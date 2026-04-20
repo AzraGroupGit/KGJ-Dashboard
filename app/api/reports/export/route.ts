@@ -27,10 +27,6 @@ function formatPercentage(value: number | null, total: number | null): string {
   return `${((value / total) * 100).toFixed(1).replace(".", ",")}%`;
 }
 
-function formatROI(roi: number | null): string {
-  if (roi === null || roi === undefined) return "0,0%";
-  return `${Number(roi).toFixed(1).replace(".", ",")}%`;
-}
 
 function toCSV(headers: string[], rows: (string | number | null)[][]): string {
   const escape = (v: string | number | null) => {
@@ -170,12 +166,10 @@ export async function GET(request: Request) {
           `
           input_date,
           channel,
-          omset,
           biaya_marketing,
           lead_serius,
           lead_all,
           closing,
-          roi,
           notes,
           users!marketing_inputs_user_id_fkey (full_name)
         `,
@@ -194,7 +188,6 @@ export async function GET(request: Request) {
       if (error) throw error;
 
       // Hitung total untuk summary
-      const totalOmset = data?.reduce((sum, r) => sum + (r.omset || 0), 0) || 0;
       const totalBiaya =
         data?.reduce((sum, r) => sum + (r.biaya_marketing || 0), 0) || 0;
       const totalLeadAll =
@@ -203,8 +196,6 @@ export async function GET(request: Request) {
         data?.reduce((sum, r) => sum + (r.lead_serius || 0), 0) || 0;
       const totalClosing =
         data?.reduce((sum, r) => sum + (r.closing || 0), 0) || 0;
-      const avgROI =
-        totalBiaya > 0 ? ((totalOmset - totalBiaya) / totalBiaya) * 100 : 0;
 
       const rows =
         data?.map((r, index) => [
@@ -212,12 +203,10 @@ export async function GET(request: Request) {
           formatDate(r.input_date),
           r.channel,
           (r.users as any)?.full_name ?? "-",
-          formatCurrency(r.omset),
           formatCurrency(r.biaya_marketing),
           formatNumber(r.lead_all),
           formatNumber(r.lead_serius),
           formatNumber(r.closing),
-          formatROI(r.roi),
           r.notes ?? "-",
         ]) ?? [];
 
@@ -229,12 +218,10 @@ export async function GET(request: Request) {
           "",
           "",
           "TOTAL",
-          formatCurrency(totalOmset),
           formatCurrency(totalBiaya),
           formatNumber(totalLeadAll),
           formatNumber(totalLeadSerius),
           formatNumber(totalClosing),
-          formatROI(avgROI),
           "",
         ],
       );
@@ -245,12 +232,10 @@ export async function GET(request: Request) {
           "Tanggal",
           "Channel",
           "Marketing",
-          "Omset",
           "Biaya Marketing",
           "Total Lead",
           "Lead Serius",
           "Closing",
-          "ROI",
           "Catatan",
         ],
         rows,
@@ -271,7 +256,7 @@ export async function GET(request: Request) {
         supabase
           .from("marketing_inputs")
           .select(
-            `input_date, channel, omset, biaya_marketing, lead_serius, lead_all, closing, roi, notes,
+            `input_date, channel, biaya_marketing, lead_serius, lead_all, closing, notes,
              users!marketing_inputs_user_id_fkey (full_name)`,
           )
           .order("input_date", { ascending: false }),
@@ -315,8 +300,6 @@ export async function GET(request: Request) {
       );
 
       // Marketing Data dengan summary
-      const totalOmset =
-        mktResult.data?.reduce((sum, r) => sum + (r.omset || 0), 0) || 0;
       const totalBiaya =
         mktResult.data?.reduce((sum, r) => sum + (r.biaya_marketing || 0), 0) ||
         0;
@@ -326,8 +309,6 @@ export async function GET(request: Request) {
         mktResult.data?.reduce((sum, r) => sum + (r.lead_serius || 0), 0) || 0;
       const totalClosingMkt =
         mktResult.data?.reduce((sum, r) => sum + (r.closing || 0), 0) || 0;
-      const avgROI =
-        totalBiaya > 0 ? ((totalOmset - totalBiaya) / totalBiaya) * 100 : 0;
 
       const mktRows =
         mktResult.data?.map((r, index) => [
@@ -335,12 +316,10 @@ export async function GET(request: Request) {
           formatDate(r.input_date),
           r.channel,
           (r.users as any)?.full_name ?? "-",
-          formatCurrency(r.omset),
           formatCurrency(r.biaya_marketing),
           formatNumber(r.lead_all),
           formatNumber(r.lead_serius),
           formatNumber(r.closing),
-          formatROI(r.roi),
           r.notes ?? "-",
         ]) ?? [];
 
@@ -351,12 +330,10 @@ export async function GET(request: Request) {
           "",
           "",
           "TOTAL",
-          formatCurrency(totalOmset),
           formatCurrency(totalBiaya),
           formatNumber(totalLeadAll),
           formatNumber(totalLeadSerius),
           formatNumber(totalClosingMkt),
-          formatROI(avgROI),
           "",
         ],
       );
@@ -392,12 +369,10 @@ export async function GET(request: Request) {
           "Tanggal",
           "Channel",
           "Marketing",
-          "Omset",
           "Biaya Marketing",
           "Total Lead",
           "Lead Serius",
           "Closing",
-          "ROI",
           "Catatan",
         ],
         mktRows,
@@ -415,12 +390,10 @@ export async function GET(request: Request) {
         `Total Data: ${csResult.data?.length || 0} entri\r\n\r\n` +
         `RINGKASAN DATA MARKETING\r\n` +
         `-----------------------\r\n` +
-        `Total Omset: ${formatCurrency(totalOmset)}\r\n` +
         `Total Biaya Marketing: ${formatCurrency(totalBiaya)}\r\n` +
         `Total Lead All: ${formatNumber(totalLeadAll)}\r\n` +
         `Total Lead Serius: ${formatNumber(totalLeadSerius)}\r\n` +
         `Total Closing: ${formatNumber(totalClosingMkt)}\r\n` +
-        `ROI Rata-rata: ${formatROI(avgROI)}\r\n` +
         `Total Data: ${mktResult.data?.length || 0} entri\r\n\r\n` +
         `================================================================\r\n\r\n` +
         `=== DATA CS (DETAIL) ===\r\n` +

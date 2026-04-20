@@ -37,6 +37,7 @@ export default function InputLeadsPage() {
   const [leadMasuk, setLeadMasuk] = useState("");
   const [closing, setClosing] = useState("");
   const [omset, setOmset] = useState("");
+  const [omsetDisplay, setOmsetDisplay] = useState(""); // Untuk tampilan format
   const [notes, setNotes] = useState("");
 
   const [alert, setAlert] = useState<{
@@ -50,6 +51,34 @@ export default function InputLeadsPage() {
   ) => {
     setAlert({ type, message });
     setTimeout(() => setAlert(null), 3500);
+  };
+
+  // Fungsi untuk format Rupiah dengan titik
+  const formatRupiah = (value: string): string => {
+    // Hapus semua karakter selain angka
+    const numberString = value.replace(/[^\d]/g, "");
+
+    if (numberString === "") return "";
+
+    // Format dengan titik setiap 3 digit
+    return numberString.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  // Fungsi untuk parse Rupiah ke number
+  const parseRupiah = (value: string): string => {
+    return value.replace(/\./g, "");
+  };
+
+  // Handler untuk input omset
+  const handleOmsetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const rawValue = parseRupiah(inputValue);
+
+    // Validasi hanya angka
+    if (rawValue === "" || /^\d+$/.test(rawValue)) {
+      setOmset(rawValue);
+      setOmsetDisplay(formatRupiah(rawValue));
+    }
   };
 
   const loadInputs = useCallback(async () => {
@@ -90,12 +119,15 @@ export default function InputLeadsPage() {
     if (todayInput) {
       setLeadMasuk(todayInput.lead_masuk.toString());
       setClosing(todayInput.closing.toString());
-      setOmset(todayInput.omset.toString());
+      const omsetValue = todayInput.omset.toString();
+      setOmset(omsetValue);
+      setOmsetDisplay(formatRupiah(omsetValue));
       setNotes(todayInput.notes || "");
     } else {
       setLeadMasuk("");
       setClosing("");
       setOmset("");
+      setOmsetDisplay("");
       setNotes("");
     }
     setIsModalOpen(true);
@@ -166,7 +198,10 @@ export default function InputLeadsPage() {
   );
   const totalLeadsMonth = monthInputs.reduce((sum, i) => sum + i.lead_masuk, 0);
   const totalClosingMonth = monthInputs.reduce((sum, i) => sum + i.closing, 0);
-  const totalOmsetMonth = monthInputs.reduce((sum, i) => sum + (i.omset ?? 0), 0);
+  const totalOmsetMonth = monthInputs.reduce(
+    (sum, i) => sum + (i.omset ?? 0),
+    0,
+  );
 
   if (isLoading && !user) {
     return (
@@ -439,16 +474,33 @@ export default function InputLeadsPage() {
                 min="0"
               />
 
-              <Input
-                label="Omset (Rp)"
-                type="number"
-                value={omset}
-                onChange={(e) => setOmset(e.target.value)}
-                placeholder="Total omset hari ini"
-                disabled={isSaving}
-                helperText="Total nilai transaksi / penjualan hari ini"
-                min="0"
-              />
+              {/* Input Omset dengan format Rupiah */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Omset (Rp)
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm">Rp</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={omsetDisplay}
+                    onChange={handleOmsetChange}
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="Contoh: 1.000.000"
+                    disabled={isSaving}
+                  />
+                </div>
+                {omsetDisplay && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Nilai: Rp {omsetDisplay}
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  Total nilai transaksi / penjualan hari ini
+                </p>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -500,6 +552,7 @@ export default function InputLeadsPage() {
                   disabled={
                     !leadMasuk ||
                     !closing ||
+                    !omset ||
                     parseInt(closing) > parseInt(leadMasuk)
                   }
                 >

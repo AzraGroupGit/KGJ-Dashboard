@@ -20,8 +20,8 @@ interface DailyStaffRow {
 }
 
 interface DailyTrend {
-  date: string; // "YYYY-MM-DD"
-  label: string; // "Sen 14", "Sel 15", etc.
+  date: string;
+  label: string;
   lead_masuk: number;
   closing: number;
   omset: number;
@@ -34,7 +34,6 @@ interface DailyTotals {
   closing: number;
   omset: number;
   gross_profit: number;
-  // vs yesterday
   lead_masuk_delta: number;
   closing_delta: number;
   omset_delta: number;
@@ -44,10 +43,10 @@ interface DailyData {
   date: string;
   totals: DailyTotals;
   staff: DailyStaffRow[];
-  trend: DailyTrend[]; // last 7 days
+  trend: DailyTrend[];
 }
 
-// ─── Format helpers ───────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmtRpShort = (v: number) => {
   if (v >= 1_000_000_000) return `Rp ${(v / 1_000_000_000).toFixed(1)}M`;
@@ -60,76 +59,48 @@ const fmtPct = (v: number) => `${v.toFixed(1)}%`;
 const toLocalDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-const formatDisplayDate = (dateStr: string) => {
-  const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
+const formatDisplayDate = (dateStr: string) =>
+  new Date(dateStr + "T00:00:00").toLocaleDateString("id-ID", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
-};
 
-// ─── Delta badge ──────────────────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function DeltaBadge({ delta, unit = "" }: { delta: number; unit?: string }) {
-  if (delta === 0) return <span className="daily-delta neutral">= sama</span>;
+  if (delta === 0)
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+        = sama
+      </span>
+    );
   const up = delta > 0;
   return (
-    <span className={`daily-delta ${up ? "up" : "down"}`}>
-      {up ? "▲" : "▼"} {Math.abs(delta)}
-      {unit} vs kemarin
+    <span className={`inline-flex items-center gap-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full ${up ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-500"}`}>
+      {up ? "▲" : "▼"} {Math.abs(delta)}{unit} vs kemarin
     </span>
   );
 }
 
-// ─── Tiny sparkline (SVG) ─────────────────────────────────────────────────────
-
 function Sparkline({ data, color }: { data: number[]; color: string }) {
-  if (!data.length) return null;
+  if (data.length < 2) return null;
   const max = Math.max(...data, 1);
   const min = Math.min(...data);
   const range = max - min || 1;
-  const W = 80,
-    H = 28;
+  const W = 80, H = 28;
   const pts = data.map((v, i) => {
     const x = (i / (data.length - 1)) * W;
     const y = H - ((v - min) / range) * H;
     return `${x},${y}`;
   });
   return (
-    <svg
-      width={W}
-      height={H}
-      viewBox={`0 0 ${W} ${H}`}
-      style={{ display: "block" }}
-    >
-      <polyline
-        points={pts.join(" ")}
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle
-        cx={parseFloat(pts[pts.length - 1].split(",")[0])}
-        cy={parseFloat(pts[pts.length - 1].split(",")[1])}
-        r="3"
-        fill={color}
-      />
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="block">
+      <polyline points={pts.join(" ")} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={parseFloat(pts[pts.length - 1].split(",")[0])} cy={parseFloat(pts[pts.length - 1].split(",")[1])} r="3" fill={color} />
     </svg>
   );
 }
 
-// ─── Mini bar chart (7-day trend) ─────────────────────────────────────────────
-
-function TrendBars({
-  trend,
-  field,
-  color,
-  fmt,
-}: {
+function TrendBars({ trend, field, color, fmt }: {
   trend: DailyTrend[];
   field: keyof DailyTrend;
   color: string;
@@ -138,29 +109,60 @@ function TrendBars({
   const vals = trend.map((t) => Number(t[field]));
   const max = Math.max(...vals, 1);
   return (
-    <div className="trend-bars">
+    <div className="flex items-end gap-1.5 h-28">
       {trend.map((t, i) => {
-        const h = Math.max((vals[i] / max) * 100, 4);
+        const h = Math.max((vals[i] / max) * 100, 3);
         const isLast = i === trend.length - 1;
         return (
-          <div key={t.date} className="trend-bar-col">
-            <div className="trend-bar-value">{fmt(vals[i])}</div>
-            <div className="trend-bar-wrap">
+          <div key={t.date} className="flex flex-col items-center flex-1 h-full gap-1">
+            <span className="text-[9px] font-mono text-slate-400 h-4 flex items-center">{fmt(vals[i])}</span>
+            <div className="flex-1 w-full flex items-end">
               <div
-                className="trend-bar-fill"
-                style={{
-                  height: `${h}%`,
-                  background: isLast ? color : `${color}55`,
-                  borderRadius: "4px 4px 0 0",
-                }}
+                className="w-full rounded-t transition-all duration-300"
+                style={{ height: `${h}%`, background: isLast ? color : `${color}55` }}
               />
             </div>
-            <div className={`trend-bar-label ${isLast ? "today" : ""}`}>
+            <span className={`text-[10px] font-mono whitespace-nowrap ${isLast ? "text-indigo-500 font-semibold" : "text-slate-400"}`}>
               {t.label}
-            </div>
+            </span>
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function KpiCard({ title, value, sub, color, delta, deltaUnit, sparkData, sparkColor }: {
+  title: string;
+  value: string | number;
+  sub?: string;
+  color: string;
+  delta?: number;
+  deltaUnit?: string;
+  sparkData?: number[];
+  sparkColor?: string;
+}) {
+  const accent: Record<string, string> = {
+    indigo: "before:bg-indigo-500",
+    emerald: "before:bg-emerald-500",
+    amber: "before:bg-amber-400",
+    rose: "before:bg-rose-400",
+    sky: "before:bg-sky-500",
+    violet: "before:bg-violet-500",
+    teal: "before:bg-teal-500",
+    orange: "before:bg-orange-400",
+  };
+  return (
+    <div className={`relative bg-white rounded-2xl border border-slate-100 shadow-sm p-5 overflow-hidden before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:rounded-t-2xl ${accent[color] ?? ""}`}>
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">{title}</p>
+      <p className="text-[22px] font-bold text-slate-900 leading-none mb-1.5">{value}</p>
+      {sub && <p className="text-[11px] text-slate-400 font-mono mb-2">{sub}</p>}
+      {delta !== undefined && <DeltaBadge delta={delta} unit={deltaUnit} />}
+      {sparkData && sparkData.length >= 2 && (
+        <div className="mt-3">
+          <Sparkline data={sparkData} color={sparkColor ?? "#6366f1"} />
+        </div>
+      )}
     </div>
   );
 }
@@ -172,13 +174,9 @@ export default function DailyAnalysisPage() {
   const [selectedDate, setSelectedDate] = useState(toLocalDate(new Date()));
   const [data, setData] = useState<DailyData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "staff" | "trend">(
-    "overview",
-  );
+  const [activeTab, setActiveTab] = useState<"overview" | "staff" | "trend">("overview");
 
-  useEffect(() => {
-    setClientUser(getClientUser());
-  }, []);
+  useEffect(() => { setClientUser(getClientUser()); }, []);
 
   const fetchDaily = useCallback(async () => {
     setIsLoading(true);
@@ -191,967 +189,401 @@ export default function DailyAnalysisPage() {
     }
   }, [selectedDate]);
 
-  useEffect(() => {
-    fetchDaily();
-  }, [fetchDaily]);
+  useEffect(() => { fetchDaily(); }, [fetchDaily]);
 
-  const crSerius =
-    data && data.totals.lead_serius > 0
-      ? (data.totals.closing / data.totals.lead_serius) * 100
-      : 0;
+  // Keyboard navigation: ← / →
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return;
+      if (e.key === "ArrowLeft") {
+        const d = new Date(selectedDate + "T00:00:00");
+        d.setDate(d.getDate() - 1);
+        setSelectedDate(toLocalDate(d));
+      } else if (e.key === "ArrowRight") {
+        const d = new Date(selectedDate + "T00:00:00");
+        d.setDate(d.getDate() + 1);
+        if (d <= new Date()) setSelectedDate(toLocalDate(d));
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [selectedDate]);
+
+  const isToday = selectedDate === toLocalDate(new Date());
+
+  const cr = data && data.totals.lead_masuk > 0
+    ? (data.totals.closing / data.totals.lead_masuk) * 100
+    : 0;
+  const crSerius = data && data.totals.lead_serius > 0
+    ? (data.totals.closing / data.totals.lead_serius) * 100
+    : 0;
 
   const trend7Lead = data?.trend.map((t) => t.lead_masuk) ?? [];
   const trend7Omset = data?.trend.map((t) => t.omset) ?? [];
 
+  const tabs = [
+    { key: "overview", label: "Overview" },
+    { key: "staff", label: "Aktivitas CS" },
+    { key: "trend", label: "Trend 7 Hari" },
+  ] as const;
+
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+    <div className="flex h-screen bg-slate-50">
+      <Sidebar role="superadmin" />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
+        <main className="flex-1 overflow-y-auto p-6">
 
-        .daily-root { font-family: 'Bricolage Grotesque', sans-serif; }
+          {/* ── Page header ── */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 tracking-tight leading-none mb-1">
+                Data Harian
+              </h2>
+              <p className="text-sm text-slate-400 font-mono">
+                {formatDisplayDate(selectedDate)}
+                {isToday && (
+                  <span className="ml-2 text-[10px] font-semibold bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">
+                    HARI INI
+                  </span>
+                )}
+              </p>
+            </div>
 
-        /* ── Page header ── */
-        .daily-page-header {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 16px;
-          margin-bottom: 28px;
-          flex-wrap: wrap;
-        }
-        .daily-title {
-          font-size: 22px;
-          font-weight: 700;
-          color: #0f172a;
-          letter-spacing: -0.03em;
-          margin-bottom: 4px;
-        }
-        .daily-subtitle {
-          font-size: 13px;
-          color: #94a3b8;
-          font-family: 'JetBrains Mono', monospace;
-          font-weight: 300;
-        }
-
-        /* ── Date picker + nav ── */
-        .date-nav {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          background: #fff;
-          border: 1px solid #e2e8f0;
-          border-radius: 14px;
-          padding: 8px 12px;
-          box-shadow: 0 1px 4px rgba(0,0,0,.06);
-        }
-        .date-nav-btn {
-          width: 32px; height: 32px;
-          border: none;
-          background: #f1f5f9;
-          border-radius: 8px;
-          cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          color: #475569;
-          font-size: 16px;
-          transition: background .15s;
-        }
-        .date-nav-btn:hover { background: #e2e8f0; }
-        .date-input {
-          border: none;
-          outline: none;
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 13px;
-          font-weight: 500;
-          color: #0f172a;
-          background: transparent;
-          cursor: pointer;
-        }
-        .today-btn {
-          padding: 6px 12px;
-          background: #6366f1;
-          color: #fff;
-          border: none;
-          border-radius: 8px;
-          font-size: 12px;
-          font-weight: 600;
-          font-family: 'Bricolage Grotesque', sans-serif;
-          cursor: pointer;
-          transition: background .15s;
-        }
-        .today-btn:hover { background: #4f46e5; }
-
-        /* ── Tabs ── */
-        .daily-tabs {
-          display: flex;
-          gap: 4px;
-          background: #f1f5f9;
-          border-radius: 12px;
-          padding: 4px;
-          margin-bottom: 24px;
-          width: fit-content;
-        }
-        .daily-tab {
-          padding: 8px 20px;
-          border: none;
-          background: transparent;
-          border-radius: 9px;
-          font-size: 13px;
-          font-weight: 600;
-          font-family: 'Bricolage Grotesque', sans-serif;
-          color: #64748b;
-          cursor: pointer;
-          transition: all .2s;
-        }
-        .daily-tab.active {
-          background: #fff;
-          color: #0f172a;
-          box-shadow: 0 1px 4px rgba(0,0,0,.1);
-        }
-
-        /* ── KPI cards ── */
-        .kpi-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 14px;
-          margin-bottom: 20px;
-        }
-        @media (min-width: 1024px) {
-          .kpi-grid { grid-template-columns: repeat(4, 1fr); }
-          .kpi-grid-2 { grid-template-columns: repeat(4, 1fr); }
-        }
-        .kpi-grid-2 {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 14px;
-          margin-bottom: 28px;
-        }
-
-        .kpi-card {
-          background: #fff;
-          border-radius: 16px;
-          padding: 18px 20px;
-          border: 1px solid #f1f5f9;
-          box-shadow: 0 1px 4px rgba(0,0,0,.04);
-          position: relative;
-          overflow: hidden;
-          animation: fadeSlideUp .4s both;
-        }
-        .kpi-card::before {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; right: 0;
-          height: 3px;
-          border-radius: 16px 16px 0 0;
-        }
-        .kpi-card.blue::before { background: #6366f1; }
-        .kpi-card.green::before { background: #10b981; }
-        .kpi-card.amber::before { background: #f59e0b; }
-        .kpi-card.rose::before { background: #f43f5e; }
-        .kpi-card.sky::before { background: #0ea5e9; }
-        .kpi-card.violet::before { background: #8b5cf6; }
-        .kpi-card.teal::before { background: #14b8a6; }
-        .kpi-card.orange::before { background: #f97316; }
-
-        .kpi-top {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          margin-bottom: 10px;
-        }
-        .kpi-icon {
-          width: 36px; height: 36px;
-          border-radius: 10px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 17px;
-        }
-        .kpi-icon.blue { background: #eef2ff; }
-        .kpi-icon.green { background: #ecfdf5; }
-        .kpi-icon.amber { background: #fffbeb; }
-        .kpi-icon.rose { background: #fff1f2; }
-        .kpi-icon.sky { background: #f0f9ff; }
-        .kpi-icon.violet { background: #f5f3ff; }
-        .kpi-icon.teal { background: #f0fdfa; }
-        .kpi-icon.orange { background: #fff7ed; }
-
-        .kpi-label {
-          font-size: 11px;
-          font-weight: 600;
-          color: #94a3b8;
-          text-transform: uppercase;
-          letter-spacing: .06em;
-          margin-bottom: 4px;
-        }
-        .kpi-value {
-          font-size: 22px;
-          font-weight: 700;
-          color: #0f172a;
-          letter-spacing: -0.03em;
-          line-height: 1;
-          margin-bottom: 6px;
-        }
-        .kpi-sub {
-          font-size: 11px;
-          color: #94a3b8;
-          font-family: 'JetBrains Mono', monospace;
-        }
-
-        /* ── Delta badge ── */
-        .daily-delta {
-          display: inline-flex;
-          align-items: center;
-          gap: 3px;
-          font-size: 10px;
-          font-family: 'JetBrains Mono', monospace;
-          font-weight: 500;
-          padding: 2px 7px;
-          border-radius: 100px;
-          margin-top: 6px;
-        }
-        .daily-delta.up { background: #ecfdf5; color: #059669; }
-        .daily-delta.down { background: #fff1f2; color: #e11d48; }
-        .daily-delta.neutral { background: #f1f5f9; color: #64748b; }
-
-        /* ── Trend section ── */
-        .trend-section {
-          background: #fff;
-          border-radius: 18px;
-          padding: 22px 24px;
-          border: 1px solid #f1f5f9;
-          box-shadow: 0 1px 4px rgba(0,0,0,.04);
-          margin-bottom: 20px;
-        }
-        .trend-section-title {
-          font-size: 14px;
-          font-weight: 700;
-          color: #0f172a;
-          margin-bottom: 18px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .trend-chip {
-          font-size: 10px;
-          font-weight: 600;
-          padding: 3px 8px;
-          border-radius: 6px;
-          background: #f1f5f9;
-          color: #64748b;
-          font-family: 'JetBrains Mono', monospace;
-        }
-
-        .trend-bars {
-          display: flex;
-          align-items: flex-end;
-          gap: 6px;
-          height: 120px;
-        }
-        .trend-bar-col {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          height: 100%;
-          gap: 4px;
-        }
-        .trend-bar-value {
-          font-size: 9px;
-          font-family: 'JetBrains Mono', monospace;
-          color: #94a3b8;
-          text-align: center;
-          height: 16px;
-          display: flex;
-          align-items: center;
-        }
-        .trend-bar-wrap {
-          flex: 1;
-          width: 100%;
-          display: flex;
-          align-items: flex-end;
-        }
-        .trend-bar-fill {
-          width: 100%;
-          min-height: 4px;
-          transition: height .4s ease;
-        }
-        .trend-bar-label {
-          font-size: 10px;
-          font-family: 'JetBrains Mono', monospace;
-          color: #94a3b8;
-          text-align: center;
-          white-space: nowrap;
-        }
-        .trend-bar-label.today {
-          color: #6366f1;
-          font-weight: 600;
-        }
-
-        .trend-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 16px;
-        }
-        @media (min-width: 1024px) {
-          .trend-grid { grid-template-columns: 1fr 1fr 1fr 1fr; }
-        }
-
-        /* ── Staff table ── */
-        .staff-section {
-          background: #fff;
-          border-radius: 18px;
-          padding: 22px 24px;
-          border: 1px solid #f1f5f9;
-          box-shadow: 0 1px 4px rgba(0,0,0,.04);
-          margin-bottom: 20px;
-          overflow-x: auto;
-        }
-        .staff-table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 13px;
-        }
-        .staff-table th {
-          text-align: left;
-          font-size: 10px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: .07em;
-          color: #94a3b8;
-          padding: 0 12px 12px 0;
-          border-bottom: 1px solid #f1f5f9;
-          white-space: nowrap;
-        }
-        .staff-table td {
-          padding: 12px 12px 12px 0;
-          border-bottom: 1px solid #f8fafc;
-          color: #334155;
-          vertical-align: middle;
-        }
-        .staff-table tr:last-child td { border-bottom: none; }
-        .staff-table tr:hover td { background: #f8fafc; }
-
-        .staff-avatar {
-          width: 32px; height: 32px;
-          border-radius: 10px;
-          background: #eef2ff;
-          color: #6366f1;
-          font-size: 12px;
-          font-weight: 700;
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
-        }
-        .staff-name-wrap {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-        .staff-name { font-weight: 600; color: #0f172a; font-size: 13px; }
-        .staff-branch { font-size: 11px; color: #94a3b8; font-family: 'JetBrains Mono', monospace; }
-
-        .staff-cr {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .staff-cr-bar {
-          height: 5px;
-          width: 60px;
-          background: #f1f5f9;
-          border-radius: 3px;
-          overflow: hidden;
-        }
-        .staff-cr-fill {
-          height: 100%;
-          border-radius: 3px;
-          background: #6366f1;
-          transition: width .4s ease;
-        }
-
-        .rank-badge {
-          width: 22px; height: 22px;
-          border-radius: 6px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 11px;
-          font-weight: 700;
-          font-family: 'JetBrains Mono', monospace;
-        }
-        .rank-badge.r1 { background: #fef9c3; color: #ca8a04; }
-        .rank-badge.r2 { background: #f1f5f9; color: #475569; }
-        .rank-badge.r3 { background: #fff7ed; color: #c2410c; }
-        .rank-badge.rn { background: #f8fafc; color: #94a3b8; }
-
-        .activity-dot {
-          width: 7px; height: 7px;
-          border-radius: 50%;
-          display: inline-block;
-          margin-right: 5px;
-        }
-        .activity-dot.active { background: #10b981; box-shadow: 0 0 0 2px #d1fae5; }
-        .activity-dot.idle { background: #f59e0b; }
-        .activity-dot.offline { background: #e2e8f0; }
-
-        /* ── Summary row ── */
-        .summary-bar {
-          display: flex;
-          gap: 12px;
-          padding: 14px 18px;
-          background: #f8fafc;
-          border-radius: 12px;
-          margin-bottom: 20px;
-          flex-wrap: wrap;
-        }
-        .summary-item {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-          flex: 1;
-          min-width: 100px;
-        }
-        .summary-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
-        .summary-val { font-size: 15px; font-weight: 700; color: #0f172a; letter-spacing: -0.02em; }
-
-        /* ── Animations ── */
-        @keyframes fadeSlideUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .kpi-card:nth-child(1) { animation-delay: .05s; }
-        .kpi-card:nth-child(2) { animation-delay: .10s; }
-        .kpi-card:nth-child(3) { animation-delay: .15s; }
-        .kpi-card:nth-child(4) { animation-delay: .20s; }
-
-        .empty-state {
-          text-align: center;
-          padding: 48px;
-          color: #94a3b8;
-          font-size: 14px;
-        }
-        .empty-state-icon { font-size: 36px; margin-bottom: 12px; }
-      `}</style>
-
-      <div className="flex h-screen bg-gray-50 daily-root">
-        <Sidebar role="superadmin" />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
-          <main className="flex-1 overflow-y-auto p-6">
-            {/* ── Page header ── */}
-            <div className="daily-page-header">
-              <div>
-                <h1 className="da-title">
-                  Data <em>Hari Ini</em>
-                </h1>
-                <p className="daily-subtitle">
-                  {selectedDate ? formatDisplayDate(selectedDate) : "—"}
-                </p>
-              </div>
-
-              {/* Date picker + nav */}
-              <div className="date-nav">
+            {/* Date navigator */}
+            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-3 py-2 shadow-sm">
+              <button
+                title="Hari sebelumnya (←)"
+                onClick={() => {
+                  const d = new Date(selectedDate + "T00:00:00");
+                  d.setDate(d.getDate() - 1);
+                  setSelectedDate(toLocalDate(d));
+                }}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-lg transition-colors"
+              >
+                ‹
+              </button>
+              <input
+                type="date"
+                value={selectedDate}
+                max={toLocalDate(new Date())}
+                onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
+                className="border-none outline-none font-mono text-sm font-medium text-slate-800 bg-transparent cursor-pointer"
+              />
+              <button
+                title="Hari berikutnya (→)"
+                onClick={() => {
+                  const d = new Date(selectedDate + "T00:00:00");
+                  d.setDate(d.getDate() + 1);
+                  if (d <= new Date()) setSelectedDate(toLocalDate(d));
+                }}
+                className={`w-8 h-8 flex items-center justify-center rounded-lg text-lg transition-colors ${
+                  isToday ? "bg-slate-50 text-slate-300 cursor-not-allowed" : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                }`}
+                disabled={isToday}
+              >
+                ›
+              </button>
+              {!isToday && (
                 <button
-                  className="date-nav-btn"
-                  title="Hari sebelumnya"
-                  onClick={() => {
-                    const d = new Date(selectedDate + "T00:00:00");
-                    d.setDate(d.getDate() - 1);
-                    setSelectedDate(toLocalDate(d));
-                  }}
-                >
-                  ‹
-                </button>
-                <input
-                  type="date"
-                  className="date-input"
-                  value={selectedDate}
-                  max={toLocalDate(new Date())}
-                  onChange={(e) =>
-                    e.target.value && setSelectedDate(e.target.value)
-                  }
-                />
-                <button
-                  className="date-nav-btn"
-                  title="Hari berikutnya"
-                  onClick={() => {
-                    const d = new Date(selectedDate + "T00:00:00");
-                    const tomorrow = new Date();
-                    tomorrow.setDate(tomorrow.getDate());
-                    d.setDate(d.getDate() + 1);
-                    if (d <= new Date()) setSelectedDate(toLocalDate(d));
-                  }}
-                >
-                  ›
-                </button>
-                <button
-                  className="today-btn"
                   onClick={() => setSelectedDate(toLocalDate(new Date()))}
+                  className="ml-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors"
                 >
                   Hari Ini
                 </button>
-              </div>
+              )}
+              <button
+                onClick={fetchDaily}
+                title="Refresh"
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
             </div>
+          </div>
 
-            {/* ── Tabs ── */}
-            <div className="daily-tabs">
-              {(["overview", "staff", "trend"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  className={`daily-tab ${activeTab === tab ? "active" : ""}`}
-                  onClick={() => setActiveTab(tab)}
-                >
-                  {tab === "overview" && "Overview"}
-                  {tab === "staff" && "Aktivitas CS"}
-                  {tab === "trend" && "Trend 7 Hari"}
-                </button>
-              ))}
+          {/* ── Tabs ── */}
+          <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit mb-6">
+            {tabs.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setActiveTab(key)}
+                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  activeTab === key
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {isLoading ? (
+            <Loading variant="skeleton" text="Memuat data harian..." />
+          ) : !data ? (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+              <svg className="w-12 h-12 mb-4 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p className="text-sm">Tidak ada data untuk tanggal ini.</p>
             </div>
+          ) : (
+            <>
+              {/* ═══ TAB: OVERVIEW ═══════════════════════════════════════════ */}
+              {activeTab === "overview" && (
+                <div className="space-y-4">
+                  {/* Primary KPIs */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <KpiCard
+                      title="Lead Masuk"
+                      value={data.totals.lead_masuk}
+                      sub={`${data.totals.lead_serius} lead serius`}
+                      color="indigo"
+                      delta={data.totals.lead_masuk_delta}
+                      sparkData={trend7Lead}
+                      sparkColor="#6366f1"
+                    />
+                    <KpiCard
+                      title="Closing"
+                      value={data.totals.closing}
+                      sub={`CR ${fmtPct(cr)}`}
+                      color="emerald"
+                      delta={data.totals.closing_delta}
+                    />
+                    <KpiCard
+                      title="Omzet"
+                      value={fmtRpShort(data.totals.omset)}
+                      sub={data.totals.closing > 0 ? `${fmtRpShort(data.totals.omset / data.totals.closing)} / closing` : "—"}
+                      color="amber"
+                      delta={data.totals.omset_delta}
+                      deltaUnit=" Jt"
+                      sparkData={trend7Omset}
+                      sparkColor="#f59e0b"
+                    />
+                    <KpiCard
+                      title="Gross Profit"
+                      value={fmtRpShort(data.totals.gross_profit)}
+                      sub={data.totals.omset > 0 ? `${fmtPct((data.totals.gross_profit / data.totals.omset) * 100)} margin` : "0% margin"}
+                      color="rose"
+                    />
+                  </div>
 
-            {isLoading ? (
-              <Loading variant="skeleton" text="Memuat data harian..." />
-            ) : !data ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">📭</div>
-                <p>Tidak ada data untuk tanggal ini.</p>
-              </div>
-            ) : (
-              <>
-                {/* ═══ TAB: OVERVIEW ═══════════════════════════════════════ */}
-                {activeTab === "overview" && (
-                  <>
-                    {/* Row 1: Primary KPIs */}
-                    <div className="kpi-grid">
-                      <div className="kpi-card blue">
-                        <div className="kpi-top">
-                          <div>
-                            <div className="kpi-label">Lead Masuk</div>
-                            <div className="kpi-value">
-                              {data.totals.lead_masuk}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="kpi-sub">
-                          {data.totals.lead_serius} lead serius
-                        </div>
-                        <div>
-                          <DeltaBadge delta={data.totals.lead_masuk_delta} />
-                        </div>
-                        <Sparkline data={trend7Lead} color="#6366f1" />
-                      </div>
+                  {/* Secondary KPIs */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <KpiCard
+                      title="CR Serius"
+                      value={fmtPct(crSerius)}
+                      sub={`${data.totals.closing} / ${data.totals.lead_serius} lead`}
+                      color="sky"
+                    />
+                    <KpiCard
+                      title="CR Masuk"
+                      value={fmtPct(cr)}
+                      sub={`${data.totals.closing} / ${data.totals.lead_masuk} lead`}
+                      color="violet"
+                    />
+                    <KpiCard
+                      title="Basket Size"
+                      value={data.totals.closing > 0 ? fmtRpShort(data.totals.omset / data.totals.closing) : "—"}
+                      sub="rata-rata per transaksi"
+                      color="teal"
+                    />
+                    <KpiCard
+                      title="Cabang Aktif"
+                      value={data.staff.filter((s) => s.lead_masuk > 0).length}
+                      sub={`dari ${data.staff.length} cabang terdaftar`}
+                      color="orange"
+                    />
+                  </div>
+                </div>
+              )}
 
-                      <div className="kpi-card green">
-                        <div className="kpi-top">
-                          <div>
-                            <div className="kpi-label">Closing</div>
-                            <div className="kpi-value">
-                              {data.totals.closing}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="kpi-sub">
-                          {fmtPct(crSerius)} CR serius
-                        </div>
-                        <div>
-                          <DeltaBadge delta={data.totals.closing_delta} />
-                        </div>
-                      </div>
-
-                      <div className="kpi-card amber">
-                        <div className="kpi-top">
-                          <div>
-                            <div className="kpi-label">Omzet</div>
-                            <div className="kpi-value">
-                              {fmtRpShort(data.totals.omset)}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="kpi-sub">
-                          {data.totals.closing > 0
-                            ? fmtRpShort(
-                                data.totals.omset / data.totals.closing,
-                              )
-                            : "—"}{" "}
-                          / closing
-                        </div>
-                        <div>
-                          <DeltaBadge
-                            delta={data.totals.omset_delta}
-                            unit=" Jt"
-                          />
-                        </div>
-                        <Sparkline data={trend7Omset} color="#f59e0b" />
-                      </div>
-
-                      <div className="kpi-card rose">
-                        <div className="kpi-top">
-                          <div>
-                            <div className="kpi-label">Gross Profit</div>
-                            <div className="kpi-value">
-                              {fmtRpShort(data.totals.gross_profit)}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="kpi-sub">
-                          {data.totals.omset > 0
-                            ? fmtPct(
-                                (data.totals.gross_profit / data.totals.omset) *
-                                  100,
-                              )
-                            : "0%"}{" "}
-                          margin
-                        </div>
-                      </div>
+              {/* ═══ TAB: STAFF ACTIVITY ═══════════════════════════════════ */}
+              {activeTab === "staff" && (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800">Aktivitas Cabang CS</h3>
+                      <p className="text-xs text-slate-400 font-mono mt-0.5">{formatDisplayDate(selectedDate)}</p>
                     </div>
+                    <span className="text-xs font-semibold bg-slate-100 text-slate-500 px-2.5 py-1 rounded-lg">
+                      {data.staff.length} cabang
+                    </span>
+                  </div>
 
-                    {/* Row 2: Secondary KPIs */}
-                    <div className="kpi-grid-2">
-                      <div className="kpi-card sky">
-                        <div className="kpi-top">
-                          <div>
-                            <div className="kpi-label">CR Serius</div>
-                            <div className="kpi-value">{fmtPct(crSerius)}</div>
-                          </div>
-                        </div>
-                        <div className="kpi-sub">
-                          {data.totals.closing} / {data.totals.lead_serius} lead
-                        </div>
+                  {/* Summary strip */}
+                  <div className="grid grid-cols-4 divide-x divide-slate-100 bg-slate-50 border-b border-slate-100">
+                    {[
+                      { label: "Total Lead", val: data.totals.lead_masuk },
+                      { label: "Total Closing", val: data.totals.closing },
+                      { label: "Omzet", val: fmtRpShort(data.totals.omset) },
+                      { label: "CR Masuk", val: fmtPct(cr) },
+                    ].map(({ label, val }) => (
+                      <div key={label} className="px-5 py-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+                        <p className="text-base font-bold text-slate-800 mt-0.5">{val}</p>
                       </div>
+                    ))}
+                  </div>
 
-                      <div className="kpi-card violet">
-                        <div className="kpi-top">
-                          <div>
-                            <div className="kpi-label">Basket Size</div>
-                            <div className="kpi-value">
-                              {data.totals.closing > 0
-                                ? fmtRpShort(
-                                    data.totals.omset / data.totals.closing,
-                                  )
-                                : "—"}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="kpi-sub">rata-rata per transaksi</div>
-                      </div>
-
-                      <div className="kpi-card teal">
-                        <div className="kpi-top">
-                          <div>
-                            <div className="kpi-label">Total Staff Aktif</div>
-                            <div className="kpi-value">
-                              {
-                                data.staff.filter((s) => s.lead_masuk > 0)
-                                  .length
-                              }
-                            </div>
-                          </div>
-                        </div>
-                        <div className="kpi-sub">
-                          dari {data.staff.length} CS terdaftar
-                        </div>
-                      </div>
+                  {data.staff.length === 0 ? (
+                    <div className="flex flex-col items-center py-14 text-slate-400">
+                      <svg className="w-10 h-10 mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <p className="text-sm">Belum ada aktivitas untuk tanggal ini.</p>
                     </div>
-                  </>
-                )}
-
-                {/* ═══ TAB: STAFF ACTIVITY ═══════════════════════════════ */}
-                {activeTab === "staff" && (
-                  <div className="staff-section">
-                    <div className="trend-section-title">
-                      Aktivitas CS/Staff
-                      <span className="trend-chip">
-                        {formatDisplayDate(selectedDate)}
-                      </span>
-                    </div>
-
-                    {/* Summary bar */}
-                    <div className="summary-bar">
-                      <div className="summary-item">
-                        <span className="summary-label">Total Lead</span>
-                        <span className="summary-val">
-                          {data.totals.lead_masuk}
-                        </span>
-                      </div>
-                      <div className="summary-item">
-                        <span className="summary-label">Total Closing</span>
-                        <span className="summary-val">
-                          {data.totals.closing}
-                        </span>
-                      </div>
-                      <div className="summary-item">
-                        <span className="summary-label">Total Omzet</span>
-                        <span className="summary-val">
-                          {fmtRpShort(data.totals.omset)}
-                        </span>
-                      </div>
-                      <div className="summary-item">
-                        <span className="summary-label">Avg CR</span>
-                        <span className="summary-val">{fmtPct(crSerius)}</span>
-                      </div>
-                    </div>
-
-                    {data.staff.length === 0 ? (
-                      <div className="empty-state">
-                        <div className="empty-state-icon">👤</div>
-                        <p>Belum ada aktivitas staff untuk tanggal ini.</p>
-                      </div>
-                    ) : (
-                      <table className="staff-table">
-                        <thead>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50">
                           <tr>
-                            <th>#</th>
-                            <th>Staff</th>
-                            <th>Lead Masuk</th>
-                            <th>Lead Serius</th>
-                            <th>Closing</th>
-                            <th>CR</th>
-                            <th>Omzet</th>
+                            {["#", "Cabang", "Kode", "Lead Masuk", "Closing", "CR"].map((h) => (
+                              <th key={h} className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                {h}
+                              </th>
+                            ))}
                           </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-slate-50">
                           {data.staff
                             .sort((a, b) => b.closing - a.closing)
                             .map((s, i) => {
-                              const cr =
-                                s.lead_serius > 0
-                                  ? (s.closing / s.lead_serius) * 100
-                                  : 0;
-                              const initials = s.name
-                                .split(" ")
-                                .slice(0, 2)
-                                .map((n) => n[0])
-                                .join("")
-                                .toUpperCase();
-                              const rankClass =
-                                i === 0
-                                  ? "r1"
-                                  : i === 1
-                                    ? "r2"
-                                    : i === 2
-                                      ? "r3"
-                                      : "rn";
-
-                              // Determine activity status from last_activity timestamp
-
+                              const staffCr = s.lead_masuk > 0 ? (s.closing / s.lead_masuk) * 100 : 0;
+                              const initials = s.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
+                              const rankColors = ["bg-yellow-100 text-yellow-700", "bg-slate-100 text-slate-600", "bg-orange-100 text-orange-600"];
+                              const rankColor = rankColors[i] ?? "bg-slate-50 text-slate-400";
                               return (
-                                <tr key={s.id}>
-                                  <td>
-                                    <span className={`rank-badge ${rankClass}`}>
+                                <tr key={s.id} className="hover:bg-slate-50 transition-colors">
+                                  <td className="px-5 py-3.5">
+                                    <span className={`w-6 h-6 inline-flex items-center justify-center text-[11px] font-bold rounded-md ${rankColor}`}>
                                       {i + 1}
                                     </span>
                                   </td>
-                                  <td>
-                                    <div className="staff-name-wrap">
-                                      <div className="staff-avatar">
+                                  <td className="px-5 py-3.5">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 text-xs font-bold flex items-center justify-center flex-shrink-0">
                                         {initials}
                                       </div>
-                                      <div>
-                                        <div className="staff-name">
-                                          {s.name}
-                                        </div>
-                                        <div className="staff-branch">
-                                          {s.branch}
-                                        </div>
-                                      </div>
+                                      <span className="font-semibold text-slate-800">{s.name}</span>
                                     </div>
                                   </td>
-                                  <td style={{ fontWeight: 600 }}>
-                                    {s.lead_masuk}
-                                  </td>
-                                  <td>{s.lead_serius}</td>
-                                  <td
-                                    style={{
-                                      fontWeight: 700,
-                                      color: "#059669",
-                                    }}
-                                  >
-                                    {s.closing}
-                                  </td>
-                                  <td>
-                                    <div className="staff-cr">
-                                      <span
-                                        style={{
-                                          fontFamily:
-                                            "JetBrains Mono, monospace",
-                                          fontSize: 12,
-                                        }}
-                                      >
-                                        {fmtPct(cr)}
+                                  <td className="px-5 py-3.5 font-mono text-xs text-slate-500">{s.branch}</td>
+                                  <td className="px-5 py-3.5 font-semibold text-slate-700">{s.lead_masuk}</td>
+                                  <td className="px-5 py-3.5 font-bold text-emerald-600">{s.closing}</td>
+                                  <td className="px-5 py-3.5">
+                                    <div className="flex items-center gap-2">
+                                      <span className={`text-xs font-semibold ${staffCr > 30 ? "text-emerald-600" : staffCr > 15 ? "text-amber-500" : "text-rose-500"}`}>
+                                        {fmtPct(staffCr)}
                                       </span>
-                                      <div className="staff-cr-bar">
+                                      <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                         <div
-                                          className="staff-cr-fill"
-                                          style={{
-                                            width: `${Math.min(cr, 100)}%`,
-                                          }}
+                                          className="h-full rounded-full bg-indigo-500 transition-all"
+                                          style={{ width: `${Math.min(staffCr, 100)}%` }}
                                         />
                                       </div>
                                     </div>
-                                  </td>
-                                  <td
-                                    style={{
-                                      fontFamily: "JetBrains Mono, monospace",
-                                      fontSize: 12,
-                                    }}
-                                  >
-                                    {fmtRpShort(s.omset)}
                                   </td>
                                 </tr>
                               );
                             })}
                         </tbody>
                       </table>
-                    )}
-                  </div>
-                )}
-
-                {/* ═══ TAB: TREND 7 HARI ════════════════════════════════ */}
-                {activeTab === "trend" && (
-                  <>
-                    {data.trend.length === 0 ? (
-                      <div className="empty-state">
-                        <div className="empty-state-icon">📉</div>
-                        <p>Belum ada data trend.</p>
-                      </div>
-                    ) : (
-                      <div className="trend-grid" style={{ marginBottom: 20 }}>
-                        {/* Lead masuk */}
-                        <div className="trend-section">
-                          <div className="trend-section-title">
-                            Lead Masuk
-                            <span className="trend-chip">7 hari</span>
-                          </div>
-                          <TrendBars
-                            trend={data.trend}
-                            field="lead_masuk"
-                            color="#6366f1"
-                            fmt={(v) => String(v)}
-                          />
-                        </div>
-
-                        {/* Closing */}
-                        <div className="trend-section">
-                          <div className="trend-section-title">
-                            Closing
-                            <span className="trend-chip">7 hari</span>
-                          </div>
-                          <TrendBars
-                            trend={data.trend}
-                            field="closing"
-                            color="#10b981"
-                            fmt={(v) => String(v)}
-                          />
-                        </div>
-
-                        {/* Omzet */}
-                        <div className="trend-section">
-                          <div className="trend-section-title">
-                            Omzet
-                            <span className="trend-chip">7 hari</span>
-                          </div>
-                          <TrendBars
-                            trend={data.trend}
-                            field="omset"
-                            color="#f59e0b"
-                            fmt={(v) =>
-                              v >= 1_000_000
-                                ? `${(v / 1_000_000).toFixed(0)}Jt`
-                                : String(v)
-                            }
-                          />
-                        </div>
-
-                        {/* Gross Profit */}
-                        <div className="trend-section">
-                          <div className="trend-section-title">
-                            Gross Profit
-                            <span className="trend-chip">7 hari</span>
-                          </div>
-                          <TrendBars
-                            trend={data.trend}
-                            field="gross_profit"
-                            color="#f43f5e"
-                            fmt={(v) =>
-                              v >= 1_000_000
-                                ? `${(v / 1_000_000).toFixed(0)}Jt`
-                                : String(v)
-                            }
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Trend table detail */}
-                    <div className="staff-section">
-                      <div className="trend-section-title">
-                        Detail Harian — 7 Hari Terakhir
-                      </div>
-                      <table className="staff-table" style={{ minWidth: 600 }}>
-                        <thead>
-                          <tr>
-                            <th>Tanggal</th>
-                            <th>Lead Masuk</th>
-                            <th>Closing</th>
-                            <th>Omzet</th>
-                            <th>Gross Profit</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[...data.trend].reverse().map((t, i) => (
-                            <tr
-                              key={t.date}
-                              style={{ fontWeight: i === 0 ? 700 : 400 }}
-                            >
-                              <td
-                                style={{
-                                  fontFamily: "JetBrains Mono, monospace",
-                                  fontSize: 12,
-                                }}
-                              >
-                                {i === 0 && (
-                                  <span
-                                    style={{
-                                      background: "#eef2ff",
-                                      color: "#6366f1",
-                                      fontSize: 10,
-                                      padding: "2px 6px",
-                                      borderRadius: 5,
-                                      marginRight: 6,
-                                      fontWeight: 700,
-                                    }}
-                                  >
-                                    HARI INI
-                                  </span>
-                                )}
-                                {t.label}
-                              </td>
-                              <td>{t.lead_masuk}</td>
-                              <td style={{ color: "#059669", fontWeight: 600 }}>
-                                {t.closing}
-                              </td>
-                              <td
-                                style={{
-                                  fontFamily: "JetBrains Mono, monospace",
-                                  fontSize: 12,
-                                }}
-                              >
-                                {fmtRpShort(t.omset)}
-                              </td>
-                              <td
-                                style={{
-                                  fontFamily: "JetBrains Mono, monospace",
-                                  fontSize: 12,
-                                }}
-                              >
-                                {fmtRpShort(t.gross_profit)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
                     </div>
-                  </>
-                )}
-              </>
-            )}
-          </main>
-        </div>
+                  )}
+                </div>
+              )}
+
+              {/* ═══ TAB: TREND 7 HARI ═══════════════════════════════════ */}
+              {activeTab === "trend" && (
+                <div className="space-y-4">
+                  {data.trend.length === 0 ? (
+                    <div className="flex flex-col items-center py-20 text-slate-400">
+                      <p className="text-sm">Belum ada data trend.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* 4 mini charts */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[
+                          { label: "Lead Masuk", field: "lead_masuk" as const, color: "#6366f1", fmt: (v: number) => String(v) },
+                          { label: "Closing", field: "closing" as const, color: "#10b981", fmt: (v: number) => String(v) },
+                          { label: "Omzet", field: "omset" as const, color: "#f59e0b", fmt: (v: number) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)}Jt` : String(v) },
+                          { label: "Gross Profit", field: "gross_profit" as const, color: "#f43f5e", fmt: (v: number) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)}Jt` : String(v) },
+                        ].map(({ label, field, color, fmt }) => (
+                          <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                            <div className="flex items-center gap-2 mb-4">
+                              <span className="text-sm font-bold text-slate-800">{label}</span>
+                              <span className="text-[10px] font-mono font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">7 hari</span>
+                            </div>
+                            <TrendBars trend={data.trend} field={field} color={color} fmt={fmt} />
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Detail table */}
+                      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-100">
+                          <h3 className="text-sm font-bold text-slate-800">Detail Harian — 7 Hari Terakhir</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead className="bg-slate-50">
+                              <tr>
+                                {["Tanggal", "Lead Masuk", "Closing", "CR", "Omzet", "Gross Profit"].map((h) => (
+                                  <th key={h} className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                              {[...data.trend].reverse().map((t) => {
+                                const rowCr = t.lead_masuk > 0 ? (t.closing / t.lead_masuk) * 100 : 0;
+                                const isSelected = t.date === selectedDate;
+                                return (
+                                  <tr key={t.date} className={`transition-colors ${isSelected ? "bg-indigo-50/60" : "hover:bg-slate-50"}`}>
+                                    <td className="px-5 py-3.5">
+                                      <div className="flex items-center gap-2">
+                                        {isSelected && (
+                                          <span className="text-[10px] font-bold bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded">
+                                            {t.date === toLocalDate(new Date()) ? "HARI INI" : "DIPILIH"}
+                                          </span>
+                                        )}
+                                        <span className="font-mono text-xs text-slate-600">{t.label}</span>
+                                      </div>
+                                    </td>
+                                    <td className="px-5 py-3.5 font-semibold text-slate-700">{t.lead_masuk}</td>
+                                    <td className="px-5 py-3.5 font-bold text-emerald-600">{t.closing}</td>
+                                    <td className="px-5 py-3.5">
+                                      <span className={`text-xs font-semibold ${rowCr > 30 ? "text-emerald-600" : rowCr > 15 ? "text-amber-500" : "text-rose-500"}`}>
+                                        {fmtPct(rowCr)}
+                                      </span>
+                                    </td>
+                                    <td className="px-5 py-3.5 font-mono text-xs text-slate-700">{fmtRpShort(t.omset)}</td>
+                                    <td className="px-5 py-3.5 font-mono text-xs text-slate-700">{fmtRpShort(t.gross_profit)}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Keyboard hint */}
+          <p className="mt-6 text-center text-[11px] text-slate-300 font-mono">
+            Gunakan ← → untuk navigasi tanggal
+          </p>
+        </main>
       </div>
-    </>
+    </div>
   );
 }

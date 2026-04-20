@@ -16,7 +16,6 @@ interface MarketingInput {
   id: string;
   channel: string;
   input_date: string;
-  omset: number;
   biaya_marketing: number;
   lead_serius: number;
   lead_all: number;
@@ -75,7 +74,6 @@ export default function InputMarketingPage() {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0],
   );
-  const [omset, setOmset] = useState("");
   const [biayaMarketing, setBiayaMarketing] = useState("");
   const [leadSerius, setLeadSerius] = useState("");
   const [leadAll, setLeadAll] = useState("");
@@ -84,6 +82,7 @@ export default function InputMarketingPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [alert, setAlert] = useState<{
     type: "success" | "error" | "warning" | "info";
     message: string;
@@ -211,12 +210,7 @@ export default function InputMarketingPage() {
   const calculateMetrics = (data: MarketingInput) => {
     const crSerius =
       data.lead_serius > 0 ? (data.closing / data.lead_serius) * 100 : 0;
-    const roi =
-      data.biaya_marketing > 0
-        ? ((data.omset * 0.5 - data.biaya_marketing) / data.biaya_marketing) *
-          100
-        : 0;
-    return { crSerius, roi };
+    return { crSerius };
   };
 
   const handleSave = async () => {
@@ -230,20 +224,10 @@ export default function InputMarketingPage() {
       return;
     }
 
-    const omsetNum = parseInt(omset) || 0;
     const biayaMarketingNum = parseInt(biayaMarketing) || 0;
     const leadSeriusNum = parseInt(leadSerius) || 0;
     const leadAllNum = parseInt(leadAll) || 0;
     const closingNum = parseInt(closing) || 0;
-
-    if (omsetNum <= 0) {
-      setAlert({
-        type: "error",
-        message: "Omzet harus diisi dengan angka positif!",
-      });
-      setTimeout(() => setAlert(null), 3000);
-      return;
-    }
 
     if (biayaMarketingNum <= 0) {
       setAlert({
@@ -273,7 +257,6 @@ export default function InputMarketingPage() {
         },
         body: JSON.stringify({
           channel: selectedChannel,
-          omset: omsetNum,
           biaya_marketing: biayaMarketingNum,
           lead_serius: leadSeriusNum,
           lead_all: leadAllNum,
@@ -288,6 +271,7 @@ export default function InputMarketingPage() {
       const data = await response.json();
 
       if (response.ok && data.data) {
+        setModalError(null);
         setAlert({
           type: "success",
           message: "Data marketing berhasil disimpan!",
@@ -295,19 +279,18 @@ export default function InputMarketingPage() {
         setIsModalOpen(false);
         resetForm();
         await fetchMarketingInputs();
+      } else if (response.status === 409) {
+        setModalError(data.error || "Data sudah ada untuk channel dan tanggal ini.");
       } else {
         throw new Error(data.error || "Gagal menyimpan data");
       }
     } catch (error) {
       console.error("Error saving data:", error);
-      setAlert({
-        type: "error",
-        message:
-          error instanceof Error ? error.message : "Gagal menyimpan data",
-      });
+      setModalError(
+        error instanceof Error ? error.message : "Gagal menyimpan data",
+      );
     } finally {
       setIsSaving(false);
-      setTimeout(() => setAlert(null), 3000);
     }
   };
 
@@ -366,7 +349,6 @@ export default function InputMarketingPage() {
     setSelectedCSInputId("");
     setSelectedChannel("");
     setSelectedDate(new Date().toISOString().split("T")[0]);
-    setOmset("");
     setBiayaMarketing("");
     setLeadSerius("");
     setLeadAll("");
@@ -389,9 +371,6 @@ export default function InputMarketingPage() {
   const todayInputs = marketingInputs.filter(
     (item) => item.input_date === today,
   );
-  const totalOmzetBulanIni = marketingInputs
-    .filter((item) => item.input_date.startsWith(currentMonth))
-    .reduce((sum, item) => sum + item.omset, 0);
   const totalBiayaBulanIni = marketingInputs
     .filter((item) => item.input_date.startsWith(currentMonth))
     .reduce((sum, item) => sum + item.biaya_marketing, 0);
@@ -456,7 +435,7 @@ export default function InputMarketingPage() {
             </div>
             <Button
               variant="primary"
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => { setModalError(null); setIsModalOpen(true); }}
               leftIcon={
                 <svg
                   className="w-4 h-4"
@@ -478,7 +457,7 @@ export default function InputMarketingPage() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
               <p className="text-sm text-gray-600 mb-2">Total Input Hari Ini</p>
               <p className="text-2xl font-bold text-gray-800">
@@ -489,14 +468,6 @@ export default function InputMarketingPage() {
               <p className="text-sm text-gray-600 mb-2">Total Data Tersimpan</p>
               <p className="text-2xl font-bold text-gray-800">
                 {marketingInputs.length}
-              </p>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
-              <p className="text-sm text-gray-600 mb-2">
-                Total Omzet (Bulan Ini)
-              </p>
-              <p className="text-2xl font-bold text-gray-800">
-                {formatRupiah(totalOmzetBulanIni)}
               </p>
             </div>
             <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-orange-500">
@@ -530,9 +501,6 @@ export default function InputMarketingPage() {
                       Channel
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Omzet
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Biaya Mkt
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -546,9 +514,6 @@ export default function InputMarketingPage() {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       CR
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      ROI
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Aksi
@@ -567,9 +532,6 @@ export default function InputMarketingPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
                           {item.channel}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
-                          {formatRupiah(item.omset)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-600">
                           {formatRupiah(item.biaya_marketing)}
@@ -594,19 +556,6 @@ export default function InputMarketingPage() {
                             }`}
                           >
                             {metrics.crSerius.toFixed(1)}%
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`text-sm font-semibold ${
-                              metrics.roi > 50
-                                ? "text-green-600"
-                                : metrics.roi > 0
-                                  ? "text-yellow-600"
-                                  : "text-red-600"
-                            }`}
-                          >
-                            {metrics.roi.toFixed(1)}%
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -638,7 +587,7 @@ export default function InputMarketingPage() {
                   {marketingInputs.length === 0 && (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={8}
                         className="px-6 py-8 text-center text-gray-500"
                       >
                         Belum ada data input. Klik "Input Data Baru" untuk
@@ -654,7 +603,7 @@ export default function InputMarketingPage() {
           {/* Modal Input Data */}
           <Modal
             isOpen={isModalOpen}
-            onClose={() => !isSaving && setIsModalOpen(false)}
+            onClose={() => { if (!isSaving) { setIsModalOpen(false); setModalError(null); } }}
             title="Input Data Marketing"
             size="lg"
           >
@@ -753,16 +702,6 @@ export default function InputMarketingPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <Input
-                  label="Omzet (Rp)"
-                  type="text"
-                  value={omset ? formatNumber(omset) : ""}
-                  onChange={(e) => handleNumberInput(e.target.value, setOmset)}
-                  placeholder="0"
-                  disabled={isSaving}
-                  helperText="Total pendapatan dari channel"
-                  required
-                />
-                <Input
                   label="Biaya Marketing (Rp)"
                   type="text"
                   value={biayaMarketing ? formatNumber(biayaMarketing) : ""}
@@ -832,6 +771,15 @@ export default function InputMarketingPage() {
                   </div>
                 )}
 
+              {modalError && (
+                <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <svg className="mt-0.5 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>{modalError}</span>
+                </div>
+              )}
+
               <div className="flex justify-end space-x-3 mt-6 pt-4 border-t">
                 <Button
                   variant="secondary"
@@ -846,7 +794,6 @@ export default function InputMarketingPage() {
                   isLoading={isSaving}
                   disabled={
                     !selectedChannel ||
-                    !omset ||
                     !biayaMarketing ||
                     parseInt(closing) > parseInt(leadSerius)
                   }
