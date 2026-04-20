@@ -36,7 +36,6 @@ export async function GET(request: Request) {
         channel,
         user_id,
         input_date,
-        omset,
         biaya_marketing,
         lead_serius,
         lead_all,
@@ -123,7 +122,6 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const channel = body.channel?.trim();
-    const omset = Number(body.omset);
     const biayaMarketing = Number(body.biaya_marketing);
     const leadSerius = Number(body.lead_serius);
     const leadAll = Number(body.lead_all);
@@ -140,13 +138,6 @@ export async function POST(request: Request) {
     if (!channel) {
       return NextResponse.json(
         { error: "Channel marketing harus diisi" },
-        { status: 400 },
-      );
-    }
-
-    if (!Number.isInteger(omset) || omset < 0) {
-      return NextResponse.json(
-        { error: "Omzet harus berupa angka bulat positif" },
         { status: 400 },
       );
     }
@@ -224,7 +215,6 @@ export async function POST(request: Request) {
         channel,
         user_id: profile.id,
         input_date: inputDate,
-        omset,
         biaya_marketing: biayaMarketing,
         lead_serius: leadSerius,
         lead_all: leadAll,
@@ -239,7 +229,6 @@ export async function POST(request: Request) {
         channel,
         user_id,
         input_date,
-        omset,
         biaya_marketing,
         lead_serius,
         lead_all,
@@ -260,6 +249,14 @@ export async function POST(request: Request) {
 
     if (insertError) {
       console.error("[POST /api/marketing/inputs] insert error:", insertError);
+      if (insertError.code === "23505") {
+        return NextResponse.json(
+          {
+            error: `Data channel "${channel}" untuk tanggal ${inputDate} sudah ada.`,
+          },
+          { status: 409 },
+        );
+      }
       return NextResponse.json(
         { error: "Gagal menyimpan data marketing" },
         { status: 500 },
@@ -274,7 +271,6 @@ export async function POST(request: Request) {
       entity_id: inserted.id,
       new_data: {
         channel,
-        omset,
         biayaMarketing,
         cs_input_id: csInputId,
         cs_user_id: csUserId,
@@ -349,7 +345,7 @@ export async function PUT(request: Request) {
     // Cek kepemilikan data
     const { data: existing, error: existingError } = await supabase
       .from("marketing_inputs")
-      .select("id, user_id, channel, omset, biaya_marketing")
+      .select("id, user_id, channel, biaya_marketing")
       .eq("id", id)
       .single();
 
@@ -391,7 +387,6 @@ export async function PUT(request: Request) {
         channel,
         user_id,
         input_date,
-        omset,
         biaya_marketing,
         lead_serius,
         lead_all,
@@ -424,12 +419,10 @@ export async function PUT(request: Request) {
       entity_id: id,
       old_data: {
         channel: existing.channel,
-        omset: existing.omset,
         biaya_marketing: existing.biaya_marketing,
       },
       new_data: {
         channel: updated.channel,
-        omset: updated.omset,
         biaya_marketing: updated.biaya_marketing,
       },
     });
@@ -492,7 +485,7 @@ export async function DELETE(request: Request) {
     // Cek kepemilikan data
     const { data: existing, error: existingError } = await supabase
       .from("marketing_inputs")
-      .select("id, user_id, channel, omset, biaya_marketing")
+      .select("id, user_id, channel, biaya_marketing")
       .eq("id", id)
       .single();
 
@@ -535,7 +528,6 @@ export async function DELETE(request: Request) {
       entity_id: id,
       old_data: {
         channel: existing.channel,
-        omset: existing.omset,
         biaya_marketing: existing.biaya_marketing,
       },
     });

@@ -79,14 +79,14 @@ export async function GET(request: NextRequest) {
       supabase
         .from("marketing_inputs")
         .select(
-          "input_date, omset, biaya_marketing, lead_serius, lead_all, closing, channel",
+          "input_date, biaya_marketing, lead_serius, lead_all, closing, channel",
         )
         .gte("input_date", rangeStart)
         .lte("input_date", rangeEnd),
       supabase
         .from("cs_inputs")
         .select(
-          "input_date, lead_masuk, closing, branches!cs_inputs_branch_id_fkey (id, name, code)",
+          "input_date, omset, lead_masuk, closing, branches!cs_inputs_branch_id_fkey (id, name, code)",
         )
         .gte("input_date", rangeStart)
         .lte("input_date", rangeEnd),
@@ -122,8 +122,8 @@ export async function GET(request: NextRequest) {
     // ── 3. Totals for selected day ────────────────────────────────────────────
     //    Mirrors totals block in /api/stats, scoped to one day
     const dayTotals = {
-      omset: sumField(mktToday, "omset"),
-      gross_profit: Math.round(sumField(mktToday, "omset") * 0.5),
+      omset: sumField(csToday, "omset"),
+      gross_profit: Math.round(sumField(csToday, "omset") * 0.5),
       biaya_marketing: sumField(mktToday, "biaya_marketing"),
       lead_serius: sumField(mktToday, "lead_serius"),
       lead_all: sumField(mktToday, "lead_all"),
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
     // ── 4. Totals for previous day (for delta badges) ─────────────────────────
     const prevLead = sumField(csPrev, "lead_masuk");
     const prevClose = sumField(csPrev, "closing");
-    const prevOmset = sumField(mktPrev, "omset");
+    const prevOmset = sumField(csPrev, "omset");
 
     // ── 5. Staff / branch breakdown ───────────────────────────────────────────
     //    Mirror branch aggregation from /api/stats but keyed per branch per day
@@ -175,11 +175,10 @@ export async function GET(request: NextRequest) {
       acc.closing += row.closing ?? 0;
     }
 
-    // Also pull marketing channel data per-branch (omset) for today
+    // Also pull marketing channel data for today
     const channelMap = new Map<
       string,
       {
-        omset: number;
         biaya_marketing: number;
         lead_serius: number;
         closing: number;
@@ -189,14 +188,12 @@ export async function GET(request: NextRequest) {
       const ch = row.channel ?? "Lainnya";
       if (!channelMap.has(ch)) {
         channelMap.set(ch, {
-          omset: 0,
           biaya_marketing: 0,
           lead_serius: 0,
           closing: 0,
         });
       }
       const acc = channelMap.get(ch)!;
-      acc.omset += row.omset ?? 0;
       acc.biaya_marketing += row.biaya_marketing ?? 0;
       acc.lead_serius += row.lead_serius ?? 0;
       acc.closing += row.closing ?? 0;
@@ -214,7 +211,7 @@ export async function GET(request: NextRequest) {
           lead_masuk: b.lead_masuk,
           lead_serius: 0, // cs_inputs doesn't track lead_serius per branch
           closing: b.closing,
-          omset: 0, // omset is on marketing_inputs, not cs_inputs
+          omset: 0, // omset from cs_inputs is not per-branch in current schema
           follow_up: 0, // not available in current schema
           last_activity: null, // not available in current schema
           cr,
@@ -225,9 +222,8 @@ export async function GET(request: NextRequest) {
     // ── 6. 7-day trend ────────────────────────────────────────────────────────
     //    Aggregate allMkt + allCs per day — same as monthly in /api/stats
     const trend = days7.map((day) => {
-      const mktDay = allMkt.filter((r) => r.input_date === day);
       const csDay = allCs.filter((r) => r.input_date === day);
-      const dayOmset = sumField(mktDay, "omset");
+      const dayOmset = sumField(csDay, "omset");
       return {
         date: day,
         label: makeLabel(day),

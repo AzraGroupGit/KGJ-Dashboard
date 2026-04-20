@@ -11,7 +11,6 @@ import Alert from "@/components/ui/Alert";
 interface MarketingInput {
   id: string;
   channel: string;
-  omset: number;
   biaya_marketing: number;
   lead_serius: number;
   lead_all: number;
@@ -27,26 +26,20 @@ interface MarketingInput {
 
 interface AnalyticsData {
   summary: {
-    totalOmset: number;
     totalBiayaMarketing: number;
     totalLeadSerius: number;
     totalLeadAll: number;
     totalClosing: number;
-    grossProfit: number;
     roi: number;
     crSerius: number;
     crAll: number;
     cpls: number;
     cpla: number;
     cac: number;
-    basketSize: number;
-    bmPerOmset: number;
-    gpPerBm: number;
     totalInputs: number;
   };
   channelMetrics: Array<{
     channel: string;
-    omset: number;
     biayaMarketing: number;
     leadSerius: number;
     leadAll: number;
@@ -54,8 +47,6 @@ interface AnalyticsData {
     roi: number;
     crSerius: number;
     cac: number;
-    gp: number;
-    gpPerBm: number;
   }>;
   recommendations: Array<{
     type: "increase" | "decrease" | "warning" | "improve";
@@ -74,6 +65,43 @@ export default function MarketingDashboard() {
     message: string;
   } | null>(null);
   const [filterDate, setFilterDate] = useState({ from: "", to: "" });
+  const [activePreset, setActivePreset] = useState("bulan-ini");
+  const [showCustomRange, setShowCustomRange] = useState(false);
+
+  const applyPreset = (preset: string) => {
+    const today = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+    setActivePreset(preset);
+    setShowCustomRange(false);
+
+    if (preset === "hari-ini") {
+      const t = fmt(today);
+      setFilterDate({ from: t, to: t });
+    } else if (preset === "minggu-ini") {
+      const day = today.getDay();
+      const mon = new Date(today);
+      mon.setDate(today.getDate() - ((day + 6) % 7));
+      setFilterDate({ from: fmt(mon), to: fmt(today) });
+    } else if (preset === "bulan-ini") {
+      const from = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
+      setFilterDate({ from, to: fmt(today) });
+    } else if (preset === "bulan-lalu") {
+      const y = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
+      const m = today.getMonth() === 0 ? 12 : today.getMonth();
+      const last = new Date(y, m, 0).getDate();
+      setFilterDate({
+        from: `${y}-${pad(m)}-01`,
+        to: `${y}-${pad(m)}-${pad(last)}`,
+      });
+    } else if (preset === "semua") {
+      setFilterDate({ from: "", to: "" });
+    } else if (preset === "custom") {
+      setShowCustomRange(true);
+    }
+  };
 
   // Fetch marketing inputs
   const fetchMarketingInputs = async () => {
@@ -121,19 +149,17 @@ export default function MarketingDashboard() {
   };
 
   useEffect(() => {
+    applyPreset("bulan-ini");
+  }, []);
+
+  useEffect(() => {
     fetchAllData();
   }, [filterDate]);
 
   const calculateMetrics = (input: MarketingInput) => {
     const crSerius =
       input.lead_serius > 0 ? (input.closing / input.lead_serius) * 100 : 0;
-    const roi =
-      input.biaya_marketing > 0
-        ? ((input.omset * 0.5 - input.biaya_marketing) /
-            input.biaya_marketing) *
-          100
-        : 0;
-    return { crSerius, roi };
+    return { crSerius };
   };
 
   if (isLoading) {
@@ -173,187 +199,150 @@ export default function MarketingDashboard() {
             </div>
           )}
 
-          {/* Header with Date Filters */}
-          <div className="flex justify-between items-start mb-8 flex-wrap gap-4">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">
-                Marketing Analytics
-              </h2>
-              <p className="text-gray-600">
-                Analisis performa channel marketing & optimasi budget
-              </p>
+          {/* Header with Filters */}
+          <div className="mb-8">
+            <div className="flex justify-between items-start flex-wrap gap-4 mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">
+                  Marketing Analytics
+                </h2>
+                <p className="text-gray-600">
+                  Analisis performa channel marketing & optimasi budget
+                </p>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <input
-                type="date"
-                value={filterDate.from}
-                onChange={(e) =>
-                  setFilterDate({ ...filterDate, from: e.target.value })
-                }
-                className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Dari tanggal"
-              />
-              <input
-                type="date"
-                value={filterDate.to}
-                onChange={(e) =>
-                  setFilterDate({ ...filterDate, to: e.target.value })
-                }
-                className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Sampai tanggal"
-              />
+
+            {/* Filter Bar */}
+            <div className="flex flex-wrap items-center gap-2">
+              {(
+                [
+                  { key: "hari-ini", label: "Hari Ini" },
+                  { key: "minggu-ini", label: "Minggu Ini" },
+                  { key: "bulan-ini", label: "Bulan Ini" },
+                  { key: "bulan-lalu", label: "Bulan Lalu" },
+                  { key: "semua", label: "Semua" },
+                  { key: "custom", label: "Custom" },
+                ] as const
+              ).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => applyPreset(key)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    activePreset === key
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-gray-600 border-gray-300 hover:border-blue-400 hover:text-blue-600"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+
+              {/* Active range label */}
+              {(filterDate.from || filterDate.to) && activePreset !== "custom" && (
+                <span className="text-xs text-gray-400 ml-1">
+                  {filterDate.from} — {filterDate.to}
+                </span>
+              )}
             </div>
+
+            {/* Custom date range */}
+            {showCustomRange && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <input
+                  type="date"
+                  value={filterDate.from}
+                  onChange={(e) =>
+                    setFilterDate({ ...filterDate, from: e.target.value })
+                  }
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-gray-400 text-sm">—</span>
+                <input
+                  type="date"
+                  value={filterDate.to}
+                  onChange={(e) =>
+                    setFilterDate({ ...filterDate, to: e.target.value })
+                  }
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            )}
           </div>
 
-          {/* Summary Cards - Row 1 */}
+          {/* Summary Cards */}
           {summary && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm opacity-90">Total Omzet</p>
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-2xl font-bold">
-                    Rp {summary.totalOmset.toLocaleString("id-ID")}
-                  </p>
-                  <p className="text-xs opacity-80 mt-2">
-                    Dari {summary.totalInputs} data input
-                  </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm opacity-90">Conversion Rate</p>
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
+                  </svg>
                 </div>
-
-                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm opacity-90">ROI Marketing</p>
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-2xl font-bold">
-                    {summary.roi.toFixed(1)}%
-                  </p>
-                  <p className="text-xs opacity-80 mt-2">
-                    Return on investment
-                  </p>
-                </div>
-
-                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm opacity-90">Conversion Rate</p>
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-2xl font-bold">
-                    {summary.crSerius.toFixed(1)}%
-                  </p>
-                  <p className="text-xs opacity-80 mt-2">
-                    Closing / Lead Serius
-                  </p>
-                </div>
-
-                <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm opacity-90">
-                      Customer Acquisition Cost
-                    </p>
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-2xl font-bold">
-                    Rp {summary.cac.toLocaleString("id-ID")}
-                  </p>
-                  <p className="text-xs opacity-80 mt-2">Biaya per closing</p>
-                </div>
+                <p className="text-2xl font-bold">
+                  {summary.crSerius.toFixed(1)}%
+                </p>
+                <p className="text-xs opacity-80 mt-2">
+                  Closing / Lead Serius
+                </p>
               </div>
 
-              {/* Summary Cards - Row 2 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm text-gray-600">Gross Profit / BM</p>
-                    <span className="text-xl">📈</span>
-                  </div>
-                  <p className="text-2xl font-bold text-gray-800">
-                    {summary.gpPerBm.toFixed(2)}x
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm opacity-90">
+                    Customer Acquisition Cost
                   </p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Return on marketing spend
-                  </p>
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                  </svg>
                 </div>
-
-                <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm text-gray-600">Basket Size</p>
-                    <span className="text-xl">🛒</span>
-                  </div>
-                  <p className="text-2xl font-bold text-gray-800">
-                    Rp {summary.basketSize.toLocaleString("id-ID")}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Rata-rata nilai per closing
-                  </p>
-                </div>
-
-                <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm text-gray-600">
-                      Marketing Cost / Omzet
-                    </p>
-                    <span className="text-xl">📊</span>
-                  </div>
-                  <p className="text-2xl font-bold text-gray-800">
-                    {summary.bmPerOmset.toFixed(1)}%
-                  </p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Target ideal &lt;30%
-                  </p>
-                </div>
+                <p className="text-2xl font-bold">
+                  Rp {summary.cac.toLocaleString("id-ID")}
+                </p>
+                <p className="text-xs opacity-80 mt-2">Biaya per closing</p>
               </div>
-            </>
+
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm opacity-90">Total Data Input</p>
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </div>
+                <p className="text-2xl font-bold">{summary.totalInputs}</p>
+                <p className="text-xs opacity-80 mt-2">Data marketing tercatat</p>
+              </div>
+            </div>
           )}
 
           {/* Optimization Recommendations */}
@@ -398,22 +387,13 @@ export default function MarketingDashboard() {
                         Channel
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Omzet
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Biaya Mkt
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        ROI
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         CR
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         CAC
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        GP/BM
                       </th>
                     </tr>
                   </thead>
@@ -424,32 +404,13 @@ export default function MarketingDashboard() {
                           {channel.channel}
                         </td>
                         <td className="px-6 py-4 text-gray-600">
-                          Rp {channel.omset.toLocaleString("id-ID")}
-                        </td>
-                        <td className="px-6 py-4 text-gray-600">
                           Rp {channel.biayaMarketing.toLocaleString("id-ID")}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              channel.roi > 50
-                                ? "bg-green-100 text-green-800"
-                                : channel.roi > 0
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {channel.roi.toFixed(1)}%
-                          </span>
                         </td>
                         <td className="px-6 py-4 text-gray-600">
                           {channel.crSerius.toFixed(1)}%
                         </td>
                         <td className="px-6 py-4 text-gray-600">
                           Rp {channel.cac.toLocaleString("id-ID")}
-                        </td>
-                        <td className="px-6 py-4 text-gray-600">
-                          {channel.gpPerBm.toFixed(2)}x
                         </td>
                       </tr>
                     ))}
@@ -480,9 +441,6 @@ export default function MarketingDashboard() {
                       Channel
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Omzet
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Biaya Mkt
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -492,13 +450,13 @@ export default function MarketingDashboard() {
                       Closing
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      ROI
+                      CR
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {marketingInputs.map((input) => {
-                    const { roi } = calculateMetrics(input);
+                    const { crSerius } = calculateMetrics(input);
                     return (
                       <tr key={input.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 text-gray-600">
@@ -508,9 +466,6 @@ export default function MarketingDashboard() {
                         </td>
                         <td className="px-6 py-4 font-medium text-gray-900">
                           {input.channel}
-                        </td>
-                        <td className="px-6 py-4 text-gray-600">
-                          Rp {input.omset.toLocaleString("id-ID")}
                         </td>
                         <td className="px-6 py-4 text-gray-600">
                           Rp {input.biaya_marketing.toLocaleString("id-ID")}
@@ -524,14 +479,14 @@ export default function MarketingDashboard() {
                         <td className="px-6 py-4">
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              roi > 50
+                              crSerius > 30
                                 ? "bg-green-100 text-green-800"
-                                : roi > 0
+                                : crSerius > 15
                                   ? "bg-yellow-100 text-yellow-800"
                                   : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {roi.toFixed(1)}%
+                            {crSerius.toFixed(1)}%
                           </span>
                         </td>
                       </tr>
@@ -540,7 +495,7 @@ export default function MarketingDashboard() {
                   {marketingInputs.length === 0 && (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={6}
                         className="px-6 py-8 text-center text-gray-500"
                       >
                         Belum ada data. Silakan input data melalui halaman{" "}
@@ -579,11 +534,9 @@ export default function MarketingDashboard() {
                   Informasi Metrik
                 </p>
                 <p className="text-sm text-blue-600 mt-1">
-                  <strong>ROI</strong> = (Gross Profit - Biaya Marketing) /
-                  Biaya Marketing × 100% | <strong>CR Serius</strong> = Closing
-                  / Lead Serius × 100% | <strong>CAC</strong> = Biaya Marketing
-                  / Closing | <strong>GP/BM</strong> = Gross Profit (50% dari
-                  Omzet) / Biaya Marketing
+                  <strong>CR Serius</strong> = Closing / Lead Serius × 100% |{" "}
+                  <strong>CAC</strong> = Biaya Marketing / Closing |{" "}
+                  <strong>CPLS</strong> = Biaya Marketing / Lead Serius
                 </p>
               </div>
             </div>
