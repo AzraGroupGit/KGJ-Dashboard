@@ -109,8 +109,8 @@ export default function CSDashboard() {
               Belum input data hari ini
             </p>
             <p className="text-sm text-gray-600 mt-0.5">
-              Silakan input data leads & closing cabang {stats.branch?.name}{" "}
-              untuk hari ini.
+              Silakan input data leads & closing {stats.branch?.name} untuk hari
+              ini.
             </p>
           </div>
           <Button
