@@ -365,7 +365,7 @@ export default function AnalisisChannelPage() {
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[180px]"
                     disabled={isLoadingChannels}
                   >
-                    <option value="all">📊 Semua Channel</option>
+                    <option value="all">Semua Channel</option>
                     {allChannels.map((channelName) => {
                       const channelFromDb = channels.find(
                         (c) => c.name === channelName,

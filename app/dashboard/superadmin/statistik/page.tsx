@@ -113,12 +113,32 @@ const pctDelta = (current: number, previous: number): number | undefined => {
 
 const YEAR_OPTIONS = [2024, 2025, 2026, 2027];
 const MONTH_NAMES = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
 ];
 const MONTH_ABBR = [
-  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-  "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "Mei",
+  "Jun",
+  "Jul",
+  "Agu",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Des",
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -129,10 +149,24 @@ export default function StatistikPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("none");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
-  const [dailyStats, setDailyStats] = useState<DailyStats | null>(null);
+
+  // DUA TANGGAL untuk perbandingan hari vs hari
+  const [dateA, setDateA] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  });
+  const [dateB, setDateB] = useState(() => {
+    const d = new Date();
+    return d.toISOString().slice(0, 10);
+  });
+
+  const [dailyStatsA, setDailyStatsA] = useState<DailyStats | null>(null);
+  const [dailyStatsB, setDailyStatsB] = useState<DailyStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [alert, setAlert] = useState<{ type: "error"; message: string } | null>(null);
+  const [alert, setAlert] = useState<{ type: "error"; message: string } | null>(
+    null,
+  );
   const [clientUser, setClientUser] = useState<ClientUser | null>(null);
 
   useEffect(() => {
@@ -143,13 +177,22 @@ export default function StatistikPage() {
     setIsLoading(true);
     try {
       if (comparisonMode === "dod") {
-        const res = await fetch(`/api/daily-stats?date=${selectedDate}`);
-        const json = await res.json();
-        if (!res.ok) {
-          setAlert({ type: "error", message: json.error || "Gagal memuat data harian" });
+        // Fetch data untuk kedua tanggal
+        const [resA, resB] = await Promise.all([
+          fetch(`/api/daily-stats?date=${dateA}`),
+          fetch(`/api/daily-stats?date=${dateB}`),
+        ]);
+
+        const jsonA = await resA.json();
+        const jsonB = await resB.json();
+
+        if (!resA.ok || !resB.ok) {
+          setAlert({ type: "error", message: "Gagal memuat data harian" });
           return;
         }
-        setDailyStats(json);
+
+        setDailyStatsA(jsonA);
+        setDailyStatsB(jsonB);
         setIsLoading(false);
         return;
       }
@@ -163,7 +206,10 @@ export default function StatistikPage() {
 
       const jsonA = await resA.json();
       if (!resA.ok) {
-        setAlert({ type: "error", message: jsonA.error || "Gagal memuat data statistik" });
+        setAlert({
+          type: "error",
+          message: jsonA.error || "Gagal memuat data statistik",
+        });
         return;
       }
       setStats(jsonA);
@@ -177,7 +223,7 @@ export default function StatistikPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedYear, comparisonMode, selectedDate]);
+  }, [selectedYear, comparisonMode, dateA, dateB]);
 
   useEffect(() => {
     fetchStats();
@@ -187,23 +233,34 @@ export default function StatistikPage() {
 
   const t = stats?.totals;
   const grossProfit = t ? Math.round(t.omset * 0.5) : 0;
-  const avgCrSerius = t && t.lead_serius > 0 ? (t.closing_mkt / t.lead_serius) * 100 : 0;
+  const avgCrSerius =
+    t && t.lead_serius > 0 ? (t.closing_mkt / t.lead_serius) * 100 : 0;
   const avgBasketSize = t && t.closing_mkt > 0 ? t.omset / t.closing_mkt : 0;
-  const avgAcquisitionCost = t && t.closing_mkt > 0 ? t.biaya_marketing / t.closing_mkt : 0;
-  const avgGpPerBm = t && t.biaya_marketing > 0 ? grossProfit / t.biaya_marketing : 0;
-  const avgBmPerOmset = t && t.omset > 0 ? (t.biaya_marketing / t.omset) * 100 : 0;
-  const avgCpls = t && t.lead_serius > 0 ? t.biaya_marketing / t.lead_serius : 0;
+  const avgAcquisitionCost =
+    t && t.closing_mkt > 0 ? t.biaya_marketing / t.closing_mkt : 0;
+  const avgGpPerBm =
+    t && t.biaya_marketing > 0 ? grossProfit / t.biaya_marketing : 0;
+  const avgBmPerOmset =
+    t && t.omset > 0 ? (t.biaya_marketing / t.omset) * 100 : 0;
+  const avgCpls =
+    t && t.lead_serius > 0 ? t.biaya_marketing / t.lead_serius : 0;
 
   // ─── Comparison metrics (YoY) ───────────────────────────────────────────────
 
   const pt = prevStats?.totals;
   const prevGrossProfit = pt ? Math.round(pt.omset * 0.5) : 0;
-  const prevCrSerius = pt && pt.lead_serius > 0 ? (pt.closing_mkt / pt.lead_serius) * 100 : 0;
-  const prevBasketSize = pt && pt.closing_mkt > 0 ? pt.omset / pt.closing_mkt : 0;
-  const prevAcquisitionCost = pt && pt.closing_mkt > 0 ? pt.biaya_marketing / pt.closing_mkt : 0;
-  const prevGpPerBm = pt && pt.biaya_marketing > 0 ? prevGrossProfit / pt.biaya_marketing : 0;
-  const prevBmPerOmset = pt && pt.omset > 0 ? (pt.biaya_marketing / pt.omset) * 100 : 0;
-  const prevCpls = pt && pt.lead_serius > 0 ? pt.biaya_marketing / pt.lead_serius : 0;
+  const prevCrSerius =
+    pt && pt.lead_serius > 0 ? (pt.closing_mkt / pt.lead_serius) * 100 : 0;
+  const prevBasketSize =
+    pt && pt.closing_mkt > 0 ? pt.omset / pt.closing_mkt : 0;
+  const prevAcquisitionCost =
+    pt && pt.closing_mkt > 0 ? pt.biaya_marketing / pt.closing_mkt : 0;
+  const prevGpPerBm =
+    pt && pt.biaya_marketing > 0 ? prevGrossProfit / pt.biaya_marketing : 0;
+  const prevBmPerOmset =
+    pt && pt.omset > 0 ? (pt.biaya_marketing / pt.omset) * 100 : 0;
+  const prevCpls =
+    pt && pt.lead_serius > 0 ? pt.biaya_marketing / pt.lead_serius : 0;
 
   // ─── Comparison metrics (MoM) ───────────────────────────────────────────────
 
@@ -258,7 +315,10 @@ export default function StatistikPage() {
       : comparisonMode === "mom" && momMetrics && momPrevMetrics
         ? {
             omset: pctDelta(momMetrics.omset, momPrevMetrics.omset),
-            grossProfit: pctDelta(momMetrics.grossProfit, momPrevMetrics.grossProfit),
+            grossProfit: pctDelta(
+              momMetrics.grossProfit,
+              momPrevMetrics.grossProfit,
+            ),
             crSerius: pctDelta(momMetrics.crSerius, momPrevMetrics.crSerius),
             basketSize: undefined,
             acquisitionCost: undefined,
@@ -268,43 +328,62 @@ export default function StatistikPage() {
           }
         : null;
 
-  // ─── DoD metrics ────────────────────────────────────────────────────────────
+  // ─── DoD metrics (perbandingan DUA HARI yang dipilih) ──────────────────────
 
-  const trend = dailyStats?.trend ?? [];
-  const todayPoint = trend[trend.length - 1] ?? null;
-  const yesterdayPoint = trend[trend.length - 2] ?? null;
+  const pointA = dailyStatsA?.totals ?? null;
+  const pointB = dailyStatsB?.totals ?? null;
 
   const dodDeltas =
-    comparisonMode === "dod" && todayPoint && yesterdayPoint
+    comparisonMode === "dod" && pointA && pointB
       ? {
-          omset: pctDelta(todayPoint.omset, yesterdayPoint.omset),
-          grossProfit: pctDelta(todayPoint.gross_profit, yesterdayPoint.gross_profit),
-          leadMasuk: pctDelta(todayPoint.lead_masuk, yesterdayPoint.lead_masuk),
-          closing: pctDelta(todayPoint.closing, yesterdayPoint.closing),
+          omset: pctDelta(pointB.omset, pointA.omset),
+          grossProfit: pctDelta(pointB.gross_profit, pointA.gross_profit),
+          leadMasuk: pctDelta(pointB.lead_masuk, pointA.lead_masuk),
+          closing: pctDelta(pointB.closing, pointA.closing),
           cr: pctDelta(
-            yesterdayPoint.lead_masuk > 0 ? (todayPoint.closing / todayPoint.lead_masuk) * 100 : 0,
-            yesterdayPoint.lead_masuk > 0 ? (yesterdayPoint.closing / yesterdayPoint.lead_masuk) * 100 : 0,
+            pointB.lead_masuk > 0
+              ? (pointB.closing / pointB.lead_masuk) * 100
+              : 0,
+            pointA.lead_masuk > 0
+              ? (pointA.closing / pointA.lead_masuk) * 100
+              : 0,
           ),
         }
       : null;
 
-  const prevDateLabel = yesterdayPoint
-    ? new Date(yesterdayPoint.date + "T00:00:00").toLocaleDateString("id-ID", {
-        weekday: "long", day: "numeric", month: "long",
+  const dateALabel = dateA
+    ? new Date(dateA + "T00:00:00").toLocaleDateString("id-ID", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      })
+    : "";
+
+  const dateBLabel = dateB
+    ? new Date(dateB + "T00:00:00").toLocaleDateString("id-ID", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
       })
     : "";
 
   // ─── Chart data ─────────────────────────────────────────────────────────────
 
-  const chartLabels = (stats?.monthly ?? []).map((m) => MONTH_ABBR[m.month - 1]);
+  const chartLabels = (stats?.monthly ?? []).map(
+    (m) => MONTH_ABBR[m.month - 1],
+  );
   const omsetData = stats?.monthly.map((m) => m.omset) ?? [];
   const gpData = stats?.monthly.map((m) => m.gross_profit) ?? [];
   const bmData = stats?.monthly.map((m) => m.biaya_marketing) ?? [];
   const prevOmsetData = prevStats?.monthly.map((m) => m.omset) ?? [];
   const prevGpData = prevStats?.monthly.map((m) => m.gross_profit) ?? [];
   const prevBmData = prevStats?.monthly.map((m) => m.biaya_marketing) ?? [];
-  const channelLabels = (stats?.channels ?? []).slice(0, 8).map((c) => c.channel);
-  const channelClosing = (stats?.channels ?? []).slice(0, 8).map((c) => c.closing);
+  const channelLabels = (stats?.channels ?? [])
+    .slice(0, 8)
+    .map((c) => c.channel);
+  const channelClosing = (stats?.channels ?? [])
+    .slice(0, 8)
+    .map((c) => c.closing);
   const channelCpls = (stats?.channels ?? []).slice(0, 8).map((c) => c.cpls);
 
   // ─── Table columns ──────────────────────────────────────────────────────────
@@ -324,7 +403,11 @@ export default function StatistikPage() {
     { key: "biaya_marketing", label: "Biaya Marketing", format: fmtRp },
     { key: "lead_serius", label: "Lead Serius" },
     { key: "closing", label: "Closing" },
-    { key: "cr_serius", label: "CR Serius", format: (v: number) => `${v.toFixed(1)}%` },
+    {
+      key: "cr_serius",
+      label: "CR Serius",
+      format: (v: number) => `${v.toFixed(1)}%`,
+    },
     { key: "cpls", label: "CPLS", format: fmtRp },
   ];
 
@@ -333,26 +416,40 @@ export default function StatistikPage() {
     { key: "code", label: "Kode" },
     { key: "lead_masuk", label: "Lead Masuk" },
     { key: "closing", label: "Closing" },
-    { key: "conversion_rate", label: "Conversion Rate", format: (v: number) => `${v.toFixed(1)}%` },
+    {
+      key: "conversion_rate",
+      label: "Conversion Rate",
+      format: (v: number) => `${v.toFixed(1)}%`,
+    },
   ];
 
   // ─── Comparison label helpers ────────────────────────────────────────────────
 
   const compLabel =
     comparisonMode === "dod"
-      ? prevDateLabel ? `vs ${prevDateLabel}` : ""
+      ? `${dateALabel} vs ${dateBLabel}`
       : comparisonMode === "yoy"
         ? `vs ${selectedYear - 1}`
         : comparisonMode === "mom" && prevMonthRow
           ? `vs ${MONTH_NAMES[(selectedMonth === 1 ? 12 : selectedMonth - 1) - 1]}${selectedMonth === 1 ? ` ${selectedYear - 1}` : ""}`
           : "";
 
-  const activeOmset = comparisonMode === "mom" && momMetrics ? momMetrics.omset : t?.omset ?? 0;
-  const activeGrossProfit = comparisonMode === "mom" && momMetrics ? momMetrics.grossProfit : grossProfit;
-  const activeCrSerius = comparisonMode === "mom" && momMetrics ? momMetrics.crSerius : avgCrSerius;
+  const activeOmset =
+    comparisonMode === "mom" && momMetrics ? momMetrics.omset : (t?.omset ?? 0);
+  const activeGrossProfit =
+    comparisonMode === "mom" && momMetrics
+      ? momMetrics.grossProfit
+      : grossProfit;
+  const activeCrSerius =
+    comparisonMode === "mom" && momMetrics ? momMetrics.crSerius : avgCrSerius;
   const activeLeadSerius =
-    comparisonMode === "mom" && curMonthRow ? curMonthRow.lead_serius : t?.lead_serius ?? 0;
-  const activeClosing = comparisonMode === "mom" && curMonthRow ? curMonthRow.closing : t?.closing_mkt ?? 0;
+    comparisonMode === "mom" && curMonthRow
+      ? curMonthRow.lead_serius
+      : (t?.lead_serius ?? 0);
+  const activeClosing =
+    comparisonMode === "mom" && curMonthRow
+      ? curMonthRow.closing
+      : (t?.closing_mkt ?? 0);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -362,7 +459,6 @@ export default function StatistikPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
         <main className="flex-1 overflow-y-auto p-6">
-
           {/* ── Page header ── */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
             <div>
@@ -375,28 +471,47 @@ export default function StatistikPage() {
             </div>
 
             {/* Year filter */}
-            <div className="flex items-center gap-3 bg-white rounded-xl shadow-sm px-4 py-3">
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <label className="text-sm text-gray-600 font-medium">Tahun</label>
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
-                className="text-sm border-none outline-none bg-transparent font-semibold text-gray-800 cursor-pointer"
-              >
-                {YEAR_OPTIONS.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
+            {comparisonMode !== "dod" && (
+              <div className="flex items-center gap-3 bg-white rounded-xl shadow-sm px-4 py-3">
+                <svg
+                  className="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <label className="text-sm text-gray-600 font-medium">
+                  Tahun
+                </label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) =>
+                    setSelectedYear(parseInt(e.target.value, 10))
+                  }
+                  className="text-sm border-none outline-none bg-transparent font-semibold text-gray-800 cursor-pointer"
+                >
+                  {YEAR_OPTIONS.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* ── Comparison mode bar ── */}
           <div className="bg-white rounded-xl shadow-sm px-5 py-4 mb-6">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm font-medium text-gray-600">Perbandingan:</span>
+              <span className="text-sm font-medium text-gray-600">
+                Perbandingan:
+              </span>
               {(
                 [
                   { key: "none", label: "Tidak Ada" },
@@ -419,32 +534,58 @@ export default function StatistikPage() {
               ))}
 
               {comparisonMode !== "none" && compLabel && (
-                <span className="text-xs text-gray-400 ml-auto">{compLabel}</span>
+                <span className="text-xs text-gray-400 ml-auto">
+                  {compLabel}
+                </span>
               )}
             </div>
 
-            {/* Date picker for DoD */}
+            {/* DUA DATE PICKER untuk Hari vs Hari */}
             {comparisonMode === "dod" && (
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <label className="text-sm text-gray-600">Pilih tanggal:</label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  max={new Date().toISOString().slice(0, 10)}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
+              <div className="mt-4 flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500 w-16">Tanggal A:</span>
+                  <input
+                    type="date"
+                    value={dateA}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setDateA(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <span className="text-xs text-gray-400">
+                    {dateA &&
+                      new Date(dateA + "T00:00:00").toLocaleDateString(
+                        "id-ID",
+                        { weekday: "short", day: "numeric", month: "short" },
+                      )}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500 w-16">Tanggal B:</span>
+                  <input
+                    type="date"
+                    value={dateB}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setDateB(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <span className="text-xs text-gray-400">
+                    {dateB &&
+                      new Date(dateB + "T00:00:00").toLocaleDateString(
+                        "id-ID",
+                        { weekday: "short", day: "numeric", month: "short" },
+                      )}
+                  </span>
+                </div>
                 <div className="flex items-center gap-4 text-xs text-gray-500 ml-2">
                   <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-3 h-0.5 rounded bg-indigo-500" />
-                    {new Date(selectedDate + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short" })} (dipilih)
+                    <span className="inline-block w-3 h-0.5 rounded bg-gray-400" />
+                    A (pembanding)
                   </span>
-                  {prevDateLabel && (
-                    <span className="flex items-center gap-1.5">
-                      <span className="inline-block w-3 h-0.5 rounded bg-gray-400" />
-                      {yesterdayPoint && new Date(yesterdayPoint.date + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short" })} (sebelumnya)
-                    </span>
-                  )}
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block w-3 h-0.5 rounded bg-indigo-500" />
+                    B (utama)
+                  </span>
                 </div>
               </div>
             )}
@@ -489,126 +630,144 @@ export default function StatistikPage() {
           {/* Alert */}
           {alert && (
             <div className="mb-6">
-              <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />
+              <Alert
+                type={alert.type}
+                message={alert.message}
+                onClose={() => setAlert(null)}
+              />
             </div>
           )}
 
           {isLoading ? (
             <Loading variant="skeleton" text="Memuat data statistik..." />
           ) : comparisonMode === "dod" ? (
-            /* ── DoD view ── */
+            /* ── DoD view dengan DUA HARI ── */
             <>
-              {!dailyStats ? (
-                <p className="text-gray-500 text-sm">Tidak ada data untuk tanggal ini.</p>
+              {!dailyStatsA || !dailyStatsB ? (
+                <p className="text-gray-500 text-sm">
+                  Tidak ada data untuk salah satu tanggal.
+                </p>
               ) : (
                 <>
-                  {/* DoD stat cards */}
+                  {/* DoD stat cards - Menampilkan data Tanggal B sebagai utama */}
                   <div className="grid grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
                     <StatCard
                       title="Omzet"
-                      value={fmtRpShort(todayPoint?.omset ?? 0)}
-                      subtitle={`Rp ${(yesterdayPoint?.omset ?? 0).toLocaleString("id-ID")}`}
+                      value={fmtRpShort(pointB?.omset ?? 0)}
+                      subtitle={`A: ${fmtRpShort(pointA?.omset ?? 0)}`}
                       color="blue"
                       delta={dodDeltas?.omset}
                     />
                     <StatCard
                       title="Gross Profit"
-                      value={fmtRpShort(todayPoint?.gross_profit ?? 0)}
-                      subtitle="Est. 50% margin"
+                      value={fmtRpShort(pointB?.gross_profit ?? 0)}
+                      subtitle={`A: ${fmtRpShort(pointA?.gross_profit ?? 0)}`}
                       color="green"
                       delta={dodDeltas?.grossProfit}
                     />
                     <StatCard
                       title="Lead Masuk"
-                      value={todayPoint?.lead_masuk ?? 0}
-                      subtitle={`kemarin: ${yesterdayPoint?.lead_masuk ?? 0}`}
+                      value={pointB?.lead_masuk ?? 0}
+                      subtitle={`A: ${pointA?.lead_masuk ?? 0}`}
                       color="purple"
                       delta={dodDeltas?.leadMasuk}
                     />
                     <StatCard
                       title="Closing"
-                      value={todayPoint?.closing ?? 0}
-                      subtitle={`kemarin: ${yesterdayPoint?.closing ?? 0}`}
+                      value={pointB?.closing ?? 0}
+                      subtitle={`A: ${pointA?.closing ?? 0}`}
                       color="orange"
                       delta={dodDeltas?.closing}
                     />
                     <StatCard
-                      title="CR Hari Ini"
-                      value={`${todayPoint && todayPoint.lead_masuk > 0 ? ((todayPoint.closing / todayPoint.lead_masuk) * 100).toFixed(1) : "0.0"}%`}
-                      subtitle={`kemarin: ${yesterdayPoint && yesterdayPoint.lead_masuk > 0 ? ((yesterdayPoint.closing / yesterdayPoint.lead_masuk) * 100).toFixed(1) : "0.0"}%`}
+                      title="CR"
+                      value={`${pointB && pointB.lead_masuk > 0 ? ((pointB.closing / pointB.lead_masuk) * 100).toFixed(1) : "0.0"}%`}
+                      subtitle={`A: ${pointA && pointA.lead_masuk > 0 ? ((pointA.closing / pointA.lead_masuk) * 100).toFixed(1) : "0.0"}%`}
                       color="indigo"
                       delta={dodDeltas?.cr}
                     />
                   </div>
 
-                  {/* 7-day trend chart */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <ChartCard
-                      title="Trend Omzet 7 Hari"
-                      type="line"
-                      labels={trend.map((d) => d.label)}
-                      datasets={[
-                        { label: "Omzet", data: trend.map((d) => d.omset), color: "#6366f1" },
-                        { label: "Gross Profit", data: trend.map((d) => d.gross_profit), color: "#10b981" },
-                      ]}
-                      period="7 hari terakhir"
-                      formatValue={(v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)}Jt` : String(Math.round(v))}
-                    />
-                    <ChartCard
-                      title="Trend Lead & Closing 7 Hari"
-                      type="bar"
-                      labels={trend.map((d) => d.label)}
-                      datasets={[
-                        { label: "Lead Masuk", data: trend.map((d) => d.lead_masuk), color: "#8b5cf6" },
-                        { label: "Closing", data: trend.map((d) => d.closing), color: "#f59e0b" },
-                      ]}
-                      period="7 hari terakhir"
-                    />
-                  </div>
-
-                  {/* DoD comparison table */}
+                  {/* Perbandingan detail table */}
                   <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
                     <h3 className="text-base font-semibold text-gray-800 mb-4">
                       Perbandingan Hari:{" "}
-                      <span className="text-indigo-600">
-                        {new Date(selectedDate + "T00:00:00").toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" })}
-                      </span>
-                      {prevDateLabel && <> vs <span className="text-gray-500">{prevDateLabel}</span></>}
+                      <span className="text-gray-500">{dateALabel}</span> vs{" "}
+                      <span className="text-indigo-600">{dateBLabel}</span>
                     </h3>
-                    {todayPoint && yesterdayPoint ? (
+                    {pointA && pointB ? (
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b border-gray-100">
-                              <th className="text-left py-2 pr-6 text-gray-500 font-medium">Metrik</th>
-                              <th className="text-right py-2 px-4 text-indigo-600 font-semibold">Hari Ini</th>
-                              <th className="text-right py-2 px-4 text-gray-500 font-medium">Kemarin</th>
-                              <th className="text-right py-2 pl-4 font-medium text-gray-500">Δ</th>
+                              <th className="text-left py-2 pr-6 text-gray-500 font-medium">
+                                Metrik
+                              </th>
+                              <th className="text-right py-2 px-4 text-gray-500 font-medium">
+                                Tanggal A
+                              </th>
+                              <th className="text-right py-2 px-4 text-indigo-600 font-semibold">
+                                Tanggal B
+                              </th>
+                              <th className="text-right py-2 pl-4 font-medium text-gray-500">
+                                Δ (B vs A)
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-50">
                             {[
-                              { label: "Omzet", cur: fmtRpShort(todayPoint.omset), prev: fmtRpShort(yesterdayPoint.omset), delta: dodDeltas?.omset },
-                              { label: "Gross Profit", cur: fmtRpShort(todayPoint.gross_profit), prev: fmtRpShort(yesterdayPoint.gross_profit), delta: dodDeltas?.grossProfit },
-                              { label: "Lead Masuk", cur: todayPoint.lead_masuk, prev: yesterdayPoint.lead_masuk, delta: dodDeltas?.leadMasuk },
-                              { label: "Closing", cur: todayPoint.closing, prev: yesterdayPoint.closing, delta: dodDeltas?.closing },
+                              {
+                                label: "Omzet",
+                                a: fmtRpShort(pointA.omset),
+                                b: fmtRpShort(pointB.omset),
+                                delta: dodDeltas?.omset,
+                              },
+                              {
+                                label: "Gross Profit",
+                                a: fmtRpShort(pointA.gross_profit),
+                                b: fmtRpShort(pointB.gross_profit),
+                                delta: dodDeltas?.grossProfit,
+                              },
+                              {
+                                label: "Lead Masuk",
+                                a: pointA.lead_masuk,
+                                b: pointB.lead_masuk,
+                                delta: dodDeltas?.leadMasuk,
+                              },
+                              {
+                                label: "Closing",
+                                a: pointA.closing,
+                                b: pointB.closing,
+                                delta: dodDeltas?.closing,
+                              },
                               {
                                 label: "CR",
-                                cur: `${todayPoint.lead_masuk > 0 ? ((todayPoint.closing / todayPoint.lead_masuk) * 100).toFixed(1) : "0.0"}%`,
-                                prev: `${yesterdayPoint.lead_masuk > 0 ? ((yesterdayPoint.closing / yesterdayPoint.lead_masuk) * 100).toFixed(1) : "0.0"}%`,
+                                a: `${pointA.lead_masuk > 0 ? ((pointA.closing / pointA.lead_masuk) * 100).toFixed(1) : "0.0"}%`,
+                                b: `${pointB.lead_masuk > 0 ? ((pointB.closing / pointB.lead_masuk) * 100).toFixed(1) : "0.0"}%`,
                                 delta: dodDeltas?.cr,
                               },
                             ].map((row) => (
                               <tr key={row.label}>
-                                <td className="py-2.5 pr-6 text-gray-700">{row.label}</td>
-                                <td className="py-2.5 px-4 text-right font-semibold text-gray-800">{row.cur}</td>
-                                <td className="py-2.5 px-4 text-right text-gray-500">{row.prev}</td>
+                                <td className="py-2.5 pr-6 text-gray-700">
+                                  {row.label}
+                                </td>
+                                <td className="py-2.5 px-4 text-right text-gray-500">
+                                  {row.a}
+                                </td>
+                                <td className="py-2.5 px-4 text-right font-semibold text-gray-800">
+                                  {row.b}
+                                </td>
                                 <td className="py-2.5 pl-4 text-right">
                                   {row.delta !== undefined ? (
-                                    <span className={`text-xs font-semibold ${row.delta >= 0 ? "text-green-600" : "text-red-500"}`}>
-                                      {row.delta >= 0 ? "+" : ""}{row.delta.toFixed(1)}%
+                                    <span
+                                      className={`text-xs font-semibold ${row.delta >= 0 ? "text-green-600" : "text-red-500"}`}
+                                    >
+                                      {row.delta >= 0 ? "+" : ""}
+                                      {row.delta.toFixed(1)}%
                                     </span>
-                                  ) : "—"}
+                                  ) : (
+                                    "—"
+                                  )}
                                 </td>
                               </tr>
                             ))}
@@ -616,34 +775,59 @@ export default function StatistikPage() {
                         </table>
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-400">Data kemarin tidak tersedia.</p>
+                      <p className="text-sm text-gray-400">
+                        Data tidak tersedia.
+                      </p>
                     )}
                   </div>
 
-                  {/* Branch breakdown */}
-                  {dailyStats.staff.length > 0 && (
+                  {/* Branch breakdown untuk Tanggal B */}
+                  {dailyStatsB.staff.length > 0 && (
                     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                       <div className="px-6 py-4 border-b border-gray-100">
-                        <h3 className="text-base font-semibold text-gray-800">Performa Cabang Hari Ini</h3>
+                        <h3 className="text-base font-semibold text-gray-800">
+                          Performa Cabang - {dateBLabel}
+                        </h3>
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead className="bg-gray-50">
                             <tr>
-                              {["Cabang", "Kode", "Lead Masuk", "Closing", "CR"].map((h) => (
-                                <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                              {[
+                                "Cabang",
+                                "Kode",
+                                "Lead Masuk",
+                                "Closing",
+                                "CR",
+                              ].map((h) => (
+                                <th
+                                  key={h}
+                                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                >
+                                  {h}
+                                </th>
                               ))}
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
-                            {dailyStats.staff.map((s) => (
+                            {dailyStatsB.staff.map((s) => (
                               <tr key={s.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-3 font-medium text-gray-800">{s.name}</td>
-                                <td className="px-6 py-3 text-gray-500">{s.branch}</td>
-                                <td className="px-6 py-3 text-gray-700">{s.lead_masuk}</td>
-                                <td className="px-6 py-3 text-gray-700">{s.closing}</td>
+                                <td className="px-6 py-3 font-medium text-gray-800">
+                                  {s.name}
+                                </td>
+                                <td className="px-6 py-3 text-gray-500">
+                                  {s.branch}
+                                </td>
+                                <td className="px-6 py-3 text-gray-700">
+                                  {s.lead_masuk}
+                                </td>
+                                <td className="px-6 py-3 text-gray-700">
+                                  {s.closing}
+                                </td>
                                 <td className="px-6 py-3">
-                                  <span className={`text-xs font-semibold ${s.cr > 30 ? "text-green-600" : s.cr > 15 ? "text-yellow-600" : "text-red-500"}`}>
+                                  <span
+                                    className={`text-xs font-semibold ${s.cr > 30 ? "text-green-600" : s.cr > 15 ? "text-yellow-600" : "text-red-500"}`}
+                                  >
                                     {s.cr.toFixed(1)}%
                                   </span>
                                 </td>
@@ -658,13 +842,18 @@ export default function StatistikPage() {
               )}
             </>
           ) : (
+            // ... (kode untuk none, mom, yoy tetap sama seperti sebelumnya)
             <>
               {/* ── Key Metrics Row 1 ── */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-2">
                 <StatCard
                   title="Total Omzet"
                   value={fmtRpShort(activeOmset)}
-                  subtitle={comparisonMode === "mom" ? MONTH_NAMES[selectedMonth - 1] : `${activeClosing} closing`}
+                  subtitle={
+                    comparisonMode === "mom"
+                      ? MONTH_NAMES[selectedMonth - 1]
+                      : `${activeClosing} closing`
+                  }
                   color="blue"
                   delta={deltas?.omset}
                 />
@@ -731,10 +920,16 @@ export default function StatistikPage() {
                 <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
                   <h3 className="text-base font-semibold text-gray-800 mb-4">
                     Perbandingan Bulan:{" "}
-                    <span className="text-indigo-600">{MONTH_NAMES[selectedMonth - 1]}</span>
-                    {" "}vs{" "}
+                    <span className="text-indigo-600">
+                      {MONTH_NAMES[selectedMonth - 1]}
+                    </span>{" "}
+                    vs{" "}
                     <span className="text-gray-500">
-                      {MONTH_NAMES[(selectedMonth === 1 ? 12 : selectedMonth - 1) - 1]}
+                      {
+                        MONTH_NAMES[
+                          (selectedMonth === 1 ? 12 : selectedMonth - 1) - 1
+                        ]
+                      }
                       {selectedMonth === 1 ? ` ${selectedYear - 1}` : ""}
                     </span>
                   </h3>
@@ -742,38 +937,112 @@ export default function StatistikPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-100">
-                          <th className="text-left py-2 pr-6 text-gray-500 font-medium">Metrik</th>
+                          <th className="text-left py-2 pr-6 text-gray-500 font-medium">
+                            Metrik
+                          </th>
                           <th className="text-right py-2 px-4 text-indigo-600 font-semibold">
                             {MONTH_NAMES[selectedMonth - 1]}
                           </th>
                           <th className="text-right py-2 px-4 text-gray-500 font-medium">
-                            {MONTH_NAMES[(selectedMonth === 1 ? 12 : selectedMonth - 1) - 1]}
+                            {
+                              MONTH_NAMES[
+                                (selectedMonth === 1 ? 12 : selectedMonth - 1) -
+                                  1
+                              ]
+                            }
                           </th>
-                          <th className="text-right py-2 pl-4 font-medium text-gray-500">Δ</th>
+                          <th className="text-right py-2 pl-4 font-medium text-gray-500">
+                            Δ
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
                         {[
-                          { label: "Omzet", cur: fmtRpShort(momMetrics.omset), prev: fmtRpShort(momPrevMetrics.omset), delta: pctDelta(momMetrics.omset, momPrevMetrics.omset) },
-                          { label: "Gross Profit", cur: fmtRpShort(momMetrics.grossProfit), prev: fmtRpShort(momPrevMetrics.grossProfit), delta: pctDelta(momMetrics.grossProfit, momPrevMetrics.grossProfit) },
-                          { label: "Biaya Marketing", cur: fmtRpShort(momMetrics.biayaMarketing), prev: fmtRpShort(momPrevMetrics.biayaMarketing), delta: pctDelta(momMetrics.biayaMarketing, momPrevMetrics.biayaMarketing), lowerIsBetter: true },
-                          { label: "Lead Serius", cur: momMetrics.leadSerius, prev: momPrevMetrics.leadSerius, delta: pctDelta(momMetrics.leadSerius, momPrevMetrics.leadSerius) },
-                          { label: "Closing", cur: momMetrics.closing, prev: momPrevMetrics.closing, delta: pctDelta(momMetrics.closing, momPrevMetrics.closing) },
-                          { label: "CR Serius", cur: `${momMetrics.crSerius.toFixed(1)}%`, prev: `${momPrevMetrics.crSerius.toFixed(1)}%`, delta: pctDelta(momMetrics.crSerius, momPrevMetrics.crSerius) },
+                          {
+                            label: "Omzet",
+                            cur: fmtRpShort(momMetrics.omset),
+                            prev: fmtRpShort(momPrevMetrics.omset),
+                            delta: pctDelta(
+                              momMetrics.omset,
+                              momPrevMetrics.omset,
+                            ),
+                          },
+                          {
+                            label: "Gross Profit",
+                            cur: fmtRpShort(momMetrics.grossProfit),
+                            prev: fmtRpShort(momPrevMetrics.grossProfit),
+                            delta: pctDelta(
+                              momMetrics.grossProfit,
+                              momPrevMetrics.grossProfit,
+                            ),
+                          },
+                          {
+                            label: "Biaya Marketing",
+                            cur: fmtRpShort(momMetrics.biayaMarketing),
+                            prev: fmtRpShort(momPrevMetrics.biayaMarketing),
+                            delta: pctDelta(
+                              momMetrics.biayaMarketing,
+                              momPrevMetrics.biayaMarketing,
+                            ),
+                            lowerIsBetter: true,
+                          },
+                          {
+                            label: "Lead Serius",
+                            cur: momMetrics.leadSerius,
+                            prev: momPrevMetrics.leadSerius,
+                            delta: pctDelta(
+                              momMetrics.leadSerius,
+                              momPrevMetrics.leadSerius,
+                            ),
+                          },
+                          {
+                            label: "Closing",
+                            cur: momMetrics.closing,
+                            prev: momPrevMetrics.closing,
+                            delta: pctDelta(
+                              momMetrics.closing,
+                              momPrevMetrics.closing,
+                            ),
+                          },
+                          {
+                            label: "CR Serius",
+                            cur: `${momMetrics.crSerius.toFixed(1)}%`,
+                            prev: `${momPrevMetrics.crSerius.toFixed(1)}%`,
+                            delta: pctDelta(
+                              momMetrics.crSerius,
+                              momPrevMetrics.crSerius,
+                            ),
+                          },
                         ].map((row) => (
                           <tr key={row.label}>
-                            <td className="py-2.5 pr-6 text-gray-700">{row.label}</td>
-                            <td className="py-2.5 px-4 text-right font-semibold text-gray-800">{row.cur}</td>
-                            <td className="py-2.5 px-4 text-right text-gray-500">{row.prev}</td>
+                            <td className="py-2.5 pr-6 text-gray-700">
+                              {row.label}
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-semibold text-gray-800">
+                              {row.cur}
+                            </td>
+                            <td className="py-2.5 px-4 text-right text-gray-500">
+                              {row.prev}
+                            </td>
                             <td className="py-2.5 pl-4 text-right">
                               {row.delta !== undefined ? (
-                                <span className={`text-xs font-semibold ${
-                                  (row.lowerIsBetter ? row.delta <= 0 : row.delta >= 0)
-                                    ? "text-green-600" : "text-red-500"
-                                }`}>
-                                  {row.delta >= 0 ? "+" : ""}{row.delta.toFixed(1)}%
+                                <span
+                                  className={`text-xs font-semibold ${
+                                    (
+                                      row.lowerIsBetter
+                                        ? row.delta <= 0
+                                        : row.delta >= 0
+                                    )
+                                      ? "text-green-600"
+                                      : "text-red-500"
+                                  }`}
+                                >
+                                  {row.delta >= 0 ? "+" : ""}
+                                  {row.delta.toFixed(1)}%
                                 </span>
-                              ) : "—"}
+                              ) : (
+                                "—"
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -790,18 +1059,44 @@ export default function StatistikPage() {
                   type="line"
                   labels={chartLabels}
                   datasets={[
-                    { label: `Omzet ${selectedYear}`, data: omsetData, color: "#6366f1" },
-                    { label: `Gross Profit ${selectedYear}`, data: gpData, color: "#10b981" },
+                    {
+                      label: `Omzet ${selectedYear}`,
+                      data: omsetData,
+                      color: "#6366f1",
+                    },
+                    {
+                      label: `Gross Profit ${selectedYear}`,
+                      data: gpData,
+                      color: "#10b981",
+                    },
                     ...(comparisonMode === "yoy" && prevOmsetData.length
-                      ? [{ label: `Omzet ${selectedYear - 1}`, data: prevOmsetData, color: "#a5b4fc" }]
+                      ? [
+                          {
+                            label: `Omzet ${selectedYear - 1}`,
+                            data: prevOmsetData,
+                            color: "#a5b4fc",
+                          },
+                        ]
                       : []),
                     ...(comparisonMode === "yoy" && prevGpData.length
-                      ? [{ label: `GP ${selectedYear - 1}`, data: prevGpData, color: "#6ee7b7" }]
+                      ? [
+                          {
+                            label: `GP ${selectedYear - 1}`,
+                            data: prevGpData,
+                            color: "#6ee7b7",
+                          },
+                        ]
                       : []),
                   ]}
-                  period={comparisonMode === "yoy" ? `${selectedYear} vs ${selectedYear - 1}` : `Tahun ${selectedYear}`}
+                  period={
+                    comparisonMode === "yoy"
+                      ? `${selectedYear} vs ${selectedYear - 1}`
+                      : `Tahun ${selectedYear}`
+                  }
                   formatValue={(v) =>
-                    v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)}Jt` : String(Math.round(v))
+                    v >= 1_000_000
+                      ? `${(v / 1_000_000).toFixed(0)}Jt`
+                      : String(Math.round(v))
                   }
                 />
                 <ChartCard
@@ -809,14 +1104,30 @@ export default function StatistikPage() {
                   type="bar"
                   labels={chartLabels}
                   datasets={[
-                    { label: `${selectedYear}`, data: bmData, color: "#f59e0b" },
+                    {
+                      label: `${selectedYear}`,
+                      data: bmData,
+                      color: "#f59e0b",
+                    },
                     ...(comparisonMode === "yoy" && prevBmData.length
-                      ? [{ label: `${selectedYear - 1}`, data: prevBmData, color: "#fcd34d" }]
+                      ? [
+                          {
+                            label: `${selectedYear - 1}`,
+                            data: prevBmData,
+                            color: "#fcd34d",
+                          },
+                        ]
                       : []),
                   ]}
-                  period={comparisonMode === "yoy" ? `${selectedYear} vs ${selectedYear - 1}` : `Tahun ${selectedYear}`}
+                  period={
+                    comparisonMode === "yoy"
+                      ? `${selectedYear} vs ${selectedYear - 1}`
+                      : `Tahun ${selectedYear}`
+                  }
                   formatValue={(v) =>
-                    v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)}Jt` : String(Math.round(v))
+                    v >= 1_000_000
+                      ? `${(v / 1_000_000).toFixed(0)}Jt`
+                      : String(Math.round(v))
                   }
                 />
               </div>
@@ -826,17 +1137,27 @@ export default function StatistikPage() {
                   title="Closing per Channel"
                   type="bar"
                   labels={channelLabels}
-                  datasets={[{ label: "Closing", data: channelClosing, color: "#8b5cf6" }]}
+                  datasets={[
+                    {
+                      label: "Closing",
+                      data: channelClosing,
+                      color: "#8b5cf6",
+                    },
+                  ]}
                   period={`Tahun ${selectedYear}`}
                 />
                 <ChartCard
                   title="CPLS per Channel"
                   type="bar"
                   labels={channelLabels}
-                  datasets={[{ label: "CPLS", data: channelCpls, color: "#06b6d4" }]}
+                  datasets={[
+                    { label: "CPLS", data: channelCpls, color: "#06b6d4" },
+                  ]}
                   period={`Tahun ${selectedYear}`}
                   formatValue={(v) =>
-                    v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)}Jt` : String(Math.round(v))
+                    v >= 1_000_000
+                      ? `${(v / 1_000_000).toFixed(0)}Jt`
+                      : String(Math.round(v))
                   }
                 />
               </div>
@@ -845,7 +1166,11 @@ export default function StatistikPage() {
               <div className="space-y-6">
                 <DataTable
                   title={`Data Statistik Bulanan ${selectedYear}`}
-                  data={stats?.monthly.filter((m) => m.omset > 0 || m.lead_serius > 0) ?? []}
+                  data={
+                    stats?.monthly.filter(
+                      (m) => m.omset > 0 || m.lead_serius > 0,
+                    ) ?? []
+                  }
                   columns={monthlyColumns}
                 />
                 <DataTable

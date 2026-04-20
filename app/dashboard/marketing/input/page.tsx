@@ -214,7 +214,7 @@ export default function InputMarketingPage() {
   };
 
   const handleSave = async () => {
-    // Validasi
+    // Validasi channel
     if (!selectedChannel) {
       setAlert({
         type: "error",
@@ -229,6 +229,7 @@ export default function InputMarketingPage() {
     const leadAllNum = parseInt(leadAll) || 0;
     const closingNum = parseInt(closing) || 0;
 
+    // Validasi biaya marketing
     if (biayaMarketingNum <= 0) {
       setAlert({
         type: "error",
@@ -238,10 +239,31 @@ export default function InputMarketingPage() {
       return;
     }
 
+    // Validasi Lead All
+    if (leadAllNum <= 0) {
+      setAlert({
+        type: "error",
+        message: "Lead All harus diisi dengan angka positif!",
+      });
+      setTimeout(() => setAlert(null), 3000);
+      return;
+    }
+
+    // Validasi Lead Serius tidak boleh melebihi Lead All
+    if (leadSeriusNum > leadAllNum) {
+      setAlert({
+        type: "error",
+        message: `Lead Serius (${leadSeriusNum.toLocaleString("id-ID")}) tidak boleh melebihi Lead All (${leadAllNum.toLocaleString("id-ID")})!`,
+      });
+      setTimeout(() => setAlert(null), 3000);
+      return;
+    }
+
+    // Validasi Closing tidak boleh melebihi Lead Serius
     if (closingNum > leadSeriusNum) {
       setAlert({
         type: "error",
-        message: "Closing tidak boleh melebihi Lead Serius!",
+        message: `Closing (${closingNum.toLocaleString("id-ID")}) tidak boleh melebihi Lead Serius (${leadSeriusNum.toLocaleString("id-ID")})!`,
       });
       setTimeout(() => setAlert(null), 3000);
       return;
@@ -280,7 +302,9 @@ export default function InputMarketingPage() {
         resetForm();
         await fetchMarketingInputs();
       } else if (response.status === 409) {
-        setModalError(data.error || "Data sudah ada untuk channel dan tanggal ini.");
+        setModalError(
+          data.error || "Data sudah ada untuk channel dan tanggal ini.",
+        );
       } else {
         throw new Error(data.error || "Gagal menyimpan data");
       }
@@ -375,6 +399,14 @@ export default function InputMarketingPage() {
     .filter((item) => item.input_date.startsWith(currentMonth))
     .reduce((sum, item) => sum + item.biaya_marketing, 0);
 
+  // Validasi real-time untuk UI
+  const leadAllNum = parseInt(leadAll) || 0;
+  const leadSeriusNum = parseInt(leadSerius) || 0;
+  const closingNum = parseInt(closing) || 0;
+
+  const leadSeriusError = leadSeriusNum > leadAllNum;
+  const closingError = closingNum > leadSeriusNum;
+
   if (isLoading) {
     return (
       <div className="flex h-screen bg-gray-50">
@@ -435,7 +467,10 @@ export default function InputMarketingPage() {
             </div>
             <Button
               variant="primary"
-              onClick={() => { setModalError(null); setIsModalOpen(true); }}
+              onClick={() => {
+                setModalError(null);
+                setIsModalOpen(true);
+              }}
               leftIcon={
                 <svg
                   className="w-4 h-4"
@@ -457,7 +492,7 @@ export default function InputMarketingPage() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
               <p className="text-sm text-gray-600 mb-2">Total Input Hari Ini</p>
               <p className="text-2xl font-bold text-gray-800">
@@ -603,7 +638,12 @@ export default function InputMarketingPage() {
           {/* Modal Input Data */}
           <Modal
             isOpen={isModalOpen}
-            onClose={() => { if (!isSaving) { setIsModalOpen(false); setModalError(null); } }}
+            onClose={() => {
+              if (!isSaving) {
+                setIsModalOpen(false);
+                setModalError(null);
+              }
+            }}
             title="Input Data Marketing"
             size="lg"
           >
@@ -715,39 +755,86 @@ export default function InputMarketingPage() {
                 />
               </div>
 
+              {/* Input dengan validasi visual */}
               <div className="grid grid-cols-3 gap-4">
-                <Input
-                  label="Lead Serius"
-                  type="text"
-                  value={leadSerius ? formatNumber(leadSerius) : ""}
-                  onChange={(e) =>
-                    handleNumberInput(e.target.value, setLeadSerius)
-                  }
-                  placeholder="0"
-                  disabled={isSaving}
-                  helperText="Dari data CS (terisi otomatis)"
-                />
-                <Input
-                  label="Lead All"
-                  type="text"
-                  value={leadAll ? formatNumber(leadAll) : ""}
-                  onChange={(e) =>
-                    handleNumberInput(e.target.value, setLeadAll)
-                  }
-                  placeholder="0"
-                  disabled={isSaving}
-                />
-                <Input
-                  label="Closing"
-                  type="text"
-                  value={closing ? formatNumber(closing) : ""}
-                  onChange={(e) =>
-                    handleNumberInput(e.target.value, setClosing)
-                  }
-                  placeholder="0"
-                  disabled={isSaving}
-                  helperText="Dari data CS (terisi otomatis)"
-                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Lead All <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={leadAll ? formatNumber(leadAll) : ""}
+                    onChange={(e) =>
+                      handleNumberInput(e.target.value, setLeadAll)
+                    }
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                      leadAllNum > 0 ? "border-gray-300" : "border-red-300"
+                    }`}
+                    placeholder="Total semua leads"
+                    disabled={isSaving}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Total leads dari channel
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Lead Serius
+                  </label>
+                  <input
+                    type="text"
+                    value={leadSerius ? formatNumber(leadSerius) : ""}
+                    onChange={(e) =>
+                      handleNumberInput(e.target.value, setLeadSerius)
+                    }
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                      leadSeriusError
+                        ? "border-red-300 bg-red-50"
+                        : "border-gray-300"
+                    }`}
+                    placeholder="0"
+                    disabled={isSaving}
+                    max={leadAll || undefined}
+                  />
+                  {leadSeriusError && (
+                    <p className="text-xs text-red-500 mt-1">
+                      ⚠️ Maksimal {leadAllNum.toLocaleString("id-ID")}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Dari data CS (terisi otomatis)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Closing
+                  </label>
+                  <input
+                    type="text"
+                    value={closing ? formatNumber(closing) : ""}
+                    onChange={(e) =>
+                      handleNumberInput(e.target.value, setClosing)
+                    }
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                      closingError
+                        ? "border-red-300 bg-red-50"
+                        : "border-gray-300"
+                    }`}
+                    placeholder="0"
+                    disabled={isSaving}
+                    max={leadSerius || undefined}
+                  />
+                  {closingError && (
+                    <p className="text-xs text-red-500 mt-1">
+                      ⚠️ Maksimal {leadSeriusNum.toLocaleString("id-ID")}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Dari data CS (terisi otomatis)
+                  </p>
+                </div>
               </div>
 
               <div>
@@ -764,17 +851,67 @@ export default function InputMarketingPage() {
                 />
               </div>
 
-              {parseInt(closing) > parseInt(leadSerius) &&
-                leadSerius !== "" && (
-                  <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-                    ⚠️ Closing tidak boleh melebihi Lead Serius
-                  </div>
-                )}
+              {/* Error Messages */}
+              {leadSeriusError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg flex items-start gap-2">
+                  <svg
+                    className="w-4 h-4 mt-0.5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <span>
+                    Lead Serius ({leadSeriusNum.toLocaleString("id-ID")}) tidak
+                    boleh melebihi Lead All (
+                    {leadAllNum.toLocaleString("id-ID")})
+                  </span>
+                </div>
+              )}
+
+              {closingError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg flex items-start gap-2">
+                  <svg
+                    className="w-4 h-4 mt-0.5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <span>
+                    Closing ({closingNum.toLocaleString("id-ID")}) tidak boleh
+                    melebihi Lead Serius (
+                    {leadSeriusNum.toLocaleString("id-ID")})
+                  </span>
+                </div>
+              )}
 
               {modalError && (
                 <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  <svg className="mt-0.5 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  <svg
+                    className="mt-0.5 h-4 w-4 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
                   </svg>
                   <span>{modalError}</span>
                 </div>
@@ -795,7 +932,10 @@ export default function InputMarketingPage() {
                   disabled={
                     !selectedChannel ||
                     !biayaMarketing ||
-                    parseInt(closing) > parseInt(leadSerius)
+                    !leadAll ||
+                    leadAllNum <= 0 ||
+                    leadSeriusError ||
+                    closingError
                   }
                 >
                   Simpan Data
