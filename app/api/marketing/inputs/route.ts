@@ -308,7 +308,7 @@ export async function POST(request: Request) {
     if (existingChannel) {
       return NextResponse.json(
         {
-          error: `Data untuk channel "${channel}" pada tanggal ${inputDate} sudah ada. Gunakan fitur edit untuk mengubah data.`,
+          error: `Data untuk channel "${channel}" pada tanggal ${inputDate} sudah ada.`,
           existingId: existingChannel.id,
         },
         { status: 409 },

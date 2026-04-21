@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
  * GET /api/marketing/channels
  * Get all active marketing channels
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createClient();
 
@@ -19,11 +19,15 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data, error } = await supabase
-      .from("marketing_channels")
-      .select("*")
-      .eq("is_active", true)
-      .order("name");
+    const { searchParams } = new URL(request.url);
+    const activeOnly = searchParams.get("activeOnly") !== "false";
+
+    let query = supabase.from("marketing_channels").select("*").order("name");
+    if (activeOnly) {
+      query = query.eq("is_active", true);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("[GET /api/marketing/channels]", error.message);
