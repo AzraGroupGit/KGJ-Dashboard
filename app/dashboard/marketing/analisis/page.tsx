@@ -86,30 +86,24 @@ export default function AnalisisChannelPage() {
   const fetchAnalytics = async () => {
     setIsLoading(true);
     try {
-      // Hitung tanggal berdasarkan periode
+      // Hitung tanggal berdasarkan periode (gunakan tanggal lokal, bukan UTC)
       const today = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const fmtLocal = (d: Date) =>
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
       let fromDate = "";
 
       if (selectedPeriod === "monthly") {
-        const firstDayOfMonth = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          1,
-        );
-        fromDate = firstDayOfMonth.toISOString().split("T")[0];
+        fromDate = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
       } else if (selectedPeriod === "quarterly") {
         const currentQuarter = Math.floor(today.getMonth() / 3);
-        const firstDayOfQuarter = new Date(
-          today.getFullYear(),
-          currentQuarter * 3,
-          1,
-        );
-        fromDate = firstDayOfQuarter.toISOString().split("T")[0];
+        const firstMonth = currentQuarter * 3 + 1;
+        fromDate = `${today.getFullYear()}-${pad(firstMonth)}-01`;
       } else if (selectedPeriod === "yearly") {
         fromDate = `${today.getFullYear()}-01-01`;
       }
 
-      const toDate = today.toISOString().split("T")[0];
+      const toDate = fmtLocal(today);
       const url = `/api/marketing/analytics?from=${fromDate}&to=${toDate}`;
 
       const response = await fetch(url);
@@ -183,30 +177,24 @@ export default function AnalisisChannelPage() {
 
   const handleExport = async () => {
     try {
-      // Hitung tanggal berdasarkan periode
+      // Hitung tanggal berdasarkan periode (gunakan tanggal lokal, bukan UTC)
       const today = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const fmtLocal = (d: Date) =>
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
       let fromDate = "";
 
       if (selectedPeriod === "monthly") {
-        const firstDayOfMonth = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          1,
-        );
-        fromDate = firstDayOfMonth.toISOString().split("T")[0];
+        fromDate = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
       } else if (selectedPeriod === "quarterly") {
         const currentQuarter = Math.floor(today.getMonth() / 3);
-        const firstDayOfQuarter = new Date(
-          today.getFullYear(),
-          currentQuarter * 3,
-          1,
-        );
-        fromDate = firstDayOfQuarter.toISOString().split("T")[0];
+        const firstMonth = currentQuarter * 3 + 1;
+        fromDate = `${today.getFullYear()}-${pad(firstMonth)}-01`;
       } else if (selectedPeriod === "yearly") {
         fromDate = `${today.getFullYear()}-01-01`;
       }
 
-      const toDate = today.toISOString().split("T")[0];
+      const toDate = fmtLocal(today);
 
       // Fetch data untuk export
       const response = await fetch(
@@ -474,7 +462,7 @@ export default function AnalisisChannelPage() {
           {selectedChannel === "all"
             ? // Summary untuk semua channel
               summary && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                   <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
                     <p className="text-sm opacity-90">Total Biaya Marketing</p>
                     <p className="text-2xl font-bold mt-2">
@@ -483,6 +471,13 @@ export default function AnalisisChannelPage() {
                     <p className="text-xs opacity-80 mt-2">
                       {summary.totalInputs} data input
                     </p>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+                    <p className="text-sm opacity-90">ROI</p>
+                    <p className="text-2xl font-bold mt-2">
+                      {summary.roi.toFixed(0)}%
+                    </p>
+                    <p className="text-xs opacity-80 mt-2">Return on investment</p>
                   </div>
                   <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
                     <p className="text-sm opacity-90">CAC</p>

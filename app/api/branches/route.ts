@@ -28,7 +28,8 @@ export async function GET(request: Request) {
       .select(
         `
         id, code, name, address, phone, email, pic,
-        status, total_leads, total_closing, created_at, updated_at
+        status, created_at, updated_at,
+        cs_inputs(lead_masuk, closing)
       `,
       )
       .order("name", { ascending: true });
@@ -45,7 +46,17 @@ export async function GET(request: Request) {
       );
     }
 
-    return NextResponse.json({ data });
+    const branchesWithTotals = (data ?? []).map((branch) => {
+      const inputs = (branch.cs_inputs as { lead_masuk: number; closing: number }[] | null) ?? [];
+      return {
+        ...branch,
+        cs_inputs: undefined,
+        total_leads: inputs.reduce((s, ci) => s + (ci.lead_masuk || 0), 0),
+        total_closing: inputs.reduce((s, ci) => s + (ci.closing || 0), 0),
+      };
+    });
+
+    return NextResponse.json({ data: branchesWithTotals });
   } catch (error) {
     console.error("[GET /api/branches] unexpected:", error);
     return NextResponse.json(

@@ -38,10 +38,6 @@ export async function GET(request: Request) {
 
     let query = supabase.from("marketing_inputs").select("*");
 
-    if (profile.role !== "superadmin") {
-      query = query.eq("user_id", profile.id);
-    }
-
     if (from) query = query.gte("input_date", from);
     if (to) query = query.lte("input_date", to);
 
@@ -102,9 +98,24 @@ export async function GET(request: Request) {
       totalLeadSerius > 0 ? totalBiayaMarketing / totalLeadSerius : 0;
     const cpla = totalLeadAll > 0 ? totalBiayaMarketing / totalLeadAll : 0;
     const cac = totalClosing > 0 ? totalBiayaMarketing / totalClosing : 0;
+    const summaryRoi =
+      inputs.length > 0
+        ? inputs.reduce((sum, item) => sum + (Number(item.roi) || 0), 0) / inputs.length
+        : 0;
 
     // Calculate channel performance
-    const channelMap = new Map();
+    const channelMap = new Map<
+      string,
+      {
+        channel: string;
+        biayaMarketing: number;
+        leadSerius: number;
+        leadAll: number;
+        closing: number;
+        roiSum: number;
+        count: number;
+      }
+    >();
 
     inputs.forEach((item) => {
       if (!channelMap.has(item.channel)) {
@@ -114,17 +125,18 @@ export async function GET(request: Request) {
           leadSerius: 0,
           leadAll: 0,
           closing: 0,
+          roiSum: 0,
           count: 0,
         });
       }
 
-      const channel = channelMap.get(item.channel);
+      const channel = channelMap.get(item.channel)!;
       channel.biayaMarketing += item.biaya_marketing || 0;
       channel.leadSerius += item.lead_serius || 0;
       channel.leadAll += item.lead_all || 0;
       channel.closing += item.closing || 0;
+      channel.roiSum += Number(item.roi) || 0;
       channel.count++;
-
     });
 
     const channelMetrics = Array.from(channelMap.values()).map((channel) => {
@@ -134,10 +146,15 @@ export async function GET(request: Request) {
           : 0;
       const channelCac =
         channel.closing > 0 ? channel.biayaMarketing / channel.closing : 0;
+      const channelRoi = channel.count > 0 ? channel.roiSum / channel.count : 0;
 
       return {
-        ...channel,
-        roi: 0,
+        channel: channel.channel,
+        biayaMarketing: channel.biayaMarketing,
+        leadSerius: channel.leadSerius,
+        leadAll: channel.leadAll,
+        closing: channel.closing,
+        roi: channelRoi,
         crSerius: channelCr,
         cac: channelCac,
       };
@@ -152,9 +169,31 @@ export async function GET(request: Request) {
     if (lowCrChannels.length > 0) {
       recommendations.push({
         type: "improve",
-        channel: lowCrChannels.map((c: { channel: string }) => c.channel).join(", "),
+        channel: lowCrChannels.map((c) => c.channel).join(", "),
         reason: "Conversion rate rendah (<15%)",
         action: "Perbaiki kualitas lead atau proses follow-up",
+      });
+    }
+
+    const lowRoiChannels = channelMetrics.filter(
+      (c) => c.roi < 0 && c.biayaMarketing > 0,
+    );
+    if (lowRoiChannels.length > 0) {
+      recommendations.push({
+        type: "warning",
+        channel: lowRoiChannels.map((c) => c.channel).join(", "),
+        reason: "ROI negatif (omset lebih kecil dari biaya marketing)",
+        action: "Evaluasi strategi dan kurangi biaya atau tingkatkan omset",
+      });
+    }
+
+    const highRoiChannels = channelMetrics.filter((c) => c.roi > 300);
+    if (highRoiChannels.length > 0) {
+      recommendations.push({
+        type: "increase",
+        channel: highRoiChannels.map((c) => c.channel).join(", "),
+        reason: "ROI sangat tinggi (>300%)",
+        action: "Pertimbangkan untuk meningkatkan anggaran pada channel ini",
       });
     }
 
@@ -165,7 +204,7 @@ export async function GET(request: Request) {
           totalLeadSerius,
           totalLeadAll,
           totalClosing,
-          roi: 0,
+          roi: summaryRoi,
           crSerius,
           crAll,
           cpls,
