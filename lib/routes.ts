@@ -55,10 +55,22 @@ export function getDashboardPath(
 // Sub-route tiap role (dipakai di Sidebar menu)
 // =======================================================================
 export const SUPERADMIN_ROUTES = {
-  DASHBOARD: DASHBOARD_PATHS.superadmin,
-  STATISTIK: `${DASHBOARD_PATHS.superadmin}/statistik`,
-  KELOLA_AKUN: `${DASHBOARD_PATHS.superadmin}/kelola-akun`,
-  LAPORAN: `${DASHBOARD_PATHS.superadmin}/laporan`,
+  DASHBOARD: "/dashboard/superadmin",
+
+  // Kelola akun & cabang
+  KELOLA_AKUN: "/dashboard/superadmin/kelola-akun",
+
+  // BMS Routes
+  BMS_DASHBOARD: "/dashboard/superadmin/bms",
+  STATISTIK: "/dashboard/superadmin/bms/statistik",
+  LAPORAN: "/dashboard/superadmin/bms/laporan",
+
+  // OPRPRD Routes
+  OPRPRD_DASHBOARD: "/dashboard/superadmin/oprprd",
+  OPRPRD_MONITORING_OPERASI: "/dashboard/superadmin/oprprd/operasi",
+  OPRPRD_MONITORING_PRODUKSI: "/dashboard/superadmin/oprprd/produksi",
+  OPRPRD_ANALISIS: "/dashboard/superadmin/oprprd/analisis",
+  OPRPRD_LAPORAN: "/dashboard/superadmin/oprprd/laporan",
 } as const;
 
 export const CS_ROUTES = {

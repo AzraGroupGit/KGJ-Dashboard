@@ -179,8 +179,8 @@ export default function StatistikPage() {
       if (comparisonMode === "dod") {
         // Fetch data untuk kedua tanggal
         const [resA, resB] = await Promise.all([
-          fetch(`/api/daily-stats?date=${dateA}`),
-          fetch(`/api/daily-stats?date=${dateB}`),
+          fetch(`/api/daily-stats-1?date=${dateA}`),
+          fetch(`/api/daily-stats-1?date=${dateB}`),
         ]);
 
         const jsonA = await resA.json();
