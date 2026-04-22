@@ -1,4 +1,4 @@
-// app/api/daily-stats/route.ts
+// app/api/daily-stats-1/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -37,7 +37,7 @@ function sumField<T extends Record<string, unknown>>(
   return rows.reduce((s, r) => s + ((r[field] as number) ?? 0), 0);
 }
 
-// ─── GET /api/daily-stats?date=YYYY-MM-DD ─────────────────────────────────────
+// ─── GET /api/daily-stats-1?date=YYYY-MM-DD ─────────────────────────────────────
 
 export async function GET(request: NextRequest) {
   try {
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
 
     if (mktResult.error) {
       console.error(
-        "[GET /api/daily-stats] marketing:",
+        "[GET /api/daily-stats-1] marketing:",
         mktResult.error.message,
       );
       return NextResponse.json(
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
       );
     }
     if (csResult.error) {
-      console.error("[GET /api/daily-stats] cs:", csResult.error.message);
+      console.error("[GET /api/daily-stats-1] cs:", csResult.error.message);
       return NextResponse.json(
         { error: "Gagal mengambil data CS" },
         { status: 500 },
@@ -252,7 +252,7 @@ export async function GET(request: NextRequest) {
       trend,
     });
   } catch (error) {
-    console.error("[GET /api/daily-stats] unexpected:", error);
+    console.error("[GET /api/daily-stats-1] unexpected:", error);
     return NextResponse.json(
       { error: "Terjadi kesalahan server" },
       { status: 500 },
