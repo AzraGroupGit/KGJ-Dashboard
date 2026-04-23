@@ -14,6 +14,7 @@ import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
 interface BranchRef {
   id: string;
   name: string;
@@ -46,6 +47,38 @@ interface Branch {
   created_at: string;
 }
 
+// ── Tambahan: types untuk User Operasional & Produksi ─────────────────────────
+
+interface RoleOPRPRD {
+  id: string;
+  name: string;
+  role_group: "management" | "operational" | "production" | "qc";
+  description: string | null;
+  permissions: {
+    can_read: boolean;
+    can_insert: boolean;
+    can_update: boolean;
+    can_delete: boolean;
+  };
+  allowed_stages: string[];
+}
+
+interface UserOPRPRD {
+  id: string;
+  username: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  role_id: string;
+  roles: RoleOPRPRD | null;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 type AlertState = {
   type: "success" | "error" | "warning" | "info";
   message: string;
@@ -71,12 +104,33 @@ const EMPTY_BRANCH_FORM = {
   status: "active" as Branch["status"],
 };
 
+// ── Tambahan: form kosong OPRPRD ───────────────────────────────────────────────
+const EMPTY_OPRPRD_USER_FORM = {
+  username: "",
+  full_name: "",
+  email: "",
+  phone: "",
+  password: "",
+  role_id: "",
+};
+
+// Label & warna per role_group
+const ROLE_GROUP_LABELS: Record<string, { label: string; bg: string }> = {
+  management: { label: "Manajemen", bg: "bg-purple-100 text-purple-800" },
+  operational: { label: "Operasional", bg: "bg-blue-100 text-blue-800" },
+  production: { label: "Produksi", bg: "bg-amber-100 text-amber-800" },
+  qc: { label: "Quality Control", bg: "bg-emerald-100 text-emerald-800" },
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function KelolaAkunPage() {
+  // ── State existing (tidak diubah) ──────────────────────────────────────────
   const [users, setUsers] = useState<User[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [activeTab, setActiveTab] = useState<"users" | "branches">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "branches" | "oprprd">(
+    "users",
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -94,6 +148,18 @@ export default function KelolaAkunPage() {
   const [userFormData, setUserFormData] = useState(EMPTY_USER_FORM);
   const [branchFormData, setBranchFormData] = useState(EMPTY_BRANCH_FORM);
 
+  // ── State tambahan OPRPRD ──────────────────────────────────────────────────
+  const [usersOPRPRD, setUsersOPRPRD] = useState<UserOPRPRD[]>([]);
+  const [roles, setRoles] = useState<RoleOPRPRD[]>([]);
+  const [selectedOPRPRDUser, setSelectedOPRPRDUser] =
+    useState<UserOPRPRD | null>(null);
+  const [oprprdUserToDelete, setOprprdUserToDelete] =
+    useState<UserOPRPRD | null>(null);
+  const [isDeletingOPRPRDUser, setIsDeletingOPRPRDUser] = useState(false);
+  const [oprprdUserFormData, setOprprdUserFormData] = useState(
+    EMPTY_OPRPRD_USER_FORM,
+  );
+
   useEffect(() => {
     setClientUser(getClientUser());
   }, []);
@@ -108,7 +174,7 @@ export default function KelolaAkunPage() {
     setTimeout(() => setAlert(null), 4000);
   };
 
-  // ─── Data fetching ────────────────────────────────────────────────────────
+  // ─── Data fetching (existing — tidak diubah) ──────────────────────────────
 
   const fetchUsers = useCallback(async () => {
     const status = showInactive ? "inactive" : "active";
@@ -131,16 +197,52 @@ export default function KelolaAkunPage() {
     setBranches(json.data ?? []);
   }, []);
 
+  // ── Fetch tambahan OPRPRD ──────────────────────────────────────────────────
+
+  const fetchRoles = useCallback(async () => {
+    const res = await fetch("/api/roles");
+    const json = await res.json();
+    if (!res.ok) {
+      showAlert("error", json.error || "Gagal memuat data role");
+      return;
+    }
+    // Hanya tampilkan role non-management di form
+    setRoles(
+      (json.data ?? []).filter(
+        (r: RoleOPRPRD) => r.role_group !== "management",
+      ),
+    );
+  }, []);
+
+  const fetchOPRPRDUsers = useCallback(async () => {
+    const params = new URLSearchParams({ limit: "200" });
+    if (!showInactive) params.append("is_active", "true");
+    const res = await fetch(`/api/users-oprprd?${params.toString()}`);
+    const json = await res.json();
+    if (!res.ok) {
+      showAlert("error", json.error || "Gagal memuat data user operasional");
+      return;
+    }
+    setUsersOPRPRD(json.data ?? []);
+  }, [showInactive]);
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
-      await Promise.all([fetchUsers(), fetchBranches()]);
+      await Promise.all([
+        fetchUsers(),
+        fetchBranches(),
+        fetchRoles(),
+        fetchOPRPRDUsers(),
+      ]);
       setIsLoading(false);
     };
     load();
-  }, [fetchUsers, fetchBranches]);
+  }, [fetchUsers, fetchBranches, fetchRoles, fetchOPRPRDUsers]);
 
-  // ─── User handlers ────────────────────────────────────────────────────────
+  // ─── User handlers (existing — tidak diubah) ──────────────────────────────
 
   const handleOpenUserModal = (user?: User) => {
     if (user) {
@@ -252,7 +354,7 @@ export default function KelolaAkunPage() {
     }
   };
 
-  // ─── Branch handlers ──────────────────────────────────────────────────────
+  // ─── Branch handlers (existing — tidak diubah) ────────────────────────────
 
   const handleOpenBranchModal = (branch?: Branch) => {
     if (branch) {
@@ -364,7 +466,137 @@ export default function KelolaAkunPage() {
     }
   };
 
-  // ─── Badge helpers ─────────────────────────────────────────────────────────
+  // ── Handler tambahan OPRPRD ────────────────────────────────────────────────
+
+  const handleOpenOPRPRDUserModal = (user?: UserOPRPRD) => {
+    if (user) {
+      setIsEditMode(true);
+      setSelectedOPRPRDUser(user);
+      setOprprdUserFormData({
+        username: user.username,
+        full_name: user.full_name,
+        email: user.email ?? "",
+        phone: user.phone ?? "",
+        password: "",
+        role_id: user.role_id,
+      });
+    } else {
+      setIsEditMode(false);
+      setSelectedOPRPRDUser(null);
+      setOprprdUserFormData(EMPTY_OPRPRD_USER_FORM);
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSaveOPRPRDUser = async () => {
+    if (
+      !oprprdUserFormData.username.trim() ||
+      !oprprdUserFormData.full_name.trim()
+    ) {
+      showAlert("error", "Username dan nama lengkap harus diisi!");
+      return;
+    }
+    if (oprprdUserFormData.username.trim().length < 3) {
+      showAlert("error", "Username minimal 3 karakter!");
+      return;
+    }
+    if (!oprprdUserFormData.role_id) {
+      showAlert("error", "Role harus dipilih!");
+      return;
+    }
+    if (!isEditMode && !oprprdUserFormData.password) {
+      showAlert("error", "Password harus diisi untuk akun baru!");
+      return;
+    }
+    if (oprprdUserFormData.password && oprprdUserFormData.password.length < 6) {
+      showAlert("error", "Password minimal 6 karakter!");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const payload: Record<string, string | null> = {
+        username: oprprdUserFormData.username.trim(),
+        full_name: oprprdUserFormData.full_name.trim(),
+        email: oprprdUserFormData.email.trim() || null,
+        phone: oprprdUserFormData.phone.trim() || null,
+        role_id: oprprdUserFormData.role_id,
+      };
+      if (oprprdUserFormData.password) {
+        payload.password = oprprdUserFormData.password;
+      }
+
+      const res = await fetch(
+        isEditMode
+          ? `/api/users-oprprd/${selectedOPRPRDUser!.id}`
+          : "/api/users-oprprd",
+        {
+          method: isEditMode ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+      const json = await res.json();
+
+      if (!res.ok) {
+        showAlert("error", json.error || "Gagal menyimpan akun");
+        return;
+      }
+
+      showAlert(
+        "success",
+        isEditMode ? "Akun berhasil diperbarui!" : "Akun baru berhasil dibuat!",
+      );
+      setIsModalOpen(false);
+      await fetchOPRPRDUsers();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleToggleOPRPRDUserStatus = async (user: UserOPRPRD) => {
+    const newIsActive = !user.is_active;
+    const res = await fetch(`/api/users-oprprd/${user.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_active: newIsActive }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      showAlert("error", json.error || "Gagal mengubah status");
+      return;
+    }
+    showAlert(
+      "success",
+      `Akun ${newIsActive ? "diaktifkan" : "dinonaktifkan"}!`,
+    );
+    await fetchOPRPRDUsers();
+  };
+
+  const handleDeleteOPRPRDUser = async () => {
+    if (!oprprdUserToDelete) return;
+    setIsDeletingOPRPRDUser(true);
+    try {
+      const res = await fetch(`/api/users-oprprd/${oprprdUserToDelete.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        showAlert("error", json.error || "Gagal menghapus akun");
+        return;
+      }
+      showAlert(
+        "success",
+        `Akun ${oprprdUserToDelete.full_name} berhasil dihapus!`,
+      );
+      await fetchOPRPRDUsers();
+    } finally {
+      setIsDeletingOPRPRDUser(false);
+      setOprprdUserToDelete(null);
+    }
+  };
+
+  // ─── Badge helpers (existing — tidak diubah) ──────────────────────────────
 
   const getRoleBadge = (role: string) => {
     const map: Record<string, { bg: string; label: string }> = {
@@ -393,6 +625,41 @@ export default function KelolaAkunPage() {
         Nonaktif
       </span>
     );
+
+  // ── Badge tambahan untuk boolean is_active (OPRPRD) ───────────────────────
+  const getIsActiveBadge = (isActive: boolean) =>
+    isActive ? (
+      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+        Aktif
+      </span>
+    ) : (
+      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+        Nonaktif
+      </span>
+    );
+
+  const getOPRPRDRoleBadge = (role: RoleOPRPRD | null) => {
+    if (!role)
+      return (
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+          -
+        </span>
+      );
+    const config = ROLE_GROUP_LABELS[role.role_group] ?? {
+      label: role.name,
+      bg: "bg-gray-100 text-gray-800",
+    };
+    return (
+      <div className="flex flex-col gap-0.5">
+        <span
+          className={`px-2 py-1 text-xs font-semibold rounded-full ${config.bg}`}
+        >
+          {role.name}
+        </span>
+        <span className="text-[10px] text-gray-500">{config.label}</span>
+      </div>
+    );
+  };
 
   const formatDate = (iso: string | null) => {
     if (!iso) return "-";
@@ -423,6 +690,18 @@ export default function KelolaAkunPage() {
 
   const activeBranches = branches.filter((b) => b.status === "active");
 
+  // Stats untuk tab OPRPRD
+  const oprprdStats = {
+    total: usersOPRPRD.length,
+    operational: usersOPRPRD.filter(
+      (u) => u.roles?.role_group === "operational",
+    ).length,
+    production: usersOPRPRD.filter((u) => u.roles?.role_group === "production")
+      .length,
+    qc: usersOPRPRD.filter((u) => u.roles?.role_group === "qc").length,
+    active: usersOPRPRD.filter((u) => u.is_active).length,
+  };
+
   return (
     <>
       <div className="flex h-screen bg-gray-50">
@@ -442,11 +721,11 @@ export default function KelolaAkunPage() {
               </div>
               <Button
                 variant="primary"
-                onClick={() =>
-                  activeTab === "users"
-                    ? handleOpenUserModal()
-                    : handleOpenBranchModal()
-                }
+                onClick={() => {
+                  if (activeTab === "users") handleOpenUserModal();
+                  else if (activeTab === "branches") handleOpenBranchModal();
+                  else handleOpenOPRPRDUserModal();
+                }}
                 leftIcon={
                   <svg
                     className="w-4 h-4"
@@ -463,7 +742,11 @@ export default function KelolaAkunPage() {
                   </svg>
                 }
               >
-                {activeTab === "users" ? "Buat Akun Baru" : "Tambah Cabang"}
+                {activeTab === "users"
+                  ? "Buat Akun Baru"
+                  : activeTab === "branches"
+                    ? "Tambah Cabang"
+                    : "Buat User Operasional"}
               </Button>
             </div>
 
@@ -480,10 +763,10 @@ export default function KelolaAkunPage() {
               </div>
             )}
 
-            {/* Tabs */}
+            {/* ── Tabs ── */}
             <div className="border-b border-gray-200 mb-8">
               <nav className="flex gap-8">
-                {(["users", "branches"] as const).map((tab) => (
+                {(["users", "branches", "oprprd"] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -508,7 +791,7 @@ export default function KelolaAkunPage() {
                             d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
                           />
                         </svg>
-                      ) : (
+                      ) : tab === "branches" ? (
                         <svg
                           className="w-4 h-4"
                           fill="none"
@@ -522,18 +805,37 @@ export default function KelolaAkunPage() {
                             d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
                           />
                         </svg>
+                      ) : (
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
                       )}
-                      {tab === "users" ? "Manajemen User" : "Data Cabang"}
+                      {tab === "users"
+                        ? "Manajemen User"
+                        : tab === "branches"
+                          ? "Data Cabang"
+                          : "User Operasional & Produksi"}
                     </div>
                   </button>
                 ))}
               </nav>
             </div>
 
-            {/* ── Tab: Users ── */}
+            {/* ══════════════════════════════════════════════════════════════
+                Tab: Users  (existing — tidak diubah)
+            ══════════════════════════════════════════════════════════════ */}
             {activeTab === "users" && (
               <>
-                {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                   {[
                     {
@@ -583,7 +885,6 @@ export default function KelolaAkunPage() {
                   ))}
                 </div>
 
-                {/* Filter toggle */}
                 <div className="flex justify-end mb-4">
                   <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
                     <input
@@ -596,7 +897,6 @@ export default function KelolaAkunPage() {
                   </label>
                 </div>
 
-                {/* Users Table */}
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full">
@@ -658,7 +958,6 @@ export default function KelolaAkunPage() {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex gap-2">
-                                  {/* Edit */}
                                   <button
                                     onClick={() => handleOpenUserModal(user)}
                                     className="text-indigo-600 hover:text-indigo-900 transition-colors"
@@ -678,7 +977,6 @@ export default function KelolaAkunPage() {
                                       />
                                     </svg>
                                   </button>
-                                  {/* Toggle status */}
                                   <button
                                     onClick={() => handleToggleUserStatus(user)}
                                     className={`${user.status === "active" ? "text-yellow-600 hover:text-yellow-900" : "text-green-600 hover:text-green-900"} transition-colors`}
@@ -702,7 +1000,6 @@ export default function KelolaAkunPage() {
                                       />
                                     </svg>
                                   </button>
-                                  {/* Delete */}
                                   <button
                                     onClick={() => setUserToDelete(user)}
                                     className="text-red-600 hover:text-red-900 transition-colors"
@@ -734,10 +1031,11 @@ export default function KelolaAkunPage() {
               </>
             )}
 
-            {/* ── Tab: Branches ── */}
+            {/* ══════════════════════════════════════════════════════════════
+                Tab: Branches  (existing — tidak diubah)
+            ══════════════════════════════════════════════════════════════ */}
             {activeTab === "branches" && (
               <>
-                {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                   <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
                     <p className="text-sm text-gray-600 mb-2">Total Cabang</p>
@@ -773,7 +1071,6 @@ export default function KelolaAkunPage() {
                   </div>
                 </div>
 
-                {/* Branches Grid */}
                 {branches.length === 0 ? (
                   <div className="text-center py-20 text-gray-500 text-sm">
                     Belum ada data cabang.
@@ -876,7 +1173,6 @@ export default function KelolaAkunPage() {
                               </div>
                             )}
                           </div>
-
                           <div className="mt-4 pt-4 border-t border-gray-200">
                             <div className="flex justify-between text-sm mb-2">
                               <span className="text-gray-600">Total Lead</span>
@@ -944,7 +1240,207 @@ export default function KelolaAkunPage() {
               </>
             )}
 
-            {/* ── Modal ── */}
+            {/* ══════════════════════════════════════════════════════════════
+                Tab: OPRPRD Users  (BARU)
+            ══════════════════════════════════════════════════════════════ */}
+            {activeTab === "oprprd" && (
+              <>
+                {/* Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                  <div className="bg-white rounded-xl shadow-sm p-4">
+                    <p className="text-xs text-gray-500">Total</p>
+                    <p className="text-xl font-bold text-gray-800">
+                      {oprprdStats.total}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-sm p-4 border-t-2 border-blue-400">
+                    <p className="text-xs text-gray-500">Operasional</p>
+                    <p className="text-xl font-bold text-blue-700">
+                      {oprprdStats.operational}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-sm p-4 border-t-2 border-amber-400">
+                    <p className="text-xs text-gray-500">Produksi</p>
+                    <p className="text-xl font-bold text-amber-700">
+                      {oprprdStats.production}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-sm p-4 border-t-2 border-emerald-400">
+                    <p className="text-xs text-gray-500">QC</p>
+                    <p className="text-xl font-bold text-emerald-700">
+                      {oprprdStats.qc}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-sm p-4 border-t-2 border-green-400">
+                    <p className="text-xs text-gray-500">Aktif</p>
+                    <p className="text-xl font-bold text-green-700">
+                      {oprprdStats.active}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Filter */}
+                <div className="flex justify-end mb-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={showInactive}
+                      onChange={(e) => setShowInactive(e.target.checked)}
+                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    Tampilkan akun nonaktif
+                  </label>
+                </div>
+
+                {/* Table */}
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          {[
+                            "Username",
+                            "Nama Lengkap",
+                            "Email / Telepon",
+                            "Role",
+                            "Status",
+                            "Terakhir Login",
+                            "Aksi",
+                          ].map((h) => (
+                            <th
+                              key={h}
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            >
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {usersOPRPRD.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={7}
+                              className="px-6 py-10 text-center text-gray-500 text-sm"
+                            >
+                              Tidak ada data user operasional &amp; produksi.
+                            </td>
+                          </tr>
+                        ) : (
+                          usersOPRPRD.map((user) => (
+                            <tr key={user.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="font-medium text-gray-900">
+                                  {user.username}
+                                </div>
+                                <div className="text-xs text-gray-400 font-mono">
+                                  {user.id.slice(0, 8)}…
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                                {user.full_name}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-600">
+                                  {user.email ?? "-"}
+                                </div>
+                                {user.phone && (
+                                  <div className="text-xs text-gray-400">
+                                    {user.phone}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {getOPRPRDRoleBadge(user.roles)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {getIsActiveBadge(user.is_active)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                {formatDate(user.last_login_at)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() =>
+                                      handleOpenOPRPRDUserModal(user)
+                                    }
+                                    className="text-indigo-600 hover:text-indigo-900 transition-colors"
+                                    title="Edit"
+                                  >
+                                    <svg
+                                      className="w-5 h-5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                      />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleToggleOPRPRDUserStatus(user)
+                                    }
+                                    className={`${user.is_active ? "text-yellow-600 hover:text-yellow-900" : "text-green-600 hover:text-green-900"} transition-colors`}
+                                    title={
+                                      user.is_active
+                                        ? "Nonaktifkan"
+                                        : "Aktifkan"
+                                    }
+                                  >
+                                    <svg
+                                      className="w-5 h-5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                                      />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => setOprprdUserToDelete(user)}
+                                    className="text-red-600 hover:text-red-900 transition-colors"
+                                    title="Hapus"
+                                  >
+                                    <svg
+                                      className="w-5 h-5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                      />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════
+                Modal — satu modal, isi berubah sesuai activeTab
+            ══════════════════════════════════════════════════════════════ */}
             <Modal
               isOpen={isModalOpen}
               onClose={() => !isSaving && setIsModalOpen(false)}
@@ -953,13 +1449,18 @@ export default function KelolaAkunPage() {
                   ? isEditMode
                     ? "Edit Akun Pengguna"
                     : "Buat Akun Baru"
-                  : isEditMode
-                    ? "Edit Cabang"
-                    : "Tambah Cabang Baru"
+                  : activeTab === "branches"
+                    ? isEditMode
+                      ? "Edit Cabang"
+                      : "Tambah Cabang Baru"
+                    : isEditMode
+                      ? "Edit User Operasional"
+                      : "Buat User Operasional & Produksi"
               }
-              size={activeTab === "users" ? "md" : "lg"}
+              size={activeTab === "branches" ? "lg" : "md"}
             >
-              {activeTab === "users" ? (
+              {/* ── Form: User BMS (existing — tidak diubah) ── */}
+              {activeTab === "users" && (
                 <div className="space-y-4">
                   <Input
                     label="Nama Lengkap"
@@ -1066,7 +1567,10 @@ export default function KelolaAkunPage() {
                     </Button>
                   </div>
                 </div>
-              ) : (
+              )}
+
+              {/* ── Form: Branch (existing — tidak diubah) ── */}
+              {activeTab === "branches" && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <Input
@@ -1182,11 +1686,150 @@ export default function KelolaAkunPage() {
                   </div>
                 </div>
               )}
+
+              {/* ── Form: OPRPRD User (BARU) ── */}
+              {activeTab === "oprprd" && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input
+                      label="Username"
+                      value={oprprdUserFormData.username}
+                      onChange={(e) =>
+                        setOprprdUserFormData({
+                          ...oprprdUserFormData,
+                          username: e.target.value,
+                        })
+                      }
+                      placeholder="min. 3 karakter"
+                      disabled={isSaving || isEditMode}
+                    />
+                    <Input
+                      label="Nama Lengkap"
+                      value={oprprdUserFormData.full_name}
+                      onChange={(e) =>
+                        setOprprdUserFormData({
+                          ...oprprdUserFormData,
+                          full_name: e.target.value,
+                        })
+                      }
+                      placeholder="Masukkan nama lengkap"
+                      disabled={isSaving}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input
+                      label="Email (Opsional)"
+                      type="email"
+                      value={oprprdUserFormData.email}
+                      onChange={(e) =>
+                        setOprprdUserFormData({
+                          ...oprprdUserFormData,
+                          email: e.target.value,
+                        })
+                      }
+                      placeholder="email@company.com"
+                      disabled={isSaving}
+                    />
+                    <Input
+                      label="Telepon (Opsional)"
+                      type="tel"
+                      value={oprprdUserFormData.phone}
+                      onChange={(e) =>
+                        setOprprdUserFormData({
+                          ...oprprdUserFormData,
+                          phone: e.target.value,
+                        })
+                      }
+                      placeholder="08123456789"
+                      disabled={isSaving}
+                    />
+                  </div>
+                  <Input
+                    label={
+                      isEditMode
+                        ? "Password Baru (kosongkan jika tidak diubah)"
+                        : "Password"
+                    }
+                    type="password"
+                    value={oprprdUserFormData.password}
+                    onChange={(e) =>
+                      setOprprdUserFormData({
+                        ...oprprdUserFormData,
+                        password: e.target.value,
+                      })
+                    }
+                    placeholder="Minimal 6 karakter"
+                    disabled={isSaving}
+                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Role
+                    </label>
+                    <select
+                      value={oprprdUserFormData.role_id}
+                      onChange={(e) =>
+                        setOprprdUserFormData({
+                          ...oprprdUserFormData,
+                          role_id: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                      disabled={isSaving}
+                    >
+                      <option value="">— Pilih Role —</option>
+                      {(["operational", "production", "qc"] as const).map(
+                        (group) => {
+                          const groupRoles = roles.filter(
+                            (r) => r.role_group === group,
+                          );
+                          if (groupRoles.length === 0) return null;
+                          return (
+                            <optgroup
+                              key={group}
+                              label={ROLE_GROUP_LABELS[group]?.label ?? group}
+                            >
+                              {groupRoles.map((role) => (
+                                <option key={role.id} value={role.id}>
+                                  {role.name}
+                                </option>
+                              ))}
+                            </optgroup>
+                          );
+                        },
+                      )}
+                    </select>
+                    {/* Deskripsi role yang dipilih */}
+                    {oprprdUserFormData.role_id && (
+                      <p className="mt-1.5 text-xs text-gray-500 italic">
+                        {roles.find((r) => r.id === oprprdUserFormData.role_id)
+                          ?.description ?? "Tidak ada deskripsi."}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex justify-end space-x-3 mt-6">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setIsModalOpen(false)}
+                      disabled={isSaving}
+                    >
+                      Batal
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={handleSaveOPRPRDUser}
+                      isLoading={isSaving}
+                    >
+                      {isEditMode ? "Simpan Perubahan" : "Buat Akun"}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </Modal>
           </main>
         </div>
       </div>
 
+      {/* ── Confirm Dialogs existing (tidak diubah) ── */}
       <ConfirmDialog
         isOpen={!!branchToDelete}
         variant="danger"
@@ -1217,6 +1860,23 @@ export default function KelolaAkunPage() {
         isLoading={isDeletingUser}
         onConfirm={handleDeleteUser}
         onCancel={() => !isDeletingUser && setUserToDelete(null)}
+      />
+
+      {/* ── Confirm Dialog tambahan OPRPRD ── */}
+      <ConfirmDialog
+        isOpen={!!oprprdUserToDelete}
+        variant="danger"
+        title="Hapus akun ini?"
+        message={
+          oprprdUserToDelete
+            ? `Akun "${oprprdUserToDelete.full_name}" (@${oprprdUserToDelete.username}) akan dihapus permanen beserta akses loginnya. Tindakan ini tidak dapat dibatalkan.`
+            : ""
+        }
+        confirmText="Ya, Hapus"
+        cancelText="Batal"
+        isLoading={isDeletingOPRPRDUser}
+        onConfirm={handleDeleteOPRPRDUser}
+        onCancel={() => !isDeletingOPRPRDUser && setOprprdUserToDelete(null)}
       />
     </>
   );
