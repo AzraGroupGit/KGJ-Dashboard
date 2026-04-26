@@ -5,22 +5,18 @@ import { createClient } from "@/lib/supabase/server";
 
 // Role yang termasuk "Jewelry Expert"
 const EXPERT_ROLES = [
-  "staff_racik",
-  "staff_lebur",
-  "staff_bentuk",
-  "staff_pemolesan",
-  "staff_laser",
-  "staff_finishing",
+  "jewelry_expert_lebur_bahan",
+  "jewelry_expert_pembentukan_awal",
+  "jewelry_expert_finishing",
+  "micro_setting",
 ] as const;
 
 // Mapping role → stage default (yang dikerjakan role tersebut)
 const ROLE_DEFAULT_STAGE: Record<string, string> = {
-  staff_racik: "racik_bahan",
-  staff_lebur: "lebur_bahan",
-  staff_bentuk: "pembentukan_cincin",
-  staff_pemolesan: "pemolesan",
-  staff_laser: "laser",
-  staff_finishing: "finishing",
+  jewelry_expert_lebur_bahan: "lebur_bahan",
+  jewelry_expert_pembentukan_awal: "pembentukan_cincin",
+  jewelry_expert_finishing: "finishing",
+  micro_setting: "pemasangan_permata",
 };
 
 // Stage yang dipakai untuk deteksi "active order" per expert

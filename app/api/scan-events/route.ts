@@ -26,7 +26,7 @@ interface ScanEventWithRelations {
     id: string;
     full_name: string;
     email: string;
-    roles: {
+    role: {
       id: string;
       name: string;
       role_group: string;
@@ -219,7 +219,7 @@ export async function GET(request: Request) {
           id,
           full_name,
           email,
-          roles (
+          role:roles!users_role_id_fkey (
             id,
             name,
             role_group
@@ -304,8 +304,8 @@ export async function GET(request: Request) {
         user_id: event.user_id,
         user_name: event.users?.full_name,
         user_email: event.users?.email,
-        user_role: event.users?.roles?.name,
-        user_role_group: event.users?.roles?.role_group,
+        user_role: event.users?.role?.name,
+        user_role_group: event.users?.role?.role_group,
         stage: event.stage,
         stage_label: STAGE_LABELS[event.stage] || event.stage,
         action: event.action,
@@ -519,7 +519,7 @@ export async function GET_STATS(request: Request) {
         stage,
         user_id,
         scanned_at,
-        users!inner (
+        users (
           id,
           full_name
         )

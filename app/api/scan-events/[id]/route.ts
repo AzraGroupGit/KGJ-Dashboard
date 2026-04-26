@@ -30,7 +30,7 @@ interface UserWithRole {
   id: string;
   full_name: string;
   email: string;
-  roles: Role | null;
+  role: Role | null;
 }
 
 interface StageResult {
@@ -57,7 +57,7 @@ interface ScanEventDetail {
 }
 
 interface CurrentUserWithRole {
-  roles: {
+  role: {
     name: string;
   } | null;
 }
@@ -140,7 +140,7 @@ export async function GET(
           id,
           full_name,
           email,
-          roles (
+          role:roles!users_role_id_fkey (
             id,
             name,
             role_group
@@ -199,8 +199,8 @@ export async function GET(
       user_id: scanEvent.user_id,
       user_name: scanEvent.users?.full_name,
       user_email: scanEvent.users?.email,
-      user_role: scanEvent.users?.roles?.name,
-      user_role_group: scanEvent.users?.roles?.role_group,
+      user_role: scanEvent.users?.role?.name,
+      user_role_group: scanEvent.users?.role?.role_group,
       stage_result_id: scanEvent.stage_result_id,
       stage: scanEvent.stage,
       action: scanEvent.action,
@@ -288,7 +288,7 @@ export async function DELETE(
     // Check if user is superadmin
     const { data: currentUser, error: userError } = await supabase
       .from("users")
-      .select("roles!inner(name)")
+      .select("role:roles!users_role_id_fkey(name)")
       .eq("id", user.id)
       .single<CurrentUserWithRole>();
 
@@ -303,7 +303,7 @@ export async function DELETE(
       );
     }
 
-    if (currentUser.roles?.name !== "superadmin") {
+    if (currentUser.role?.name !== "superadmin") {
       return NextResponse.json(
         {
           error: "Forbidden - Hanya superadmin yang dapat menghapus",

@@ -267,6 +267,7 @@ export default function KelolaQRPage() {
   >("all");
 
   const [generateForm, setGenerateForm] = useState(EMPTY_GENERATE_FORM);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     setClientUser(getClientUser());
@@ -421,6 +422,12 @@ export default function KelolaQRPage() {
       setIsProcessing(false);
       setQrToDelete(null);
     }
+  };
+
+  const handleCopyLink = (url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   const handleDownloadQR = () => {
@@ -926,7 +933,7 @@ export default function KelolaQRPage() {
       {/* Modal Detail QR */}
       <Modal
         isOpen={!!selectedQR}
-        onClose={() => setSelectedQR(null)}
+        onClose={() => { setSelectedQR(null); setCopiedLink(false); }}
         title="Detail QR Code"
         size="sm"
       >
@@ -968,11 +975,23 @@ export default function KelolaQRPage() {
                   <span className="text-gray-700">{selectedQR.location}</span>
                 </div>
               )}
-              <div className="flex justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-500">QR Token</span>
-                <code className="text-xs font-mono bg-white px-2 py-0.5 rounded border">
-                  {selectedQR.qr_token.slice(0, 16)}...
-                </code>
+              <div className="py-2.5 px-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-500">Link QR</span>
+                  <button
+                    onClick={() => handleCopyLink(selectedQR.qr_payload)}
+                    className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${
+                      copiedLink
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-white text-indigo-600 border border-gray-200 hover:bg-indigo-50"
+                    }`}
+                  >
+                    {copiedLink ? "✓ Tersalin!" : "Salin"}
+                  </button>
+                </div>
+                <p className="text-[11px] font-mono text-gray-600 break-all leading-relaxed">
+                  {selectedQR.qr_payload}
+                </p>
               </div>
               <div className="flex justify-between py-2 px-3">
                 <span className="text-gray-500">Status</span>
