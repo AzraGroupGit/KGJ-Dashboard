@@ -62,12 +62,6 @@ interface CurrentUserWithRole {
   } | null;
 }
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
 // ─── Helper Functions ─────────────────────────────────────────────────────────
 
 function isValidUUID(uuid: string): boolean {
@@ -82,7 +76,10 @@ function isValidUUID(uuid: string): boolean {
  * GET /api/scan-events/[id]
  * Mendapatkan detail scan event berdasarkan ID
  */
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const supabase = await createClient();
 
@@ -98,7 +95,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -253,7 +250,10 @@ export async function GET(request: Request, { params }: RouteParams) {
  * DELETE /api/scan-events/[id]
  * Menghapus scan event (hanya untuk superadmin)
  */
-export async function DELETE(request: Request, { params }: RouteParams) {
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const supabase = await createClient();
 
@@ -269,7 +269,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
