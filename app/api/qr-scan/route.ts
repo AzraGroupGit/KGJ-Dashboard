@@ -485,7 +485,8 @@ async function handleStartWork(
     )
     .eq("order_id", order.id)
     .eq("stage", currentStage)
-    .is("finished_at", null).maybeSingle;
+    .is("finished_at", null)
+    .maybeSingle();
 
   if (activeError) {
     console.error("[handleStartWork] Check active stage error:", activeError);
@@ -685,11 +686,11 @@ async function handleDeleteOrder(
   // Check if user is superadmin
   const { data: userRole, error: roleError } = await supabase
     .from("users")
-    .select("roles!inner(name)")
+    .select("role:roles!users_role_id_fkey(name)")
     .eq("id", userId)
     .single();
 
-  if (roleError || userRole?.roles?.name !== "superadmin") {
+  if (roleError || (userRole?.role as any)?.name !== "superadmin") {
     return NextResponse.json(
       {
         error: "Hanya superadmin yang bisa menghapus data",

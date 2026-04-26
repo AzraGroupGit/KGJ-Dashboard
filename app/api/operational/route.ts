@@ -42,37 +42,146 @@ export async function GET() {
     const threeDaysAgoISO = threeDaysAgo.toISOString();
     const sevenDaysAgoISO = sevenDaysAgo.toISOString();
 
-    // ========== KONFIRMASI (Menunggu Keputusan Customer) ==========
-    const { data: konfirmasiRaw, error: konfirmasiError } = await supabase
-      .from("stage_results")
-      .select(
-        `
-        data,
-        started_at,
-        finished_at,
-        orders!inner (
-          order_number,
-          customers!inner ( name, wa_contact )
+    // ========== FETCH ALL SECTIONS IN PARALLEL ==========
+    const [
+      konfirmasiResult,
+      pelunasanResult,
+      deliveryResult,
+      adminTasksResult,
+      racikResult,
+      laserResult,
+      qcSummaryResult,
+      qcActivityResult,
+    ] = await Promise.allSettled([
+      // 1. KONFIRMASI
+      supabase
+        .from("stage_results")
+        .select(
+          `
+          data,
+          started_at,
+          finished_at,
+          orders!inner (
+            order_number,
+            customers ( name, wa_contact )
+          )
+        `,
         )
-      `,
-      )
-      .eq("stage", "konfirmasi_awal")
-      .order("started_at", { ascending: false })
-      .limit(30);
+        .eq("stage", "konfirmasi_awal")
+        .order("started_at", { ascending: false })
+        .limit(30),
 
-    if (konfirmasiError) {
+      // 2. PELUNASAN
+      supabase
+        .from("v_payment_status")
+        .select("*")
+        .order("pelunasan_finished_at", { ascending: false, nullsFirst: true })
+        .limit(50),
+
+      // 3. DELIVERY
+      supabase
+        .from("stage_results")
+        .select(
+          `
+          data,
+          started_at,
+          finished_at,
+          orders!inner (
+            order_number,
+            delivery_method,
+            completed_at,
+            customers ( name )
+          )
+        `,
+        )
+        .eq("stage", "pengiriman")
+        .order("started_at", { ascending: false })
+        .limit(50),
+
+      // 4. ADMIN TASKS
+      supabase
+        .from("v_stage_duration")
+        .select("*")
+        .in("stage", ["pelunasan", "kelengkapan", "packing", "pengiriman"])
+        .gte("started_at", threeDaysAgoISO)
+        .order("started_at", { ascending: false })
+        .limit(50),
+
+      // 5. RACIK BAHAN
+      supabase
+        .from("stage_results")
+        .select(
+          `
+          data,
+          finished_at,
+          orders!inner ( order_number, target_weight ),
+          users ( full_name )
+        `,
+        )
+        .eq("stage", "racik_bahan")
+        .gte("finished_at", sevenDaysAgoISO)
+        .order("finished_at", { ascending: false }),
+
+      // 6. LASER
+      supabase
+        .from("stage_results")
+        .select(
+          `
+          data,
+          started_at,
+          finished_at,
+          orders!inner ( order_number )
+        `,
+        )
+        .eq("stage", "laser")
+        .gte("started_at", sevenDaysAgoISO)
+        .order("started_at", { ascending: false }),
+
+      // 7. QC SUMMARY
+      supabase
+        .from("v_quality_summary")
+        .select("*")
+        .gte("qc_date", sevenDaysAgo.toISOString().split("T")[0])
+        .order("qc_date", { ascending: false }),
+
+      // 8. QC ACTIVITY
+      supabase
+        .from("stage_results")
+        .select(
+          `
+          data,
+          notes,
+          stage,
+          finished_at,
+          orders!inner ( order_number ),
+          users ( full_name )
+        `,
+        )
+        .in("stage", ["qc_awal", "qc_1", "qc_2", "qc_3"])
+        .not("finished_at", "is", null)
+        .order("finished_at", { ascending: false })
+        .limit(15),
+    ]);
+
+    // ========== KONFIRMASI ==========
+    const konfirmasiRaw =
+      konfirmasiResult.status === "fulfilled" &&
+      !konfirmasiResult.value.error
+        ? konfirmasiResult.value.data || []
+        : [];
+
+    if (
+      konfirmasiResult.status === "fulfilled" &&
+      konfirmasiResult.value.error
+    ) {
       console.error(
         "[GET /api/operational] konfirmasi:",
-        konfirmasiError.message,
-      );
-      return NextResponse.json(
-        { error: "Gagal mengambil data konfirmasi" },
-        { status: 500 },
+        konfirmasiResult.value.error.message,
       );
     }
 
-    const konfirmasi = (konfirmasiRaw || [])
-      .filter((row: any) => {
+    const konfirmasi = (konfirmasiRaw as any[])
+      .filter((row) => {
         const decision = row.data?.customer_decision;
         return (
           decision == null ||
@@ -80,12 +189,11 @@ export async function GET() {
         );
       })
       .slice(0, 10)
-      .map((row: any) => {
+      .map((row) => {
         const startedAt = row.started_at;
         const hoursElapsed = startedAt
           ? (now.getTime() - new Date(startedAt).getTime()) / 3_600_000
           : 0;
-
         return {
           order_number: row.orders?.order_number ?? null,
           customer_name: row.orders?.customers?.name ?? null,
@@ -100,64 +208,47 @@ export async function GET() {
         };
       });
 
-    // ========== PELUNASAN (Menunggu Pelunasan) ==========
-    const { data: pelunasanRaw, error: pelunasanError } = await supabase
-      .from("v_payment_status")
-      .select("*")
-      .order("pelunasan_finished_at", { ascending: false, nullsFirst: true })
-      .limit(50);
+    // ========== PELUNASAN ==========
+    const pelunasanRaw =
+      pelunasanResult.status === "fulfilled" && !pelunasanResult.value.error
+        ? pelunasanResult.value.data || []
+        : [];
 
-    if (pelunasanError) {
+    if (
+      pelunasanResult.status === "fulfilled" &&
+      pelunasanResult.value.error
+    ) {
       console.error(
         "[GET /api/operational] pelunasan:",
-        pelunasanError.message,
-      );
-      return NextResponse.json(
-        { error: "Gagal mengambil data pelunasan" },
-        { status: 500 },
+        pelunasanResult.value.error.message,
       );
     }
 
-    const pelunasan = (pelunasanRaw || [])
-      .filter((row: any) => row.payment_status !== "lunas")
+    const pelunasan = (pelunasanRaw as any[])
+      .filter((row) => row.payment_status !== "lunas")
       .slice(0, 10);
 
-    // ========== DELIVERY (Menunggu Pickup) ==========
-    const { data: deliveryRaw, error: deliveryError } = await supabase
-      .from("stage_results")
-      .select(
-        `
-        data,
-        started_at,
-        finished_at,
-        orders!inner (
-          order_number,
-          delivery_method,
-          completed_at,
-          customers!inner ( name )
-        )
-      `,
-      )
-      .eq("stage", "pengiriman")
-      .order("started_at", { ascending: false })
-      .limit(50);
+    // ========== DELIVERY ==========
+    const deliveryRaw =
+      deliveryResult.status === "fulfilled" && !deliveryResult.value.error
+        ? deliveryResult.value.data || []
+        : [];
 
-    if (deliveryError) {
-      console.error("[GET /api/operational] delivery:", deliveryError.message);
-      return NextResponse.json(
-        { error: "Gagal mengambil data delivery" },
-        { status: 500 },
+    if (deliveryResult.status === "fulfilled" && deliveryResult.value.error) {
+      console.error(
+        "[GET /api/operational] delivery:",
+        deliveryResult.value.error.message,
       );
     }
 
-    const delivery = (deliveryRaw || [])
+    const delivery = (deliveryRaw as any[])
       .filter(
-        (row: any) =>
+        (row) =>
           row.data?.picked_up_by_customer_at == null &&
           row.orders?.completed_at == null,
       )
       .slice(0, 10)
-      .map((row: any) => ({
+      .map((row) => ({
         order_number: row.orders?.order_number ?? null,
         customer_name: row.orders?.customers?.name ?? null,
         delivery_method: row.orders?.delivery_method ?? null,
@@ -170,31 +261,27 @@ export async function GET() {
         delivery_finished_at: row.finished_at,
       }));
 
-    // ========== ADMIN TASKS (operational Lintas Stage) ==========
-    const { data: adminTasksRaw, error: adminTasksError } = await supabase
-      .from("v_stage_duration")
-      .select("*")
-      .in("stage", ["pelunasan", "kelengkapan", "packing", "pengiriman"])
-      .gte("started_at", threeDaysAgoISO)
-      .order("started_at", { ascending: false })
-      .limit(50);
+    // ========== ADMIN TASKS ==========
+    const adminTasksRaw =
+      adminTasksResult.status === "fulfilled" && !adminTasksResult.value.error
+        ? adminTasksResult.value.data || []
+        : [];
 
-    if (adminTasksError) {
+    if (
+      adminTasksResult.status === "fulfilled" &&
+      adminTasksResult.value.error
+    ) {
       console.error(
         "[GET /api/operational] admin tasks:",
-        adminTasksError.message,
-      );
-      return NextResponse.json(
-        { error: "Gagal mengambil data admin tasks" },
-        { status: 500 },
+        adminTasksResult.value.error.message,
       );
     }
 
     const fourHoursAgo = new Date(now);
     fourHoursAgo.setHours(fourHoursAgo.getHours() - 4);
 
-    const adminTasks = (adminTasksRaw || [])
-      .sort((a: any, b: any) => {
+    const adminTasks = (adminTasksRaw as any[])
+      .sort((a, b) => {
         const aActive = a.finished_at == null ? 0 : 1;
         const bActive = b.finished_at == null ? 0 : 1;
         if (aActive !== bActive) return aActive - bActive;
@@ -203,7 +290,7 @@ export async function GET() {
         );
       })
       .slice(0, 20)
-      .map((row: any) => ({
+      .map((row) => ({
         order_id: row.order_id,
         order_number: row.order_number,
         stage: row.stage,
@@ -217,38 +304,28 @@ export async function GET() {
       }));
 
     // ========== RACIK BAHAN ==========
-    const { data: racikRaw, error: racikError } = await supabase
-      .from("stage_results")
-      .select(
-        `
-        data,
-        finished_at,
-        orders!inner ( order_number, target_weight ),
-        users!inner ( full_name )
-      `,
-      )
-      .eq("stage", "racik_bahan")
-      .gte("finished_at", sevenDaysAgoISO)
-      .order("finished_at", { ascending: false });
+    const racikRaw =
+      racikResult.status === "fulfilled" && !racikResult.value.error
+        ? racikResult.value.data || []
+        : [];
 
-    if (racikError) {
-      console.error("[GET /api/operational] racik:", racikError.message);
-      return NextResponse.json(
-        { error: "Gagal mengambil data racik" },
-        { status: 500 },
+    if (racikResult.status === "fulfilled" && racikResult.value.error) {
+      console.error(
+        "[GET /api/operational] racik:",
+        racikResult.value.error.message,
       );
     }
 
-    const racikFinished = (racikRaw || []).filter(
-      (row: any) => row.finished_at != null,
+    const racikFinished = (racikRaw as any[]).filter(
+      (row) => row.finished_at != null,
     );
 
-    let deviationSum = 0;
-    let deviationCount = 0;
-    let bufferSum = 0;
-    let bufferCount = 0;
+    let deviationSum = 0,
+      deviationCount = 0,
+      bufferSum = 0,
+      bufferCount = 0;
 
-    racikFinished.forEach((row: any) => {
+    racikFinished.forEach((row) => {
       const totalWeight = parseFloat(row.data?.total_weight);
       const targetWeight = parseFloat(row.orders?.target_weight);
       if (!isNaN(totalWeight) && !isNaN(targetWeight) && targetWeight > 0) {
@@ -256,7 +333,6 @@ export async function GET() {
           (Math.abs(totalWeight - targetWeight) / targetWeight) * 100;
         deviationCount++;
       }
-
       const buffer = parseFloat(row.data?.shrinkage_buffer);
       if (!isNaN(buffer)) {
         bufferSum += buffer;
@@ -267,7 +343,7 @@ export async function GET() {
     const rataDeviasi = deviationCount > 0 ? deviationSum / deviationCount : 0;
     const rataBuffer = bufferCount > 0 ? bufferSum / bufferCount : 0;
 
-    const racikLogs = racikFinished.slice(0, 5).map((row: any) => ({
+    const racikLogs = racikFinished.slice(0, 5).map((row) => ({
       order_number: row.orders?.order_number ?? null,
       staff_name: row.users?.full_name ?? null,
       target_weight: row.orders?.target_weight ?? null,
@@ -276,60 +352,57 @@ export async function GET() {
       timestamp: row.finished_at,
     }));
 
-    const { data: wiRacik } = await supabase
-      .from("work_instructions")
-      .select("parameters")
-      .eq("stage", "racik_bahan")
-      .eq("is_active", true)
-      .limit(1)
-      .maybeSingle();
+    // Fetch antrian racik dan work instructions (non-critical, no early return)
+    const [wiRacikResult, antrianRacikResult] = await Promise.allSettled([
+      supabase
+        .from("work_instructions")
+        .select("parameters")
+        .eq("stage", "racik_bahan")
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("orders")
+        .select("target_weight")
+        .eq("current_stage", "racik_bahan")
+        .is("deleted_at", null),
+    ]);
+
+    const wiRacik =
+      wiRacikResult.status === "fulfilled" ? wiRacikResult.value.data : null;
+    const antrianRacik =
+      antrianRacikResult.status === "fulfilled"
+        ? antrianRacikResult.value.data || []
+        : [];
 
     const targetShrinkagePercent =
-      parseFloat(wiRacik?.parameters?.shrinkage_buffer_percent) || 5.0;
+      parseFloat((wiRacik as any)?.parameters?.shrinkage_buffer_percent) || 5.0;
 
-    const { data: antrianRacik } = await supabase
-      .from("orders")
-      .select("target_weight")
-      .eq("current_stage", "racik_bahan")
-      .is("deleted_at", null);
-
-    const totalBeratTeoritis = (antrianRacik || []).reduce(
-      (sum: number, row: any) => sum + (parseFloat(row.target_weight) || 0),
+    const totalBeratTeoritis = (antrianRacik as any[]).reduce(
+      (sum, row) => sum + (parseFloat(row.target_weight) || 0),
       0,
     );
 
     // ========== LASER ==========
-    const { data: laserRaw, error: laserError } = await supabase
-      .from("stage_results")
-      .select(
-        `
-        data,
-        started_at,
-        finished_at,
-        orders!inner ( order_number )
-      `,
-      )
-      .eq("stage", "laser")
-      .gte("started_at", sevenDaysAgoISO)
-      .order("started_at", { ascending: false });
+    const laserRaw =
+      laserResult.status === "fulfilled" && !laserResult.value.error
+        ? laserResult.value.data || []
+        : [];
 
-    if (laserError) {
-      console.error("[GET /api/operational] laser:", laserError.message);
-      return NextResponse.json(
-        { error: "Gagal mengambil data laser" },
-        { status: 500 },
+    if (laserResult.status === "fulfilled" && laserResult.value.error) {
+      console.error(
+        "[GET /api/operational] laser:",
+        laserResult.value.error.message,
       );
     }
 
-    const laserRows = laserRaw || [];
-
-    const antrianUkir = laserRows.filter(
-      (r: any) => r.finished_at == null,
+    const antrianUkir = (laserRaw as any[]).filter(
+      (r) => r.finished_at == null,
     ).length;
 
-    let durationSum = 0;
-    let durationCount = 0;
-    laserRows.forEach((r: any) => {
+    let durationSum = 0,
+      durationCount = 0;
+    (laserRaw as any[]).forEach((r) => {
       if (r.finished_at != null) {
         const dur = parseFloat(r.data?.engraving_duration_seconds);
         if (!isNaN(dur)) {
@@ -341,18 +414,17 @@ export async function GET() {
     const rataWaktu = durationCount > 0 ? durationSum / durationCount : 120;
 
     const mesinSet = new Set<string>();
-    laserRows.forEach((r: any) => {
+    (laserRaw as any[]).forEach((r) => {
       if (r.finished_at == null) {
         const mid = r.data?.laser_machine_id;
         if (mid) mesinSet.add(mid);
       }
     });
-    const mesinAktif = Array.from(mesinSet);
 
-    const laserRecent = laserRows
-      .filter((r: any) => r.finished_at != null)
+    const laserRecent = (laserRaw as any[])
+      .filter((r) => r.finished_at != null)
       .slice(0, 5)
-      .map((r: any) => ({
+      .map((r) => ({
         order_number: r.orders?.order_number ?? null,
         engraved_text: r.data?.engraved_text ?? null,
         ring_identity_number: r.data?.ring_identity_number ?? null,
@@ -362,25 +434,22 @@ export async function GET() {
       }));
 
     // ========== QC SUMMARY ==========
-    const sevenDaysAgoDate = sevenDaysAgoISO.split("T")[0];
-    const { data: qcSummaryRaw, error: qcSummaryError } = await supabase
-      .from("v_quality_summary")
-      .select("*")
-      .gte("qc_date", sevenDaysAgoDate)
-      .order("qc_date", { ascending: false });
+    const qcSummaryRaw =
+      qcSummaryResult.status === "fulfilled" && !qcSummaryResult.value.error
+        ? qcSummaryResult.value.data || []
+        : [];
 
-    if (qcSummaryError) {
+    if (
+      qcSummaryResult.status === "fulfilled" &&
+      qcSummaryResult.value.error
+    ) {
       console.error(
         "[GET /api/operational] qc summary:",
-        qcSummaryError.message,
-      );
-      return NextResponse.json(
-        { error: "Gagal mengambil ringkasan QC" },
-        { status: 500 },
+        qcSummaryResult.value.error.message,
       );
     }
 
-    const qcSummary = (qcSummaryRaw || []).map((row: any) => ({
+    const qcSummary = (qcSummaryRaw as any[]).map((row) => ({
       qc_date: row.qc_date,
       qc_type: row.qc_type,
       total_checks: row.total_checks,
@@ -390,35 +459,22 @@ export async function GET() {
     }));
 
     // ========== QC ACTIVITY ==========
-    const { data: qcActivityRaw, error: qcActivityError } = await supabase
-      .from("stage_results")
-      .select(
-        `
-        data,
-        notes,
-        stage,
-        finished_at,
-        orders!inner ( order_number ),
-        users!inner ( full_name )
-      `,
-      )
-      .in("stage", ["qc_awal", "qc_1", "qc_2", "qc_3"])
-      .not("finished_at", "is", null)
-      .order("finished_at", { ascending: false })
-      .limit(15);
+    const qcActivityRaw =
+      qcActivityResult.status === "fulfilled" && !qcActivityResult.value.error
+        ? qcActivityResult.value.data || []
+        : [];
 
-    if (qcActivityError) {
+    if (
+      qcActivityResult.status === "fulfilled" &&
+      qcActivityResult.value.error
+    ) {
       console.error(
         "[GET /api/operational] qc activity:",
-        qcActivityError.message,
-      );
-      return NextResponse.json(
-        { error: "Gagal mengambil aktivitas QC" },
-        { status: 500 },
+        qcActivityResult.value.error.message,
       );
     }
 
-    const qcActivity = (qcActivityRaw || []).map((row: any) => ({
+    const qcActivity = (qcActivityRaw as any[]).map((row) => ({
       order_number: row.orders?.order_number ?? null,
       stage: row.stage,
       result: row.data?.overall_result ?? null,
@@ -445,7 +501,7 @@ export async function GET() {
           logs: racikLogs,
         },
         laser: {
-          mesinAktif,
+          mesinAktif: Array.from(mesinSet),
           antrianUkir,
           rataWaktuPengerjaan: rataWaktu,
           recentResults: laserRecent,

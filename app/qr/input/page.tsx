@@ -151,7 +151,7 @@ function QRInputContent() {
   const handleSubmit = async (formData: Record<string, unknown>) => {
     try {
       const payload: any = {
-        order_id: orderId || config?.stage, // fallback
+        order_id: orderId,
         stage,
         data: formData,
       };

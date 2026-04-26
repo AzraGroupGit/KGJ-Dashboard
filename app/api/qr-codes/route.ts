@@ -27,7 +27,7 @@ interface QRCode {
 
 interface UserWithRole {
   id: string;
-  roles: {
+  role: {
     name: string;
     role_group: string;
   } | null;
@@ -173,7 +173,7 @@ export async function POST(request: Request) {
       .select(
         `
         id,
-        roles!inner (
+        role:roles!users_role_id_fkey (
           name,
           role_group
         )
@@ -192,7 +192,7 @@ export async function POST(request: Request) {
 
     const currentUser = currentUserData as unknown as UserWithRole;
 
-    if (!currentUser.roles || currentUser.roles.name !== "superadmin") {
+    if (!currentUser.role || currentUser.role.name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -358,7 +358,7 @@ export async function PATCH(request: Request) {
       .select(
         `
         id,
-        roles!inner (
+        role:roles!users_role_id_fkey (
           name,
           role_group
         )
@@ -376,7 +376,7 @@ export async function PATCH(request: Request) {
 
     const currentUser = currentUserData as unknown as UserWithRole;
 
-    if (!currentUser.roles || currentUser.roles.name !== "superadmin") {
+    if (!currentUser.role || currentUser.role.name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -469,7 +469,7 @@ export async function DELETE(request: Request) {
       .select(
         `
         id,
-        roles!inner (
+        role:roles!users_role_id_fkey (
           name,
           role_group
         )
@@ -487,7 +487,7 @@ export async function DELETE(request: Request) {
 
     const currentUser = currentUserData as unknown as UserWithRole;
 
-    if (!currentUser.roles || currentUser.roles.name !== "superadmin") {
+    if (!currentUser.role || currentUser.role.name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 // ============================================================
-// Types — selaras dengan response API v7 (Supabase)
+// Types
 // ============================================================
 
 interface KonfirmasiOrder {

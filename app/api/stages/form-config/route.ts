@@ -460,7 +460,7 @@ export async function GET(request: Request) {
     const { data: userData, error: userError } = await supabase
       .from("users")
       .select(
-        "id, full_name, role_id, roles(id, name, role_group, allowed_stages, permissions)",
+        "id, full_name, role:roles!users_role_id_fkey(id, name, role_group, allowed_stages, permissions)",
       )
       .eq("id", authUser.id)
       .single();
@@ -473,8 +473,8 @@ export async function GET(request: Request) {
     }
 
     // Validasi akses ke stage
-    const allowedStages = (userData.roles as any)?.allowed_stages || [];
-    const permissions = (userData.roles as any)?.permissions || {};
+    const allowedStages = (userData.role as any)?.allowed_stages || [];
+    const permissions = (userData.role as any)?.permissions || {};
 
     if (!allowedStages.includes(stage)) {
       return NextResponse.json(
@@ -522,8 +522,8 @@ export async function GET(request: Request) {
       fields,
       permissions: {
         can_submit: permissions.can_insert || false,
-        can_edit: permissions.can_update || false,
-        can_reject: false, // Hanya role tertentu
+        can_edit: permissions.can_insert || permissions.can_update || false,
+        can_reject: false,
       },
       current_data: existingResult?.data || {},
     };
@@ -534,7 +534,7 @@ export async function GET(request: Request) {
         config,
         user: {
           name: userData.full_name,
-          role: (userData.roles as any)?.name,
+          role: (userData.role as any)?.name,
         },
       },
     });
