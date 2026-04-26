@@ -62,7 +62,7 @@ export async function GET() {
 
     if (konfirmasiError) {
       console.error(
-        "[GET /api/operasional] konfirmasi:",
+        "[GET /api/operational] konfirmasi:",
         konfirmasiError.message,
       );
       return NextResponse.json(
@@ -109,7 +109,7 @@ export async function GET() {
 
     if (pelunasanError) {
       console.error(
-        "[GET /api/operasional] pelunasan:",
+        "[GET /api/operational] pelunasan:",
         pelunasanError.message,
       );
       return NextResponse.json(
@@ -143,7 +143,7 @@ export async function GET() {
       .limit(50);
 
     if (deliveryError) {
-      console.error("[GET /api/operasional] delivery:", deliveryError.message);
+      console.error("[GET /api/operational] delivery:", deliveryError.message);
       return NextResponse.json(
         { error: "Gagal mengambil data delivery" },
         { status: 500 },
@@ -170,7 +170,7 @@ export async function GET() {
         delivery_finished_at: row.finished_at,
       }));
 
-    // ========== ADMIN TASKS (Operasional Lintas Stage) ==========
+    // ========== ADMIN TASKS (operational Lintas Stage) ==========
     const { data: adminTasksRaw, error: adminTasksError } = await supabase
       .from("v_stage_duration")
       .select("*")
@@ -181,7 +181,7 @@ export async function GET() {
 
     if (adminTasksError) {
       console.error(
-        "[GET /api/operasional] admin tasks:",
+        "[GET /api/operational] admin tasks:",
         adminTasksError.message,
       );
       return NextResponse.json(
@@ -232,7 +232,7 @@ export async function GET() {
       .order("finished_at", { ascending: false });
 
     if (racikError) {
-      console.error("[GET /api/operasional] racik:", racikError.message);
+      console.error("[GET /api/operational] racik:", racikError.message);
       return NextResponse.json(
         { error: "Gagal mengambil data racik" },
         { status: 500 },
@@ -314,7 +314,7 @@ export async function GET() {
       .order("started_at", { ascending: false });
 
     if (laserError) {
-      console.error("[GET /api/operasional] laser:", laserError.message);
+      console.error("[GET /api/operational] laser:", laserError.message);
       return NextResponse.json(
         { error: "Gagal mengambil data laser" },
         { status: 500 },
@@ -371,7 +371,7 @@ export async function GET() {
 
     if (qcSummaryError) {
       console.error(
-        "[GET /api/operasional] qc summary:",
+        "[GET /api/operational] qc summary:",
         qcSummaryError.message,
       );
       return NextResponse.json(
@@ -409,7 +409,7 @@ export async function GET() {
 
     if (qcActivityError) {
       console.error(
-        "[GET /api/operasional] qc activity:",
+        "[GET /api/operational] qc activity:",
         qcActivityError.message,
       );
       return NextResponse.json(
@@ -457,7 +457,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("[GET /api/operasional] unexpected:", error);
+    console.error("[GET /api/operational] unexpected:", error);
     return NextResponse.json(
       { error: "Terjadi kesalahan server" },
       { status: 500 },
