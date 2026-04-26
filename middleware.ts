@@ -6,6 +6,7 @@ import type { NextRequest } from "next/server";
 import {
   ROUTES,
   getDashboardPath,
+  canAccessPath,
   isProtectedPath,
   isAuthOnlyPath,
 } from "@/lib/routes";
@@ -54,7 +55,9 @@ export async function middleware(req: NextRequest) {
   const pathIsProtected = isProtectedPath(pathname);
   const pathIsAuthOnly = isAuthOnlyPath(pathname);
 
+  // ──────────────────────────────────────────────────────────────────────────
   // 1) Akses halaman protected tanpa login → redirect ke /login
+  // ──────────────────────────────────────────────────────────────────────────
   if (pathIsProtected && !user) {
     const loginUrl = new URL(ROUTES.LOGIN, req.url);
     // Sertakan path asal sebagai query, biar setelah login bisa kembali
@@ -62,24 +65,103 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 2) Akses halaman auth (mis. /login) padahal sudah login →
+  // ──────────────────────────────────────────────────────────────────────────
+  // 2) Akses halaman auth (e.g. /login) padahal sudah login →
   //    redirect ke dashboard sesuai role
+  // ──────────────────────────────────────────────────────────────────────────
   if (pathIsAuthOnly && user) {
-    const { data: userData } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+    const roleName = await fetchUserRoleName(supabase, user.id);
 
-    const dashboardPath = getDashboardPath(userData?.role);
+    const dashboardPath = getDashboardPath(roleName);
     if (dashboardPath) {
       return NextResponse.redirect(new URL(dashboardPath, req.url));
     }
-    // Kalau role tidak dikenali, biarkan user stay di /login
+
+    // Role tidak dikenali (misal production_staff yang login via form) —
+    // paksa logout & biarkan di /login dengan pesan error.
+    await supabase.auth.signOut();
+    const loginUrl = new URL(ROUTES.LOGIN, req.url);
+    loginUrl.searchParams.set("error", "invalid_role");
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 3) Akses halaman protected dengan role tidak sesuai → redirect ke
+  //    dashboard role-nya sendiri
+  //    Misal: user CS coba akses /dashboard/superadmin
+  // ──────────────────────────────────────────────────────────────────────────
+  if (pathIsProtected && user) {
+    const roleName = await fetchUserRoleName(supabase, user.id);
+
+    // Role user tidak dikenali → force logout
+    if (!roleName) {
+      await supabase.auth.signOut();
+      const loginUrl = new URL(ROUTES.LOGIN, req.url);
+      loginUrl.searchParams.set("error", "no_role");
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Cek akses path — kalau tidak punya akses, redirect ke dashboard sendiri
+    if (!canAccessPath(roleName as any, pathname)) {
+      const ownDashboard = getDashboardPath(roleName);
+      if (ownDashboard) {
+        return NextResponse.redirect(new URL(ownDashboard, req.url));
+      }
+      // Fallback defensive — seharusnya tidak pernah sampai sini
+      return NextResponse.redirect(new URL(ROUTES.LOGIN, req.url));
+    }
   }
 
   return res;
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Ambil nama role user dari tabel users (JOIN ke roles).
+ * Return null kalau user tidak ada, tidak aktif, sudah di-soft-delete,
+ * atau role tidak valid.
+ */
+async function fetchUserRoleName(
+  supabase: ReturnType<typeof createServerClient>,
+  userId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("users")
+    .select(
+      `
+      status,
+      deleted_at,
+      role:roles!users_role_id_fkey (
+        name
+      )
+    `,
+    )
+    .eq("id", userId)
+    .single();
+
+  if (error || !data) {
+    console.warn("[middleware] failed to fetch user role:", error?.message);
+    return null;
+  }
+
+  // Tolak user yang sudah di-soft-delete
+  if (data.deleted_at) return null;
+
+  // Tolak user yang statusnya bukan active
+  if (data.status !== "active") return null;
+
+  const roleName = (data.role as any)?.name;
+  if (!roleName || typeof roleName !== "string") return null;
+
+  return roleName;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MATCHER CONFIG
+// ════════════════════════════════════════════════════════════════════════════
 
 export const config = {
   // Matcher mengeksklusi static assets & API routes biar middleware
@@ -91,7 +173,8 @@ export const config = {
      * - _next/image (image optimization)
      * - favicon.ico, sitemap.xml, robots.txt
      * - file dengan ekstensi (*.png, *.svg, dsb)
+     * - /api/* (API routes handle auth sendiri)
      */
-    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\..*).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|api/|.*\\..*).*)",
   ],
 };

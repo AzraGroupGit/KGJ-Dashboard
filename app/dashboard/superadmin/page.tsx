@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import { useRouter } from "next/navigation";
 
@@ -42,84 +43,12 @@ interface AlertItem {
   message: string;
 }
 
-// ─── Mock data (ganti dengan fetch API nyata) ─────────────────────────────────
-
-const MOCK: DashboardSnapshot = {
-  bms: {
-    lead_masuk: 42,
-    closing: 9,
-    omset: 47_500_000,
-    cr: 21.4,
-    lead_delta: 5,
-    closing_delta: -2,
-  },
-  oprprd: {
-    produksi: 18,
-    target: 25,
-    on_time_pct: 72,
-    backlog: 3,
-  },
-  activity: [
-    {
-      id: "1",
-      time: "09:14",
-      module: "bms",
-      message: "CS Bandung menginput 3 lead baru",
-    },
-    {
-      id: "2",
-      time: "09:02",
-      module: "oprprd",
-      message: "Batch #B-041 selesai produksi",
-    },
-    {
-      id: "3",
-      time: "08:55",
-      module: "bms",
-      message: "Closing baru Rp 8,5 Jt — CS Jakarta",
-    },
-    {
-      id: "4",
-      time: "08:30",
-      module: "oprprd",
-      message: "Target harian diperbarui: 25 unit",
-    },
-    {
-      id: "5",
-      time: "08:10",
-      module: "bms",
-      message: "5 lead serius masuk dari kanal web",
-    },
-  ],
-  alerts: [
-    {
-      id: "a1",
-      level: "warning",
-      message:
-        "Conversion rate hari ini 21,4% — di bawah rata-rata minggu lalu 26,2%",
-    },
-    {
-      id: "a2",
-      level: "info",
-      message: "Target produksi OPRPRD telah tercapai 72% dari target harian",
-    },
-  ],
-};
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmtRpShort = (v: number) => {
   if (v >= 1_000_000_000) return `Rp ${(v / 1_000_000_000).toFixed(1)}M`;
   if (v >= 1_000_000) return `Rp ${(v / 1_000_000).toFixed(0)} Jt`;
   return `Rp ${Math.round(v).toLocaleString("id-ID")}`;
-};
-
-const getGreeting = () => {
-  const h = new Date().getHours();
-  if (h < 11) return "Selamat pagi";
-  if (h < 15) return "Selamat siang";
-  if (h < 18) return "Selamat sore";
-  return "Selamat malam";
 };
 
 const formatFullDate = () =>
@@ -176,18 +105,6 @@ const IcArrowRight = () => (
       d="M2 6.5H11M7.5 3L11 6.5L7.5 10"
       stroke="currentColor"
       strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const IcChevron = () => (
-  <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
-    <path
-      d="M3 2L6 4.5L3 7"
-      stroke="currentColor"
-      strokeWidth="1.3"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -426,32 +343,85 @@ function ModuleCard({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SuperadminDashboard() {
+  const router = useRouter();
   const [clientUser, setClientUser] = useState<ClientUser | null>(null);
-  const [data] = useState<DashboardSnapshot>(MOCK);
+  const [data, setData] = useState<DashboardSnapshot | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [now, setNow] = useState(new Date());
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setClientUser(getClientUser());
-    // slight delay so entry animation fires after hydration
+    const cu = getClientUser();
+    if (!cu) {
+      router.push("/login");
+      return;
+    }
+    setClientUser(cu);
+
     const t = setTimeout(() => setMounted(true), 50);
+
+    const fetchSnapshot = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/overview");
+        if (res.ok) {
+          const json = await res.json();
+          setData(json);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchSnapshot();
+
     return () => clearTimeout(t);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(t);
   }, []);
 
-  const { bms, oprprd: ops } = data;
-  const prodPct = Math.round((ops.produksi / ops.target) * 100);
-  const username = clientUser?.email?.split("@")[0] ?? "Superadmin";
+  const bms = data?.bms ?? {
+    lead_masuk: 0,
+    closing: 0,
+    omset: 0,
+    cr: 0,
+    lead_delta: 0,
+    closing_delta: 0,
+  };
+  const ops = data?.oprprd ?? {
+    produksi: 0,
+    target: 0,
+    on_time_pct: 0,
+    backlog: 0,
+  };
+  const alerts = data?.alerts ?? [];
+  const activity = data?.activity ?? [];
+  const prodPct =
+    ops.target > 0 ? Math.round((ops.produksi / ops.target) * 100) : 0;
+
+  if (!clientUser) return null;
+
+  if (isLoading && !data) {
+    return (
+      <div className="flex h-screen bg-[#f8f9fb]">
+        <Sidebar role="superadmin" />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header userEmail={clientUser.email} role="superadmin" />
+          <main className="flex-1 overflow-y-auto p-6">
+            <Loading variant="skeleton" text="Memuat dashboard..." />
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-[#f8f9fb]">
       <Sidebar role="superadmin" />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
+        <Header userEmail={clientUser.email} role="superadmin" />
 
         <main
           className="flex-1 overflow-y-auto px-6 py-6 space-y-4"
@@ -517,9 +487,9 @@ export default function SuperadminDashboard() {
           </div>
 
           {/* ── Alerts ───────────────────────────────────────────────── */}
-          {data.alerts.length > 0 && (
+          {alerts.length > 0 && (
             <div className="space-y-1.5">
-              {data.alerts.map((a) => {
+              {alerts.map((a) => {
                 const s = {
                   warning: {
                     wrap: "bg-amber-50 border-amber-200/60 text-amber-700",
@@ -651,7 +621,16 @@ export default function SuperadminDashboard() {
             </div>
 
             <div className="divide-y divide-slate-50">
-              {data.activity.map((a) => {
+              {activity.length === 0 && isLoading ? (
+                <p className="px-6 py-4 text-[11px] text-slate-400">
+                  Memuat aktivitas...
+                </p>
+              ) : activity.length === 0 ? (
+                <p className="px-6 py-4 text-[11px] text-slate-400">
+                  Belum ada aktivitas tercatat.
+                </p>
+              ) : null}
+              {activity.map((a) => {
                 const bmsRow = a.module === "bms";
                 return (
                   <div

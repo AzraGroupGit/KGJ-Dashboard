@@ -3,14 +3,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import {
   AlertTriangle,
-  ArrowLeft,
   Camera,
   CheckCircle2,
   Clock,
@@ -226,6 +225,7 @@ function getSLAStatus(hours: number): {
 // ============================================================
 
 export default function OperasionalPage() {
+  const router = useRouter();
   const [clientUser, setClientUser] = useState<ClientUser | null>(null);
   const [data, setData] = useState<OperasionalData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -234,8 +234,13 @@ export default function OperasionalPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
-    setClientUser(getClientUser());
-  }, []);
+    const cu = getClientUser();
+    if (!cu) {
+      router.push("/login");
+      return;
+    }
+    setClientUser(cu);
+  }, [router]);
 
   const fetchData = useCallback(async (isManualRefresh = false) => {
     try {

@@ -3,14 +3,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import {
   AlertTriangle,
-  ArrowLeft,
   BarChart3,
   CheckCircle2,
   Clock,
@@ -104,22 +103,6 @@ function getRoleConfig(roleName: string) {
 // Formatters
 // ============================================================
 
-function formatRelativeTime(timestamp: string | null): string {
-  if (!timestamp) return "-";
-  const date = new Date(timestamp);
-  const diffMs = Date.now() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60_000);
-  const diffHours = Math.floor(diffMs / 3_600_000);
-
-  if (diffMins < 1) return "baru saja";
-  if (diffMins < 60) return `${diffMins}m lalu`;
-  if (diffHours < 24) return `${diffHours}j lalu`;
-  return date.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-  });
-}
-
 function formatGemstone(info: GemstoneInfo[] | null): string {
   if (!info || info.length === 0) return "—";
   const first = info[0];
@@ -137,6 +120,7 @@ function formatGemstone(info: GemstoneInfo[] | null): string {
 // ============================================================
 
 export default function ProduksiPage() {
+  const router = useRouter();
   const [clientUser, setClientUser] = useState<ClientUser | null>(null);
   const [data, setData] = useState<ProduksiData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -145,8 +129,13 @@ export default function ProduksiPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
-    setClientUser(getClientUser());
-  }, []);
+    const cu = getClientUser();
+    if (!cu) {
+      router.push("/login");
+      return;
+    }
+    setClientUser(cu);
+  }, [router]);
 
   const fetchData = useCallback(async (isManualRefresh = false) => {
     try {

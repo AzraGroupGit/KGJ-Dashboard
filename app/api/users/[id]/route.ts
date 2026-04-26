@@ -3,126 +3,279 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireSuperadmin, mapUserResponse } from "../route";
 
-type Params = { params: Promise<{ id: string }> };
+const BMS_ROLE_NAMES = ["superadmin", "customer_service", "marketing"] as const;
+type BmsRoleName = (typeof BMS_ROLE_NAMES)[number];
 
-async function getRequester(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  const { data } = await supabase
-    .from("users")
-    .select("id, role")
-    .eq("id", user.id)
-    .single();
-
-  return data;
+function isBmsRoleName(v: unknown): v is BmsRoleName {
+  return (
+    typeof v === "string" && (BMS_ROLE_NAMES as readonly string[]).includes(v)
+  );
 }
 
-/**
- * PUT /api/users/[id]
- * Body: { full_name?, email?, role?, branch_id?, password? }
- * Hanya superadmin.
- */
-export async function PUT(request: Request, { params }: Params) {
+// ════════════════════════════════════════════════════════════════════════════
+// GET /api/users/[id]
+// ════════════════════════════════════════════════════════════════════════════
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const { id } = await params;
     const supabase = await createClient();
-    const requester = await getRequester(supabase);
+    const auth = await requireSuperadmin(supabase);
+    if ("error" in auth) return auth.error;
 
-    if (!requester) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (requester.role !== "superadmin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const { data, error } = await supabase
+      .from("users")
+      .select(
+        `
+        id, email, full_name, username, phone,
+        branch_id, role_id, status, last_login,
+        created_at, updated_at,
+        role:roles!users_role_id_fkey (
+          id, name, role_group, description, permissions, allowed_stages
+        ),
+        branches:branches!users_branch_id_fkey (id, name, code)
+      `,
+      )
+      .eq("id", id)
+      .is("deleted_at", null)
+      .single();
 
-    const body = await request.json();
-    const { full_name, email, role, branch_id, password } = body;
-
-    if (!full_name || !email || !role) {
+    if (error || !data) {
       return NextResponse.json(
-        { error: "full_name, email, dan role wajib diisi" },
-        { status: 400 },
+        { error: "User tidak ditemukan" },
+        { status: 404 },
       );
     }
 
-    if (!["superadmin", "cs", "marketing"].includes(role)) {
-      return NextResponse.json({ error: "Role tidak valid" }, { status: 400 });
+    return NextResponse.json({ data: mapUserResponse(data) });
+  } catch (error) {
+    console.error("[GET /api/users/:id] unexpected:", error);
+    return NextResponse.json(
+      { error: "Terjadi kesalahan server" },
+      { status: 500 },
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PUT /api/users/[id]
+// Body (semua optional):
+//   - full_name, email, phone, password, branch_id
+//   - role (BMS mode) ATAU role_id (untuk ganti role ke apa saja)
+//
+// Catatan: username tidak bisa diubah setelah create (design choice).
+// ════════════════════════════════════════════════════════════════════════════
+const admin = createAdminClient();
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+    const supabase = await createClient();
+    const auth = await requireSuperadmin(supabase);
+    if ("error" in auth) return auth.error;
+
+    const body = await request.json();
+    const { full_name, email, phone, password, branch_id, role, role_id } =
+      body;
+
+    const updatePayload: Record<string, unknown> = {};
+
+    // full_name
+    if (typeof full_name === "string" && full_name.trim()) {
+      updatePayload.full_name = full_name.trim();
     }
 
-    const admin = createAdminClient();
+    // email
+    if (email !== undefined) {
+      const normalizedEmail = email?.trim().toLowerCase() || null;
+      if (normalizedEmail) {
+        const { data: dup } = await supabase
+          .from("users")
+          .select("id")
+          .eq("email", normalizedEmail)
+          .neq("id", id)
+          .is("deleted_at", null)
+          .maybeSingle();
+        if (dup) {
+          return NextResponse.json(
+            { error: "Email sudah digunakan user lain" },
+            { status: 409 },
+          );
+        }
+        updatePayload.email = normalizedEmail;
+      } else {
+        // users.email adalah NOT NULL — saat email dikosongkan (user OPRPRD tanpa
+        // email asli), simpan dummy @internal.local agar constraint terpenuhi.
+        const { data: u } = await supabase
+          .from("users")
+          .select("username")
+          .eq("id", id)
+          .single();
+        updatePayload.email = `${u?.username ?? id}@internal.local`;
+      }
+    }
 
-    // Update email & optional password di auth
-    const authUpdate: { email?: string; password?: string } = {
-      email: email.trim().toLowerCase(),
-    };
+    // phone
+    if (phone !== undefined) {
+      updatePayload.phone = phone?.trim() || null;
+    }
+
+    // role — BMS mode (pakai string nama role)
+    if (role !== undefined) {
+      if (!isBmsRoleName(role)) {
+        return NextResponse.json(
+          {
+            error: "Role harus: superadmin, customer_service, marketing",
+          },
+          { status: 400 },
+        );
+      }
+
+      const { data: roleRec } = await supabase
+        .from("roles")
+        .select("id")
+        .eq("name", role)
+        .single();
+
+      if (!roleRec) {
+        return NextResponse.json(
+          { error: `Role '${role}' tidak ditemukan` },
+          { status: 500 },
+        );
+      }
+
+      updatePayload.role_id = roleRec.id;
+
+      // Non-Customer Service tidak perlu branch
+      if (role !== "customer_service") {
+        updatePayload.branch_id = null;
+      }
+    }
+
+    // role_id — bisa dipakai untuk set role apa saja (termasuk non-BMS)
+    if (role_id !== undefined && role === undefined) {
+      const { data: roleRec } = await supabase
+        .from("roles")
+        .select("id, name")
+        .eq("id", role_id)
+        .single();
+
+      if (!roleRec) {
+        return NextResponse.json(
+          { error: "Role tidak valid" },
+          { status: 400 },
+        );
+      }
+
+      updatePayload.role_id = roleRec.id;
+
+      // Kalau role baru bukan Customer Service, clear branch_id
+      if (roleRec.name !== "customer_service") {
+        updatePayload.branch_id = null;
+      }
+    }
+
+    // branch_id explicit
+    if (branch_id !== undefined) {
+      updatePayload.branch_id = branch_id || null;
+    }
+
+    // Password update via auth admin
     if (password) {
-      if (password.length < 6) {
+      if (typeof password !== "string" || password.length < 6) {
         return NextResponse.json(
           { error: "Password minimal 6 karakter" },
           { status: 400 },
         );
       }
-      authUpdate.password = password;
+
+      const admin = createAdminClient();
+      const { error: pwError } = await admin.auth.admin.updateUserById(id, {
+        password,
+      });
+
+      if (pwError) {
+        console.error("[PUT /api/users/:id] password error:", pwError.message);
+        return NextResponse.json(
+          { error: "Gagal mengubah password" },
+          { status: 500 },
+        );
+      }
     }
 
-    const { error: authError } = await admin.auth.admin.updateUserById(
-      id,
-      authUpdate,
-    );
+    // Sync email ke auth.users kalau berubah
+    // updatePayload.email dijamin non-null (lihat blok "email" di atas).
+    if (updatePayload.email !== undefined) {
+      const admin = createAdminClient();
+      const { error: emailError } = await admin.auth.admin.updateUserById(id, {
+        email: updatePayload.email as string,
+      });
 
-    if (authError) {
-      console.error("[PUT /api/users/:id] auth error:", authError.message);
-      return NextResponse.json(
-        { error: "Gagal memperbarui akun auth" },
-        { status: 500 },
-      );
+      if (emailError) {
+        console.warn(
+          "[PUT /api/users/:id] auth email sync warning:",
+          emailError.message,
+        );
+      }
     }
 
-    // Update profil di tabel users
-    const { data: updatedUser, error: updateError } = await supabase
+    // Update public.users
+    if (Object.keys(updatePayload).length > 0) {
+      const { error: updateError } = await admin
+        .from("users")
+        .update(updatePayload)
+        .eq("id", id);
+
+      if (updateError) {
+        console.error(
+          "[PUT /api/users/:id] update error:",
+          updateError.message,
+        );
+        return NextResponse.json(
+          { error: "Gagal memperbarui user" },
+          { status: 500 },
+        );
+      }
+    }
+
+    // Fetch terbaru
+    const { data: updated } = await supabase
       .from("users")
-      .update({
-        full_name,
-        email: email.trim().toLowerCase(),
-        role,
-        branch_id: branch_id || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
       .select(
         `
-        id, email, full_name, role, branch_id, status, created_at, updated_at,
-        branches!users_branch_id_fkey (id, name, code)
+        id, email, full_name, username, phone,
+        branch_id, role_id, status, last_login,
+        created_at, updated_at,
+        role:roles!users_role_id_fkey (
+          id, name, role_group, description, permissions, allowed_stages
+        ),
+        branches:branches!users_branch_id_fkey (id, name, code)
       `,
       )
+      .eq("id", id)
       .single();
 
-    if (updateError) {
-      console.error("[PUT /api/users/:id] update error:", updateError.message);
-      return NextResponse.json(
-        { error: "Gagal memperbarui profil user" },
-        { status: 500 },
-      );
-    }
+    try {
+      await supabase.from("activity_logs").insert({
+        user_id: auth.authUser.id,
+        action: "UPDATE_USER",
+        entity_type: "users",
+        entity_id: id,
+        new_data: updatePayload,
+      });
+    } catch {}
 
-    await supabase.from("activity_logs").insert({
-      user_id: requester.id,
-      action: "UPDATE_USER",
-      entity_type: "users",
-      entity_id: id,
-      new_data: { full_name, email, role },
-      ip_address:
-        request.headers.get("x-forwarded-for") ||
-        request.headers.get("x-real-ip"),
-      user_agent: request.headers.get("user-agent"),
+    return NextResponse.json({
+      data: updated ? mapUserResponse(updated) : null,
     });
-
-    return NextResponse.json({ data: updatedUser });
   } catch (error) {
     console.error("[PUT /api/users/:id] unexpected:", error);
     return NextResponse.json(
@@ -132,65 +285,77 @@ export async function PUT(request: Request, { params }: Params) {
   }
 }
 
-/**
- * PATCH /api/users/[id]
- * Body: { status: 'active' | 'inactive' }
- * Toggle status akun. Hanya superadmin.
- */
-export async function PATCH(request: Request, { params }: Params) {
+// ════════════════════════════════════════════════════════════════════════════
+// PATCH /api/users/[id] — khusus toggle status
+// Body (pakai salah satu):
+//   { status: 'active' | 'inactive' }   (untuk BMS)
+//   { is_active: boolean }              (untuk OPRPRD, alias)
+// ════════════════════════════════════════════════════════════════════════════
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const { id } = await params;
     const supabase = await createClient();
-    const requester = await getRequester(supabase);
+    const auth = await requireSuperadmin(supabase);
+    if ("error" in auth) return auth.error;
 
-    if (!requester) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (requester.role !== "superadmin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const body = await request.json();
+    const { status, is_active } = body;
+
+    // Tentukan status final dari dua bentuk input
+    let newStatus: "active" | "inactive" | null = null;
+
+    if (status === "active" || status === "inactive") {
+      newStatus = status;
+    } else if (typeof is_active === "boolean") {
+      newStatus = is_active ? "active" : "inactive";
     }
 
-    // Cegah superadmin menonaktifkan dirinya sendiri
-    if (id === requester.id) {
+    if (!newStatus) {
       return NextResponse.json(
-        { error: "Tidak dapat mengubah status akun sendiri" },
+        {
+          error:
+            "Harus menyertakan 'status' ('active'/'inactive') atau 'is_active' (boolean)",
+        },
         { status: 400 },
       );
     }
 
-    const { status } = await request.json();
-
-    if (!["active", "inactive"].includes(status)) {
-      return NextResponse.json({ error: "Status tidak valid" }, { status: 400 });
+    // Cegah superadmin menonaktifkan dirinya sendiri
+    if (id === auth.authUser.id && newStatus === "inactive") {
+      return NextResponse.json(
+        { error: "Tidak bisa menonaktifkan akun Anda sendiri" },
+        { status: 400 },
+      );
     }
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("users")
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .select("id, status")
-      .single();
+      .update({ status: newStatus })
+      .eq("id", id);
 
     if (error) {
       console.error("[PATCH /api/users/:id]", error.message);
       return NextResponse.json(
-        { error: "Gagal mengubah status user" },
+        { error: "Gagal mengubah status" },
         { status: 500 },
       );
     }
 
-    await supabase.from("activity_logs").insert({
-      user_id: requester.id,
-      action: status === "active" ? "ACTIVATE_USER" : "DEACTIVATE_USER",
-      entity_type: "users",
-      entity_id: id,
-      ip_address:
-        request.headers.get("x-forwarded-for") ||
-        request.headers.get("x-real-ip"),
-      user_agent: request.headers.get("user-agent"),
-    });
+    try {
+      await supabase.from("activity_logs").insert({
+        user_id: auth.authUser.id,
+        action: `SET_USER_${newStatus.toUpperCase()}`,
+        entity_type: "users",
+        entity_id: id,
+        new_data: { status: newStatus },
+      });
+    } catch {}
 
-    return NextResponse.json({ data });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[PATCH /api/users/:id] unexpected:", error);
     return NextResponse.json(
@@ -200,64 +365,65 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 }
 
-/**
- * DELETE /api/users/[id]
- * Hapus akun auth + profil user. Hanya superadmin.
- */
-export async function DELETE(request: Request, { params }: Params) {
+// ════════════════════════════════════════════════════════════════════════════
+// DELETE /api/users/[id]
+// Soft delete di public.users + hard delete di auth.users (supaya tidak bisa login).
+// ════════════════════════════════════════════════════════════════════════════
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const { id } = await params;
     const supabase = await createClient();
-    const requester = await getRequester(supabase);
+    const auth = await requireSuperadmin(supabase);
+    if ("error" in auth) return auth.error;
 
-    if (!requester) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (requester.role !== "superadmin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    // Cegah superadmin menghapus dirinya sendiri
-    if (id === requester.id) {
+    // Cegah hapus diri sendiri
+    if (id === auth.authUser.id) {
       return NextResponse.json(
-        { error: "Tidak dapat menghapus akun sendiri" },
+        { error: "Tidak bisa menghapus akun Anda sendiri" },
         { status: 400 },
       );
     }
 
-    const admin = createAdminClient();
-
-    // Hapus profil dulu (FK constraint), lalu auth user
-    const { error: deleteProfileError } = await supabase
+    // Soft delete di public.users
+    const { error: softDeleteError } = await supabase
       .from("users")
-      .delete()
+      .update({
+        deleted_at: new Date().toISOString(),
+        status: "inactive",
+      })
       .eq("id", id);
 
-    if (deleteProfileError) {
-      console.error("[DELETE /api/users/:id] profile:", deleteProfileError.message);
+    if (softDeleteError) {
+      console.error("[DELETE /api/users/:id]", softDeleteError.message);
       return NextResponse.json(
-        { error: "Gagal menghapus profil user" },
+        { error: "Gagal menghapus user" },
         { status: 500 },
       );
     }
 
-    const { error: deleteAuthError } = await admin.auth.admin.deleteUser(id);
+    // Hard delete di auth.users
+    const admin = createAdminClient();
+    const { error: authDeleteError } = await admin.auth.admin.deleteUser(id);
 
-    if (deleteAuthError) {
-      console.error("[DELETE /api/users/:id] auth:", deleteAuthError.message);
-      // Profil sudah terhapus — catat saja, tidak rollback
+    if (authDeleteError) {
+      console.warn(
+        "[DELETE /api/users/:id] auth delete warning:",
+        authDeleteError.message,
+      );
     }
 
-    await supabase.from("activity_logs").insert({
-      user_id: requester.id,
-      action: "DELETE_USER",
-      entity_type: "users",
-      entity_id: id,
-      ip_address:
-        request.headers.get("x-forwarded-for") ||
-        request.headers.get("x-real-ip"),
-      user_agent: request.headers.get("user-agent"),
-    });
+    try {
+      await supabase.from("activity_logs").insert({
+        user_id: auth.authUser.id,
+        action: "DELETE_USER",
+        entity_type: "users",
+        entity_id: id,
+      });
+    } catch {}
 
     return NextResponse.json({ success: true });
   } catch (error) {

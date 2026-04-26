@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
     const { data: profile, error: profileError } = await supabase
       .from("users")
-      .select("id, role, status")
+      .select("id, status, role:roles!users_role_id_fkey(name)")
       .eq("id", user.id)
       .single();
 
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (profile.role !== "marketing") {
+    if ((profile.role as any)?.name !== "marketing") {
       return NextResponse.json(
         { error: "Hanya marketing yang dapat input data" },
         { status: 403 },
@@ -187,6 +187,11 @@ export async function POST(request: Request) {
 
     // ─── VALIDASI DATA CS ────────────────────────────────────────────────
 
+    // Variabel diisi di dalam blok if agar bisa dipakai setelah blok berakhir.
+    let resolvedCsOmset = 0;
+    let resolvedCsUserId: string | null = csUserId || null;
+    let resolvedCsBranchName: string | null = null;
+
     if (csInputId) {
       // 1. Cek apakah data CS ada
       const { data: csInput, error: csInputError } = await supabase
@@ -213,6 +218,11 @@ export async function POST(request: Request) {
           { status: 404 },
         );
       }
+
+      // Simpan nilai csInput yang dibutuhkan setelah blok ini berakhir.
+      resolvedCsOmset = (csInput as any).omset || 0;
+      resolvedCsBranchName = (csInput as any).branches?.name || null;
+      resolvedCsUserId = csUserId || csInput.user_id;
 
       // 2. Cek apakah data CS SUDAH DIGUNAKAN oleh marketing input lain
       const { data: existingMktInput, error: existingError } = await supabase
@@ -317,10 +327,10 @@ export async function POST(request: Request) {
 
     // ─── INSERT DATA ─────────────────────────────────────────────────────
 
-    // Hitung ROI
+    // Hitung ROI — gunakan omset dari data CS yang sudah di-resolve di atas
     const roi =
       biayaMarketing > 0
-        ? (((csInputId?.omset || 0) - biayaMarketing) / biayaMarketing) * 100
+        ? ((resolvedCsOmset - biayaMarketing) / biayaMarketing) * 100
         : 0;
 
     const { data: inserted, error: insertError } = await supabase
@@ -335,7 +345,7 @@ export async function POST(request: Request) {
         closing,
         notes,
         cs_input_id: csInputId,
-        cs_user_id: csUserId || (csInputId ? csInputId?.user_id : null),
+        cs_user_id: resolvedCsUserId,
         roi: Math.round(roi * 100) / 100,
       })
       .select(
@@ -410,7 +420,7 @@ export async function POST(request: Request) {
         data: inserted,
         action: "created",
         message: csInputId
-          ? `Data marketing berhasil disimpan dan dikaitkan dengan data CS dari ${csInputId?.branches?.name || "cabang"}`
+          ? `Data marketing berhasil disimpan dan dikaitkan dengan data CS dari ${resolvedCsBranchName || "cabang"}`
           : "Data marketing berhasil disimpan",
       },
       { status: 201 },
@@ -441,7 +451,7 @@ export async function PUT(request: Request) {
 
     const { data: profile, error: profileError } = await supabase
       .from("users")
-      .select("id, role, status")
+      .select("id, status, role:roles!users_role_id_fkey(name)")
       .eq("id", user.id)
       .single();
 
@@ -459,7 +469,7 @@ export async function PUT(request: Request) {
       );
     }
 
-    if (profile.role !== "marketing") {
+    if ((profile.role as any)?.name !== "marketing") {
       return NextResponse.json(
         { error: "Hanya marketing yang dapat update data" },
         { status: 403 },
@@ -709,7 +719,7 @@ export async function DELETE(request: Request) {
 
     const { data: profile, error: profileError } = await supabase
       .from("users")
-      .select("id, role, status")
+      .select("id, status")
       .eq("id", user.id)
       .single();
 
