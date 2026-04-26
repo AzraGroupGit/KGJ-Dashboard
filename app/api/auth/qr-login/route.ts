@@ -56,17 +56,11 @@ export async function POST(request: Request) {
 
     const roleObj = userData.role as any;
     const roleName = roleObj?.name;
+    const roleGroup = roleObj?.role_group;
 
-    // QR login hanya untuk role produksi/operasional
-    const qrAllowedRoles = [
-      "production_staff",
-      "qc_staff",
-      "admin",
-      "superadmin",
-      // tambahkan role produksi lain sesuai kebutuhan
-    ];
-
-    if (!qrAllowedRoles.includes(roleName)) {
+    // QR login hanya untuk role workshop (production, operational, qc) dan superadmin
+    const qrAllowedGroups = ["production", "operational", "qc"];
+    if (roleName !== "superadmin" && !qrAllowedGroups.includes(roleGroup)) {
       return NextResponse.json(
         {
           error:
