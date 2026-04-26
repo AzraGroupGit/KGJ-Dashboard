@@ -473,10 +473,21 @@ export async function GET(request: Request) {
     }
 
     // Validasi akses ke stage
-    const allowedStages = (userData.role as any)?.allowed_stages || [];
+    const allowedStages: string[] = (userData.role as any)?.allowed_stages || [];
     const permissions = (userData.role as any)?.permissions || {};
+    const roleGroup: string = (userData.role as any)?.role_group ?? "";
+    const roleName: string = (userData.role as any)?.name ?? "";
 
-    if (!allowedStages.includes(stage)) {
+    // If allowed_stages is populated, use it strictly.
+    // If empty (default for all roles), grant access to any workshop role.
+    const workshopGroups = ["production", "operational", "qc"];
+    const hasAccess =
+      roleName === "superadmin" ||
+      (allowedStages.length > 0
+        ? allowedStages.includes(stage)
+        : workshopGroups.includes(roleGroup));
+
+    if (!hasAccess) {
       return NextResponse.json(
         {
           error: "Anda tidak memiliki akses ke tahap ini",
