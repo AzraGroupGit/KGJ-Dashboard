@@ -47,16 +47,6 @@ interface ScanEvent {
   scanned_at: string;
 }
 
-interface QRStats {
-  total_workstations: number;
-  active_workstations: number;
-  operational_count: number;
-  production_count: number;
-  scans_today: number;
-  scans_this_week: number;
-  most_active_workstation: string | null;
-}
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ROLE_GROUP_STYLES: Record<
@@ -238,15 +228,7 @@ export default function KelolaQRPage() {
   const [qrCodes, setQrCodes] = useState<QRCode[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [scanEvents, setScanEvents] = useState<ScanEvent[]>([]);
-  const [stats, setStats] = useState<QRStats>({
-    total_workstations: 0,
-    active_workstations: 0,
-    operational_count: 0,
-    production_count: 0,
-    scans_today: 0,
-    scans_this_week: 0,
-    most_active_workstation: null,
-  });
+  const [scansToday, setScansToday] = useState(0);
 
   const [activeTab, setActiveTab] = useState<"workstations" | "scan-logs">(
     "workstations",
@@ -314,14 +296,25 @@ export default function KelolaQRPage() {
     setRoles(filteredRoles);
   }, []);
 
+  const fetchScansToday = useCallback(async () => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const res = await fetch(
+      `/api/scan-events?start_date=${todayStart.toISOString()}&limit=1`,
+    );
+    if (!res.ok) return;
+    const json = await res.json();
+    setScansToday(json.total ?? 0);
+  }, []);
+
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
-      await Promise.all([fetchQRCodes(), fetchRoles()]);
+      await Promise.all([fetchQRCodes(), fetchRoles(), fetchScansToday()]);
       setIsLoading(false);
     };
     load();
-  }, [fetchQRCodes, fetchRoles]);
+  }, [fetchQRCodes, fetchRoles, fetchScansToday]);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
@@ -526,6 +519,17 @@ export default function KelolaQRPage() {
     );
   };
 
+  const workstationStats = useMemo(
+    () => ({
+      total: qrCodes.length,
+      active: qrCodes.filter((qr) => qr.is_active).length,
+      operational: qrCodes.filter((qr) => qr.role_group === "operational")
+        .length,
+      production: qrCodes.filter((qr) => qr.role_group === "production").length,
+    }),
+    [qrCodes],
+  );
+
   const filteredQRCodes = qrCodes.filter((qr) => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
@@ -606,31 +610,31 @@ export default function KelolaQRPage() {
                   Total Workstation
                 </p>
                 <p className="text-2xl font-semibold text-gray-800">
-                  {stats.total_workstations}
+                  {workstationStats.total}
                 </p>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <p className="text-gray-500 text-xs mb-1.5">Aktif</p>
                 <p className="text-2xl font-semibold text-emerald-600">
-                  {stats.active_workstations}
+                  {workstationStats.active}
                 </p>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 border-t-2 border-t-blue-400">
                 <p className="text-gray-500 text-xs mb-1.5">Operasional</p>
                 <p className="text-2xl font-semibold text-blue-600">
-                  {stats.operational_count}
+                  {workstationStats.operational}
                 </p>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 border-t-2 border-t-amber-400">
                 <p className="text-gray-500 text-xs mb-1.5">Produksi</p>
                 <p className="text-2xl font-semibold text-amber-600">
-                  {stats.production_count}
+                  {workstationStats.production}
                 </p>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <p className="text-gray-500 text-xs mb-1.5">Scan Hari Ini</p>
                 <p className="text-2xl font-semibold text-indigo-600">
-                  {stats.scans_today}
+                  {scansToday}
                 </p>
               </div>
             </div>
