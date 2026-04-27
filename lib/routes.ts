@@ -29,7 +29,7 @@ export type AppRole = LoginRole;
 /**
  * Role yang digunakan untuk akses workshop / QR scan.
  * Role ini TIDAK bisa login lewat halaman /login (dashboard),
- * hanya lewat /qr/login.
+ * hanya lewat /workshop/login.
  *
  * Role names are DB-driven and can change — DO NOT enumerate them here.
  * Detection is done by exclusion: any non-AppRole string is a workshop role.
@@ -64,10 +64,11 @@ export const ROUTES = {
   DASHBOARD_SUPERADMIN: "/dashboard/superadmin",
   DASHBOARD_CS: "/dashboard/cs",
   DASHBOARD_MARKETING: "/dashboard/marketing",
+  DASHBOARD_SUPERVISOR: "/dashboard/supervisor",
 
   // Workshop / QR access
-  QR_LOGIN: "/qr/login",
-  QR_INPUT: "/qr/input",
+  QR_LOGIN: "/workshop/login",
+  QR_INPUT: "/workshop/input",
 } as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -108,8 +109,14 @@ export const MARKETING_ROUTES = {
  * User produksi hanya mengakses halaman ini.
  */
 export const WORKSHOP_ROUTES = {
-  LOGIN: "/qr/login",
-  INPUT: "/qr/input",
+  LOGIN: "/workshop/login",
+  INPUT: "/workshop/input",
+} as const;
+
+export const SUPERVISOR_ROUTES = {
+  DASHBOARD: "/dashboard/supervisor",
+  MONITORING: "/dashboard/supervisor/monitoring",
+  APPROVAL: "/dashboard/supervisor/approval",
 } as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -118,21 +125,18 @@ export const WORKSHOP_ROUTES = {
 
 /**
  * Path yang hanya boleh diakses oleh user yang sudah login.
- * Middleware akan redirect ke /login atau /qr/login kalau user tidak authenticated.
+ * Middleware akan redirect ke /login atau /workshop/login kalau user tidak authenticated.
  */
-const PROTECTED_PREFIXES = [
-  "/dashboard",
-  "/qr/input", // ← TAMBAH: halaman input QR wajib login
-] as const;
+const PROTECTED_PREFIXES = ["/dashboard", "/workshop/input"] as const;
 
 /**
  * Path yang hanya boleh diakses oleh user yang BELUM login.
  * Middleware akan redirect ke dashboard kalau user sudah authenticated.
  *
- * CATATAN: /qr/login TIDAK termasuk di sini karena:
- * - User workshop yang sudah login tetap boleh akses /qr/login
+ * CATATAN: /workshop/login TIDAK termasuk di sini karena:
+ * - User workshop yang sudah login tetap boleh akses /workshop/login
  *   (misal: session expired, login ulang)
- * - User dashboard yang sudah login juga boleh akses /qr/login
+ * - User dashboard yang sudah login juga boleh akses /workshop/login
  *   (tidak ada masalah — halaman login QR tidak sensitif)
  */
 const AUTH_ONLY_PATHS = ["/login"] as const;
@@ -142,7 +146,8 @@ const AUTH_ONLY_PATHS = ["/login"] as const;
  * Middleware tidak akan melakukan pengecekan apapun di path ini.
  */
 const PUBLIC_PREFIXES = [
-  "/qr/login", // ← TAMBAH: halaman login QR selalu terbuka
+  "/login",
+  "/workshop/login", // halaman login workshop selalu terbuka
   "/api/auth", // API auth (login, qr-login, logout)
 ] as const;
 
@@ -191,7 +196,7 @@ export function isAllRole(value: unknown): value is AllRole {
  *   - superadmin                       → /dashboard/superadmin
  *   - customer_service                 → /dashboard/cs
  *   - marketing                        → /dashboard/marketing
- *   - production_staff / qc_staff / admin  → /qr/login
+ *   - production_staff / qc_staff / admin  → /workshop/login
  *
  * Menerima input unknown (dari DB atau user input) — kalau bukan AllRole
  * valid, return null. Defensive untuk runtime safety.
@@ -217,6 +222,11 @@ export function getDashboardPath(role: unknown): string | null {
     }
   }
 
+  // Supervisor — punya dashboard sendiri
+  if (role === "supervisor") {
+    return ROUTES.DASHBOARD_SUPERVISOR + "/monitoring";
+  }
+
   // Cek WorkshopRole — semua role workshop diarahkan ke QR login
   if (isWorkshopRole(role)) {
     return ROUTES.QR_LOGIN;
@@ -235,6 +245,13 @@ export function getDashboardPath(role: unknown): string | null {
 export function canAccessPath(role: string, path: string): boolean {
   // Superadmin bisa akses semua (termasuk QR)
   if (role === "superadmin") return true;
+
+  // Supervisor — hanya akses dashboard supervisor
+  if (role === "supervisor") {
+    return (
+      path.startsWith(ROUTES.DASHBOARD_SUPERVISOR) || path.startsWith("/api/")
+    );
+  }
 
   // Workshop roles — hanya bisa akses /qr/*
   if (isWorkshopRole(role)) {
@@ -302,7 +319,7 @@ export function isPublicPath(pathname: string): boolean {
 
 /**
  * Cek apakah path perlu authentication (user harus sudah login).
- * Contoh: /dashboard/cs → true, /qr/input → true, /login → false
+ * Contoh: /dashboard/cs → true, /workshop/input → true, /login → false
  */
 export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(
@@ -316,9 +333,9 @@ export function isProtectedPath(pathname: string): boolean {
 /**
  * Cek apakah path khusus untuk user yang belum login.
  * User yang sudah login tidak boleh akses (akan di-redirect ke dashboard).
- * Contoh: /login → true, /qr/login → false
+ * Contoh: /login → true, /workshop/login → false
  *
- * CATATAN: /qr/login TIDAK termasuk karena halaman itu boleh diakses
+ * CATATAN: /workshop/login TIDAK termasuk karena halaman itu boleh diakses
  * baik sudah login maupun belum (user workshop mungkin perlu login ulang).
  */
 export function isAuthOnlyPath(pathname: string): boolean {

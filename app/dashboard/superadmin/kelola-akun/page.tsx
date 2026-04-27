@@ -78,7 +78,7 @@ type AlertState = {
   message: string;
 } | null;
 
-type UserSegment = "all" | "bms" | "operational" | "production";
+type UserSegment = "all" | "bms" | "management" | "operational" | "production";
 type NewUserType = "bms" | "oprprd" | null;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -94,6 +94,7 @@ const ROLE_GROUP_LABELS: Record<string, { label: string; bg: string }> = {
 const SEGMENT_OPTIONS: { value: UserSegment; label: string }[] = [
   { value: "all", label: "Semua" },
   { value: "bms", label: "BMS (Admin, CS, Marketing)" },
+  { value: "management", label: "Manajemen" },
   { value: "operational", label: "Operasional" },
   { value: "production", label: "Produksi" },
 ];
@@ -260,9 +261,11 @@ export default function KelolaAkunPage() {
     const res = await fetch("/api/roles");
     const json = await res.json();
     if (!res.ok) return;
+    // Exclude only the three BMS roles — supervisor stays in regardless of role_group
+    const BMS_NAMES = new Set(["superadmin", "customer_service", "marketing"]);
     setRoles(
       (json.data ?? []).filter(
-        (r: RoleOPRPRD) => r.role_group !== "management",
+        (r: RoleOPRPRD) => !BMS_NAMES.has(r.name),
       ),
     );
   }, []);
@@ -297,10 +300,9 @@ export default function KelolaAkunPage() {
   const stats = {
     total: allUsers.length,
     bms: allUsers.filter((u) => u.userType === "bms").length,
-    operational: allUsers.filter((u) => u.roles?.role_group === "operational")
-      .length,
-    production: allUsers.filter((u) => u.roles?.role_group === "production")
-      .length,
+    management: allUsers.filter((u) => u.roles?.role_group === "management").length,
+    operational: allUsers.filter((u) => u.roles?.role_group === "operational").length,
+    production: allUsers.filter((u) => u.roles?.role_group === "production").length,
     active: allUsers.filter((u) =>
       u.userType === "bms" ? u.status === "active" : u.is_active,
     ).length,
@@ -686,6 +688,16 @@ export default function KelolaAkunPage() {
           -
         </span>
       );
+    if (role.name === "supervisor") {
+      return (
+        <div className="flex flex-col gap-0.5">
+          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+            Supervisor
+          </span>
+          <span className="text-[10px] text-gray-400">Manajemen</span>
+        </div>
+      );
+    }
     const cfg = ROLE_GROUP_LABELS[role.role_group] ?? {
       label: role.name,
       bg: "bg-gray-100 text-gray-800",
@@ -865,7 +877,7 @@ export default function KelolaAkunPage() {
             {activeTab === "users" && (
               <>
                 {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
                   {[
                     {
                       label: "Total",
@@ -878,6 +890,12 @@ export default function KelolaAkunPage() {
                       value: stats.bms,
                       color: "border-purple-400",
                       text: "text-purple-700",
+                    },
+                    {
+                      label: "Manajemen",
+                      value: stats.management,
+                      color: "border-orange-400",
+                      text: "text-orange-700",
                     },
                     {
                       label: "Operasional",
@@ -1295,12 +1313,12 @@ export default function KelolaAkunPage() {
                     ? "Edit Cabang"
                     : "Tambah Cabang Baru"
                   : isEditMode
-                    ? `Edit Akun — ${selectedUser?.userType === "bms" ? "BMS" : "Operasional & Produksi"}`
+                    ? `Edit Akun — ${selectedUser?.userType === "bms" ? "BMS" : selectedUser?.roles?.role_group === "management" ? "Manajemen" : "Operasional & Produksi"}`
                     : newUserType === null
                       ? "Pilih Tipe Akun"
                       : newUserType === "bms"
                         ? "Buat Akun BMS"
-                        : "Buat Akun Operasional & Produksi"
+                        : "Buat Akun OPR-PRD / Supervisor"
               }
               size="md"
             >
@@ -1454,11 +1472,11 @@ export default function KelolaAkunPage() {
                   </button>
                   <button
                     onClick={() => setNewUserType("oprprd")}
-                    className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left"
+                    className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-orange-400 hover:bg-orange-50 transition-all text-left"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
                       <svg
-                        className="w-5 h-5 text-blue-600"
+                        className="w-5 h-5 text-orange-600"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -1473,10 +1491,10 @@ export default function KelolaAkunPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-gray-800">
-                        Akun Operasional & Produksi
+                        Akun OPR-PRD & Supervisor
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        Operasional, Produksi — login dengan username
+                        Supervisor, Operasional, Produksi — login dengan username
                       </p>
                     </div>
                   </button>
@@ -1724,6 +1742,21 @@ export default function KelolaAkunPage() {
                         disabled={isSaving}
                       >
                         <option value="">Pilih Role</option>
+                        {(() => {
+                          const managementRoles = roles.filter(
+                            (r) => r.role_group === "management",
+                          );
+                          if (managementRoles.length === 0) return null;
+                          return (
+                            <optgroup key="management" label="Manajemen">
+                              {managementRoles.map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.name}
+                                </option>
+                              ))}
+                            </optgroup>
+                          );
+                        })()}
                         {(["operational", "production"] as const).map(
                           (group) => {
                             const groupRoles = roles.filter(

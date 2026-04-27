@@ -243,7 +243,7 @@ export async function POST(request: Request) {
       process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
     // Buat URL params
-    const loginUrl = new URL("/qr/login", appBaseUrl);
+    const loginUrl = new URL("/workshop/login", appBaseUrl);
     loginUrl.searchParams.set("qr_token", qrToken);
     loginUrl.searchParams.set("workstation", workstation_name.trim());
 

@@ -17,7 +17,9 @@ export default function Home() {
 
     if (userRole && userEmail) {
       const path = getDashboardPath(userRole);
-      if (path) {
+      // Only redirect to actual dashboards — workshop roles map to /workshop/login
+      // which is not relevant from the BMS landing page.
+      if (path && path.startsWith("/dashboard")) {
         router.replace(path);
         return;
       }

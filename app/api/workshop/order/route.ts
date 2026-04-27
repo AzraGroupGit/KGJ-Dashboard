@@ -29,19 +29,7 @@ export async function GET(request: Request) {
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select(
-        `
-        id,
-        order_number,
-        product_name,
-        current_stage,
-        status,
-        target_weight,
-        deadline,
-        customers!left (
-          name,
-          phone
-        )
-      `,
+        "id, order_number, product_name, current_stage, status, target_weight, deadline, customer_name",
       )
       .eq("order_number", orderNumber.trim().toUpperCase())
       .is("deleted_at", null)
@@ -63,8 +51,6 @@ export async function GET(request: Request) {
       );
     }
 
-    const customer = (order as any).customers;
-
     return NextResponse.json({
       success: true,
       data: {
@@ -74,9 +60,8 @@ export async function GET(request: Request) {
         current_stage: order.current_stage,
         status: order.status,
         target_weight: order.target_weight,
-        deadline: (order as any).deadline,
-        customer_name: customer?.name || null,
-        customer_phone: customer?.phone || null,
+        deadline: order.deadline,
+        customer_name: (order as any).customer_name || null,
       },
     });
   } catch (error) {

@@ -1,4 +1,4 @@
-// app/qr/login/page.tsx
+// app/workshop/login/page.tsx
 
 "use client";
 
@@ -8,12 +8,12 @@ import BrandHeader from "@/components/qr/BrandHeader";
 import LoginForm from "@/components/qr/LoginForm";
 
 // Wrapper karena useSearchParams perlu Suspense
-function QRLoginContent() {
+function WorkshopLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // Ambil parameter dari QR code
-  const redirectTo = searchParams.get("redirect") || "/qr/input";
+  const redirectTo = searchParams.get("redirect") || "/workshop/input";
   const orderId = searchParams.get("order_id");
   const stage = searchParams.get("stage");
   const qrToken = searchParams.get("qr_token");
@@ -90,7 +90,7 @@ function QRLoginContent() {
 }
 
 // Main component dengan Suspense boundary
-export default function QRLoginPage() {
+export default function WorkshopLoginPage() {
   return (
     <Suspense
       fallback={
@@ -99,7 +99,7 @@ export default function QRLoginPage() {
         </div>
       }
     >
-      <QRLoginContent />
+      <WorkshopLoginContent />
     </Suspense>
   );
 }
