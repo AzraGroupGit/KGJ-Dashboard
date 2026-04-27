@@ -58,8 +58,8 @@ export async function POST(request: Request) {
     const roleName = roleObj?.name;
     const roleGroup = roleObj?.role_group;
 
-    // QR login hanya untuk role workshop (production and operational)
-    const qrAllowedGroups = ["production", "operational"];
+    // QR login untuk role workshop + management (supervisor)
+    const qrAllowedGroups = ["production", "operational", "management"];
     if (roleName !== "superadmin" && !qrAllowedGroups.includes(roleGroup)) {
       return NextResponse.json(
         {

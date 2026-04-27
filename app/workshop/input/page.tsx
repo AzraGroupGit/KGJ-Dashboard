@@ -1,4 +1,4 @@
-// app/qr/input/page.tsx
+// app/workshop/input/page.tsx
 
 "use client";
 
@@ -384,7 +384,7 @@ function PhaseSuccess({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-function QRInputContent() {
+function WorkshopInputContent() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("loading");
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -478,7 +478,7 @@ function QRInputContent() {
 
   const handleLogout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/qr/login");
+    router.push("/workshop/login");
   }, [router]);
 
   const handleNextOrder = useCallback(() => {
@@ -500,7 +500,7 @@ function QRInputContent() {
           </div>
           <p className="text-[14px] text-stone-600 mb-5">{loadError}</p>
           <button
-            onClick={() => router.push("/qr/login")}
+            onClick={() => router.push("/workshop/login")}
             className="text-[14px] font-medium text-amber-600 hover:text-amber-700"
           >
             Login ulang
@@ -552,7 +552,7 @@ function QRInputContent() {
   return null;
 }
 
-export default function QRInputPage() {
+export default function WorkshopInputPage() {
   return (
     <Suspense
       fallback={
@@ -561,7 +561,7 @@ export default function QRInputPage() {
         </div>
       }
     >
-      <QRInputContent />
+      <WorkshopInputContent />
     </Suspense>
   );
 }

@@ -18,6 +18,45 @@ const STAGE_FIELD_CONFIGS: Record<
     max?: number;
   }>
 > = {
+  penerimaan_order: [
+    {
+      name: "product_name",
+      label: "Nama Produk",
+      type: "text",
+      required: true,
+      placeholder: "Contoh: Cincin Berlian 18K",
+    },
+    {
+      name: "customer_name",
+      label: "Nama Pelanggan",
+      type: "text",
+      required: true,
+      placeholder: "Nama lengkap pelanggan",
+    },
+    {
+      name: "target_weight",
+      label: "Target Berat",
+      type: "number",
+      required: false,
+      unit: "gram",
+      min: 0,
+      placeholder: "0.00",
+    },
+    {
+      name: "deadline",
+      label: "Target Selesai",
+      type: "text",
+      required: false,
+      placeholder: "Contoh: 2026-05-30",
+    },
+    {
+      name: "notes",
+      label: "Catatan / Spesifikasi",
+      type: "textarea",
+      required: false,
+      placeholder: "Detail pesanan, ukuran, keinginan khusus...",
+    },
+  ],
   qc_awal: [
     {
       name: "berat_actual",
@@ -448,7 +487,7 @@ const ROLE_STAGE_ACCESS: Record<string, string[]> = {
   packing: ["packing"],
   kelengkapan: ["kelengkapan"],
   after_sales: ["pengiriman"],
-  customer_care: ["pelunasan"],
+  customer_care: ["penerimaan_order", "pelunasan"],
 };
 
 export async function GET(request: Request) {
@@ -469,9 +508,14 @@ export async function GET(request: Request) {
     const orderId = searchParams.get("order_id");
     const stage = searchParams.get("stage");
 
-    if (!orderId || !stage) {
+    if (!stage) {
+      return NextResponse.json({ error: "stage wajib diisi" }, { status: 400 });
+    }
+
+    // penerimaan_order tidak butuh order_id — order belum ada
+    if (!orderId && stage !== "penerimaan_order") {
       return NextResponse.json(
-        { error: "order_id dan stage wajib diisi" },
+        { error: "order_id wajib diisi" },
         { status: 400 },
       );
     }
@@ -499,7 +543,7 @@ export async function GET(request: Request) {
     const roleName: string = (userData.role as any)?.name ?? "";
 
     // Priority: superadmin → DB allowed_stages → role-name map → group fallback
-    const workshopGroups = ["production", "operational"];
+    const workshopGroups = ["production", "operational", "management"];
     const roleStages = ROLE_STAGE_ACCESS[roleName];
     const hasAccess =
       roleName === "superadmin" ||
@@ -519,30 +563,38 @@ export async function GET(request: Request) {
       );
     }
 
-    // Ambil data order
-    const { data: order, error: orderError } = await supabase
-      .from("orders")
-      .select("id, order_number, product_name, current_stage")
-      .eq("id", orderId)
-      .is("deleted_at", null)
-      .single();
+    // penerimaan_order: order belum ada, skip lookup
+    let order: { id: string; order_number: string; product_name: string; current_stage: string } | null = null;
+    let existingResult: { data: Record<string, unknown> } | null = null;
 
-    if (orderError || !order) {
-      return NextResponse.json(
-        { error: "Order tidak ditemukan" },
-        { status: 404 },
-      );
+    if (stage !== "penerimaan_order") {
+      const { data: fetchedOrder, error: orderError } = await supabase
+        .from("orders")
+        .select("id, order_number, product_name, current_stage")
+        .eq("id", orderId)
+        .is("deleted_at", null)
+        .single();
+
+      if (orderError || !fetchedOrder) {
+        return NextResponse.json(
+          { error: "Order tidak ditemukan" },
+          { status: 404 },
+        );
+      }
+
+      order = fetchedOrder;
+
+      const { data: lastResult } = await supabase
+        .from("stage_results")
+        .select("data")
+        .eq("order_id", orderId)
+        .eq("stage", stage)
+        .order("attempt_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      existingResult = lastResult;
     }
-
-    // Ambil existing stage result jika ada
-    const { data: existingResult } = await supabase
-      .from("stage_results")
-      .select("data")
-      .eq("order_id", orderId)
-      .eq("stage", stage)
-      .order("attempt_number", { ascending: false })
-      .limit(1)
-      .maybeSingle();
 
     // Dapatkan konfigurasi field untuk stage ini
     const fields = STAGE_FIELD_CONFIGS[stage] || [];
@@ -550,8 +602,8 @@ export async function GET(request: Request) {
     const config = {
       stage,
       stage_label: STAGE_LABELS[stage] || stage,
-      order_number: order.order_number,
-      product_name: order.product_name,
+      order_number: order?.order_number ?? null,
+      product_name: order?.product_name ?? null,
       fields,
       permissions: {
         can_submit: permissions.can_insert || false,
@@ -582,6 +634,7 @@ export async function GET(request: Request) {
 
 // Label stage
 const STAGE_LABELS: Record<string, string> = {
+  penerimaan_order: "Penerimaan Order",
   qc_awal: "QC Awal",
   racik_bahan: "Racik Bahan",
   lebur_bahan: "Lebur Bahan",

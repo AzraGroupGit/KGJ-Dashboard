@@ -23,9 +23,11 @@ const POLL_INTERVAL = 60_000; // refresh tiap 60 detik
 export default function Header({
   userEmail,
   role,
+  logoutPath,
 }: {
   userEmail: string;
   role: string;
+  logoutPath?: string;
 }) {
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -111,7 +113,7 @@ export default function Header({
     // Bersihkan semua data user di localStorage (7 key) via helper terpusat —
     // menggantikan manual removeItem yang sebelumnya incomplete.
     clearClientUser();
-    router.push(ROUTES.LOGIN);
+    router.push(logoutPath ?? ROUTES.LOGIN);
     router.refresh();
   };
 

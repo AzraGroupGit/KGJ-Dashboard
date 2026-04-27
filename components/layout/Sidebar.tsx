@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { SUPERADMIN_ROUTES, CS_ROUTES, MARKETING_ROUTES } from "@/lib/routes";
+import { SUPERADMIN_ROUTES, CS_ROUTES, MARKETING_ROUTES, SUPERVISOR_ROUTES } from "@/lib/routes";
 
 // Tipe untuk menu item
 interface MenuItem {
@@ -107,6 +107,10 @@ const menuItems: Record<string, MenuItem[]> = {
       icon: "analisis",
       href: MARKETING_ROUTES.ANALISIS,
     },
+  ],
+  supervisor: [
+    { name: "Monitoring", icon: "monitor", href: SUPERVISOR_ROUTES.MONITORING },
+    { name: "Persetujuan", icon: "approval", href: SUPERVISOR_ROUTES.APPROVAL },
   ],
 };
 
@@ -277,6 +281,21 @@ const iconMap = {
       />
     </svg>
   ),
+  approval: (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+  ),
   // Chevron untuk dropdown
   chevronDown: (
     <svg
@@ -328,6 +347,8 @@ export default function Sidebar({ role }: { role: string }) {
         return "from-blue-600 to-cyan-600";
       case "marketing":
         return "from-green-600 to-emerald-600";
+      case "supervisor":
+        return "from-amber-600 to-orange-600";
       default:
         return "from-gray-600 to-gray-600";
     }

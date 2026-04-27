@@ -1,4 +1,4 @@
-// app/qr/layout.tsx
+// app/workshop/layout.tsx
 
 import type { Metadata } from "next";
 
@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   robots: "noindex, nofollow",
 };
 
-export default function QRLayout({ children }: { children: React.ReactNode }) {
+export default function WorkshopLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-stone-50 font-sans antialiased">
       {/* Subtle texture overlay */}
