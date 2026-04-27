@@ -47,6 +47,7 @@ export async function POST(request: Request) {
         data,
         notes: data.notes || null,
         started_at: new Date().toISOString(),
+        finished_at: new Date().toISOString(),
       })
       .select("id")
       .single();
