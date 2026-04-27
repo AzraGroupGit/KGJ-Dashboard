@@ -38,11 +38,11 @@ export async function GET(request: Request) {
 
     const { data: currentUser } = await supabase
       .from("users")
-      .select("role")
+      .select("role:roles!users_role_id_fkey(name)")
       .eq("id", user.id)
       .single();
 
-    if (currentUser?.role !== "superadmin") {
+    if ((currentUser?.role as any)?.name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

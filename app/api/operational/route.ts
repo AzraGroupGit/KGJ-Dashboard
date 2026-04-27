@@ -18,7 +18,7 @@ export async function GET() {
 
     const { data: profile, error: profileError } = await supabase
       .from("users")
-      .select("id, role_id")
+      .select("id, role:roles!users_role_id_fkey(name)")
       .eq("id", user.id)
       .single();
 
@@ -27,6 +27,10 @@ export async function GET() {
         { error: "Profil user tidak ditemukan" },
         { status: 404 },
       );
+    }
+
+    if ((profile?.role as any)?.name !== "superadmin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Helper tanggal

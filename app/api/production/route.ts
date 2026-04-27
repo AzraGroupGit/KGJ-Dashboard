@@ -48,7 +48,7 @@ export async function GET() {
 
     const { data: profile, error: profileError } = await supabase
       .from("users")
-      .select("id, role_id")
+      .select("id, role:roles!users_role_id_fkey(name)")
       .eq("id", user.id)
       .single();
 
@@ -57,6 +57,10 @@ export async function GET() {
         { error: "Profil user tidak ditemukan" },
         { status: 404 },
       );
+    }
+
+    if ((profile?.role as any)?.name !== "superadmin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Helper tanggal
@@ -81,13 +85,12 @@ export async function GET() {
         `
         id,
         full_name,
-        is_active,
-        roles!inner ( name )
+        status,
+        role:roles!users_role_id_fkey ( name )
       `,
       )
-      .eq("is_active", true)
-      .is("deleted_at", null)
-      .in("roles.name", EXPERT_ROLES as unknown as string[]);
+      .eq("status", "active")
+      .is("deleted_at", null);
 
     if (expertUsersError) {
       console.error(
@@ -100,11 +103,13 @@ export async function GET() {
       );
     }
 
-    const expertUserList = (expertUsers || []).map((u: any) => ({
-      id: u.id,
-      fullName: u.full_name,
-      roleName: u.roles?.name as string,
-    }));
+    const expertUserList = (expertUsers || [])
+      .filter((u: any) => EXPERT_ROLES.includes((u.role as any)?.name))
+      .map((u: any) => ({
+        id: u.id,
+        fullName: u.full_name,
+        roleName: (u.role as any)?.name as string,
+      }));
     const expertUserIds = expertUserList.map((u) => u.id);
 
     // ========== 2. SCAN EVENTS HARI INI (untuk total_scans & orders_handled) ==========

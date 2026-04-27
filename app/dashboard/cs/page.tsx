@@ -14,16 +14,18 @@ import { CS_ROUTES } from "@/lib/routes";
 
 interface StatsData {
   branch: { id: string; name: string; code: string } | null;
-  month: {
+  summary: {
     totalLeadMasuk: number;
     totalClosing: number;
-    averageCR: number;
-    totalDays: number;
+    conversionRate: number;
+  };
+  period: {
+    daysWithInput: number;
   };
   today: {
     hasInput: boolean;
-    leadMasuk: number | null;
-    closing: number | null;
+    leadMasuk: number;
+    closing: number;
   };
 }
 
@@ -165,9 +167,9 @@ export default function CSDashboard() {
   if (isLoading || !user) {
     return (
       <div className="flex h-screen bg-gray-50">
-        <Sidebar role="cs" />
+        <Sidebar role="customer_service" />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Header userEmail={user?.email || ""} role="cs" />
+          <Header userEmail={user?.email || ""} role="customer_service" />
           <main className="flex-1 overflow-y-auto p-6">
             <Loading variant="skeleton" text="Memuat dashboard..." />
           </main>
@@ -178,9 +180,9 @@ export default function CSDashboard() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar role="cs" />
+      <Sidebar role="customer_service" />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header userEmail={user.email} role="cs" />
+        <Header userEmail={user.email} role="customer_service" />
         <main className="flex-1 overflow-y-auto p-6">
           {error && (
             <div className="mb-6">
@@ -207,7 +209,7 @@ export default function CSDashboard() {
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
               <p className="text-sm opacity-90 mb-2">Total Lead Masuk</p>
               <p className="text-3xl font-bold">
-                {stats?.month.totalLeadMasuk.toLocaleString("id-ID") ?? 0}
+                {stats?.summary.totalLeadMasuk.toLocaleString("id-ID") ?? 0}
               </p>
               <p className="text-xs opacity-75 mt-2">bulan ini</p>
             </div>
@@ -215,7 +217,7 @@ export default function CSDashboard() {
             <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
               <p className="text-sm opacity-90 mb-2">Total Closing</p>
               <p className="text-3xl font-bold">
-                {stats?.month.totalClosing.toLocaleString("id-ID") ?? 0}
+                {stats?.summary.totalClosing.toLocaleString("id-ID") ?? 0}
               </p>
               <p className="text-xs opacity-75 mt-2">bulan ini</p>
             </div>
@@ -223,7 +225,7 @@ export default function CSDashboard() {
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
               <p className="text-sm opacity-90 mb-2">CR Rata-rata</p>
               <p className="text-3xl font-bold">
-                {(stats?.month.averageCR ?? 0).toFixed(1)}%
+                {(stats?.summary.conversionRate ?? 0).toFixed(1)}%
               </p>
               <p className="text-xs opacity-75 mt-2">konversi leads</p>
             </div>
@@ -231,7 +233,7 @@ export default function CSDashboard() {
             <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
               <p className="text-sm opacity-90 mb-2">Hari Input</p>
               <p className="text-3xl font-bold">
-                {stats?.month.totalDays ?? 0}
+                {stats?.period.daysWithInput ?? 0}
               </p>
               <p className="text-xs opacity-75 mt-2">hari tercatat bulan ini</p>
             </div>

@@ -37,7 +37,7 @@ export default function InputLeadsPage() {
   const [leadMasuk, setLeadMasuk] = useState("");
   const [closing, setClosing] = useState("");
   const [omset, setOmset] = useState("");
-  const [omsetDisplay, setOmsetDisplay] = useState(""); // Untuk tampilan format
+  const [omsetDisplay, setOmsetDisplay] = useState("");
   const [notes, setNotes] = useState("");
 
   const [alert, setAlert] = useState<{
@@ -206,9 +206,9 @@ export default function InputLeadsPage() {
   if (isLoading && !user) {
     return (
       <div className="flex h-screen bg-gray-50">
-        <Sidebar role="cs" />
+        <Sidebar role="customer_service" />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Header userEmail="" role="cs" />
+          <Header userEmail="" role="customer_service" />
           <main className="flex-1 overflow-y-auto p-6">
             <Loading variant="skeleton" text="Memuat data input leads..." />
           </main>
@@ -219,9 +219,9 @@ export default function InputLeadsPage() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar role="cs" />
+      <Sidebar role="customer_service" />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header userEmail={user?.email || ""} role="cs" />
+        <Header userEmail={user?.email || ""} role="customer_service" />
         <main className="flex-1 overflow-y-auto p-6">
           {alert && (
             <div className="mb-6 animate-slide-down">

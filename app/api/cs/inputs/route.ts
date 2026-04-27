@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
     const { data: currentUser, error: currentUserError } = await supabase
       .from("users")
-      .select("id, role, branch_id")
+      .select("id, branch_id, role:roles!users_role_id_fkey(name)")
       .eq("id", user.id)
       .single();
 
@@ -59,8 +59,7 @@ export async function GET(request: Request) {
         users!cs_inputs_user_id_fkey (
           id,
           full_name,
-          email,
-          role
+          email
         ),
         branches!cs_inputs_branch_id_fkey (
           id,
@@ -87,13 +86,15 @@ export async function GET(request: Request) {
       query = query.eq("branch_id", branchId);
     }
 
+    const currentRoleName = (currentUser.role as any)?.name;
+
     // Jika user adalah CS, hanya bisa melihat data sendiri
-    if (currentUser.role === "cs") {
+    if (currentRoleName === "customer_service") {
       query = query.eq("user_id", currentUser.id);
     }
 
     // Jika user adalah marketing, bisa melihat data CS di branch yang sama
-    if (currentUser.role === "marketing" && currentUser.branch_id) {
+    if (currentRoleName === "marketing" && currentUser.branch_id) {
       query = query.eq("branch_id", currentUser.branch_id);
     }
 
@@ -139,7 +140,7 @@ export async function POST(request: Request) {
 
     const { data: profile, error: profileError } = await supabase
       .from("users")
-      .select("id, role, branch_id, status")
+      .select("id, branch_id, status, role:roles!users_role_id_fkey(name)")
       .eq("id", user.id)
       .single();
 
@@ -157,16 +158,16 @@ export async function POST(request: Request) {
       );
     }
 
-    if (profile.role !== "cs") {
+    if ((profile.role as any)?.name !== "customer_service") {
       return NextResponse.json(
-        { error: "Hanya CS yang dapat input data" },
+        { error: "Hanya Customer Service yang dapat input data" },
         { status: 403 },
       );
     }
 
     if (!profile.branch_id) {
       return NextResponse.json(
-        { error: "User CS tidak terhubung ke cabang manapun" },
+        { error: "User Customer Service tidak terhubung ke cabang manapun" },
         { status: 400 },
       );
     }

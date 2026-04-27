@@ -4,6 +4,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
@@ -230,6 +231,7 @@ function formatRelativeTime(timestamp: string): string {
 // ============================================================
 
 export default function OwnerDashboardPage() {
+  const router = useRouter();
   const [clientUser, setClientUser] = useState<ClientUser | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -238,8 +240,13 @@ export default function OwnerDashboardPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
-    setClientUser(getClientUser());
-  }, []);
+    const cu = getClientUser();
+    if (!cu) {
+      router.push("/login");
+      return;
+    }
+    setClientUser(cu);
+  }, [router]);
 
   const fetchData = useCallback(async (isManualRefresh = false) => {
     try {

@@ -24,7 +24,7 @@ const menuItems: Record<string, MenuItem[]> = {
   superadmin: [
     // Kelola seluruh akun dan cabang
     {
-      name: "Main Dashboard",
+      name: "Overview",
       icon: "dashboard",
       href: SUPERADMIN_ROUTES.DASHBOARD,
     },
@@ -35,6 +35,14 @@ const menuItems: Record<string, MenuItem[]> = {
       icon: "users",
       href: SUPERADMIN_ROUTES.KELOLA_AKUN,
     },
+
+    // Kelola qr codes
+    {
+      name: "Kelola QR Codes",
+      icon: "qrcode",
+      href: SUPERADMIN_ROUTES.KELOLA_QR_CODES,
+    },
+
     // Menu besar BMS - berisi menu utama sebelumnya
     {
       name: "BMS",
@@ -87,7 +95,7 @@ const menuItems: Record<string, MenuItem[]> = {
       ],
     },
   ],
-  cs: [
+  customer_service: [
     { name: "Dashboard", icon: "dashboard", href: CS_ROUTES.DASHBOARD },
     { name: "Input Leads", icon: "input", href: CS_ROUTES.INPUT_LEADS },
   ],
@@ -316,7 +324,7 @@ export default function Sidebar({ role }: { role: string }) {
     switch (role) {
       case "superadmin":
         return "from-purple-600 to-indigo-600";
-      case "cs":
+      case "customer_service":
         return "from-blue-600 to-cyan-600";
       case "marketing":
         return "from-green-600 to-emerald-600";

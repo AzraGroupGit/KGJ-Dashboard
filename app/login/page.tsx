@@ -6,8 +6,160 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Loading from "@/components/ui/Loading";
-import Alert from "@/components/ui/Alert";
-import { getDashboardPath } from "@/lib/routes";
+import { getDashboardPath, queryParamToAppRole } from "@/lib/routes";
+import { setClientUser, type LoginRole } from "@/lib/auth/session";
+
+// ════════════════════════════════════════════════════════════════════════════
+// ROLE CONFIGS & ICONS
+// ════════════════════════════════════════════════════════════════════════════
+
+interface RoleConfig {
+  value: LoginRole;
+  label: string;
+  colors: { border: string; bg: string; text: string };
+  icon: React.ReactNode;
+}
+
+const ROLE_CONFIGS: RoleConfig[] = [
+  {
+    value: "superadmin",
+    label: "Super Admin",
+    colors: {
+      border: "#f0c96b",
+      bg: "rgba(240,201,107,0.1)",
+      text: "#b8860b",
+    },
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none">
+        <path
+          d="M12 15L12 18"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+        <path
+          d="M8 11L8 14"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+        <path
+          d="M16 11L16 14"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+        <rect
+          x="3"
+          y="8"
+          width="18"
+          height="12"
+          rx="2"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+        <path
+          d="M7 5L7 8"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+        <path
+          d="M12 3L12 8"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+        <path
+          d="M17 5L17 8"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+  },
+  {
+    value: "customer_service",
+    label: "CS",
+    colors: {
+      border: "#4f8ef7",
+      bg: "rgba(79,142,247,0.1)",
+      text: "#2563eb",
+    },
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none">
+        <path
+          d="M3 10C3 7.79086 4.79086 6 7 6H17C19.2091 6 21 7.79086 21 10V14C21 16.2091 19.2091 18 17 18H7C4.79086 18 3 16.2091 3 14V10Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+        <circle
+          cx="8"
+          cy="12"
+          r="2"
+          fill="currentColor"
+          fillOpacity="0.15"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+        <circle
+          cx="16"
+          cy="12"
+          r="2"
+          fill="currentColor"
+          fillOpacity="0.15"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+      </svg>
+    ),
+  },
+  {
+    value: "marketing",
+    label: "Marketing",
+    colors: {
+      border: "#82c882",
+      bg: "rgba(130,200,130,0.1)",
+      text: "#16a34a",
+    },
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none">
+        <rect
+          x="3"
+          y="15"
+          width="4"
+          height="6"
+          rx="1"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+        <rect
+          x="10"
+          y="9"
+          width="4"
+          height="12"
+          rx="1"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+        <rect
+          x="17"
+          y="5"
+          width="4"
+          height="16"
+          rx="1"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+      </svg>
+    ),
+  },
+];
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENT
+// ════════════════════════════════════════════════════════════════════════════
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,19 +167,15 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState<"superadmin" | "cs" | "marketing">(
-    "superadmin",
-  );
+  const [role, setRole] = useState<LoginRole>("superadmin");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
   // Set role from URL query parameter
   useEffect(() => {
-    const roleParam = searchParams.get("role");
-    if (roleParam === "admin") {
-      setRole("superadmin");
-    } else if (roleParam === "cs" || roleParam === "marketing") {
-      setRole(roleParam);
+    const roleFromParam = queryParamToAppRole(searchParams.get("role"));
+    if (roleFromParam) {
+      setRole(roleFromParam);
     }
   }, [searchParams]);
 
@@ -45,9 +193,7 @@ export default function LoginPage() {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, role }),
       });
 
@@ -59,14 +205,16 @@ export default function LoginPage() {
         return;
       }
 
-      localStorage.setItem("userRole", data.user.role);
-      localStorage.setItem("userEmail", data.user.email);
-      localStorage.setItem("userName", data.user.fullName);
-      localStorage.setItem("userId", data.user.id);
-
-      if (data.user.branch) {
-        localStorage.setItem("userBranch", JSON.stringify(data.user.branch));
-      }
+      // Simpan data user via setter terpusat — lebih type-safe dan konsisten
+      setClientUser({
+        id: data.user.id,
+        email: data.user.email,
+        fullName: data.user.fullName,
+        role: data.user.role,
+        username: data.user.username ?? null,
+        roleDetail: data.user.roleDetail ?? null,
+        branch: data.user.branch ?? null,
+      });
 
       const targetPath = getDashboardPath(data.user.role);
 
@@ -85,30 +233,10 @@ export default function LoginPage() {
     }
   };
 
-  const getRoleColor = () => {
-    switch (role) {
-      case "superadmin":
-        return {
-          border: "#f0c96b",
-          bg: "rgba(240,201,107,0.1)",
-          text: "#b8860b",
-        };
-      case "cs":
-        return {
-          border: "#4f8ef7",
-          bg: "rgba(79,142,247,0.1)",
-          text: "#2563eb",
-        };
-      case "marketing":
-        return {
-          border: "#82c882",
-          bg: "rgba(130,200,130,0.1)",
-          text: "#16a34a",
-        };
-    }
-  };
-
-  const roleColor = getRoleColor();
+  // Warna aktif berdasarkan role yang dipilih — dipakai di CSS variable
+  const activeConfig =
+    ROLE_CONFIGS.find((c) => c.value === role) ?? ROLE_CONFIGS[0];
+  const roleColor = activeConfig.colors;
 
   return (
     <>
@@ -196,13 +324,13 @@ export default function LoginPage() {
           50% { transform: translateY(-24px); }
         }
 
-        /* === CARD STYLES - KOMPAK === */
+        /* === CARD STYLES === */
         .login-card {
           background: #ffffff;
           border-radius: 24px;
           padding: 24px 28px;
           width: 100%;
-          max-width: 420px;
+          max-width: 440px;
           position: relative;
           z-index: 10;
           animation: fadeUp 0.4s ease both;
@@ -265,37 +393,52 @@ export default function LoginPage() {
           font-size: 13px;
           color: #9ca3af;
           text-align: center;
-          margin-bottom: 20px;
+          margin-bottom: 16px;
           font-weight: 400;
         }
 
-        /* Role Selector */
+        .role-label {
+          font-size: 11px;
+          font-weight: 500;
+          color: #6b7280;
+          margin-bottom: 8px;
+          text-align: center;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        /* Role Selector — grid 3 kolom × 2 baris untuk 6 role */
         .role-selector {
-          display: flex;
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
           gap: 6px;
-          margin-bottom: 20px;
+          margin-bottom: 18px;
         }
         .role-btn {
-          flex: 1;
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 4px;
-          padding: 8px 6px;
+          padding: 8px 4px;
           background: #f9fafb;
           border: 1px solid #e5e7eb;
           border-radius: 10px;
           cursor: pointer;
           transition: all 0.15s ease;
           color: #9ca3af;
+          min-height: 56px;
         }
         .role-btn svg {
-          width: 20px;
-          height: 20px;
+          width: 18px;
+          height: 18px;
+          flex-shrink: 0;
         }
         .role-btn span {
-          font-size: 11px;
+          font-size: 10.5px;
           font-weight: 500;
+          text-align: center;
+          line-height: 1.2;
+          white-space: nowrap;
         }
         .role-btn.active {
           border-color: ${roleColor.border};
@@ -303,10 +446,14 @@ export default function LoginPage() {
           color: ${roleColor.text};
           box-shadow: 0 2px 6px rgba(0,0,0,0.04);
         }
-        .role-btn:hover:not(.active) {
+        .role-btn:hover:not(.active):not(:disabled) {
           background: #f3f4f6;
           border-color: #d1d5db;
           color: #6b7280;
+        }
+        .role-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         /* Input Fields */
@@ -502,7 +649,7 @@ export default function LoginPage() {
         }
 
         /* Responsive untuk layar kecil */
-        @media (max-height: 600px) {
+        @media (max-height: 640px) {
           .login-card {
             padding: 18px 22px;
           }
@@ -511,17 +658,21 @@ export default function LoginPage() {
           }
           .welcome-sub {
             font-size: 12px;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
           }
           .role-btn {
-            padding: 6px 4px;
+            padding: 6px 3px;
+            min-height: 48px;
+          }
+          .role-btn svg {
+            width: 16px;
+            height: 16px;
+          }
+          .role-btn span {
+            font-size: 9.5px;
           }
           .input-field {
             padding: 8px 10px 8px 36px;
-          }
-          .demo-section {
-            margin-top: 12px;
-            padding-top: 10px;
           }
         }
       `}</style>
@@ -664,144 +815,20 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleLogin}>
+            <div className="role-label">Pilih Role</div>
             <div className="role-selector">
-              <button
-                type="button"
-                className={`role-btn ${role === "superadmin" ? "active" : ""}`}
-                onClick={() => setRole("superadmin")}
-                disabled={isLoading}
-              >
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M12 15L12 18"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M8 11L8 14"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M16 11L16 14"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M4 20L7 20"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M17 20L20 20"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <rect
-                    x="3"
-                    y="8"
-                    width="18"
-                    height="12"
-                    rx="2"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  />
-                  <path
-                    d="M7 5L7 8"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M12 3L12 8"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M17 5L17 8"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <span>Super Admin</span>
-              </button>
-              <button
-                type="button"
-                className={`role-btn ${role === "cs" ? "active" : ""}`}
-                onClick={() => setRole("cs")}
-                disabled={isLoading}
-              >
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M3 10C3 7.79086 4.79086 6 7 6H17C19.2091 6 21 7.79086 21 10V14C21 16.2091 19.2091 18 17 18H7C4.79086 18 3 16.2091 3 14V10Z"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  />
-                  <circle
-                    cx="8"
-                    cy="12"
-                    r="2"
-                    fill="currentColor"
-                    fillOpacity="0.15"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  />
-                  <circle
-                    cx="16"
-                    cy="12"
-                    r="2"
-                    fill="currentColor"
-                    fillOpacity="0.15"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  />
-                </svg>
-                <span>CS</span>
-              </button>
-              <button
-                type="button"
-                className={`role-btn ${role === "marketing" ? "active" : ""}`}
-                onClick={() => setRole("marketing")}
-                disabled={isLoading}
-              >
-                <svg viewBox="0 0 24 24" fill="none">
-                  <rect
-                    x="3"
-                    y="15"
-                    width="4"
-                    height="6"
-                    rx="1"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  />
-                  <rect
-                    x="10"
-                    y="9"
-                    width="4"
-                    height="12"
-                    rx="1"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  />
-                  <rect
-                    x="17"
-                    y="5"
-                    width="4"
-                    height="16"
-                    rx="1"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  />
-                </svg>
-                <span>Marketing</span>
-              </button>
+              {ROLE_CONFIGS.map((config) => (
+                <button
+                  key={config.value}
+                  type="button"
+                  className={`role-btn ${role === config.value ? "active" : ""}`}
+                  onClick={() => setRole(config.value)}
+                  disabled={isLoading}
+                >
+                  {config.icon}
+                  <span>{config.label}</span>
+                </button>
+              ))}
             </div>
 
             <div className="input-group">
@@ -937,7 +964,7 @@ export default function LoginPage() {
               <div
                 className="demo-account"
                 onClick={() => {
-                  setRole("cs");
+                  setRole("customer_service");
                   setEmail("cs.jogja@company.com");
                   setPassword("password123");
                 }}

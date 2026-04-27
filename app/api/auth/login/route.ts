@@ -3,14 +3,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isAppRole } from "@/lib/routes";
+import { isLoginRole } from "@/lib/auth/session";
 
 export async function POST(request: Request) {
   try {
     const { email, password, role } = await request.json();
-
-    console.log("=== LOGIN ATTEMPT ===");
-    console.log("Email:", email);
-    console.log("Role:", role);
 
     // Validasi input
     if (!email || !password) {
@@ -33,8 +30,6 @@ export async function POST(request: Request) {
       });
 
     if (authError || !authData.user) {
-      console.error("❌ Supabase Auth Error:", authError?.message);
-
       let userMessage = "Email atau password salah!";
       if (authError?.message.includes("Email not confirmed")) {
         userMessage = "Email belum dikonfirmasi. Silakan cek inbox Anda.";
@@ -53,9 +48,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log("✅ Auth successful, user ID:", authData.user.id);
-
-    // Ambil profil user
+    // Ambil profil user — JOIN ke tabel roles untuk dapat detail role lengkap
     const { data: userData, error: userError } = await supabase
       .from("users")
       .select(
@@ -63,11 +56,18 @@ export async function POST(request: Request) {
         id,
         email,
         full_name,
-        role,
+        username,
         branch_id,
         status,
         last_login,
-        branches (
+        role:roles!users_role_id_fkey (
+          id,
+          name,
+          role_group,
+          description,
+          permissions
+        ),
+        branches:branches!users_branch_id_fkey (
           id,
           name,
           code
@@ -75,10 +75,10 @@ export async function POST(request: Request) {
       `,
       )
       .eq("id", authData.user.id)
+      .is("deleted_at", null)
       .single();
 
     if (userError || !userData) {
-      console.error("❌ Profile fetch error:", userError?.message);
       await supabase.auth.signOut();
       return NextResponse.json(
         {
@@ -100,11 +100,40 @@ export async function POST(request: Request) {
       );
     }
 
-    if (userData.role !== role) {
+    // role dari database = object { id, name, role_group, description, permissions }
+    const roleObj = userData.role as any;
+    const userRoleName = roleObj?.name;
+
+    if (!userRoleName) {
       await supabase.auth.signOut();
       return NextResponse.json(
         {
-          error: `Anda tidak memiliki akses sebagai ${role}! (role Anda: ${userData.role})`,
+          error:
+            "Akun Anda belum memiliki role yang valid. Hubungi administrator.",
+        },
+        { status: 403 },
+      );
+    }
+
+    // Pastikan role user adalah LoginRole (superadmin/customer_service/marketing).
+    // Role produksi/operasional lain tidak diizinkan login lewat halaman form ini —
+    // mereka pakai halaman QR code terpisah.
+    if (!isLoginRole(userRoleName)) {
+      await supabase.auth.signOut();
+      return NextResponse.json(
+        {
+          error:
+            "Akun Anda tidak dapat login di halaman ini. Silakan gunakan halaman login yang sesuai.",
+        },
+        { status: 403 },
+      );
+    }
+
+    if (userRoleName !== role) {
+      await supabase.auth.signOut();
+      return NextResponse.json(
+        {
+          error: `Anda tidak memiliki akses sebagai ${role}! (role Anda: ${userRoleName})`,
         },
         { status: 403 },
       );
@@ -127,8 +156,7 @@ export async function POST(request: Request) {
       user_agent: request.headers.get("user-agent"),
     });
 
-    console.log("✅ Login successful for:", email);
-
+    // Response struktur sesuai ClientUser di lib/auth/session.ts
     return NextResponse.json(
       {
         success: true,
@@ -137,14 +165,26 @@ export async function POST(request: Request) {
           id: userData.id,
           email: userData.email,
           fullName: userData.full_name,
-          role: userData.role,
-          branch: userData.branches,
+          username: userData.username ?? null,
+          role: userRoleName,
+          roleDetail: {
+            id: roleObj.id,
+            name: roleObj.name,
+            role_group: roleObj.role_group,
+            description: roleObj.description ?? null,
+            permissions: roleObj.permissions ?? {
+              can_read: false,
+              can_insert: false,
+              can_update: false,
+              can_delete: false,
+            },
+          },
+          branch: userData.branches ?? null,
         },
       },
       { status: 200 },
     );
-  } catch (error) {
-    console.error("❌ Unexpected login error:", error);
+  } catch {
     return NextResponse.json(
       { error: "Terjadi kesalahan pada server!" },
       { status: 500 },

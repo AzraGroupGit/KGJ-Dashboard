@@ -3,8 +3,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
@@ -64,6 +66,8 @@ interface CSInput {
 }
 
 export default function InputMarketingPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<ClientUser | null>(null);
   const [marketingInputs, setMarketingInputs] = useState<MarketingInput[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [csUsers, setCsUsers] = useState<CSUser[]>([]);
@@ -130,7 +134,7 @@ export default function InputMarketingPage() {
   // Fetch CS users
   const fetchCSUsers = async () => {
     try {
-      const response = await fetch("/api/users?role=cs");
+      const response = await fetch("/api/cs/users");
       const data = await response.json();
       if (data.data) {
         setCsUsers(data.data);
@@ -204,8 +208,14 @@ export default function InputMarketingPage() {
   };
 
   useEffect(() => {
+    const clientUser = getClientUser();
+    if (!clientUser) {
+      router.push("/login");
+      return;
+    }
+    setUser(clientUser);
     fetchAllData();
-  }, []);
+  }, [router]);
 
   const calculateMetrics = (data: MarketingInput) => {
     const crSerius =
@@ -412,7 +422,7 @@ export default function InputMarketingPage() {
       <div className="flex h-screen bg-gray-50">
         <Sidebar role="marketing" />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Header userEmail="marketing@company.com" role="marketing" />
+          <Header userEmail={user?.email || ""} role="marketing" />
           <main className="flex-1 overflow-y-auto p-6">
             <Loading variant="skeleton" text="Memuat data marketing..." />
           </main>

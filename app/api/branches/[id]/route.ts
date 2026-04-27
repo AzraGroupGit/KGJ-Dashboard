@@ -16,12 +16,12 @@ async function requireSuperadmin(
 
   const { data } = await supabase
     .from("users")
-    .select("id, role")
+    .select("id, role:roles!users_role_id_fkey(name)")
     .eq("id", user.id)
     .single();
 
-  if (data?.role !== "superadmin") return null;
-  return data;
+  if ((data?.role as any)?.name !== "superadmin") return null;
+  return { id: data!.id };
 }
 
 /**

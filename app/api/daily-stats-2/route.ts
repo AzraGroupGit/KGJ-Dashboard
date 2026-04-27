@@ -2,7 +2,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { supabase } from "@/lib/supabase/client";
 
 // ============================================================
 // Config & Initialization
@@ -134,7 +133,9 @@ interface DailyStatsResponse {
 /**
  * Hitung cycle time rata-rata dari order yang completed dalam 30 hari terakhir
  */
-async function calculateAverageCycleTime(): Promise<number> {
+async function calculateAverageCycleTime(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<number> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -188,6 +189,24 @@ function mapStageToActivityType(
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { data: currentUser } = await supabase
+    .from("users")
+    .select("role:roles!users_role_id_fkey(name)")
+    .eq("id", user.id)
+    .single();
+
+  if ((currentUser?.role as any)?.name !== "superadmin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   try {
     const today = new Date();
@@ -391,22 +410,17 @@ export async function GET(request: NextRequest) {
         .gte("started_at", todayISO)
         .eq("data->>overall_result", "failed"),
 
-      // Expert stats (users with production roles)
+      // Expert stats (users with production roles) — filter in JS
       supabase
         .from("users")
         .select(
           `
           id,
           full_name,
-          is_active,
-          roles!inner(
-            id,
-            name,
-            role_group
-          )
+          status,
+          role:roles!users_role_id_fkey(name, role_group)
         `,
         )
-        .eq("roles.role_group", "production")
         .is("deleted_at", null),
 
       // Micro setting stats
@@ -526,7 +540,7 @@ export async function GET(request: NextRequest) {
     const estimasiRupiah = estimateWipValue(totalBeratEmas, totalPermata);
 
     // Cycle time
-    const rataCycleTime = await calculateAverageCycleTime();
+    const rataCycleTime = await calculateAverageCycleTime(supabase);
     const targetCycleTime = DEFAULT_TARGET_CYCLE_TIME;
 
     // Rework stats
@@ -610,10 +624,12 @@ export async function GET(request: NextRequest) {
 
     // --- Production Calculations ---
 
-    // Experts
-    const expertData = expertStatsQuery.data || [];
+    // Experts — filter to production role_group only
+    const expertData = (expertStatsQuery.data ?? []).filter(
+      (u: any) => (u.role as any)?.role_group === "production",
+    );
     const totalExperts = expertData.length;
-    const activeExperts = expertData.filter((e) => e.is_active).length;
+    const activeExperts = expertData.filter((e: any) => e.status === "active").length;
 
     // Get orders assigned to experts today
     const expertOrdersQuery = await supabase
@@ -622,7 +638,7 @@ export async function GET(request: NextRequest) {
       .eq("action", "submit")
       .in(
         "user_id",
-        expertData.filter((e) => e.is_active).map((e) => e.id),
+        expertData.filter((e: any) => e.status === "active").map((e: any) => e.id),
       )
       .gte("scanned_at", todayISO);
 

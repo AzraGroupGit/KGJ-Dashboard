@@ -21,16 +21,42 @@ interface BranchRef {
   code: string;
 }
 
-interface User {
+interface RoleOPRPRD {
   id: string;
-  email: string;
+  name: string;
+  role_group:
+    | "management"
+    | "operational"
+    | "production"
+    | "marketing"
+    | "customer_service";
+  description: string | null;
+  permissions: {
+    can_read: boolean;
+    can_insert: boolean;
+    can_update: boolean;
+    can_delete: boolean;
+  };
+  allowed_stages: string[];
+}
+
+interface UnifiedUser {
+  id: string;
   full_name: string;
-  role: "superadmin" | "cs" | "marketing";
+  email: string | null;
+  username: string | null;
+  phone: string | null;
+  role: "superadmin" | "customer_service" | "marketing" | null;
+  roles: RoleOPRPRD | null;
+  role_id: string | null;
   branch_id: string | null;
   branches: BranchRef | null;
-  status: "active" | "inactive";
+  status: "active" | "inactive" | null;
+  is_active: boolean;
   last_login: string | null;
+  last_login_at: string | null;
   created_at: string;
+  userType: "bms" | "oprprd";
 }
 
 interface Branch {
@@ -47,51 +73,48 @@ interface Branch {
   created_at: string;
 }
 
-// ── Tambahan: types untuk User Operasional & Produksi ─────────────────────────
-
-interface RoleOPRPRD {
-  id: string;
-  name: string;
-  role_group: "management" | "operational" | "production" | "qc";
-  description: string | null;
-  permissions: {
-    can_read: boolean;
-    can_insert: boolean;
-    can_update: boolean;
-    can_delete: boolean;
-  };
-  allowed_stages: string[];
-}
-
-interface UserOPRPRD {
-  id: string;
-  username: string;
-  full_name: string;
-  email: string | null;
-  phone: string | null;
-  role_id: string;
-  roles: RoleOPRPRD | null;
-  is_active: boolean;
-  last_login_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-
 type AlertState = {
   type: "success" | "error" | "warning" | "info";
   message: string;
 } | null;
 
-// ─── Initial form values ───────────────────────────────────────────────────────
+type UserSegment = "all" | "bms" | "operational" | "production";
+type NewUserType = "bms" | "oprprd" | null;
 
-const EMPTY_USER_FORM = {
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const BMS_ROLES = ["superadmin", "customer_service", "marketing"] as const;
+
+const ROLE_GROUP_LABELS: Record<string, { label: string; bg: string }> = {
+  management: { label: "Manajemen", bg: "bg-purple-100 text-purple-800" },
+  operational: { label: "Operasional", bg: "bg-blue-100 text-blue-800" },
+  production: { label: "Produksi", bg: "bg-amber-100 text-amber-800" },
+};
+
+const SEGMENT_OPTIONS: { value: UserSegment; label: string }[] = [
+  { value: "all", label: "Semua" },
+  { value: "bms", label: "BMS (Admin, CS, Marketing)" },
+  { value: "operational", label: "Operasional" },
+  { value: "production", label: "Produksi" },
+];
+
+// ─── Empty forms ──────────────────────────────────────────────────────────────
+
+const EMPTY_BMS_FORM = {
   full_name: "",
   email: "",
   password: "",
-  role: "cs" as User["role"],
+  role: "customer_service" as "superadmin" | "customer_service" | "marketing",
   branch_id: "",
+};
+
+const EMPTY_OPRPRD_FORM = {
+  username: "",
+  full_name: "",
+  email: "",
+  phone: "",
+  password: "",
+  role_id: "",
 };
 
 const EMPTY_BRANCH_FORM = {
@@ -104,61 +127,36 @@ const EMPTY_BRANCH_FORM = {
   status: "active" as Branch["status"],
 };
 
-// ── Tambahan: form kosong OPRPRD ───────────────────────────────────────────────
-const EMPTY_OPRPRD_USER_FORM = {
-  username: "",
-  full_name: "",
-  email: "",
-  phone: "",
-  password: "",
-  role_id: "",
-};
-
-// Label & warna per role_group
-const ROLE_GROUP_LABELS: Record<string, { label: string; bg: string }> = {
-  management: { label: "Manajemen", bg: "bg-purple-100 text-purple-800" },
-  operational: { label: "Operasional", bg: "bg-blue-100 text-blue-800" },
-  production: { label: "Produksi", bg: "bg-amber-100 text-amber-800" },
-  qc: { label: "Quality Control", bg: "bg-emerald-100 text-emerald-800" },
-};
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function KelolaAkunPage() {
-  // ── State existing (tidak diubah) ──────────────────────────────────────────
-  const [users, setUsers] = useState<User[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [activeTab, setActiveTab] = useState<"users" | "branches" | "oprprd">(
-    "users",
-  );
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<"users" | "branches">("users");
+  const [clientUser, setClientUser] = useState<ClientUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [alert, setAlert] = useState<AlertState>(null);
+
+  const [allUsers, setAllUsers] = useState<UnifiedUser[]>([]);
+  const [roles, setRoles] = useState<RoleOPRPRD[]>([]);
+  const [segment, setSegment] = useState<UserSegment>("all");
   const [showInactive, setShowInactive] = useState(false);
-  const [clientUser, setClientUser] = useState<ClientUser | null>(null);
-  const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UnifiedUser | null>(null);
+  const [newUserType, setNewUserType] = useState<NewUserType>(null);
+
+  const [bmsForm, setBmsForm] = useState(EMPTY_BMS_FORM);
+  const [oprprdForm, setOprprdForm] = useState(EMPTY_OPRPRD_FORM);
+
+  const [userToDelete, setUserToDelete] = useState<UnifiedUser | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
 
-  const [userFormData, setUserFormData] = useState(EMPTY_USER_FORM);
-  const [branchFormData, setBranchFormData] = useState(EMPTY_BRANCH_FORM);
-
-  // ── State tambahan OPRPRD ──────────────────────────────────────────────────
-  const [usersOPRPRD, setUsersOPRPRD] = useState<UserOPRPRD[]>([]);
-  const [roles, setRoles] = useState<RoleOPRPRD[]>([]);
-  const [selectedOPRPRDUser, setSelectedOPRPRDUser] =
-    useState<UserOPRPRD | null>(null);
-  const [oprprdUserToDelete, setOprprdUserToDelete] =
-    useState<UserOPRPRD | null>(null);
-  const [isDeletingOPRPRDUser, setIsDeletingOPRPRDUser] = useState(false);
-  const [oprprdUserFormData, setOprprdUserFormData] = useState(
-    EMPTY_OPRPRD_USER_FORM,
-  );
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+  const [branchForm, setBranchForm] = useState(EMPTY_BRANCH_FORM);
+  const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     setClientUser(getClientUser());
@@ -171,42 +169,97 @@ export default function KelolaAkunPage() {
     message: string,
   ) => {
     setAlert({ type, message });
-    setTimeout(() => setAlert(null), 4000);
+    setTimeout(() => setAlert(null), 5000);
   };
 
-  // ─── Data fetching (existing — tidak diubah) ──────────────────────────────
+  // Terjemahkan pesan error API → pesan ramah pengguna
+  const parseApiError = (raw: string, httpStatus?: number): string => {
+    if (!raw) return "Terjadi kesalahan, silakan coba lagi.";
 
-  const fetchUsers = useCallback(async () => {
-    const status = showInactive ? "inactive" : "active";
-    const res = await fetch(`/api/users?status=${status}&limit=200`);
+    // 409 Conflict — duplikasi data
+    if (httpStatus === 409) {
+      if (raw.toLowerCase().includes("email"))
+        return "Email ini sudah terdaftar. Gunakan email lain.";
+      if (raw.toLowerCase().includes("username"))
+        return "Username sudah digunakan. Pilih username lain.";
+      if (raw.includes("sudah terdaftar"))
+        return "Akun dengan data ini sudah terdaftar di sistem.";
+      return raw;
+    }
+
+    // 403 / 401 — akses
+    if (httpStatus === 403)
+      return "Anda tidak memiliki izin untuk melakukan tindakan ini.";
+    if (httpStatus === 401)
+      return "Sesi login Anda telah berakhir. Silakan login ulang.";
+
+    // Validasi input (400)
+    if (raw.includes("Nama lengkap dan password"))
+      return "Nama lengkap dan password wajib diisi.";
+    if (raw.includes("Password minimal"))
+      return "Password terlalu pendek, minimal 6 karakter.";
+    if (raw.includes("Email wajib")) return "Email wajib diisi untuk akun BMS.";
+    if (raw.includes("Cabang wajib"))
+      return "Pilih cabang terlebih dahulu untuk role Customer Service.";
+    if (raw.includes("Username minimal"))
+      return "Username terlalu pendek, minimal 3 karakter.";
+    if (raw.includes("Role harus dipilih") || raw.includes("Role tidak valid"))
+      return "Role belum dipilih atau tidak valid.";
+    if (raw.includes("Role harus salah satu"))
+      return "Role tidak dikenali. Pilih: Super Admin, Customer Service, atau Marketing.";
+    if (raw.includes("role BMS, gunakan field"))
+      return "Untuk role BMS gunakan mode BMS, bukan mode Operasional.";
+
+    // Error server (500)
+    if (raw.includes("Gagal membuat akun auth"))
+      return "Gagal membuat akun. Email mungkin sudah pernah terdaftar sebelumnya.";
+    if (raw.includes("Gagal menyimpan profil"))
+      return "Akun berhasil dibuat di sistem auth, tapi profil gagal disimpan. Hubungi administrator.";
+    if (raw.includes("Gagal memperbarui"))
+      return "Gagal menyimpan perubahan. Silakan coba lagi.";
+    if (raw.includes("Gagal mengubah password"))
+      return "Password gagal diubah. Silakan coba lagi.";
+    if (raw.includes("tidak ditemukan di database"))
+      return "Konfigurasi role tidak ditemukan. Hubungi administrator.";
+    if (raw.includes("Terjadi kesalahan server"))
+      return "Server sedang bermasalah. Silakan coba beberapa saat lagi.";
+
+    // Fallback — tampilkan pesan asli dari API
+    return raw;
+  };
+
+  const resolveUserType = (u: any): "bms" | "oprprd" => {
+    if (u.role && (BMS_ROLES as readonly string[]).includes(u.role))
+      return "bms";
+    if (u.roles?.role_group) return "oprprd";
+    if (u.username && (!u.email || u.email?.endsWith("@internal.local")))
+      return "oprprd";
+    return u.email && !u.username ? "bms" : "oprprd";
+  };
+
+  // ─── Data fetching ─────────────────────────────────────────────────────────
+
+  const fetchAllUsers = useCallback(async () => {
+    const params = new URLSearchParams({ limit: "500" });
+    if (!showInactive) params.append("status", "active");
+    const res = await fetch(`/api/users?${params.toString()}`);
     const json = await res.json();
     if (!res.ok) {
-      showAlert("error", json.error || "Gagal memuat data user");
+      showAlert("error", parseApiError(json.error, res.status));
       return;
     }
-    setUsers(json.data ?? []);
+    setAllUsers(
+      (json.data ?? []).map((u: any) => ({
+        ...u,
+        userType: resolveUserType(u),
+      })),
+    );
   }, [showInactive]);
-
-  const fetchBranches = useCallback(async () => {
-    const res = await fetch("/api/branches");
-    const json = await res.json();
-    if (!res.ok) {
-      showAlert("error", json.error || "Gagal memuat data cabang");
-      return;
-    }
-    setBranches(json.data ?? []);
-  }, []);
-
-  // ── Fetch tambahan OPRPRD ──────────────────────────────────────────────────
 
   const fetchRoles = useCallback(async () => {
     const res = await fetch("/api/roles");
     const json = await res.json();
-    if (!res.ok) {
-      showAlert("error", json.error || "Gagal memuat data role");
-      return;
-    }
-    // Hanya tampilkan role non-management di form
+    if (!res.ok) return;
     setRoles(
       (json.data ?? []).filter(
         (r: RoleOPRPRD) => r.role_group !== "management",
@@ -214,79 +267,121 @@ export default function KelolaAkunPage() {
     );
   }, []);
 
-  const fetchOPRPRDUsers = useCallback(async () => {
-    const params = new URLSearchParams({ limit: "200" });
-    if (!showInactive) params.append("is_active", "true");
-    const res = await fetch(`/api/users-oprprd?${params.toString()}`);
+  const fetchBranches = useCallback(async () => {
+    const res = await fetch("/api/branches");
     const json = await res.json();
     if (!res.ok) {
-      showAlert("error", json.error || "Gagal memuat data user operasional");
+      showAlert("error", parseApiError(json.error, res.status));
       return;
     }
-    setUsersOPRPRD(json.data ?? []);
-  }, [showInactive]);
-
-  // ─────────────────────────────────────────────────────────────────────────
+    setBranches(json.data ?? []);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
-      await Promise.all([
-        fetchUsers(),
-        fetchBranches(),
-        fetchRoles(),
-        fetchOPRPRDUsers(),
-      ]);
+      await Promise.all([fetchAllUsers(), fetchRoles(), fetchBranches()]);
       setIsLoading(false);
     };
     load();
-  }, [fetchUsers, fetchBranches, fetchRoles, fetchOPRPRDUsers]);
+  }, [fetchAllUsers, fetchRoles, fetchBranches]);
 
-  // ─── User handlers (existing — tidak diubah) ──────────────────────────────
+  // ─── Filtered & stats ──────────────────────────────────────────────────────
 
-  const handleOpenUserModal = (user?: User) => {
-    if (user) {
-      setIsEditMode(true);
-      setSelectedUser(user);
-      setUserFormData({
+  const filteredUsers = allUsers.filter((u) => {
+    if (segment === "all") return true;
+    if (segment === "bms") return u.userType === "bms";
+    return u.roles?.role_group === segment;
+  });
+
+  const stats = {
+    total: allUsers.length,
+    bms: allUsers.filter((u) => u.userType === "bms").length,
+    operational: allUsers.filter((u) => u.roles?.role_group === "operational")
+      .length,
+    production: allUsers.filter((u) => u.roles?.role_group === "production")
+      .length,
+    active: allUsers.filter((u) =>
+      u.userType === "bms" ? u.status === "active" : u.is_active,
+    ).length,
+  };
+
+  // ─── Modal handlers ────────────────────────────────────────────────────────
+
+  const handleOpenCreateModal = () => {
+    setIsEditMode(false);
+    setSelectedUser(null);
+    setNewUserType(null);
+    setBmsForm(EMPTY_BMS_FORM);
+    setOprprdForm(EMPTY_OPRPRD_FORM);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (user: UnifiedUser) => {
+    setIsEditMode(true);
+    setSelectedUser(user);
+    setNewUserType(user.userType);
+    if (user.userType === "bms") {
+      setBmsForm({
         full_name: user.full_name,
-        email: user.email,
+        email: user.email ?? "",
         password: "",
-        role: user.role,
+        role:
+          (user.role as (typeof EMPTY_BMS_FORM)["role"]) ?? "customer_service",
         branch_id: user.branch_id ?? "",
       });
     } else {
-      setIsEditMode(false);
-      setSelectedUser(null);
-      setUserFormData(EMPTY_USER_FORM);
+      setOprprdForm({
+        username: user.username ?? "",
+        full_name: user.full_name,
+        email: user.email ?? "",
+        phone: user.phone ?? "",
+        password: "",
+        role_id: user.role_id ?? "",
+      });
     }
     setIsModalOpen(true);
   };
 
-  const handleSaveUser = async () => {
-    if (!userFormData.full_name.trim() || !userFormData.email.trim()) {
-      showAlert("error", "Nama dan email harus diisi!");
+  const handleCloseModal = () => {
+    if (isSaving) return;
+    setIsModalOpen(false);
+  };
+
+  // ─── Save BMS ──────────────────────────────────────────────────────────────
+
+  const handleSaveBmsUser = async () => {
+    if (!bmsForm.full_name.trim() || !bmsForm.email.trim()) {
+      showAlert("error", "Nama lengkap dan email wajib diisi.");
       return;
     }
-    if (!isEditMode && !userFormData.password) {
-      showAlert("error", "Password harus diisi untuk akun baru!");
+    if (!isEditMode && !bmsForm.password) {
+      showAlert("error", "Password wajib diisi untuk akun baru.");
       return;
     }
-    if (userFormData.role === "cs" && !userFormData.branch_id) {
-      showAlert("error", "Cabang harus dipilih untuk role CS!");
+    if (bmsForm.password && bmsForm.password.length < 6) {
+      showAlert("error", "Password terlalu pendek, minimal 6 karakter.");
+      return;
+    }
+    if (bmsForm.role === "customer_service" && !bmsForm.branch_id) {
+      showAlert(
+        "error",
+        "Pilih cabang terlebih dahulu untuk role Customer Service.",
+      );
       return;
     }
 
     setIsSaving(true);
     try {
       const payload = {
-        full_name: userFormData.full_name.trim(),
-        email: userFormData.email.trim(),
-        role: userFormData.role,
-        branch_id: ["cs"].includes(userFormData.role)
-          ? userFormData.branch_id || null
-          : null,
-        ...(userFormData.password ? { password: userFormData.password } : {}),
+        full_name: bmsForm.full_name.trim(),
+        email: bmsForm.email.trim(),
+        role: bmsForm.role,
+        branch_id:
+          bmsForm.role === "customer_service"
+            ? bmsForm.branch_id || null
+            : null,
+        ...(bmsForm.password ? { password: bmsForm.password } : {}),
       };
 
       const res = await fetch(
@@ -300,39 +395,122 @@ export default function KelolaAkunPage() {
       const json = await res.json();
 
       if (!res.ok) {
-        showAlert("error", json.error || "Gagal menyimpan akun");
+        showAlert("error", parseApiError(json.error, res.status));
         return;
       }
 
       showAlert(
         "success",
-        isEditMode ? "Akun berhasil diperbarui!" : "Akun baru berhasil dibuat!",
+        isEditMode
+          ? "Akun berhasil diperbarui!"
+          : "Akun BMS baru berhasil dibuat!",
       );
+
       setIsModalOpen(false);
-      await fetchUsers();
+
+      setTimeout(() => {
+        fetchAllUsers();
+      }, 500);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleToggleUserStatus = async (user: User) => {
-    const newStatus = user.status === "active" ? "inactive" : "active";
+  // ─── Save OPRPRD ───────────────────────────────────────────────────────────
+
+  const handleSaveOprprdUser = async () => {
+    if (!oprprdForm.username.trim() || !oprprdForm.full_name.trim()) {
+      showAlert("error", "Username dan nama lengkap wajib diisi.");
+      return;
+    }
+    if (oprprdForm.username.trim().length < 3) {
+      showAlert("error", "Username terlalu pendek, minimal 3 karakter.");
+      return;
+    }
+    if (!oprprdForm.role_id) {
+      showAlert("error", "Role wajib dipilih.");
+      return;
+    }
+    if (!isEditMode && !oprprdForm.password) {
+      showAlert("error", "Password wajib diisi untuk akun baru.");
+      return;
+    }
+    if (oprprdForm.password && oprprdForm.password.length < 6) {
+      showAlert("error", "Password terlalu pendek, minimal 6 karakter.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const payload: Record<string, string | null> = {
+        username: oprprdForm.username.trim(),
+        full_name: oprprdForm.full_name.trim(),
+        email: oprprdForm.email.trim() || null,
+        phone: oprprdForm.phone.trim() || null,
+        role_id: oprprdForm.role_id,
+      };
+      if (oprprdForm.password) payload.password = oprprdForm.password;
+
+      const res = await fetch(
+        isEditMode ? `/api/users/${selectedUser!.id}` : "/api/users",
+        {
+          method: isEditMode ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+      const json = await res.json();
+
+      if (!res.ok) {
+        showAlert("error", parseApiError(json.error, res.status));
+        return;
+      }
+
+      showAlert(
+        "success",
+        isEditMode
+          ? "Akun berhasil diperbarui!"
+          : "Akun Operasional/Produksi baru berhasil dibuat!",
+      );
+
+      setIsModalOpen(false);
+
+      setTimeout(() => {
+        fetchAllUsers();
+      }, 500);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ─── Toggle status ─────────────────────────────────────────────────────────
+
+  const handleToggleUserStatus = async (user: UnifiedUser) => {
+    const body =
+      user.userType === "bms"
+        ? { status: user.status === "active" ? "inactive" : "active" }
+        : { is_active: !user.is_active };
+
     const res = await fetch(`/api/users/${user.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
+      body: JSON.stringify(body),
     });
     const json = await res.json();
     if (!res.ok) {
-      showAlert("error", json.error || "Gagal mengubah status");
+      showAlert("error", parseApiError(json.error, res.status));
       return;
     }
+    const isNowActive =
+      user.userType === "bms" ? user.status !== "active" : !user.is_active;
     showAlert(
       "success",
-      `Akun ${newStatus === "active" ? "diaktifkan" : "dinonaktifkan"}!`,
+      `Akun ${user.full_name} berhasil ${isNowActive ? "diaktifkan" : "dinonaktifkan"}.`,
     );
-    await fetchUsers();
+    await fetchAllUsers();
   };
+
+  // ─── Delete user ───────────────────────────────────────────────────────────
 
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
@@ -343,24 +521,24 @@ export default function KelolaAkunPage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        showAlert("error", json.error || "Gagal menghapus akun");
+        showAlert("error", parseApiError(json.error, res.status));
         return;
       }
-      showAlert("success", `Akun ${userToDelete.full_name} berhasil dihapus!`);
-      await fetchUsers();
+      showAlert("success", `Akun ${userToDelete.full_name} berhasil dihapus.`);
+      await fetchAllUsers();
     } finally {
       setIsDeletingUser(false);
       setUserToDelete(null);
     }
   };
 
-  // ─── Branch handlers (existing — tidak diubah) ────────────────────────────
+  // ─── Branch handlers ───────────────────────────────────────────────────────
 
   const handleOpenBranchModal = (branch?: Branch) => {
     if (branch) {
       setIsEditMode(true);
       setSelectedBranch(branch);
-      setBranchFormData({
+      setBranchForm({
         name: branch.name,
         code: branch.code,
         address: branch.address,
@@ -372,31 +550,31 @@ export default function KelolaAkunPage() {
     } else {
       setIsEditMode(false);
       setSelectedBranch(null);
-      setBranchFormData(EMPTY_BRANCH_FORM);
+      setBranchForm(EMPTY_BRANCH_FORM);
     }
     setIsModalOpen(true);
   };
 
   const handleSaveBranch = async () => {
     if (
-      !branchFormData.name.trim() ||
-      !branchFormData.code.trim() ||
-      !branchFormData.address.trim()
+      !branchForm.name.trim() ||
+      !branchForm.code.trim() ||
+      !branchForm.address.trim()
     ) {
-      showAlert("error", "Nama cabang, kode, dan alamat harus diisi!");
+      showAlert("error", "Nama cabang, kode, dan alamat wajib diisi.");
       return;
     }
 
     setIsSaving(true);
     try {
       const payload = {
-        name: branchFormData.name.trim(),
-        code: branchFormData.code.trim(),
-        address: branchFormData.address.trim(),
-        phone: branchFormData.phone.trim() || null,
-        email: branchFormData.email.trim() || null,
-        pic: branchFormData.pic.trim() || null,
-        status: branchFormData.status,
+        name: branchForm.name.trim(),
+        code: branchForm.code.trim(),
+        address: branchForm.address.trim(),
+        phone: branchForm.phone.trim() || null,
+        email: branchForm.email.trim() || null,
+        pic: branchForm.pic.trim() || null,
+        status: branchForm.status,
       };
 
       const res = await fetch(
@@ -410,18 +588,23 @@ export default function KelolaAkunPage() {
       const json = await res.json();
 
       if (!res.ok) {
-        showAlert("error", json.error || "Gagal menyimpan cabang");
+        showAlert("error", parseApiError(json.error, res.status));
         return;
       }
 
       showAlert(
         "success",
         isEditMode
-          ? `Data ${branchFormData.name} berhasil diperbarui!`
-          : `Cabang ${branchFormData.name} berhasil ditambahkan!`,
+          ? `Data ${branchForm.name} berhasil diperbarui.`
+          : `Cabang ${branchForm.name} berhasil ditambahkan.`,
       );
+
+      // TUTUP MODAL SETELAH SUKSES
       setIsModalOpen(false);
-      await fetchBranches();
+
+      setTimeout(() => {
+        fetchBranches();
+      }, 500);
     } finally {
       setIsSaving(false);
     }
@@ -436,12 +619,12 @@ export default function KelolaAkunPage() {
     });
     const json = await res.json();
     if (!res.ok) {
-      showAlert("error", json.error || "Gagal mengubah status cabang");
+      showAlert("error", parseApiError(json.error, res.status));
       return;
     }
     showAlert(
       "success",
-      `Cabang ${branch.name} ${newStatus === "active" ? "diaktifkan" : "dinonaktifkan"}!`,
+      `Cabang ${branch.name} berhasil ${newStatus === "active" ? "diaktifkan" : "dinonaktifkan"}.`,
     );
     await fetchBranches();
   };
@@ -455,10 +638,10 @@ export default function KelolaAkunPage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        showAlert("error", json.error || "Gagal menghapus cabang");
+        showAlert("error", parseApiError(json.error, res.status));
         return;
       }
-      showAlert("success", `Cabang ${branchToDelete.name} berhasil dihapus!`);
+      showAlert("success", `Cabang ${branchToDelete.name} berhasil dihapus.`);
       await fetchBranches();
     } finally {
       setIsDeleting(false);
@@ -466,156 +649,74 @@ export default function KelolaAkunPage() {
     }
   };
 
-  // ── Handler tambahan OPRPRD ────────────────────────────────────────────────
+  // ─── Badge helpers ─────────────────────────────────────────────────────────
 
-  const handleOpenOPRPRDUserModal = (user?: UserOPRPRD) => {
-    if (user) {
-      setIsEditMode(true);
-      setSelectedOPRPRDUser(user);
-      setOprprdUserFormData({
-        username: user.username,
-        full_name: user.full_name,
-        email: user.email ?? "",
-        phone: user.phone ?? "",
-        password: "",
-        role_id: user.role_id,
-      });
-    } else {
-      setIsEditMode(false);
-      setSelectedOPRPRDUser(null);
-      setOprprdUserFormData(EMPTY_OPRPRD_USER_FORM);
-    }
-    setIsModalOpen(true);
-  };
-
-  const handleSaveOPRPRDUser = async () => {
-    if (
-      !oprprdUserFormData.username.trim() ||
-      !oprprdUserFormData.full_name.trim()
-    ) {
-      showAlert("error", "Username dan nama lengkap harus diisi!");
-      return;
-    }
-    if (oprprdUserFormData.username.trim().length < 3) {
-      showAlert("error", "Username minimal 3 karakter!");
-      return;
-    }
-    if (!oprprdUserFormData.role_id) {
-      showAlert("error", "Role harus dipilih!");
-      return;
-    }
-    if (!isEditMode && !oprprdUserFormData.password) {
-      showAlert("error", "Password harus diisi untuk akun baru!");
-      return;
-    }
-    if (oprprdUserFormData.password && oprprdUserFormData.password.length < 6) {
-      showAlert("error", "Password minimal 6 karakter!");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const payload: Record<string, string | null> = {
-        username: oprprdUserFormData.username.trim(),
-        full_name: oprprdUserFormData.full_name.trim(),
-        email: oprprdUserFormData.email.trim() || null,
-        phone: oprprdUserFormData.phone.trim() || null,
-        role_id: oprprdUserFormData.role_id,
-      };
-      if (oprprdUserFormData.password) {
-        payload.password = oprprdUserFormData.password;
-      }
-
-      const res = await fetch(
-        isEditMode
-          ? `/api/users-oprprd/${selectedOPRPRDUser!.id}`
-          : "/api/users-oprprd",
-        {
-          method: isEditMode ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+  const getRoleBadge = (user: UnifiedUser) => {
+    if (user.userType === "bms") {
+      const map: Record<string, { bg: string; label: string }> = {
+        superadmin: {
+          bg: "bg-purple-100 text-purple-800",
+          label: "Super Admin",
         },
+        customer_service: {
+          bg: "bg-blue-100 text-blue-800",
+          label: "Customer Service",
+        },
+        marketing: { bg: "bg-green-100 text-green-800", label: "Marketing" },
+      };
+      const cfg = map[user.role ?? ""] ?? {
+        bg: "bg-gray-100 text-gray-800",
+        label: user.role ?? "-",
+      };
+      return (
+        <div className="flex flex-col gap-0.5">
+          <span
+            className={`px-2 py-1 text-xs font-semibold rounded-full ${cfg.bg}`}
+          >
+            {cfg.label}
+          </span>
+          <span className="text-[10px] text-gray-400">BMS</span>
+        </div>
       );
-      const json = await res.json();
-
-      if (!res.ok) {
-        showAlert("error", json.error || "Gagal menyimpan akun");
-        return;
-      }
-
-      showAlert(
-        "success",
-        isEditMode ? "Akun berhasil diperbarui!" : "Akun baru berhasil dibuat!",
+    }
+    const role = user.roles;
+    if (!role)
+      return (
+        <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-500">
+          -
+        </span>
       );
-      setIsModalOpen(false);
-      await fetchOPRPRDUsers();
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleToggleOPRPRDUserStatus = async (user: UserOPRPRD) => {
-    const newIsActive = !user.is_active;
-    const res = await fetch(`/api/users-oprprd/${user.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_active: newIsActive }),
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      showAlert("error", json.error || "Gagal mengubah status");
-      return;
-    }
-    showAlert(
-      "success",
-      `Akun ${newIsActive ? "diaktifkan" : "dinonaktifkan"}!`,
-    );
-    await fetchOPRPRDUsers();
-  };
-
-  const handleDeleteOPRPRDUser = async () => {
-    if (!oprprdUserToDelete) return;
-    setIsDeletingOPRPRDUser(true);
-    try {
-      const res = await fetch(`/api/users-oprprd/${oprprdUserToDelete.id}`, {
-        method: "DELETE",
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        showAlert("error", json.error || "Gagal menghapus akun");
-        return;
-      }
-      showAlert(
-        "success",
-        `Akun ${oprprdUserToDelete.full_name} berhasil dihapus!`,
-      );
-      await fetchOPRPRDUsers();
-    } finally {
-      setIsDeletingOPRPRDUser(false);
-      setOprprdUserToDelete(null);
-    }
-  };
-
-  // ─── Badge helpers (existing — tidak diubah) ──────────────────────────────
-
-  const getRoleBadge = (role: string) => {
-    const map: Record<string, { bg: string; label: string }> = {
-      superadmin: { bg: "bg-purple-100 text-purple-800", label: "Super Admin" },
-      cs: { bg: "bg-blue-100 text-blue-800", label: "CS" },
-      marketing: { bg: "bg-green-100 text-green-800", label: "Marketing" },
-    };
-    const { bg, label } = map[role] ?? {
+    const cfg = ROLE_GROUP_LABELS[role.role_group] ?? {
+      label: role.name,
       bg: "bg-gray-100 text-gray-800",
-      label: role,
     };
     return (
-      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${bg}`}>
-        {label}
+      <div className="flex flex-col gap-0.5">
+        <span
+          className={`px-2 py-1 text-xs font-semibold rounded-full ${cfg.bg}`}
+        >
+          {role.name}
+        </span>
+        <span className="text-[10px] text-gray-400">{cfg.label}</span>
+      </div>
+    );
+  };
+
+  const getStatusBadge = (user: UnifiedUser) => {
+    const isActive =
+      user.userType === "bms" ? user.status === "active" : user.is_active;
+    return isActive ? (
+      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+        Aktif
+      </span>
+    ) : (
+      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+        Nonaktif
       </span>
     );
   };
 
-  const getStatusBadge = (status: "active" | "inactive") =>
+  const getBranchStatusBadge = (status: "active" | "inactive") =>
     status === "active" ? (
       <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
         Aktif
@@ -625,41 +726,6 @@ export default function KelolaAkunPage() {
         Nonaktif
       </span>
     );
-
-  // ── Badge tambahan untuk boolean is_active (OPRPRD) ───────────────────────
-  const getIsActiveBadge = (isActive: boolean) =>
-    isActive ? (
-      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-        Aktif
-      </span>
-    ) : (
-      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-        Nonaktif
-      </span>
-    );
-
-  const getOPRPRDRoleBadge = (role: RoleOPRPRD | null) => {
-    if (!role)
-      return (
-        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-          -
-        </span>
-      );
-    const config = ROLE_GROUP_LABELS[role.role_group] ?? {
-      label: role.name,
-      bg: "bg-gray-100 text-gray-800",
-    };
-    return (
-      <div className="flex flex-col gap-0.5">
-        <span
-          className={`px-2 py-1 text-xs font-semibold rounded-full ${config.bg}`}
-        >
-          {role.name}
-        </span>
-        <span className="text-[10px] text-gray-500">{config.label}</span>
-      </div>
-    );
-  };
 
   const formatDate = (iso: string | null) => {
     if (!iso) return "-";
@@ -671,6 +737,10 @@ export default function KelolaAkunPage() {
       minute: "2-digit",
     });
   };
+
+  const activeBranches = branches.filter((b) => b.status === "active");
+  const currentUserIsActive = (u: UnifiedUser) =>
+    u.userType === "bms" ? u.status === "active" : u.is_active;
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
@@ -687,20 +757,6 @@ export default function KelolaAkunPage() {
       </div>
     );
   }
-
-  const activeBranches = branches.filter((b) => b.status === "active");
-
-  // Stats untuk tab OPRPRD
-  const oprprdStats = {
-    total: usersOPRPRD.length,
-    operational: usersOPRPRD.filter(
-      (u) => u.roles?.role_group === "operational",
-    ).length,
-    production: usersOPRPRD.filter((u) => u.roles?.role_group === "production")
-      .length,
-    qc: usersOPRPRD.filter((u) => u.roles?.role_group === "qc").length,
-    active: usersOPRPRD.filter((u) => u.is_active).length,
-  };
 
   return (
     <>
@@ -721,11 +777,11 @@ export default function KelolaAkunPage() {
               </div>
               <Button
                 variant="primary"
-                onClick={() => {
-                  if (activeTab === "users") handleOpenUserModal();
-                  else if (activeTab === "branches") handleOpenBranchModal();
-                  else handleOpenOPRPRDUserModal();
-                }}
+                onClick={() =>
+                  activeTab === "users"
+                    ? handleOpenCreateModal()
+                    : handleOpenBranchModal()
+                }
                 leftIcon={
                   <svg
                     className="w-4 h-4"
@@ -742,11 +798,7 @@ export default function KelolaAkunPage() {
                   </svg>
                 }
               >
-                {activeTab === "users"
-                  ? "Buat Akun Baru"
-                  : activeTab === "branches"
-                    ? "Tambah Cabang"
-                    : "Buat User Operasional"}
+                {activeTab === "users" ? "Buat Akun Baru" : "Tambah Cabang"}
               </Button>
             </div>
 
@@ -758,23 +810,19 @@ export default function KelolaAkunPage() {
                   message={alert.message}
                   onClose={() => setAlert(null)}
                   autoClose
-                  duration={4000}
+                  duration={5000}
                 />
               </div>
             )}
 
-            {/* ── Tabs ── */}
+            {/* Tabs */}
             <div className="border-b border-gray-200 mb-8">
               <nav className="flex gap-8">
-                {(["users", "branches", "oprprd"] as const).map((tab) => (
+                {(["users", "branches"] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`pb-4 px-1 font-medium text-sm transition-colors ${
-                      activeTab === tab
-                        ? "text-indigo-600 border-b-2 border-indigo-600"
-                        : "text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={`pb-4 px-1 font-medium text-sm transition-colors ${activeTab === tab ? "text-indigo-600 border-b-2 border-indigo-600" : "text-gray-500 hover:text-gray-700"}`}
                   >
                     <div className="flex items-center gap-2">
                       {tab === "users" ? (
@@ -791,7 +839,7 @@ export default function KelolaAkunPage() {
                             d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
                           />
                         </svg>
-                      ) : tab === "branches" ? (
+                      ) : (
                         <svg
                           className="w-4 h-4"
                           fill="none"
@@ -805,87 +853,74 @@ export default function KelolaAkunPage() {
                             d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
                           />
                         </svg>
-                      ) : (
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                        </svg>
                       )}
-                      {tab === "users"
-                        ? "Manajemen User"
-                        : tab === "branches"
-                          ? "Data Cabang"
-                          : "User Operasional & Produksi"}
+                      {tab === "users" ? "Manajemen User" : "Data Cabang"}
                     </div>
                   </button>
                 ))}
               </nav>
             </div>
 
-            {/* ══════════════════════════════════════════════════════════════
-                Tab: Users  (existing — tidak diubah)
-            ══════════════════════════════════════════════════════════════ */}
+            {/* ── Tab: Users ── */}
             {activeTab === "users" && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                {/* Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                   {[
                     {
-                      label: "Total Pengguna",
-                      count: users.length,
-                      icon: "👥",
-                      bg: "bg-indigo-100",
+                      label: "Total",
+                      value: stats.total,
+                      color: "border-indigo-400",
+                      text: "text-indigo-700",
                     },
                     {
-                      label: "Super Admin",
-                      count: users.filter((u) => u.role === "superadmin")
-                        .length,
-                      icon: "👑",
-                      bg: "bg-purple-100",
+                      label: "BMS",
+                      value: stats.bms,
+                      color: "border-purple-400",
+                      text: "text-purple-700",
                     },
                     {
-                      label: "CS",
-                      count: users.filter((u) => u.role === "cs").length,
-                      icon: "💬",
-                      bg: "bg-blue-100",
+                      label: "Operasional",
+                      value: stats.operational,
+                      color: "border-blue-400",
+                      text: "text-blue-700",
                     },
                     {
-                      label: "Marketing",
-                      count: users.filter((u) => u.role === "marketing").length,
-                      icon: "📊",
-                      bg: "bg-green-100",
+                      label: "Produksi",
+                      value: stats.production,
+                      color: "border-amber-400",
+                      text: "text-amber-700",
                     },
-                  ].map(({ label, count, icon, bg }) => (
+                    {
+                      label: "Aktif",
+                      value: stats.active,
+                      color: "border-green-400",
+                      text: "text-green-700",
+                    },
+                  ].map(({ label, value, color, text }) => (
                     <div
                       key={label}
-                      className="bg-white rounded-xl shadow-sm p-6"
+                      className={`bg-white rounded-xl shadow-sm p-4 border-t-2 ${color}`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">{label}</p>
-                          <p className="text-2xl font-bold text-gray-800">
-                            {count}
-                          </p>
-                        </div>
-                        <div
-                          className={`w-12 h-12 ${bg} rounded-full flex items-center justify-center`}
-                        >
-                          <span className="text-xl">{icon}</span>
-                        </div>
-                      </div>
+                      <p className="text-xs text-gray-500">{label}</p>
+                      <p className={`text-xl font-bold ${text}`}>{value}</p>
                     </div>
                   ))}
                 </div>
 
-                <div className="flex justify-end mb-4">
+                {/* Filter bar */}
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div className="flex flex-wrap gap-2">
+                    {SEGMENT_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setSegment(opt.value)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${segment === opt.value ? "bg-indigo-600 text-white" : "bg-white text-gray-600 border border-gray-200 hover:border-indigo-300"}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                   <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
                     <input
                       type="checkbox"
@@ -893,20 +928,20 @@ export default function KelolaAkunPage() {
                       onChange={(e) => setShowInactive(e.target.checked)}
                       className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                     />
-                    Tampilkan akun nonaktif
+                    Tampilkan nonaktif
                   </label>
                 </div>
 
+                {/* Tabel */}
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
                           {[
-                            "Nama",
-                            "Email",
+                            "Nama / Identitas",
+                            "Email / Username",
                             "Role",
-                            "Cabang",
                             "Status",
                             "Terakhir Login",
                             "Aksi",
@@ -921,17 +956,17 @@ export default function KelolaAkunPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {users.length === 0 ? (
+                        {filteredUsers.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={7}
+                              colSpan={6}
                               className="px-6 py-10 text-center text-gray-500 text-sm"
                             >
                               Tidak ada data user.
                             </td>
                           </tr>
                         ) : (
-                          users.map((user) => (
+                          filteredUsers.map((user) => (
                             <tr key={user.id} className="hover:bg-gray-50">
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="font-medium text-gray-900">
@@ -941,25 +976,37 @@ export default function KelolaAkunPage() {
                                   {user.id.slice(0, 8)}…
                                 </div>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-gray-600 text-sm">
-                                {user.email}
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                {user.userType === "bms" ? (
+                                  (user.email ?? "-")
+                                ) : (
+                                  <div>
+                                    <div className="font-medium text-gray-800">
+                                      @{user.username}
+                                    </div>
+                                    {user.email && (
+                                      <div className="text-xs text-gray-400">
+                                        {user.email}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                {getRoleBadge(user.role)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-gray-600 text-sm">
-                                {user.branches?.name ?? "-"}
+                                {getRoleBadge(user)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                {getStatusBadge(user.status)}
+                                {getStatusBadge(user)}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-gray-600 text-sm">
-                                {formatDate(user.last_login)}
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                {formatDate(
+                                  user.last_login ?? user.last_login_at,
+                                )}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex gap-2">
                                   <button
-                                    onClick={() => handleOpenUserModal(user)}
+                                    onClick={() => handleOpenEditModal(user)}
                                     className="text-indigo-600 hover:text-indigo-900 transition-colors"
                                     title="Edit"
                                   >
@@ -979,9 +1026,9 @@ export default function KelolaAkunPage() {
                                   </button>
                                   <button
                                     onClick={() => handleToggleUserStatus(user)}
-                                    className={`${user.status === "active" ? "text-yellow-600 hover:text-yellow-900" : "text-green-600 hover:text-green-900"} transition-colors`}
+                                    className={`${currentUserIsActive(user) ? "text-yellow-600 hover:text-yellow-900" : "text-green-600 hover:text-green-900"} transition-colors`}
                                     title={
-                                      user.status === "active"
+                                      currentUserIsActive(user)
                                         ? "Nonaktifkan"
                                         : "Aktifkan"
                                     }
@@ -1031,9 +1078,7 @@ export default function KelolaAkunPage() {
               </>
             )}
 
-            {/* ══════════════════════════════════════════════════════════════
-                Tab: Branches  (existing — tidak diubah)
-            ══════════════════════════════════════════════════════════════ */}
+            {/* ── Tab: Branches ── */}
             {activeTab === "branches" && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -1092,7 +1137,7 @@ export default function KelolaAkunPage() {
                                 {branch.code}
                               </p>
                             </div>
-                            {getStatusBadge(branch.status)}
+                            {getBranchStatusBadge(branch.status)}
                           </div>
                         </div>
                         <div className="p-6">
@@ -1240,357 +1285,56 @@ export default function KelolaAkunPage() {
               </>
             )}
 
-            {/* ══════════════════════════════════════════════════════════════
-                Tab: OPRPRD Users  (BARU)
-            ══════════════════════════════════════════════════════════════ */}
-            {activeTab === "oprprd" && (
-              <>
-                {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                  <div className="bg-white rounded-xl shadow-sm p-4">
-                    <p className="text-xs text-gray-500">Total</p>
-                    <p className="text-xl font-bold text-gray-800">
-                      {oprprdStats.total}
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-xl shadow-sm p-4 border-t-2 border-blue-400">
-                    <p className="text-xs text-gray-500">Operasional</p>
-                    <p className="text-xl font-bold text-blue-700">
-                      {oprprdStats.operational}
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-xl shadow-sm p-4 border-t-2 border-amber-400">
-                    <p className="text-xs text-gray-500">Produksi</p>
-                    <p className="text-xl font-bold text-amber-700">
-                      {oprprdStats.production}
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-xl shadow-sm p-4 border-t-2 border-emerald-400">
-                    <p className="text-xs text-gray-500">QC</p>
-                    <p className="text-xl font-bold text-emerald-700">
-                      {oprprdStats.qc}
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-xl shadow-sm p-4 border-t-2 border-green-400">
-                    <p className="text-xs text-gray-500">Aktif</p>
-                    <p className="text-xl font-bold text-green-700">
-                      {oprprdStats.active}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Filter */}
-                <div className="flex justify-end mb-4">
-                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={showInactive}
-                      onChange={(e) => setShowInactive(e.target.checked)}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    Tampilkan akun nonaktif
-                  </label>
-                </div>
-
-                {/* Table */}
-                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          {[
-                            "Username",
-                            "Nama Lengkap",
-                            "Email / Telepon",
-                            "Role",
-                            "Status",
-                            "Terakhir Login",
-                            "Aksi",
-                          ].map((h) => (
-                            <th
-                              key={h}
-                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                            >
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {usersOPRPRD.length === 0 ? (
-                          <tr>
-                            <td
-                              colSpan={7}
-                              className="px-6 py-10 text-center text-gray-500 text-sm"
-                            >
-                              Tidak ada data user operasional &amp; produksi.
-                            </td>
-                          </tr>
-                        ) : (
-                          usersOPRPRD.map((user) => (
-                            <tr key={user.id} className="hover:bg-gray-50">
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="font-medium text-gray-900">
-                                  {user.username}
-                                </div>
-                                <div className="text-xs text-gray-400 font-mono">
-                                  {user.id.slice(0, 8)}…
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                                {user.full_name}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-600">
-                                  {user.email ?? "-"}
-                                </div>
-                                {user.phone && (
-                                  <div className="text-xs text-gray-400">
-                                    {user.phone}
-                                  </div>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                {getOPRPRDRoleBadge(user.roles)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                {getIsActiveBadge(user.is_active)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                {formatDate(user.last_login_at)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() =>
-                                      handleOpenOPRPRDUserModal(user)
-                                    }
-                                    className="text-indigo-600 hover:text-indigo-900 transition-colors"
-                                    title="Edit"
-                                  >
-                                    <svg
-                                      className="w-5 h-5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                      />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleToggleOPRPRDUserStatus(user)
-                                    }
-                                    className={`${user.is_active ? "text-yellow-600 hover:text-yellow-900" : "text-green-600 hover:text-green-900"} transition-colors`}
-                                    title={
-                                      user.is_active
-                                        ? "Nonaktifkan"
-                                        : "Aktifkan"
-                                    }
-                                  >
-                                    <svg
-                                      className="w-5 h-5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                      />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    onClick={() => setOprprdUserToDelete(user)}
-                                    className="text-red-600 hover:text-red-900 transition-colors"
-                                    title="Hapus"
-                                  >
-                                    <svg
-                                      className="w-5 h-5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                      />
-                                    </svg>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* ══════════════════════════════════════════════════════════════
-                Modal — satu modal, isi berubah sesuai activeTab
-            ══════════════════════════════════════════════════════════════ */}
+            {/* ── Modal ── */}
             <Modal
               isOpen={isModalOpen}
-              onClose={() => !isSaving && setIsModalOpen(false)}
+              onClose={handleCloseModal}
               title={
-                activeTab === "users"
+                activeTab === "branches"
                   ? isEditMode
-                    ? "Edit Akun Pengguna"
-                    : "Buat Akun Baru"
-                  : activeTab === "branches"
-                    ? isEditMode
-                      ? "Edit Cabang"
-                      : "Tambah Cabang Baru"
-                    : isEditMode
-                      ? "Edit User Operasional"
-                      : "Buat User Operasional & Produksi"
+                    ? "Edit Cabang"
+                    : "Tambah Cabang Baru"
+                  : isEditMode
+                    ? `Edit Akun — ${selectedUser?.userType === "bms" ? "BMS" : "Operasional & Produksi"}`
+                    : newUserType === null
+                      ? "Pilih Tipe Akun"
+                      : newUserType === "bms"
+                        ? "Buat Akun BMS"
+                        : "Buat Akun Operasional & Produksi"
               }
-              size={activeTab === "branches" ? "lg" : "md"}
+              size="md"
             >
-              {/* ── Form: User BMS (existing — tidak diubah) ── */}
-              {activeTab === "users" && (
-                <div className="space-y-4">
-                  <Input
-                    label="Nama Lengkap"
-                    value={userFormData.full_name}
-                    onChange={(e) =>
-                      setUserFormData({
-                        ...userFormData,
-                        full_name: e.target.value,
-                      })
-                    }
-                    placeholder="Masukkan nama lengkap"
-                    disabled={isSaving}
+              {/* TAMPILKAN ALERT DI DALAM MODAL */}
+              {alert && (
+                <div className="mb-4">
+                  <Alert
+                    type={alert.type}
+                    message={alert.message}
+                    onClose={() => setAlert(null)}
+                    autoClose
+                    duration={3000}
                   />
-                  <Input
-                    label="Email"
-                    type="email"
-                    value={userFormData.email}
-                    onChange={(e) =>
-                      setUserFormData({
-                        ...userFormData,
-                        email: e.target.value,
-                      })
-                    }
-                    placeholder="email@company.com"
-                    disabled={isSaving}
-                  />
-                  <Input
-                    label={
-                      isEditMode
-                        ? "Password Baru (kosongkan jika tidak diubah)"
-                        : "Password"
-                    }
-                    type="password"
-                    value={userFormData.password}
-                    onChange={(e) =>
-                      setUserFormData({
-                        ...userFormData,
-                        password: e.target.value,
-                      })
-                    }
-                    placeholder="Minimal 6 karakter"
-                    disabled={isSaving}
-                  />
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Role
-                    </label>
-                    <select
-                      value={userFormData.role}
-                      onChange={(e) =>
-                        setUserFormData({
-                          ...userFormData,
-                          role: e.target.value as User["role"],
-                          branch_id: "",
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
-                      disabled={isSaving}
-                    >
-                      <option value="superadmin">Super Admin</option>
-                      <option value="cs">Customer Service</option>
-                      <option value="marketing">Marketing</option>
-                    </select>
-                  </div>
-                  {userFormData.role === "cs" && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Cabang
-                      </label>
-                      <select
-                        value={userFormData.branch_id}
-                        onChange={(e) =>
-                          setUserFormData({
-                            ...userFormData,
-                            branch_id: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
-                        disabled={isSaving}
-                      >
-                        <option value="">Pilih Cabang</option>
-                        {activeBranches.map((b) => (
-                          <option key={b.id} value={b.id}>
-                            {b.name} ({b.code})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  <div className="flex justify-end space-x-3 mt-6">
-                    <Button
-                      variant="secondary"
-                      onClick={() => setIsModalOpen(false)}
-                      disabled={isSaving}
-                    >
-                      Batal
-                    </Button>
-                    <Button
-                      variant="primary"
-                      onClick={handleSaveUser}
-                      isLoading={isSaving}
-                    >
-                      {isEditMode ? "Simpan Perubahan" : "Buat Akun"}
-                    </Button>
-                  </div>
                 </div>
               )}
-
-              {/* ── Form: Branch (existing — tidak diubah) ── */}
+              {/* Form Cabang */}
               {activeTab === "branches" && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <Input
                       label="Nama Cabang"
-                      value={branchFormData.name}
+                      value={branchForm.name}
                       onChange={(e) =>
-                        setBranchFormData({
-                          ...branchFormData,
-                          name: e.target.value,
-                        })
+                        setBranchForm({ ...branchForm, name: e.target.value })
                       }
                       placeholder="Contoh: Cabang Jakarta Barat"
                       disabled={isSaving}
                     />
                     <Input
                       label="Kode Cabang"
-                      value={branchFormData.code}
+                      value={branchForm.code}
                       onChange={(e) =>
-                        setBranchFormData({
-                          ...branchFormData,
+                        setBranchForm({
+                          ...branchForm,
                           code: e.target.value.toUpperCase(),
                         })
                       }
@@ -1600,12 +1344,9 @@ export default function KelolaAkunPage() {
                   </div>
                   <Input
                     label="Alamat Lengkap"
-                    value={branchFormData.address}
+                    value={branchForm.address}
                     onChange={(e) =>
-                      setBranchFormData({
-                        ...branchFormData,
-                        address: e.target.value,
-                      })
+                      setBranchForm({ ...branchForm, address: e.target.value })
                     }
                     placeholder="Jl. Contoh No. 123, Kota"
                     disabled={isSaving}
@@ -1613,12 +1354,9 @@ export default function KelolaAkunPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <Input
                       label="Nomor Telepon"
-                      value={branchFormData.phone}
+                      value={branchForm.phone}
                       onChange={(e) =>
-                        setBranchFormData({
-                          ...branchFormData,
-                          phone: e.target.value,
-                        })
+                        setBranchForm({ ...branchForm, phone: e.target.value })
                       }
                       placeholder="(021) 1234567"
                       disabled={isSaving}
@@ -1626,12 +1364,9 @@ export default function KelolaAkunPage() {
                     <Input
                       label="Email"
                       type="email"
-                      value={branchFormData.email}
+                      value={branchForm.email}
                       onChange={(e) =>
-                        setBranchFormData({
-                          ...branchFormData,
-                          email: e.target.value,
-                        })
+                        setBranchForm({ ...branchForm, email: e.target.value })
                       }
                       placeholder="cabang@company.com"
                       disabled={isSaving}
@@ -1639,12 +1374,9 @@ export default function KelolaAkunPage() {
                   </div>
                   <Input
                     label="PIC (Person in Charge)"
-                    value={branchFormData.pic}
+                    value={branchForm.pic}
                     onChange={(e) =>
-                      setBranchFormData({
-                        ...branchFormData,
-                        pic: e.target.value,
-                      })
+                      setBranchForm({ ...branchForm, pic: e.target.value })
                     }
                     placeholder="Nama penanggung jawab"
                     disabled={isSaving}
@@ -1654,10 +1386,10 @@ export default function KelolaAkunPage() {
                       Status
                     </label>
                     <select
-                      value={branchFormData.status}
+                      value={branchForm.status}
                       onChange={(e) =>
-                        setBranchFormData({
-                          ...branchFormData,
+                        setBranchForm({
+                          ...branchForm,
                           status: e.target.value as Branch["status"],
                         })
                       }
@@ -1668,10 +1400,10 @@ export default function KelolaAkunPage() {
                       <option value="inactive">Nonaktif</option>
                     </select>
                   </div>
-                  <div className="flex justify-end space-x-3 mt-6">
+                  <div className="flex justify-end gap-3 mt-6">
                     <Button
                       variant="secondary"
-                      onClick={() => setIsModalOpen(false)}
+                      onClick={handleCloseModal}
                       disabled={isSaving}
                     >
                       Batal
@@ -1687,149 +1419,363 @@ export default function KelolaAkunPage() {
                 </div>
               )}
 
-              {/* ── Form: OPRPRD User (BARU) ── */}
-              {activeTab === "oprprd" && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input
-                      label="Username"
-                      value={oprprdUserFormData.username}
-                      onChange={(e) =>
-                        setOprprdUserFormData({
-                          ...oprprdUserFormData,
-                          username: e.target.value,
-                        })
-                      }
-                      placeholder="min. 3 karakter"
-                      disabled={isSaving || isEditMode}
-                    />
+              {/* Step 1: Pilih tipe akun */}
+              {activeTab === "users" && !isEditMode && newUserType === null && (
+                <div className="space-y-3 py-2">
+                  <p className="text-sm text-gray-500 mb-4">
+                    Pilih tipe akun yang ingin dibuat:
+                  </p>
+                  <button
+                    onClick={() => setNewUserType("bms")}
+                    className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
+                      <svg
+                        className="w-5 h-5 text-purple-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-800">Akun BMS</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Super Admin, Customer Service, Marketing — login dengan
+                        email
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setNewUserType("oprprd")}
+                    className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                      <svg
+                        className="w-5 h-5 text-blue-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-800">
+                        Akun Operasional & Produksi
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Operasional, Produksi — login dengan username
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* Form BMS */}
+              {activeTab === "users" &&
+                (isEditMode
+                  ? selectedUser?.userType === "bms"
+                  : newUserType === "bms") && (
+                  <div className="space-y-4">
+                    {!isEditMode && (
+                      <button
+                        onClick={() => setNewUserType(null)}
+                        className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 mb-2"
+                      >
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                          />
+                        </svg>
+                        Ganti tipe akun
+                      </button>
+                    )}
                     <Input
                       label="Nama Lengkap"
-                      value={oprprdUserFormData.full_name}
+                      value={bmsForm.full_name}
                       onChange={(e) =>
-                        setOprprdUserFormData({
-                          ...oprprdUserFormData,
-                          full_name: e.target.value,
-                        })
+                        setBmsForm({ ...bmsForm, full_name: e.target.value })
                       }
                       placeholder="Masukkan nama lengkap"
                       disabled={isSaving}
                     />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
                     <Input
-                      label="Email (Opsional)"
+                      label="Email"
                       type="email"
-                      value={oprprdUserFormData.email}
+                      value={bmsForm.email}
                       onChange={(e) =>
-                        setOprprdUserFormData({
-                          ...oprprdUserFormData,
-                          email: e.target.value,
-                        })
+                        setBmsForm({ ...bmsForm, email: e.target.value })
                       }
                       placeholder="email@company.com"
                       disabled={isSaving}
                     />
                     <Input
-                      label="Telepon (Opsional)"
-                      type="tel"
-                      value={oprprdUserFormData.phone}
-                      onChange={(e) =>
-                        setOprprdUserFormData({
-                          ...oprprdUserFormData,
-                          phone: e.target.value,
-                        })
+                      label={
+                        isEditMode
+                          ? "Password Baru (kosongkan jika tidak diubah)"
+                          : "Password"
                       }
-                      placeholder="08123456789"
+                      type="password"
+                      value={bmsForm.password}
+                      onChange={(e) =>
+                        setBmsForm({ ...bmsForm, password: e.target.value })
+                      }
+                      placeholder="Minimal 6 karakter"
                       disabled={isSaving}
                     />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Role
+                      </label>
+                      <select
+                        value={bmsForm.role}
+                        onChange={(e) =>
+                          setBmsForm({
+                            ...bmsForm,
+                            role: e.target.value as typeof bmsForm.role,
+                            branch_id: "",
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                        disabled={isSaving}
+                      >
+                        <option value="superadmin">Super Admin</option>
+                        <option value="customer_service">
+                          Customer Service
+                        </option>
+                        <option value="marketing">Marketing</option>
+                      </select>
+                    </div>
+                    {bmsForm.role === "customer_service" && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Cabang
+                        </label>
+                        <select
+                          value={bmsForm.branch_id}
+                          onChange={(e) =>
+                            setBmsForm({
+                              ...bmsForm,
+                              branch_id: e.target.value,
+                            })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                          disabled={isSaving}
+                        >
+                          <option value="">Pilih Cabang</option>
+                          {activeBranches.map((b) => (
+                            <option key={b.id} value={b.id}>
+                              {b.name} ({b.code})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <div className="flex justify-end gap-3 mt-6">
+                      <Button
+                        variant="secondary"
+                        onClick={handleCloseModal}
+                        disabled={isSaving}
+                      >
+                        Batal
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={handleSaveBmsUser}
+                        isLoading={isSaving}
+                      >
+                        {isEditMode ? "Simpan Perubahan" : "Buat Akun"}
+                      </Button>
+                    </div>
                   </div>
-                  <Input
-                    label={
-                      isEditMode
-                        ? "Password Baru (kosongkan jika tidak diubah)"
-                        : "Password"
-                    }
-                    type="password"
-                    value={oprprdUserFormData.password}
-                    onChange={(e) =>
-                      setOprprdUserFormData({
-                        ...oprprdUserFormData,
-                        password: e.target.value,
-                      })
-                    }
-                    placeholder="Minimal 6 karakter"
-                    disabled={isSaving}
-                  />
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Role
-                    </label>
-                    <select
-                      value={oprprdUserFormData.role_id}
+                )}
+
+              {/* Form OPRPRD */}
+              {activeTab === "users" &&
+                (isEditMode
+                  ? selectedUser?.userType === "oprprd"
+                  : newUserType === "oprprd") && (
+                  <div className="space-y-4">
+                    {!isEditMode && (
+                      <button
+                        onClick={() => setNewUserType(null)}
+                        className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 mb-2"
+                      >
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                          />
+                        </svg>
+                        Ganti tipe akun
+                      </button>
+                    )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input
+                        label="Username"
+                        value={oprprdForm.username}
+                        onChange={(e) =>
+                          setOprprdForm({
+                            ...oprprdForm,
+                            username: e.target.value,
+                          })
+                        }
+                        placeholder="min. 3 karakter"
+                        disabled={isSaving || isEditMode}
+                      />
+                      <Input
+                        label="Nama Lengkap"
+                        value={oprprdForm.full_name}
+                        onChange={(e) =>
+                          setOprprdForm({
+                            ...oprprdForm,
+                            full_name: e.target.value,
+                          })
+                        }
+                        placeholder="Masukkan nama lengkap"
+                        disabled={isSaving}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input
+                        label="Email (Opsional)"
+                        type="email"
+                        value={oprprdForm.email}
+                        onChange={(e) =>
+                          setOprprdForm({
+                            ...oprprdForm,
+                            email: e.target.value,
+                          })
+                        }
+                        placeholder="email@company.com"
+                        disabled={isSaving}
+                      />
+                      <Input
+                        label="Telepon (Opsional)"
+                        type="tel"
+                        value={oprprdForm.phone}
+                        onChange={(e) =>
+                          setOprprdForm({
+                            ...oprprdForm,
+                            phone: e.target.value,
+                          })
+                        }
+                        placeholder="08123456789"
+                        disabled={isSaving}
+                      />
+                    </div>
+                    <Input
+                      label={
+                        isEditMode
+                          ? "Password Baru (kosongkan jika tidak diubah)"
+                          : "Password"
+                      }
+                      type="password"
+                      value={oprprdForm.password}
                       onChange={(e) =>
-                        setOprprdUserFormData({
-                          ...oprprdUserFormData,
-                          role_id: e.target.value,
+                        setOprprdForm({
+                          ...oprprdForm,
+                          password: e.target.value,
                         })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                      placeholder="Minimal 6 karakter"
                       disabled={isSaving}
-                    >
-                      <option value="">— Pilih Role —</option>
-                      {(["operational", "production", "qc"] as const).map(
-                        (group) => {
-                          const groupRoles = roles.filter(
-                            (r) => r.role_group === group,
-                          );
-                          if (groupRoles.length === 0) return null;
-                          return (
-                            <optgroup
-                              key={group}
-                              label={ROLE_GROUP_LABELS[group]?.label ?? group}
-                            >
-                              {groupRoles.map((role) => (
-                                <option key={role.id} value={role.id}>
-                                  {role.name}
-                                </option>
-                              ))}
-                            </optgroup>
-                          );
-                        },
+                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Role
+                      </label>
+                      <select
+                        value={oprprdForm.role_id}
+                        onChange={(e) =>
+                          setOprprdForm({
+                            ...oprprdForm,
+                            role_id: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                        disabled={isSaving}
+                      >
+                        <option value="">Pilih Role</option>
+                        {(["operational", "production"] as const).map(
+                          (group) => {
+                            const groupRoles = roles.filter(
+                              (r) => r.role_group === group,
+                            );
+                            if (groupRoles.length === 0) return null;
+                            return (
+                              <optgroup
+                                key={group}
+                                label={ROLE_GROUP_LABELS[group]?.label ?? group}
+                              >
+                                {groupRoles.map((r) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            );
+                          },
+                        )}
+                      </select>
+                      {oprprdForm.role_id && (
+                        <p className="mt-1.5 text-xs text-gray-500 italic">
+                          {roles.find((r) => r.id === oprprdForm.role_id)
+                            ?.description ?? "Tidak ada deskripsi."}
+                        </p>
                       )}
-                    </select>
-                    {/* Deskripsi role yang dipilih */}
-                    {oprprdUserFormData.role_id && (
-                      <p className="mt-1.5 text-xs text-gray-500 italic">
-                        {roles.find((r) => r.id === oprprdUserFormData.role_id)
-                          ?.description ?? "Tidak ada deskripsi."}
-                      </p>
-                    )}
+                    </div>
+                    <div className="flex justify-end gap-3 mt-6">
+                      <Button
+                        variant="secondary"
+                        onClick={handleCloseModal}
+                        disabled={isSaving}
+                      >
+                        Batal
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={handleSaveOprprdUser}
+                        isLoading={isSaving}
+                      >
+                        {isEditMode ? "Simpan Perubahan" : "Buat Akun"}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex justify-end space-x-3 mt-6">
-                    <Button
-                      variant="secondary"
-                      onClick={() => setIsModalOpen(false)}
-                      disabled={isSaving}
-                    >
-                      Batal
-                    </Button>
-                    <Button
-                      variant="primary"
-                      onClick={handleSaveOPRPRDUser}
-                      isLoading={isSaving}
-                    >
-                      {isEditMode ? "Simpan Perubahan" : "Buat Akun"}
-                    </Button>
-                  </div>
-                </div>
-              )}
+                )}
             </Modal>
           </main>
         </div>
       </div>
 
-      {/* ── Confirm Dialogs existing (tidak diubah) ── */}
+      {/* Confirm Dialogs */}
       <ConfirmDialog
         isOpen={!!branchToDelete}
         variant="danger"
@@ -1852,7 +1798,7 @@ export default function KelolaAkunPage() {
         title="Hapus akun ini?"
         message={
           userToDelete
-            ? `Akun "${userToDelete.full_name}" (${userToDelete.email}) akan dihapus permanen beserta akses loginnya. Tindakan ini tidak dapat dibatalkan.`
+            ? `Akun "${userToDelete.full_name}" (${userToDelete.userType === "bms" ? userToDelete.email : `@${userToDelete.username}`}) akan dihapus permanen beserta akses loginnya. Tindakan ini tidak dapat dibatalkan.`
             : ""
         }
         confirmText="Ya, Hapus"
@@ -1860,23 +1806,6 @@ export default function KelolaAkunPage() {
         isLoading={isDeletingUser}
         onConfirm={handleDeleteUser}
         onCancel={() => !isDeletingUser && setUserToDelete(null)}
-      />
-
-      {/* ── Confirm Dialog tambahan OPRPRD ── */}
-      <ConfirmDialog
-        isOpen={!!oprprdUserToDelete}
-        variant="danger"
-        title="Hapus akun ini?"
-        message={
-          oprprdUserToDelete
-            ? `Akun "${oprprdUserToDelete.full_name}" (@${oprprdUserToDelete.username}) akan dihapus permanen beserta akses loginnya. Tindakan ini tidak dapat dibatalkan.`
-            : ""
-        }
-        confirmText="Ya, Hapus"
-        cancelText="Batal"
-        isLoading={isDeletingOPRPRDUser}
-        onConfirm={handleDeleteOPRPRDUser}
-        onCancel={() => !isDeletingOPRPRDUser && setOprprdUserToDelete(null)}
       />
     </>
   );
