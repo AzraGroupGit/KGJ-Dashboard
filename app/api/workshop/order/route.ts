@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select(
-        "id, order_number, product_name, current_stage, status, target_weight, deadline, customer_name",
+        "id, order_number, product_name, current_stage, status, target_weight, deadline, customers!orders_customer_id_fkey(name)",
       )
       .eq("order_number", orderNumber.trim().toUpperCase())
       .is("deleted_at", null)
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
         status: order.status,
         target_weight: order.target_weight,
         deadline: order.deadline,
-        customer_name: (order as any).customer_name || null,
+        customer_name: (order as any).customers?.name || null,
       },
     });
   } catch (error) {

@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const STAGE_LABELS: Record<string, string> = {
   qc_awal: "QC Awal",
@@ -42,21 +43,24 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify supervisor
-    const { data: profile } = await supabase
+    const admin = createAdminClient();
+
+    // Verify supervisor via admin client (bypasses RLS)
+    const { data: profile } = await admin
       .from("users")
-      .select("role:roles!users_role_id_fkey(name)")
+      .select("role:roles!users_role_id_fkey(name, role_group)")
       .eq("id", authUser.id)
       .is("deleted_at", null)
       .single();
     const roleName = (profile?.role as any)?.name;
-    if (roleName !== "supervisor" && roleName !== "superadmin") {
+    const roleGroup = (profile?.role as any)?.role_group;
+    if (roleName !== "superadmin" && roleGroup !== "management") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
 
-    const { data: results, error } = await supabase
+    const { data: results, error } = await admin
       .from("stage_results")
       .select(
         `

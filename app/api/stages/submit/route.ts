@@ -24,29 +24,113 @@ export async function POST(request: Request) {
       );
     }
 
-    // penerimaan_order: customer_care creates the order here (no order_id yet)
     let order_id = rawOrderId as string | null;
-    let orderNumber: string | null = null;
 
+    // ── penerimaan_order: customer care creates the order here ─────────────────
     if (stage === "penerimaan_order" && !order_id) {
-      const { product_name, customer_name, target_weight, deadline, notes } = data;
-      if (!product_name?.trim() || !customer_name?.trim()) {
+      const {
+        customer_name,
+        customer_phone,
+        customer_wa,
+        product_name,
+        target_weight,
+        target_karat,
+        ring_size,
+        model_description,
+        delivery_method,
+        deadline,
+        special_notes,
+      } = data;
+
+      if (!customer_name?.trim() || !product_name?.trim()) {
         return NextResponse.json(
-          { error: "product_name dan customer_name wajib diisi" },
+          { error: "Nama pelanggan dan nama produk wajib diisi" },
+          { status: 400 },
+        );
+      }
+      if (!target_weight || Number(target_weight) <= 0) {
+        return NextResponse.json(
+          { error: "Target berat harus lebih dari 0" },
+          { status: 400 },
+        );
+      }
+      if (target_karat === undefined || target_karat === null || target_karat === "") {
+        return NextResponse.json(
+          { error: "Target karat wajib diisi" },
           { status: 400 },
         );
       }
 
+      // Find or create customer (match by phone if provided)
+      let customerId: string;
+      const phoneClean = customer_phone?.trim() || null;
+
+      if (phoneClean) {
+        const { data: existing } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("phone", phoneClean)
+          .is("deleted_at", null)
+          .maybeSingle();
+
+        if (existing) {
+          customerId = existing.id;
+        } else {
+          const { data: newCustomer, error: customerErr } = await supabase
+            .from("customers")
+            .insert({
+              name: customer_name.trim(),
+              phone: phoneClean,
+              wa_contact: customer_wa?.trim() || null,
+            })
+            .select("id")
+            .single();
+
+          if (customerErr || !newCustomer) {
+            console.error("[Submit] Customer create error:", customerErr);
+            return NextResponse.json(
+              { error: "Gagal membuat data pelanggan" },
+              { status: 500 },
+            );
+          }
+          customerId = newCustomer.id;
+        }
+      } else {
+        const { data: newCustomer, error: customerErr } = await supabase
+          .from("customers")
+          .insert({
+            name: customer_name.trim(),
+            wa_contact: customer_wa?.trim() || null,
+          })
+          .select("id")
+          .single();
+
+        if (customerErr || !newCustomer) {
+          console.error("[Submit] Customer create error:", customerErr);
+          return NextResponse.json(
+            { error: "Gagal membuat data pelanggan" },
+            { status: 500 },
+          );
+        }
+        customerId = newCustomer.id;
+      }
+
+      // Create order
       const { data: newOrder, error: orderError } = await supabase
         .from("orders")
         .insert({
+          customer_id: customerId,
           product_name: product_name.trim(),
-          customer_name: customer_name.trim(),
-          target_weight: target_weight || null,
+          target_weight: Number(target_weight),
+          target_karat: Number(target_karat),
+          ring_size: ring_size?.trim() || null,
+          model_description: model_description?.trim() || null,
+          delivery_method: delivery_method || "pickup_store",
           deadline: deadline || null,
-          notes: notes?.trim() || null,
+          special_notes: special_notes?.trim() || null,
           current_stage: "penerimaan_order",
-          status: "active",
+          status: "in_progress",
+          created_by: authUser.id,
         })
         .select("id, order_number")
         .single();
@@ -59,9 +143,28 @@ export async function POST(request: Request) {
         );
       }
 
-      order_id = newOrder.id;
-      orderNumber = newOrder.order_number;
-    } else if (!order_id) {
+      // Log activity
+      await supabase.from("activity_logs").insert({
+        user_id: authUser.id,
+        action: "CREATE_ORDER",
+        entity_type: "orders",
+        entity_id: newOrder.id,
+        new_data: { order_number: newOrder.order_number, customer_id: customerId },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Order berhasil dibuat",
+        data: {
+          order_id: newOrder.id,
+          order_number: newOrder.order_number,
+          customer_id: customerId,
+        },
+      });
+    }
+
+    // ── Regular stage submission ────────────────────────────────────────────────
+    if (!order_id) {
       return NextResponse.json(
         { error: "order_id wajib diisi" },
         { status: 400 },
@@ -131,7 +234,6 @@ export async function POST(request: Request) {
         stage_result_id: stageResult.id,
         attempt_number: attemptNumber,
         order_id,
-        ...(orderNumber ? { order_number: orderNumber } : {}),
       },
     });
   } catch (error) {

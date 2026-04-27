@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {
@@ -14,10 +15,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = await createClient();
+    // Admin client bypasses RLS for the pre-auth user lookup
+    const admin = createAdminClient();
 
-    // Cari user berdasarkan username ATAU email
-    const { data: userData, error: userError } = await supabase
+    const { data: userData, error: userError } = await admin
       .from("users")
       .select(
         `
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
     const roleName = roleObj?.name;
     const roleGroup = roleObj?.role_group;
 
-    // QR login untuk role workshop + management (supervisor)
+    // QR login hanya untuk workshop + management (supervisor)
     const qrAllowedGroups = ["production", "operational", "management"];
     if (roleName !== "superadmin" && !qrAllowedGroups.includes(roleGroup)) {
       return NextResponse.json(
@@ -70,7 +71,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Login via Supabase Auth
+    // Session client for signInWithPassword — must write the auth cookie
+    const supabase = await createClient();
     const { error: authError } = await supabase.auth.signInWithPassword({
       email: userData.email,
       password,
@@ -84,14 +86,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: message }, { status: 401 });
     }
 
-    // Update last_login
-    await supabase
+    // Post-auth writes via admin client (avoids RLS dependency)
+    await admin
       .from("users")
       .update({ last_login: new Date().toISOString() })
       .eq("id", userData.id);
 
-    // Log activity
-    await supabase.from("activity_logs").insert({
+    await admin.from("activity_logs").insert({
       user_id: userData.id,
       action: "QR_LOGIN",
       entity_type: "auth",

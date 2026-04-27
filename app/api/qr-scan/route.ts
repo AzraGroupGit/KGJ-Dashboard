@@ -25,7 +25,7 @@ interface OrderWithCustomer {
   current_stage: string;
   status: string;
   product_name: string;
-  customer_name: string;
+  customers: { name: string } | null;
 }
 
 interface StageResult {
@@ -176,7 +176,7 @@ export async function GET(request: Request) {
     // Validasi order
     const { data: order, error: orderError } = await supabase
       .from("orders")
-      .select("id, order_number, current_stage, status, product_name, customer_name")
+      .select("id, order_number, current_stage, status, product_name, customers!orders_customer_id_fkey(name)")
       .eq("order_number", orderNumber)
       .is("deleted_at", null)
       .single<OrderWithCustomer>();
@@ -209,7 +209,7 @@ export async function GET(request: Request) {
           id: order.id,
           order_number: order.order_number,
           product_name: order.product_name,
-          customer_name: order.customer_name,
+          customer_name: order.customers?.name || null,
           current_stage: order.current_stage,
           status: order.status,
         },
@@ -325,7 +325,7 @@ export async function POST(request: Request) {
     // 4. Find order by order_number
     const { data: order, error: orderError } = await supabase
       .from("orders")
-      .select("id, order_number, current_stage, status, product_name, customer_name")
+      .select("id, order_number, current_stage, status, product_name, customers!orders_customer_id_fkey(name)")
       .eq("order_number", order_number)
       .is("deleted_at", null)
       .single<OrderWithCustomer>();
@@ -642,7 +642,7 @@ async function handleReadOrder(
     data: {
       order_id: order.id,
       order_number: order.order_number,
-      customer_name: order.customer_name,
+      customer_name: order.customers?.name || null,
       product_name: order.product_name,
       current_stage: order.current_stage,
       status: order.status,
@@ -711,11 +711,10 @@ async function handleRejectOrder(
   clientIP: string | null,
   timestamp: string,
 ) {
-  // Update order status to cancelled (rejected maps to cancelled per schema constraint)
   await supabase
     .from("orders")
     .update({
-      status: "cancelled",
+      status: "rejected",
       updated_at: timestamp,
     })
     .eq("id", order.id);

@@ -52,7 +52,7 @@ interface FormConfig {
   current_data?: Record<string, unknown>;
 }
 
-type Phase = "loading" | "search" | "form" | "success";
+type Phase = "loading" | "search" | "create" | "form" | "success";
 
 // ── Role → stage map (mirrors server-side ROLE_STAGE_ACCESS) ─────────────────
 
@@ -69,11 +69,11 @@ const ROLE_STAGE_MAP: Record<string, string[]> = {
   packing: ["packing"],
   kelengkapan: ["kelengkapan"],
   after_sales: ["pengiriman"],
-  customer_care: ["pelunasan"],
+  customer_care: ["penerimaan_order", "pelunasan"],
 };
 
-// Stage labels
 const STAGE_LABELS: Record<string, string> = {
+  penerimaan_order: "Penerimaan Order",
   qc_awal: "QC Awal",
   racik_bahan: "Racik Bahan",
   lebur_bahan: "Lebur Bahan",
@@ -126,19 +126,38 @@ function getTheme(roleGroup: string) {
   return GROUP_THEME.default;
 }
 
-// ── Helper: determine target stage for current user + order ───────────────────
-
 function resolveStage(roleName: string, allowedStages: string[], currentStage: string): string | null {
-  // DB allowed_stages takes priority
   if (allowedStages.length > 0) {
     return allowedStages.includes(currentStage) ? currentStage : null;
   }
-  // Fallback to code-level map
   const roleStages = ROLE_STAGE_MAP[roleName] || [];
   return roleStages.includes(currentStage) ? currentStage : null;
 }
 
-// ── Phase: Loading splash ─────────────────────────────────────────────────────
+// ── Shared UI Helpers ─────────────────────────────────────────────────────────
+
+function inputCls(theme: (typeof GROUP_THEME)[keyof typeof GROUP_THEME]) {
+  return `w-full rounded-xl border border-stone-200 bg-stone-50/50 py-2.5 px-3.5 text-[14px] text-stone-700 placeholder:text-stone-300 focus:bg-white focus:outline-none focus:ring-2 transition-all ${theme.ring}`;
+}
+
+function FieldRow({
+  label,
+  theme,
+  children,
+}: {
+  label: string;
+  theme: (typeof GROUP_THEME)[keyof typeof GROUP_THEME];
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className={`block text-[11px] font-medium mb-1 ${theme.label}`}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+// ── Phase: Loading ────────────────────────────────────────────────────────────
 
 function PhaseLoading({ spinnerClass }: { spinnerClass: string }) {
   return (
@@ -171,8 +190,9 @@ function PhaseSearch({
     inputRef.current?.focus();
   }, []);
 
-  const roleLabel = ROLE_STAGE_MAP[user.role.name]
-    ?.map((s) => STAGE_LABELS[s] || s)
+  const roleLabel = (ROLE_STAGE_MAP[user.role.name] || [])
+    .filter((s) => s !== "penerimaan_order")
+    .map((s) => STAGE_LABELS[s] || s)
     .join(", ") || user.role.name;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -197,14 +217,11 @@ function PhaseSearch({
     <div className="w-full max-w-[380px]">
       <BrandHeader subtitle="Workshop Input" />
 
-      {/* User greeting */}
       <div className={`mb-5 rounded-xl border px-4 py-3 ${theme.card}`}>
         <p className={`text-[10px] font-medium uppercase tracking-wider ${theme.label}`}>
           Masuk sebagai
         </p>
-        <p className="mt-1 text-[15px] font-semibold text-stone-800">
-          {user.full_name}
-        </p>
+        <p className="mt-1 text-[15px] font-semibold text-stone-800">{user.full_name}</p>
         <div className="mt-1.5 flex items-center justify-between">
           <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${theme.badge}`}>
             {roleLabel}
@@ -218,7 +235,6 @@ function PhaseSearch({
         </div>
       </div>
 
-      {/* Search form */}
       <div className="rounded-2xl border border-stone-200/80 bg-white/90 backdrop-blur-sm p-6 shadow-sm">
         <p className="mb-4 text-[13px] font-medium text-stone-600">
           Masukkan nomor order yang akan diproses
@@ -262,6 +278,266 @@ function PhaseSearch({
   );
 }
 
+// ── Phase: Create (penerimaan_order) ─────────────────────────────────────────
+
+function PhaseCreate({
+  user,
+  theme,
+  onCreate,
+  onLogout,
+}: {
+  user: UserProfile;
+  theme: (typeof GROUP_THEME)[keyof typeof GROUP_THEME];
+  onCreate: (data: Record<string, unknown>) => Promise<void>;
+  onLogout: () => void;
+}) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    customer_name: "",
+    customer_phone: "",
+    customer_wa: "",
+    product_name: "",
+    target_weight: "",
+    target_karat: "",
+    ring_size: "",
+    model_description: "",
+    delivery_method: "pickup_store",
+    deadline: "",
+    special_notes: "",
+  });
+
+  const set =
+    (name: string) =>
+    (
+      e: React.ChangeEvent<
+        HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      >,
+    ) =>
+      setForm((prev) => ({ ...prev, [name]: e.target.value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.customer_name.trim() || !form.product_name.trim()) {
+      setError("Nama pelanggan dan nama produk wajib diisi");
+      return;
+    }
+    if (!form.target_weight || Number(form.target_weight) <= 0) {
+      setError("Target berat harus lebih dari 0");
+      return;
+    }
+    if (form.target_karat === "") {
+      setError("Target karat wajib diisi");
+      return;
+    }
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await onCreate({
+        customer_name: form.customer_name.trim(),
+        customer_phone: form.customer_phone.trim() || null,
+        customer_wa: form.customer_wa.trim() || null,
+        product_name: form.product_name.trim(),
+        target_weight: Number(form.target_weight),
+        target_karat: Number(form.target_karat),
+        ring_size: form.ring_size.trim() || null,
+        model_description: form.model_description.trim() || null,
+        delivery_method: form.delivery_method || "pickup_store",
+        deadline: form.deadline || null,
+        special_notes: form.special_notes.trim() || null,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal membuat order");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const SpinIcon = () => (
+    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+      <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor" className="opacity-75" />
+    </svg>
+  );
+
+  return (
+    <div className="w-full max-w-[420px]">
+      <BrandHeader subtitle="Penerimaan Order" />
+
+      <div className={`mb-5 rounded-xl border px-4 py-3 ${theme.card}`}>
+        <p className={`text-[10px] font-medium uppercase tracking-wider ${theme.label}`}>
+          Masuk sebagai
+        </p>
+        <p className="mt-1 text-[15px] font-semibold text-stone-800">{user.full_name}</p>
+        <div className="mt-1.5 flex items-center justify-between">
+          <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${theme.badge}`}>
+            Customer Care
+          </span>
+          <button
+            onClick={onLogout}
+            className="text-[11px] text-stone-400 hover:text-red-500 transition-colors"
+          >
+            Keluar
+          </button>
+        </div>
+      </div>
+
+      <form
+        onSubmit={handleSubmit}
+        className="rounded-2xl border border-stone-200/80 bg-white/90 backdrop-blur-sm p-5 shadow-sm space-y-5"
+      >
+        {/* Customer section */}
+        <div>
+          <p className={`text-[11px] font-semibold uppercase tracking-wider mb-3 ${theme.label}`}>
+            Data Pelanggan
+          </p>
+          <div className="space-y-3">
+            <FieldRow label="Nama Pelanggan *" theme={theme}>
+              <input
+                type="text"
+                value={form.customer_name}
+                onChange={set("customer_name")}
+                placeholder="Nama lengkap"
+                required
+                className={inputCls(theme)}
+              />
+            </FieldRow>
+            <FieldRow label="No. Telepon" theme={theme}>
+              <input
+                type="tel"
+                value={form.customer_phone}
+                onChange={set("customer_phone")}
+                placeholder="08xx-xxxx-xxxx"
+                className={inputCls(theme)}
+              />
+            </FieldRow>
+            <FieldRow label="No. WhatsApp" theme={theme}>
+              <input
+                type="tel"
+                value={form.customer_wa}
+                onChange={set("customer_wa")}
+                placeholder="08xx-xxxx-xxxx"
+                className={inputCls(theme)}
+              />
+            </FieldRow>
+          </div>
+        </div>
+
+        {/* Order section */}
+        <div>
+          <p className={`text-[11px] font-semibold uppercase tracking-wider mb-3 ${theme.label}`}>
+            Detail Pesanan
+          </p>
+          <div className="space-y-3">
+            <FieldRow label="Nama Produk *" theme={theme}>
+              <input
+                type="text"
+                value={form.product_name}
+                onChange={set("product_name")}
+                placeholder="Contoh: Cincin Berlian 18K"
+                required
+                className={inputCls(theme)}
+              />
+            </FieldRow>
+            <div className="grid grid-cols-2 gap-3">
+              <FieldRow label="Target Berat * (g)" theme={theme}>
+                <input
+                  type="number"
+                  value={form.target_weight}
+                  onChange={set("target_weight")}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  className={inputCls(theme)}
+                />
+              </FieldRow>
+              <FieldRow label="Target Karat * (K)" theme={theme}>
+                <input
+                  type="number"
+                  value={form.target_karat}
+                  onChange={set("target_karat")}
+                  placeholder="18"
+                  step="0.5"
+                  min="0"
+                  max="24"
+                  required
+                  className={inputCls(theme)}
+                />
+              </FieldRow>
+            </div>
+            <FieldRow label="Ukuran Cincin" theme={theme}>
+              <input
+                type="text"
+                value={form.ring_size}
+                onChange={set("ring_size")}
+                placeholder="Contoh: 12"
+                className={inputCls(theme)}
+              />
+            </FieldRow>
+            <FieldRow label="Deskripsi Model" theme={theme}>
+              <textarea
+                value={form.model_description}
+                onChange={set("model_description")}
+                placeholder="Detail bentuk, desain, model..."
+                rows={2}
+                className={`${inputCls(theme)} resize-none`}
+              />
+            </FieldRow>
+            <FieldRow label="Metode Pengambilan" theme={theme}>
+              <select
+                value={form.delivery_method}
+                onChange={set("delivery_method")}
+                className={inputCls(theme)}
+              >
+                <option value="pickup_store">Ambil di Toko</option>
+                <option value="courier_local">Kurir Lokal</option>
+                <option value="courier_intercity">Kurir Antar Kota</option>
+                <option value="in_house_delivery">Antar ke Rumah</option>
+                <option value="other">Lainnya</option>
+              </select>
+            </FieldRow>
+            <FieldRow label="Target Selesai" theme={theme}>
+              <input
+                type="date"
+                value={form.deadline}
+                onChange={set("deadline")}
+                className={inputCls(theme)}
+              />
+            </FieldRow>
+            <FieldRow label="Catatan Khusus" theme={theme}>
+              <textarea
+                value={form.special_notes}
+                onChange={set("special_notes")}
+                placeholder="Keinginan khusus, detail tambahan..."
+                rows={2}
+                className={`${inputCls(theme)} resize-none`}
+              />
+            </FieldRow>
+          </div>
+        </div>
+
+        {error && <p className="text-[12px] text-red-500">{error}</p>}
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className={`w-full rounded-xl py-3 text-[14px] font-medium text-white shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${theme.btn}`}
+        >
+          {isSubmitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <SpinIcon />
+              Menyimpan...
+            </span>
+          ) : (
+            "Buat Order"
+          )}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 // ── Phase: Form ───────────────────────────────────────────────────────────────
 
 function PhaseForm({
@@ -283,7 +559,6 @@ function PhaseForm({
 
   return (
     <div className="w-full max-w-[420px]">
-      {/* Top bar */}
       <div className="mb-5 flex items-center justify-between">
         <button
           onClick={onBack}
@@ -297,7 +572,6 @@ function PhaseForm({
         <p className="text-[13px] font-medium text-stone-700">{user.full_name}</p>
       </div>
 
-      {/* Stage badge */}
       <div className="mb-3 flex items-center gap-2">
         <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${theme.badge}`}>
           {stageLabel}
@@ -305,7 +579,6 @@ function PhaseForm({
         <span className="text-[12px] text-stone-400">#{order.order_number}</span>
       </div>
 
-      {/* Order info card */}
       <div className={`mb-5 rounded-xl border px-4 py-3.5 ${theme.card}`}>
         <p className={`text-[10px] font-medium uppercase tracking-wider ${theme.label}`}>
           Produk
@@ -334,7 +607,6 @@ function PhaseForm({
         </div>
       </div>
 
-      {/* Stage form */}
       <StageInputForm
         fields={config.fields}
         permissions={config.permissions}
@@ -348,16 +620,17 @@ function PhaseForm({
 // ── Phase: Success ────────────────────────────────────────────────────────────
 
 function PhaseSuccess({
-  order,
+  orderNumber,
   stage,
   theme,
   onNext,
 }: {
-  order: OrderInfo;
+  orderNumber: string;
   stage: string;
   theme: (typeof GROUP_THEME)[keyof typeof GROUP_THEME];
   onNext: () => void;
 }) {
+  const isCreate = stage === "penerimaan_order";
   return (
     <div className="w-full max-w-[380px] text-center">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-50 border border-green-200">
@@ -365,18 +638,18 @@ function PhaseSuccess({
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
-      <h2 className="text-[18px] font-semibold text-stone-800 mb-1">Data Tersimpan</h2>
+      <h2 className="text-[18px] font-semibold text-stone-800 mb-1">
+        {isCreate ? "Order Berhasil Dibuat" : "Data Tersimpan"}
+      </h2>
       <p className="text-[13px] text-stone-500 mb-1">
         Tahap <span className="font-medium text-stone-700">{STAGE_LABELS[stage] || stage}</span>
       </p>
-      <p className="text-[13px] text-stone-400 mb-8">
-        Order #{order.order_number}
-      </p>
+      <p className="text-[13px] text-stone-400 mb-8">Order #{orderNumber}</p>
       <button
         onClick={onNext}
         className={`w-full rounded-xl py-3 text-[14px] font-medium text-white shadow-sm transition-all active:scale-[0.98] ${theme.btn}`}
       >
-        Input Order Berikutnya
+        {isCreate ? "Buat Order Baru" : "Input Order Berikutnya"}
       </button>
     </div>
   );
@@ -391,8 +664,8 @@ function WorkshopInputContent() {
   const [order, setOrder] = useState<OrderInfo | null>(null);
   const [config, setConfig] = useState<FormConfig | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [createdOrderNumber, setCreatedOrderNumber] = useState<string | null>(null);
 
-  // Load current user on mount
   useEffect(() => {
     (async () => {
       try {
@@ -402,8 +675,14 @@ function WorkshopInputContent() {
           throw new Error(body.error || "Sesi tidak valid");
         }
         const json = await res.json();
-        setUser(json.data);
-        setPhase("search");
+        const profile: UserProfile = json.data;
+        setUser(profile);
+
+        // Route to create phase if this role handles penerimaan_order
+        const dbStages: string[] = profile.role.allowed_stages || [];
+        const roleStages = ROLE_STAGE_MAP[profile.role.name] || [];
+        const stages = dbStages.length > 0 ? dbStages : roleStages;
+        setPhase(stages.includes("penerimaan_order") ? "create" : "search");
       } catch (err) {
         setLoadError(err instanceof Error ? err.message : "Gagal memuat sesi");
       }
@@ -416,14 +695,12 @@ function WorkshopInputContent() {
     async (orderNumber: string) => {
       if (!user) return;
 
-      // 1. Fetch order
       const orderRes = await fetch(`/api/workshop/order?order_number=${encodeURIComponent(orderNumber)}`);
       const orderJson = await orderRes.json();
       if (!orderRes.ok) throw new Error(orderJson.error || "Order tidak ditemukan");
 
       const orderData: OrderInfo = orderJson.data;
 
-      // 2. Resolve which stage this user handles
       const targetStage = resolveStage(
         user.role.name,
         user.role.allowed_stages,
@@ -432,6 +709,7 @@ function WorkshopInputContent() {
 
       if (!targetStage) {
         const myStages = (ROLE_STAGE_MAP[user.role.name] || [])
+          .filter((s) => s !== "penerimaan_order")
           .map((s) => STAGE_LABELS[s] || s)
           .join(", ");
         const currentLabel = STAGE_LABELS[orderData.current_stage] || orderData.current_stage;
@@ -440,7 +718,6 @@ function WorkshopInputContent() {
         );
       }
 
-      // 3. Fetch form config
       const configRes = await fetch(
         `/api/stages/form-config?order_id=${orderData.id}&stage=${targetStage}`,
       );
@@ -453,6 +730,18 @@ function WorkshopInputContent() {
     },
     [user],
   );
+
+  const handleCreate = useCallback(async (formData: Record<string, unknown>) => {
+    const res = await fetch("/api/stages/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stage: "penerimaan_order", data: formData }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || "Gagal membuat order");
+    setCreatedOrderNumber(result.data.order_number);
+    setPhase("success");
+  }, []);
 
   const handleSubmit = useCallback(
     async (formData: Record<string, unknown>) => {
@@ -487,7 +776,11 @@ function WorkshopInputContent() {
     setPhase("search");
   }, []);
 
-  // Error state (failed to load user)
+  const handleNextCreate = useCallback(() => {
+    setCreatedOrderNumber(null);
+    setPhase("create");
+  }, []);
+
   if (loadError) {
     return (
       <div className="w-full max-w-[380px] text-center">
@@ -511,7 +804,7 @@ function WorkshopInputContent() {
   }
 
   if (phase === "loading") {
-    return <PhaseLoading spinnerClass={`border-t-amber-500`} />;
+    return <PhaseLoading spinnerClass="border-t-amber-500" />;
   }
 
   if (phase === "search" && user) {
@@ -520,6 +813,17 @@ function WorkshopInputContent() {
         user={user}
         theme={theme}
         onSearch={handleSearch}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  if (phase === "create" && user) {
+    return (
+      <PhaseCreate
+        user={user}
+        theme={theme}
+        onCreate={handleCreate}
         onLogout={handleLogout}
       />
     );
@@ -538,13 +842,14 @@ function WorkshopInputContent() {
     );
   }
 
-  if (phase === "success" && order && config) {
+  if (phase === "success") {
+    const fromCreate = !!createdOrderNumber;
     return (
       <PhaseSuccess
-        order={order}
-        stage={config.stage}
+        orderNumber={fromCreate ? createdOrderNumber! : order!.order_number}
+        stage={fromCreate ? "penerimaan_order" : config!.stage}
         theme={theme}
-        onNext={handleNextOrder}
+        onNext={fromCreate ? handleNextCreate : handleNextOrder}
       />
     );
   }
