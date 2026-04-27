@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const PRODUCTION_STAGES = new Set([
   "lebur_bahan",
@@ -45,17 +46,19 @@ const STAGE_LABELS: Record<string, string> = {
   pengiriman: "Pengiriman",
 };
 
-async function verifySupervisor(supabase: any, userId: string) {
-  const { data, error } = await supabase
+async function verifySupervisor(userId: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("users")
-    .select("id, full_name, role:roles!users_role_id_fkey(name)")
+    .select("id, full_name, role:roles!users_role_id_fkey(name, role_group)")
     .eq("id", userId)
     .is("deleted_at", null)
     .single();
 
   if (error || !data) return null;
   const roleName = (data.role as any)?.name;
-  if (roleName !== "supervisor" && roleName !== "superadmin") return null;
+  const roleGroup = (data.role as any)?.role_group;
+  if (roleName !== "superadmin" && roleGroup !== "management") return null;
   return data;
 }
 
@@ -71,11 +74,13 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supervisor = await verifySupervisor(supabase, authUser.id);
+    const supervisor = await verifySupervisor(authUser.id);
     if (!supervisor) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Admin client bypasses RLS for cross-user monitoring queries
+    const admin = createAdminClient();
     const now = new Date();
     const todayStart = new Date(now);
     todayStart.setHours(0, 0, 0, 0);
@@ -84,10 +89,10 @@ export async function GET() {
     const [ordersResult, submissionsTodayResult, pendingCountResult] =
       await Promise.allSettled([
         // Active orders with customer info
-        supabase
+        admin
           .from("orders")
           .select(
-            "id, order_number, product_name, current_stage, status, created_at, deadline, customer_name",
+            "id, order_number, product_name, current_stage, status, created_at, deadline, customers!orders_customer_id_fkey(name)",
           )
           .not("status", "in", "(completed,cancelled)")
           .is("deleted_at", null)
@@ -95,15 +100,15 @@ export async function GET() {
           .limit(200),
 
         // Submissions today
-        supabase
+        admin
           .from("stage_results")
           .select("id, stage, user_id, finished_at, users!inner(full_name)", { count: "exact" })
           .gte("finished_at", todayStart.toISOString())
           .not("finished_at", "is", null)
           .limit(1),
 
-        // Pending approvals count: stage_results where stage = orders.current_stage
-        supabase
+        // Pending approvals count
+        admin
           .from("stage_results")
           .select("id, stage, order_id, data, orders!inner(current_stage, status)", {
             count: "exact",
@@ -138,7 +143,7 @@ export async function GET() {
     const orderIds = orders.map((o: any) => o.id);
     let latestResults: any[] = [];
     if (orderIds.length > 0) {
-      const { data: results } = await supabase
+      const { data: results } = await admin
         .from("stage_results")
         .select("order_id, stage, finished_at, started_at, users!inner(full_name)")
         .in("order_id", orderIds)
@@ -177,7 +182,7 @@ export async function GET() {
         stage_label: STAGE_LABELS[o.current_stage] || o.current_stage,
         stage_group: group,
         deadline: o.deadline,
-        customer_name: (o as any).customer_name || null,
+        customer_name: (o as any).customers?.name || null,
         last_worker: (latest?.users as any)?.full_name || null,
         last_submission_at: latest?.finished_at || null,
         hours_at_stage: hoursAtStage,

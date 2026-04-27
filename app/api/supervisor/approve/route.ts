@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const STAGE_SEQUENCE = [
   "penerimaan_order",
@@ -25,8 +26,8 @@ const STAGE_SEQUENCE = [
 
 export async function POST(request: Request) {
   try {
+    // Session client — only used for auth token verification
     const supabase = await createClient();
-
     const {
       data: { user: authUser },
       error: authError,
@@ -35,15 +36,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify supervisor
-    const { data: profile } = await supabase
+    // Admin client for all DB operations (bypasses RLS)
+    const admin = createAdminClient();
+
+    const { data: profile } = await admin
       .from("users")
-      .select("full_name, role:roles!users_role_id_fkey(name)")
+      .select("full_name, role:roles!users_role_id_fkey(name, role_group)")
       .eq("id", authUser.id)
       .is("deleted_at", null)
       .single();
     const roleName = (profile?.role as any)?.name;
-    if (roleName !== "supervisor" && roleName !== "superadmin") {
+    const roleGroup = (profile?.role as any)?.role_group;
+    if (roleName !== "superadmin" && roleGroup !== "management") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -64,8 +68,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch the stage_result and order together
-    const { data: stageResult, error: srError } = await supabase
+    const { data: stageResult, error: srError } = await admin
       .from("stage_results")
       .select("id, data, stage, order_id")
       .eq("id", stage_result_id)
@@ -79,7 +82,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await admin
       .from("orders")
       .select("id, current_stage, status")
       .eq("id", order_id)
@@ -91,9 +94,7 @@ export async function POST(request: Request) {
 
     if (order.current_stage !== stage) {
       return NextResponse.json(
-        {
-          error: "Order sudah berpindah tahap. Refresh halaman dan coba lagi.",
-        },
+        { error: "Order sudah berpindah tahap. Refresh halaman dan coba lagi." },
         { status: 409 },
       );
     }
@@ -101,7 +102,6 @@ export async function POST(request: Request) {
     const now = new Date().toISOString();
     const supervisorName = (profile as any)?.full_name || "Supervisor";
 
-    // Mark the stage_result as processed
     const updatedData = {
       ...(stageResult.data || {}),
       _sv_action: action,
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
       ...(notes ? { _sv_notes: notes } : {}),
     };
 
-    await supabase
+    await admin
       .from("stage_results")
       .update({ data: updatedData })
       .eq("id", stage_result_id);
@@ -129,11 +129,10 @@ export async function POST(request: Request) {
           ? { current_stage: "completed", status: "completed" }
           : { current_stage: nextStage };
 
-      await supabase.from("orders").update(orderUpdate).eq("id", order_id);
+      await admin.from("orders").update(orderUpdate).eq("id", order_id);
     }
 
-    // Log activity
-    await supabase.from("activity_logs").insert({
+    await admin.from("activity_logs").insert({
       user_id: authUser.id,
       action: action === "approve" ? "APPROVE_STAGE" : "REJECT_STAGE",
       entity_type: "stage_results",

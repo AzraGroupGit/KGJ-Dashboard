@@ -153,7 +153,7 @@ export default function SupervisorMonitoringPage() {
       if (!res.ok) { router.push("/workshop/login"); return; }
       const json = await res.json();
       const u = json.data;
-      if (u.role.name !== "supervisor" && u.role.name !== "superadmin") {
+      if (u.role.name !== "superadmin" && u.role.role_group !== "management") {
         router.push("/workshop/login");
         return;
       }
