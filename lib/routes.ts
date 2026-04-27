@@ -31,15 +31,10 @@ export type AppRole = LoginRole;
  * Role ini TIDAK bisa login lewat halaman /login (dashboard),
  * hanya lewat /qr/login.
  *
- * Sesuaikan dengan data role di tabel `roles` dengan role_group = 'production'.
+ * Role names are DB-driven and can change — DO NOT enumerate them here.
+ * Detection is done by exclusion: any non-AppRole string is a workshop role.
  */
-export const WORKSHOP_ROLES = [
-  "production_staff",
-  "qc_staff",
-  "admin", // admin workshop (bisa approve/reject)
-] as const;
-
-export type WorkshopRole = (typeof WORKSHOP_ROLES)[number];
+export type WorkshopRole = string;
 
 /**
  * Union semua role yang ada di sistem (dashboard + workshop).
@@ -48,12 +43,10 @@ export type WorkshopRole = (typeof WORKSHOP_ROLES)[number];
 export type AllRole = AppRole | WorkshopRole;
 
 /**
- * Semua role yang valid di aplikasi.
+ * Semua role dashboard yang valid di aplikasi.
+ * Workshop roles are DB-driven (not enumerable), so this only covers AppRoles.
  */
-export const ALL_ROLES: readonly string[] = [
-  ...LOGIN_ROLES,
-  ...WORKSHOP_ROLES,
-] as const;
+export const ALL_ROLES: readonly string[] = [...LOGIN_ROLES] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
 // ROUTE CONSTANTS — TOP-LEVEL
@@ -170,13 +163,11 @@ export function isAppRole(value: unknown): value is AppRole {
 
 /**
  * Validasi apakah sebuah value adalah WorkshopRole yang valid.
- * Dipakai di API route QR login.
+ * Any non-empty string that is not an AppRole is treated as a workshop role,
+ * since workshop role names are DB-driven and cannot be enumerated statically.
  */
 export function isWorkshopRole(value: unknown): value is WorkshopRole {
-  return (
-    typeof value === "string" &&
-    (WORKSHOP_ROLES as readonly string[]).includes(value)
-  );
+  return typeof value === "string" && value.length > 0 && !isAppRole(value);
 }
 
 /**
