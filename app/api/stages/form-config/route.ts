@@ -431,6 +431,26 @@ const STAGE_FIELD_CONFIGS: Record<
   ],
 };
 
+// Mapping role name → stages the role is allowed to access.
+// Used as fallback when allowed_stages is empty in the DB.
+const ROLE_STAGE_ACCESS: Record<string, string[]> = {
+  // Production
+  jewelry_expert_lebur_bahan: ["lebur_bahan"],
+  jewelry_expert_pembentukan_awal: ["pembentukan_cincin", "pemolesan"],
+  jewelry_expert_finishing: ["finishing"],
+  micro_setting: ["pemasangan_permata"],
+  // Operational
+  racik: ["racik_bahan"],
+  qc_1: ["qc_awal", "qc_1"],
+  qc_2: ["qc_2"],
+  qc_3: ["qc_3"],
+  laser: ["laser"],
+  packing: ["packing"],
+  kelengkapan: ["kelengkapan"],
+  after_sales: ["pengiriman"],
+  customer_care: ["pelunasan"],
+};
+
 export async function GET(request: Request) {
   try {
     const supabase = await createClient();
@@ -478,14 +498,16 @@ export async function GET(request: Request) {
     const roleGroup: string = (userData.role as any)?.role_group ?? "";
     const roleName: string = (userData.role as any)?.name ?? "";
 
-    // If allowed_stages is populated, use it strictly.
-    // If empty (default for all roles), grant access to any workshop role.
-    const workshopGroups = ["production", "operational", "qc"];
+    // Priority: superadmin → DB allowed_stages → role-name map → group fallback
+    const workshopGroups = ["production", "operational"];
+    const roleStages = ROLE_STAGE_ACCESS[roleName];
     const hasAccess =
       roleName === "superadmin" ||
       (allowedStages.length > 0
         ? allowedStages.includes(stage)
-        : workshopGroups.includes(roleGroup));
+        : roleStages
+          ? roleStages.includes(stage)
+          : workshopGroups.includes(roleGroup));
 
     if (!hasAccess) {
       return NextResponse.json(

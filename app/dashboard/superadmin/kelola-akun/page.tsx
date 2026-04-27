@@ -334,7 +334,7 @@ export default function KelolaAkunPage() {
       setOprprdForm({
         username: user.username ?? "",
         full_name: user.full_name,
-        email: user.email ?? "",
+        email: user.email?.endsWith("@internal.local") ? "" : (user.email ?? ""),
         phone: user.phone ?? "",
         password: "",
         role_id: user.role_id ?? "",
@@ -982,9 +982,9 @@ export default function KelolaAkunPage() {
                                 ) : (
                                   <div>
                                     <div className="font-medium text-gray-800">
-                                      @{user.username}
+                                      {user.username ?? "-"}
                                     </div>
-                                    {user.email && (
+                                    {user.email && !user.email.endsWith("@internal.local") && (
                                       <div className="text-xs text-gray-400">
                                         {user.email}
                                       </div>
@@ -1798,7 +1798,7 @@ export default function KelolaAkunPage() {
         title="Hapus akun ini?"
         message={
           userToDelete
-            ? `Akun "${userToDelete.full_name}" (${userToDelete.userType === "bms" ? userToDelete.email : `@${userToDelete.username}`}) akan dihapus permanen beserta akses loginnya. Tindakan ini tidak dapat dibatalkan.`
+            ? `Akun "${userToDelete.full_name}" (${userToDelete.userType === "bms" ? userToDelete.email : userToDelete.username}) akan dihapus permanen beserta akses loginnya. Tindakan ini tidak dapat dibatalkan.`
             : ""
         }
         confirmText="Ya, Hapus"
