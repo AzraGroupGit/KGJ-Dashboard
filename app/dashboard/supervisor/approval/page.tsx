@@ -229,7 +229,7 @@ function PendingCard({
               >
                 {item.stage_label}
               </span>
-              {item.attempt_number > 1 && (
+              {(item.attempt_number ?? 0) > 1 && (
                 <span className="rounded-full bg-rose-100 border border-rose-200 px-2 py-0.5 text-[11px] font-medium text-rose-700">
                   Percobaan ke-{item.attempt_number}
                 </span>
