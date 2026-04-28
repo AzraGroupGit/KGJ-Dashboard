@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import BrandHeader from "@/components/qr/BrandHeader";
 import StageInputForm from "@/components/qr/StageInputForm";
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface UserProfile {
   id: string;
@@ -28,14 +28,17 @@ interface OrderInfo {
   current_stage: string;
   status: string;
   target_weight: number | null;
+  target_karat: number | null;
   deadline: string | null;
+  updated_at: string | null;
   customer_name: string | null;
+  customer_phone: string | null;
 }
 
 interface StageField {
   name: string;
   label: string;
-  type: "text" | "number" | "select" | "textarea" | "boolean" | "file";
+  type: string;
   required: boolean;
   options?: { value: string; label: string }[];
   placeholder?: string;
@@ -48,50 +51,50 @@ interface FormConfig {
   stage: string;
   stage_label: string;
   fields: StageField[];
-  permissions: { can_submit: boolean; can_edit: boolean; can_reject: boolean };
+  permissions: { can_submit: boolean; can_edit: boolean };
   current_data?: Record<string, unknown>;
 }
 
-type Phase = "loading" | "search" | "create" | "form" | "success";
+type Phase = "loading" | "list" | "create" | "form" | "success";
 
-// ── Role → stage map (mirrors server-side ROLE_STAGE_ACCESS) ─────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const ROLE_STAGE_MAP: Record<string, string[]> = {
   jewelry_expert_lebur_bahan: ["lebur_bahan"],
   jewelry_expert_pembentukan_awal: ["pembentukan_cincin", "pemolesan"],
-  jewelry_expert_finishing: ["finishing"],
+  jewelry_expert_finishing: ["finishing", "pemolesan"],
   micro_setting: ["pemasangan_permata"],
   racik: ["racik_bahan"],
-  qc_1: ["qc_awal", "qc_1"],
+  qc_1: ["qc_1"],
   qc_2: ["qc_2"],
   qc_3: ["qc_3"],
   laser: ["laser"],
   packing: ["packing"],
   kelengkapan: ["kelengkapan"],
   after_sales: ["pengiriman"],
-  customer_care: ["penerimaan_order", "pelunasan"],
+  customer_care: ["penerimaan_order", "konfirmasi_awal", "pelunasan"],
 };
 
 const STAGE_LABELS: Record<string, string> = {
   penerimaan_order: "Penerimaan Order",
-  qc_awal: "QC Awal",
   racik_bahan: "Racik Bahan",
   lebur_bahan: "Lebur Bahan",
   pembentukan_cincin: "Pembentukan Cincin",
   pemasangan_permata: "Pemasangan Permata",
   pemolesan: "Pemolesan",
   qc_1: "QC 1",
+  konfirmasi_awal: "Konfirmasi Awal",
   finishing: "Finishing",
   laser: "Laser",
   qc_2: "QC 2",
-  pelunasan: "Pelunasan",
   kelengkapan: "Kelengkapan",
   qc_3: "QC 3",
   packing: "Packing",
+  pelunasan: "Pelunasan",
   pengiriman: "Pengiriman",
 };
 
-// ── Color themes ──────────────────────────────────────────────────────────────
+// ── Theming ───────────────────────────────────────────────────────────────────
 
 const GROUP_THEME = {
   production: {
@@ -101,6 +104,7 @@ const GROUP_THEME = {
     btn: "bg-amber-600 hover:bg-amber-700 active:bg-amber-800",
     ring: "focus:ring-amber-100 focus:border-amber-400",
     spinner: "border-t-amber-500",
+    rework: "bg-orange-50 border-orange-200",
   },
   operational: {
     card: "border-blue-200 bg-blue-50/70",
@@ -109,6 +113,7 @@ const GROUP_THEME = {
     btn: "bg-blue-600 hover:bg-blue-700 active:bg-blue-800",
     ring: "focus:ring-blue-100 focus:border-blue-400",
     spinner: "border-t-blue-500",
+    rework: "bg-orange-50 border-orange-200",
   },
   default: {
     card: "border-stone-200 bg-stone-50/70",
@@ -117,26 +122,19 @@ const GROUP_THEME = {
     btn: "bg-stone-700 hover:bg-stone-800 active:bg-stone-900",
     ring: "focus:ring-stone-100 focus:border-stone-400",
     spinner: "border-t-stone-500",
+    rework: "bg-orange-50 border-orange-200",
   },
 } as const;
 
-function getTheme(roleGroup: string) {
+type Theme = (typeof GROUP_THEME)[keyof typeof GROUP_THEME];
+
+function getTheme(roleGroup: string): Theme {
   if (roleGroup === "production") return GROUP_THEME.production;
   if (roleGroup === "operational") return GROUP_THEME.operational;
   return GROUP_THEME.default;
 }
 
-function resolveStage(roleName: string, allowedStages: string[], currentStage: string): string | null {
-  if (allowedStages.length > 0) {
-    return allowedStages.includes(currentStage) ? currentStage : null;
-  }
-  const roleStages = ROLE_STAGE_MAP[roleName] || [];
-  return roleStages.includes(currentStage) ? currentStage : null;
-}
-
-// ── Shared UI Helpers ─────────────────────────────────────────────────────────
-
-function inputCls(theme: (typeof GROUP_THEME)[keyof typeof GROUP_THEME]) {
+function inputCls(theme: Theme) {
   return `w-full rounded-xl border border-stone-200 bg-stone-50/50 py-2.5 px-3.5 text-[14px] text-stone-700 placeholder:text-stone-300 focus:bg-white focus:outline-none focus:ring-2 transition-all ${theme.ring}`;
 }
 
@@ -146,84 +144,155 @@ function FieldRow({
   children,
 }: {
   label: string;
-  theme: (typeof GROUP_THEME)[keyof typeof GROUP_THEME];
+  theme: Theme;
   children: React.ReactNode;
 }) {
   return (
     <div>
-      <label className={`block text-[11px] font-medium mb-1 ${theme.label}`}>{label}</label>
+      <label className={`block text-[11px] font-medium mb-1 ${theme.label}`}>
+        {label}
+      </label>
       {children}
     </div>
   );
 }
 
+function SpinIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg
+      className={`animate-spin ${className}`}
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="3"
+        className="opacity-25"
+      />
+      <path
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        fill="currentColor"
+        className="opacity-75"
+      />
+    </svg>
+  );
+}
+
 // ── Phase: Loading ────────────────────────────────────────────────────────────
 
-function PhaseLoading({ spinnerClass }: { spinnerClass: string }) {
+function PhaseLoading() {
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-20">
-      <div className={`h-10 w-10 rounded-full border-2 border-stone-200 animate-spin ${spinnerClass}`} />
+      <div className="h-10 w-10 rounded-full border-2 border-stone-200 border-t-amber-500 animate-spin" />
       <p className="text-[13px] text-stone-400">Memuat profil...</p>
     </div>
   );
 }
 
-// ── Phase: Search ─────────────────────────────────────────────────────────────
+// ── Phase: Order List ─────────────────────────────────────────────────────────
 
-function PhaseSearch({
+function PhaseOrderList({
   user,
   theme,
-  onSearch,
+  onSelect,
   onLogout,
 }: {
   user: UserProfile;
-  theme: (typeof GROUP_THEME)[keyof typeof GROUP_THEME];
-  onSearch: (orderNumber: string) => Promise<void>;
+  theme: Theme;
+  onSelect: (order: OrderInfo) => Promise<void>;
   onLogout: () => void;
 }) {
-  const [value, setValue] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [orders, setOrders] = useState<OrderInfo[]>([]);
+  const [search, setSearch] = useState("");
+  const [isFetching, setIsFetching] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [selectingId, setSelectingId] = useState<string | null>(null);
+  const [selectError, setSelectError] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    inputRef.current?.focus();
+  const roleStages = (
+    user.role.allowed_stages.length > 0
+      ? user.role.allowed_stages
+      : (ROLE_STAGE_MAP[user.role.name] ?? [])
+  ).filter((s) => s !== "penerimaan_order");
+
+  const roleLabel =
+    roleStages.map((s) => STAGE_LABELS[s] ?? s).join(", ") || user.role.name;
+
+  const fetchOrders = useCallback(async (q: string) => {
+    setIsFetching(true);
+    setFetchError(null);
+    try {
+      const url = `/api/workshop/orders${q ? `?q=${encodeURIComponent(q)}` : ""}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Gagal memuat daftar order");
+      setOrders(json.data ?? []);
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : "Gagal memuat data");
+    } finally {
+      setIsFetching(false);
+    }
   }, []);
 
-  const roleLabel = (ROLE_STAGE_MAP[user.role.name] || [])
-    .filter((s) => s !== "penerimaan_order")
-    .map((s) => STAGE_LABELS[s] || s)
-    .join(", ") || user.role.name;
+  // Initial load
+  useEffect(() => {
+    fetchOrders("");
+  }, [fetchOrders]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = value.trim().toUpperCase();
-    if (!trimmed) {
-      setError("Masukkan nomor order");
-      return;
-    }
-    setError(null);
-    setIsSearching(true);
+  // Debounced search
+  useEffect(() => {
+    const t = setTimeout(() => fetchOrders(search), 350);
+    return () => clearTimeout(t);
+  }, [search, fetchOrders]);
+
+  const handleSelect = async (order: OrderInfo) => {
+    setSelectingId(order.id);
+    setSelectError(null);
     try {
-      await onSearch(trimmed);
+      await onSelect(order);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Order tidak ditemukan");
-    } finally {
-      setIsSearching(false);
+      setSelectError(
+        err instanceof Error ? err.message : "Gagal membuka order",
+      );
+      setSelectingId(null);
     }
   };
 
+  function formatDeadline(d: string | null) {
+    if (!d) return null;
+    return new Date(d).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+    });
+  }
+
+  function isOverdue(d: string | null) {
+    if (!d) return false;
+    return new Date(d) < new Date();
+  }
+
   return (
-    <div className="w-full max-w-[380px]">
+    <div className="w-full max-w-[420px]">
       <BrandHeader subtitle="Workshop Input" />
 
-      <div className={`mb-5 rounded-xl border px-4 py-3 ${theme.card}`}>
-        <p className={`text-[10px] font-medium uppercase tracking-wider ${theme.label}`}>
+      {/* User badge */}
+      <div className={`mb-4 rounded-xl border px-4 py-3 ${theme.card}`}>
+        <p
+          className={`text-[10px] font-medium uppercase tracking-wider ${theme.label}`}
+        >
           Masuk sebagai
         </p>
-        <p className="mt-1 text-[15px] font-semibold text-stone-800">{user.full_name}</p>
+        <p className="mt-1 text-[15px] font-semibold text-stone-800">
+          {user.full_name}
+        </p>
         <div className="mt-1.5 flex items-center justify-between">
-          <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${theme.badge}`}>
+          <span
+            className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${theme.badge}`}
+          >
             {roleLabel}
           </span>
           <button
@@ -235,45 +304,193 @@ function PhaseSearch({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-stone-200/80 bg-white/90 backdrop-blur-sm p-6 shadow-sm">
-        <p className="mb-4 text-[13px] font-medium text-stone-600">
-          Masukkan nomor order yang akan diproses
-        </p>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <input
-              ref={inputRef}
-              type="text"
-              value={value}
-              onChange={(e) => { setValue(e.target.value.toUpperCase()); setError(null); }}
-              placeholder="Contoh: ORD-2024-001"
-              autoComplete="off"
-              autoCapitalize="characters"
-              className={`w-full rounded-xl border border-stone-200 bg-stone-50/50 py-3 px-4 text-[15px] font-mono text-stone-700 placeholder:text-stone-300 focus:bg-white focus:outline-none focus:ring-2 transition-all ${theme.ring}`}
+      {/* Search bar */}
+      <div className="relative mb-3">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-300 pointer-events-none"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path strokeLinecap="round" d="M21 21l-4.35-4.35" />
+        </svg>
+        <input
+          ref={searchRef}
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cari nomor order atau nama produk..."
+          className={`w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-10 pr-4 text-[14px] text-stone-700 placeholder:text-stone-300 focus:outline-none focus:ring-2 transition-all ${theme.ring}`}
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-300 hover:text-stone-500"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              className="h-4 w-4"
+            >
+              <path strokeLinecap="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Error from select */}
+      {selectError && (
+        <div className="mb-3 rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-[12px] text-red-600">
+          {selectError}
+        </div>
+      )}
+
+      {/* Order list */}
+      <div className="rounded-2xl border border-stone-200/80 bg-white/90 backdrop-blur-sm shadow-sm overflow-hidden">
+        {isFetching ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-14">
+            <div
+              className={`h-8 w-8 rounded-full border-2 border-stone-100 animate-spin ${theme.spinner}`}
             />
-            {error && (
-              <p className="mt-2 text-[12px] text-red-500">{error}</p>
+            <p className="text-[13px] text-stone-400">Memuat order...</p>
+          </div>
+        ) : fetchError ? (
+          <div className="flex flex-col items-center gap-3 py-12 px-6 text-center">
+            <p className="text-[13px] text-red-500">{fetchError}</p>
+            <button
+              onClick={() => fetchOrders(search)}
+              className={`rounded-lg px-4 py-2 text-[13px] font-medium text-white ${theme.btn}`}
+            >
+              Coba lagi
+            </button>
+          </div>
+        ) : orders.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-14 px-6 text-center">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              className="h-10 w-10 text-stone-200"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
+            </svg>
+            <p className="text-[14px] font-medium text-stone-400">
+              {search
+                ? "Order tidak ditemukan"
+                : "Belum ada order untuk ditangani"}
+            </p>
+            {search && (
+              <p className="text-[12px] text-stone-300">Coba kata kunci lain</p>
             )}
           </div>
-          <button
-            type="submit"
-            disabled={isSearching}
-            className={`w-full rounded-xl py-3 text-[14px] font-medium text-white shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${theme.btn}`}
-          >
-            {isSearching ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
-                  <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor" className="opacity-75" />
-                </svg>
-                Mencari...
-              </span>
-            ) : (
-              "Cari Order"
-            )}
-          </button>
-        </form>
+        ) : (
+          <ul className="divide-y divide-stone-100">
+            {orders.map((order) => {
+              const isSelecting = selectingId === order.id;
+              const isRework = order.status === "rework";
+              const overdue = isOverdue(order.deadline);
+
+              return (
+                <li key={order.id}>
+                  <button
+                    onClick={() => handleSelect(order)}
+                    disabled={!!selectingId}
+                    className="w-full text-left px-4 py-3.5 hover:bg-stone-50 active:bg-stone-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        {/* Order number + stage badge */}
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-mono text-[12px] font-semibold text-stone-500">
+                            #{order.order_number}
+                          </span>
+                          {isRework && (
+                            <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
+                              Rework
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Product name */}
+                        <p className="text-[14px] font-semibold text-stone-800 truncate leading-snug">
+                          {order.product_name}
+                        </p>
+
+                        {/* Customer + weight */}
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                          {order.customer_name && (
+                            <span className="text-[12px] text-stone-400">
+                              {order.customer_name}
+                            </span>
+                          )}
+                          {order.target_weight && (
+                            <span className="text-[12px] text-stone-400">
+                              {order.target_weight} g
+                            </span>
+                          )}
+                          {order.target_karat && (
+                            <span className="text-[12px] text-stone-400">
+                              {order.target_karat}K
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right side: deadline + chevron */}
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        {order.deadline ? (
+                          <span
+                            className={`text-[11px] font-medium ${overdue ? "text-red-500" : "text-stone-400"}`}
+                          >
+                            {overdue ? "⚠ " : ""}
+                            {formatDeadline(order.deadline)}
+                          </span>
+                        ) : null}
+                        {isSelecting ? (
+                          <SpinIcon className={`h-4 w-4 text-stone-400`} />
+                        ) : (
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            className="h-4 w-4 text-stone-300"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
+
+      {/* Refresh hint */}
+      {!isFetching && !fetchError && orders.length > 0 && (
+        <button
+          onClick={() => fetchOrders(search)}
+          className="mt-3 w-full text-center text-[12px] text-stone-300 hover:text-stone-500 transition-colors py-1"
+        >
+          Refresh daftar
+        </button>
+      )}
     </div>
   );
 }
@@ -287,7 +504,7 @@ function PhaseCreate({
   onLogout,
 }: {
   user: UserProfile;
-  theme: (typeof GROUP_THEME)[keyof typeof GROUP_THEME];
+  theme: Theme;
   onCreate: (data: Record<string, unknown>) => Promise<void>;
   onLogout: () => void;
 }) {
@@ -304,6 +521,9 @@ function PhaseCreate({
     model_description: "",
     delivery_method: "pickup_store",
     deadline: "",
+    total_price: "",
+    dp_amount: "",
+    engraved_text: "",
     special_notes: "",
   });
 
@@ -334,16 +554,21 @@ function PhaseCreate({
     setIsSubmitting(true);
     try {
       await onCreate({
-        customer_name: form.customer_name.trim(),
-        customer_phone: form.customer_phone.trim() || null,
-        customer_wa: form.customer_wa.trim() || null,
+        new_customer: {
+          name: form.customer_name.trim(),
+          phone: form.customer_phone.trim() || null,
+          wa_contact: form.customer_wa.trim() || null,
+        },
         product_name: form.product_name.trim(),
         target_weight: Number(form.target_weight),
         target_karat: Number(form.target_karat),
         ring_size: form.ring_size.trim() || null,
         model_description: form.model_description.trim() || null,
+        engraved_text: form.engraved_text.trim() || null,
         delivery_method: form.delivery_method || "pickup_store",
         deadline: form.deadline || null,
+        total_price: form.total_price ? Number(form.total_price) : null,
+        dp_amount: form.dp_amount ? Number(form.dp_amount) : null,
         special_notes: form.special_notes.trim() || null,
       });
     } catch (err) {
@@ -353,24 +578,23 @@ function PhaseCreate({
     }
   };
 
-  const SpinIcon = () => (
-    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
-      <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor" className="opacity-75" />
-    </svg>
-  );
-
   return (
     <div className="w-full max-w-[420px]">
       <BrandHeader subtitle="Penerimaan Order" />
 
       <div className={`mb-5 rounded-xl border px-4 py-3 ${theme.card}`}>
-        <p className={`text-[10px] font-medium uppercase tracking-wider ${theme.label}`}>
+        <p
+          className={`text-[10px] font-medium uppercase tracking-wider ${theme.label}`}
+        >
           Masuk sebagai
         </p>
-        <p className="mt-1 text-[15px] font-semibold text-stone-800">{user.full_name}</p>
+        <p className="mt-1 text-[15px] font-semibold text-stone-800">
+          {user.full_name}
+        </p>
         <div className="mt-1.5 flex items-center justify-between">
-          <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${theme.badge}`}>
+          <span
+            className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${theme.badge}`}
+          >
             Customer Care
           </span>
           <button
@@ -386,9 +610,11 @@ function PhaseCreate({
         onSubmit={handleSubmit}
         className="rounded-2xl border border-stone-200/80 bg-white/90 backdrop-blur-sm p-5 shadow-sm space-y-5"
       >
-        {/* Customer section */}
+        {/* Customer */}
         <div>
-          <p className={`text-[11px] font-semibold uppercase tracking-wider mb-3 ${theme.label}`}>
+          <p
+            className={`text-[11px] font-semibold uppercase tracking-wider mb-3 ${theme.label}`}
+          >
             Data Pelanggan
           </p>
           <div className="space-y-3">
@@ -402,30 +628,34 @@ function PhaseCreate({
                 className={inputCls(theme)}
               />
             </FieldRow>
-            <FieldRow label="No. Telepon" theme={theme}>
-              <input
-                type="tel"
-                value={form.customer_phone}
-                onChange={set("customer_phone")}
-                placeholder="08xx-xxxx-xxxx"
-                className={inputCls(theme)}
-              />
-            </FieldRow>
-            <FieldRow label="No. WhatsApp" theme={theme}>
-              <input
-                type="tel"
-                value={form.customer_wa}
-                onChange={set("customer_wa")}
-                placeholder="08xx-xxxx-xxxx"
-                className={inputCls(theme)}
-              />
-            </FieldRow>
+            <div className="grid grid-cols-2 gap-3">
+              <FieldRow label="No. Telepon" theme={theme}>
+                <input
+                  type="tel"
+                  value={form.customer_phone}
+                  onChange={set("customer_phone")}
+                  placeholder="08xx-xxxx-xxxx"
+                  className={inputCls(theme)}
+                />
+              </FieldRow>
+              <FieldRow label="WhatsApp" theme={theme}>
+                <input
+                  type="tel"
+                  value={form.customer_wa}
+                  onChange={set("customer_wa")}
+                  placeholder="08xx-xxxx-xxxx"
+                  className={inputCls(theme)}
+                />
+              </FieldRow>
+            </div>
           </div>
         </div>
 
-        {/* Order section */}
+        {/* Order detail */}
         <div>
-          <p className={`text-[11px] font-semibold uppercase tracking-wider mb-3 ${theme.label}`}>
+          <p
+            className={`text-[11px] font-semibold uppercase tracking-wider mb-3 ${theme.label}`}
+          >
             Detail Pesanan
           </p>
           <div className="space-y-3">
@@ -475,6 +705,15 @@ function PhaseCreate({
                 className={inputCls(theme)}
               />
             </FieldRow>
+            <FieldRow label="Teks Ukiran (Laser)" theme={theme}>
+              <input
+                type="text"
+                value={form.engraved_text}
+                onChange={set("engraved_text")}
+                placeholder="Teks yang akan diukir"
+                className={inputCls(theme)}
+              />
+            </FieldRow>
             <FieldRow label="Deskripsi Model" theme={theme}>
               <textarea
                 value={form.model_description}
@@ -505,17 +744,49 @@ function PhaseCreate({
                 className={inputCls(theme)}
               />
             </FieldRow>
-            <FieldRow label="Catatan Khusus" theme={theme}>
-              <textarea
-                value={form.special_notes}
-                onChange={set("special_notes")}
-                placeholder="Keinginan khusus, detail tambahan..."
-                rows={2}
-                className={`${inputCls(theme)} resize-none`}
+          </div>
+        </div>
+
+        {/* Harga */}
+        <div>
+          <p
+            className={`text-[11px] font-semibold uppercase tracking-wider mb-3 ${theme.label}`}
+          >
+            Harga & DP
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <FieldRow label="Total Harga (IDR)" theme={theme}>
+              <input
+                type="number"
+                value={form.total_price}
+                onChange={set("total_price")}
+                placeholder="0"
+                min="0"
+                className={inputCls(theme)}
+              />
+            </FieldRow>
+            <FieldRow label="Jumlah DP (IDR)" theme={theme}>
+              <input
+                type="number"
+                value={form.dp_amount}
+                onChange={set("dp_amount")}
+                placeholder="0"
+                min="0"
+                className={inputCls(theme)}
               />
             </FieldRow>
           </div>
         </div>
+
+        <FieldRow label="Catatan Khusus" theme={theme}>
+          <textarea
+            value={form.special_notes}
+            onChange={set("special_notes")}
+            placeholder="Keinginan khusus, detail tambahan..."
+            rows={2}
+            className={`${inputCls(theme)} resize-none`}
+          />
+        </FieldRow>
 
         {error && <p className="text-[12px] text-red-500">{error}</p>}
 
@@ -526,8 +797,7 @@ function PhaseCreate({
         >
           {isSubmitting ? (
             <span className="flex items-center justify-center gap-2">
-              <SpinIcon />
-              Menyimpan...
+              <SpinIcon /> Menyimpan...
             </span>
           ) : (
             "Buat Order"
@@ -551,11 +821,11 @@ function PhaseForm({
   user: UserProfile;
   order: OrderInfo;
   config: FormConfig;
-  theme: (typeof GROUP_THEME)[keyof typeof GROUP_THEME];
+  theme: Theme;
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
   onBack: () => void;
 }) {
-  const stageLabel = STAGE_LABELS[config.stage] || config.stage;
+  const stageLabel = STAGE_LABELS[config.stage] ?? config.stage;
 
   return (
     <div className="w-full max-w-[420px]">
@@ -564,23 +834,46 @@ function PhaseForm({
           onClick={onBack}
           className="flex items-center gap-1 text-[13px] text-stone-400 hover:text-stone-600 transition-colors"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            className="h-4 w-4"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
-          Order lain
+          Daftar order
         </button>
-        <p className="text-[13px] font-medium text-stone-700">{user.full_name}</p>
+        <p className="text-[13px] font-medium text-stone-700">
+          {user.full_name}
+        </p>
       </div>
 
       <div className="mb-3 flex items-center gap-2">
-        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${theme.badge}`}>
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${theme.badge}`}
+        >
           {stageLabel}
         </span>
-        <span className="text-[12px] text-stone-400">#{order.order_number}</span>
+        <span className="text-[12px] text-stone-400">
+          #{order.order_number}
+        </span>
+        {order.status === "rework" && (
+          <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
+            Rework
+          </span>
+        )}
       </div>
 
       <div className={`mb-5 rounded-xl border px-4 py-3.5 ${theme.card}`}>
-        <p className={`text-[10px] font-medium uppercase tracking-wider ${theme.label}`}>
+        <p
+          className={`text-[10px] font-medium uppercase tracking-wider ${theme.label}`}
+        >
           Produk
         </p>
         <p className="mt-1 text-[15px] font-semibold text-stone-800">
@@ -589,18 +882,29 @@ function PhaseForm({
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
           {order.customer_name && (
             <p className="text-[12px] text-stone-500">
-              Customer: <span className="font-medium text-stone-700">{order.customer_name}</span>
+              Customer:{" "}
+              <span className="font-medium text-stone-700">
+                {order.customer_name}
+              </span>
             </p>
           )}
           {order.target_weight && (
             <p className="text-[12px] text-stone-500">
-              Berat target: <span className="font-medium text-stone-700">{order.target_weight} g</span>
+              Berat:{" "}
+              <span className="font-medium text-stone-700">
+                {order.target_weight} g
+              </span>
             </p>
           )}
           {order.deadline && (
             <p className="text-[12px] text-stone-500">
-              Deadline: <span className="font-medium text-stone-700">
-                {new Date(order.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+              Deadline:{" "}
+              <span className="font-medium text-stone-700">
+                {new Date(order.deadline).toLocaleDateString("id-ID", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
               </span>
             </p>
           )}
@@ -608,8 +912,8 @@ function PhaseForm({
       </div>
 
       <StageInputForm
-        fields={config.fields}
-        permissions={config.permissions}
+        fields={config.fields as any}
+        permissions={config.permissions as any}
         initialData={config.current_data}
         onSubmit={onSubmit}
       />
@@ -627,29 +931,42 @@ function PhaseSuccess({
 }: {
   orderNumber: string;
   stage: string;
-  theme: (typeof GROUP_THEME)[keyof typeof GROUP_THEME];
+  theme: Theme;
   onNext: () => void;
 }) {
   const isCreate = stage === "penerimaan_order";
   return (
     <div className="w-full max-w-[380px] text-center">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-50 border border-green-200">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-8 w-8 text-green-500">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          className="h-8 w-8 text-green-500"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
       </div>
       <h2 className="text-[18px] font-semibold text-stone-800 mb-1">
         {isCreate ? "Order Berhasil Dibuat" : "Data Tersimpan"}
       </h2>
       <p className="text-[13px] text-stone-500 mb-1">
-        Tahap <span className="font-medium text-stone-700">{STAGE_LABELS[stage] || stage}</span>
+        Tahap{" "}
+        <span className="font-medium text-stone-700">
+          {STAGE_LABELS[stage] ?? stage}
+        </span>
       </p>
       <p className="text-[13px] text-stone-400 mb-8">Order #{orderNumber}</p>
       <button
         onClick={onNext}
         className={`w-full rounded-xl py-3 text-[14px] font-medium text-white shadow-sm transition-all active:scale-[0.98] ${theme.btn}`}
       >
-        {isCreate ? "Buat Order Baru" : "Input Order Berikutnya"}
+        {isCreate ? "Buat Order Baru" : "Kembali ke Daftar"}
       </button>
     </div>
   );
@@ -664,89 +981,86 @@ function WorkshopInputContent() {
   const [order, setOrder] = useState<OrderInfo | null>(null);
   const [config, setConfig] = useState<FormConfig | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [createdOrderNumber, setCreatedOrderNumber] = useState<string | null>(null);
+  const [createdOrderNumber, setCreatedOrderNumber] = useState<string | null>(
+    null,
+  );
 
+  // Load user profile on mount
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch("/api/me");
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || "Sesi tidak valid");
+          throw new Error(body.error ?? "Sesi tidak valid");
         }
         const json = await res.json();
         const profile: UserProfile = json.data;
         setUser(profile);
 
-        // Route to create phase if this role handles penerimaan_order
-        const dbStages: string[] = profile.role.allowed_stages || [];
-        const roleStages = ROLE_STAGE_MAP[profile.role.name] || [];
+        const dbStages: string[] = profile.role.allowed_stages ?? [];
+        const roleStages = ROLE_STAGE_MAP[profile.role.name] ?? [];
         const stages = dbStages.length > 0 ? dbStages : roleStages;
-        setPhase(stages.includes("penerimaan_order") ? "create" : "search");
+        setPhase(stages.includes("penerimaan_order") ? "create" : "list");
       } catch (err) {
         setLoadError(err instanceof Error ? err.message : "Gagal memuat sesi");
       }
     })();
   }, []);
 
-  const theme = getTheme(user?.role.role_group || "");
+  const theme = getTheme(user?.role.role_group ?? "");
 
-  const handleSearch = useCallback(
-    async (orderNumber: string) => {
+  // Called when worker taps an order card — fetch form config directly
+  const handleSelect = useCallback(
+    async (selectedOrder: OrderInfo) => {
       if (!user) return;
 
-      const orderRes = await fetch(`/api/workshop/order?order_number=${encodeURIComponent(orderNumber)}`);
-      const orderJson = await orderRes.json();
-      if (!orderRes.ok) throw new Error(orderJson.error || "Order tidak ditemukan");
+      const allowedStages: string[] = user.role.allowed_stages ?? [];
+      const roleStages = ROLE_STAGE_MAP[user.role.name] ?? [];
+      const myStages = allowedStages.length > 0 ? allowedStages : roleStages;
 
-      const orderData: OrderInfo = orderJson.data;
-
-      const targetStage = resolveStage(
-        user.role.name,
-        user.role.allowed_stages,
-        orderData.current_stage,
-      );
+      const targetStage =
+        myStages.find((s) => s === selectedOrder.current_stage) ?? null;
 
       if (!targetStage) {
-        const myStages = (ROLE_STAGE_MAP[user.role.name] || [])
-          .filter((s) => s !== "penerimaan_order")
-          .map((s) => STAGE_LABELS[s] || s)
-          .join(", ");
-        const currentLabel = STAGE_LABELS[orderData.current_stage] || orderData.current_stage;
+        const stageNames = myStages.map((s) => STAGE_LABELS[s] ?? s).join(", ");
         throw new Error(
-          `Order ini sedang di tahap "${currentLabel}". Anda hanya menangani: ${myStages || user.role.name}.`,
+          `Order di tahap "${STAGE_LABELS[selectedOrder.current_stage] ?? selectedOrder.current_stage}". Anda menangani: ${stageNames}.`,
         );
       }
 
       const configRes = await fetch(
-        `/api/stages/form-config?order_id=${orderData.id}&stage=${targetStage}`,
+        `/api/stages/form-config?order_id=${selectedOrder.id}&stage=${targetStage}`,
       );
       const configJson = await configRes.json();
-      if (!configRes.ok) throw new Error(configJson.error || "Gagal memuat form");
+      if (!configRes.ok)
+        throw new Error(configJson.error ?? "Gagal memuat form");
 
-      setOrder(orderData);
+      setOrder(selectedOrder);
       setConfig({ ...configJson.data.config, stage: targetStage });
       setPhase("form");
     },
     [user],
   );
 
-  const handleCreate = useCallback(async (formData: Record<string, unknown>) => {
-    const res = await fetch("/api/stages/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stage: "penerimaan_order", data: formData }),
-    });
-    const result = await res.json();
-    if (!res.ok) throw new Error(result.error || "Gagal membuat order");
-    setCreatedOrderNumber(result.data.order_number);
-    setPhase("success");
-  }, []);
+  const handleCreate = useCallback(
+    async (formData: Record<string, unknown>) => {
+      const res = await fetch("/api/stages/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage: "penerimaan_order", data: formData }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error ?? "Gagal membuat order");
+      setCreatedOrderNumber(result.data.order_number);
+      setPhase("success");
+    },
+    [],
+  );
 
   const handleSubmit = useCallback(
     async (formData: Record<string, unknown>) => {
       if (!order || !config) return;
-
       const res = await fetch("/api/stages/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -756,10 +1070,8 @@ function WorkshopInputContent() {
           data: formData,
         }),
       });
-
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Gagal menyimpan data");
-
+      if (!res.ok) throw new Error(result.error ?? "Gagal menyimpan data");
       setPhase("success");
     },
     [order, config],
@@ -770,10 +1082,10 @@ function WorkshopInputContent() {
     router.push("/workshop/login");
   }, [router]);
 
-  const handleNextOrder = useCallback(() => {
+  const handleBackToList = useCallback(() => {
     setOrder(null);
     setConfig(null);
-    setPhase("search");
+    setPhase("list");
   }, []);
 
   const handleNextCreate = useCallback(() => {
@@ -787,8 +1099,18 @@ function WorkshopInputContent() {
         <BrandHeader subtitle="Workshop Access Point" />
         <div className="rounded-2xl border border-red-100 bg-white/90 p-7 shadow-sm">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-7 w-7 text-red-400">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              className="h-7 w-7 text-red-400"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+              />
             </svg>
           </div>
           <p className="text-[14px] text-stone-600 mb-5">{loadError}</p>
@@ -803,16 +1125,14 @@ function WorkshopInputContent() {
     );
   }
 
-  if (phase === "loading") {
-    return <PhaseLoading spinnerClass="border-t-amber-500" />;
-  }
+  if (phase === "loading") return <PhaseLoading />;
 
-  if (phase === "search" && user) {
+  if (phase === "list" && user) {
     return (
-      <PhaseSearch
+      <PhaseOrderList
         user={user}
         theme={theme}
-        onSearch={handleSearch}
+        onSelect={handleSelect}
         onLogout={handleLogout}
       />
     );
@@ -837,7 +1157,7 @@ function WorkshopInputContent() {
         config={config}
         theme={theme}
         onSubmit={handleSubmit}
-        onBack={handleNextOrder}
+        onBack={handleBackToList}
       />
     );
   }
@@ -849,7 +1169,7 @@ function WorkshopInputContent() {
         orderNumber={fromCreate ? createdOrderNumber! : order!.order_number}
         stage={fromCreate ? "penerimaan_order" : config!.stage}
         theme={theme}
-        onNext={fromCreate ? handleNextCreate : handleNextOrder}
+        onNext={fromCreate ? handleNextCreate : handleBackToList}
       />
     );
   }
