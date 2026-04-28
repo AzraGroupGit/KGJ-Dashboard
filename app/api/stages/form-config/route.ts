@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type FieldType =
-  | "text" | "number" | "select" | "textarea" | "boolean" | "file" | "date"
+  | "text" | "number" | "select" | "textarea" | "boolean" | "file" | "date" | "time"
   // Complex sub-form types — UI renders dedicated components for these
   | "customer_selector"   // find existing customer or create new inline
   | "gemstone_array"      // dynamic list of gemstone rows
@@ -36,6 +36,8 @@ interface FieldConfig {
   items?: { key: string; label: string }[];
   // For file / attachment_list: allowed file_type values
   allowedFileTypes?: string[];
+  // For material_array: which transaction_type values the UI should offer
+  transactionTypes?: ("input" | "output" | "waste" | "return")[];
 }
 
 const STAGE_FIELD_CONFIGS: Record<string, FieldConfig[]> = {
@@ -84,11 +86,8 @@ const STAGE_FIELD_CONFIGS: Record<string, FieldConfig[]> = {
   // ── TAHAP 3: RACIK BAHAN ────────────────────────────────────────────────────
   racik_bahan: [
     { name: "shrinkage_anticipated", label: "Antisipasi Penyusutan", type: "number", required: false, unit: "gram", min: 0, placeholder: "0.00" },
-    { name: "started_at",            label: "Waktu Mulai",          type: "text",   required: false, placeholder: "ISO datetime" },
-    {
-      name: "material_transactions", label: "Bahan yang Digunakan (Input)", type: "material_array", required: true,
-      // hint to UI: default transaction_type = 'input'
-    },
+    { name: "started_at",            label: "Waktu Mulai",          type: "time",   required: false },
+    { name: "material_transactions", label: "Bahan yang Digunakan", type: "material_array", required: true, transactionTypes: ["input"] },
     { name: "notes", label: "Catatan", type: "textarea", required: false },
   ],
 
@@ -96,10 +95,7 @@ const STAGE_FIELD_CONFIGS: Record<string, FieldConfig[]> = {
   lebur_bahan: [
     { name: "temperature_celsius", label: "Suhu Peleburan",  type: "number", required: true,  unit: "°C", min: 800, max: 1200, placeholder: "950" },
     { name: "duration_seconds",    label: "Durasi Lebur",    type: "number", required: true,  unit: "detik", min: 1, placeholder: "900" },
-    {
-      name: "material_transactions", label: "Hasil Lebur & Penyusutan", type: "material_array", required: true,
-      // UI renders rows for transaction_type: output + waste
-    },
+    { name: "material_transactions", label: "Hasil Lebur & Penyusutan", type: "material_array", required: true, transactionTypes: ["output", "waste"] },
     { name: "notes", label: "Catatan", type: "textarea", required: false },
   ],
 
@@ -109,31 +105,25 @@ const STAGE_FIELD_CONFIGS: Record<string, FieldConfig[]> = {
     { name: "solder_position",    label: "Posisi Patri",         type: "text",     required: false, placeholder: "Contoh: bagian bawah" },
     { name: "sanding_stage",      label: "Tahap Pengamplasan",   type: "select",   required: false,
       options: [{ value: "1", label: "Tahap 1" }, { value: "2", label: "Tahap 2" }, { value: "3", label: "Tahap 3" }] },
-    {
-      name: "material_transactions", label: "Bahan Input / Output / Sisa", type: "material_array", required: true,
-    },
+    { name: "material_transactions", label: "Bahan Input / Output / Sisa", type: "material_array", required: true, transactionTypes: ["input", "output", "waste"] },
     { name: "notes", label: "Catatan", type: "textarea", required: false },
   ],
 
   // ── TAHAP 7: PEMASANGAN PERMATA ─────────────────────────────────────────────
   pemasangan_permata: [
-    { name: "gemstone_size",     label: "Ukuran Permata",       type: "text",    required: false, placeholder: "Contoh: 4.5mm" },
-    { name: "gemstone_position", label: "Posisi Permata",       type: "text",    required: false },
-    { name: "gemstone_spacing",  label: "Jarak Antar Permata",  type: "text",    required: false },
-    { name: "gemstone_total_weight", label: "Total Berat Batu Dipasang", type: "number", required: false, unit: "gram" },
-    { name: "ultrasonic_cleaned", label: "Ultrasonic Cleaned",  type: "boolean", required: false },
-    {
-      name: "material_transactions", label: "Bahan Input / Output", type: "material_array", required: true,
-    },
+    { name: "gemstone_size",          label: "Ukuran Permata",             type: "text",    required: false, placeholder: "Contoh: 4.5mm" },
+    { name: "gemstone_position",      label: "Posisi Permata",             type: "text",    required: false },
+    { name: "gemstone_spacing",       label: "Jarak Antar Permata",        type: "text",    required: false },
+    { name: "gemstone_total_weight",  label: "Total Berat Batu Dipasang",  type: "number",  required: false, unit: "gram" },
+    { name: "ultrasonic_cleaned",     label: "Ultrasonic Cleaned",         type: "boolean", required: false },
+    { name: "material_transactions",  label: "Bahan Input / Output",       type: "material_array", required: true, transactionTypes: ["input", "output"] },
     { name: "notes", label: "Catatan", type: "textarea", required: false },
   ],
 
   // ── TAHAP 8: PEMOLESAN ──────────────────────────────────────────────────────
   pemolesan: [
-    { name: "ultrasonic_cleaned", label: "Ultrasonic Cleaned", type: "boolean", required: false },
-    {
-      name: "material_transactions", label: "Bahan Input / Output / Sisa", type: "material_array", required: true,
-    },
+    { name: "ultrasonic_cleaned",    label: "Ultrasonic Cleaned",         type: "boolean", required: false },
+    { name: "material_transactions", label: "Bahan Input / Output / Sisa", type: "material_array", required: true, transactionTypes: ["input", "output", "waste"] },
     { name: "notes", label: "Catatan", type: "textarea", required: false },
   ],
 
@@ -168,9 +158,7 @@ const STAGE_FIELD_CONFIGS: Record<string, FieldConfig[]> = {
     { name: "rhodium_specification", label: "Warna Rhodium",     type: "text",    required: false, placeholder: "Contoh: white, yellow, rose" },
     { name: "rhodium_coated",        label: "Rhodium Coating",   type: "boolean", required: false },
     { name: "doff_motif_applied",    label: "Motif Doff Diterapkan", type: "boolean", required: false },
-    {
-      name: "material_transactions", label: "Bahan Input / Output / Sisa", type: "material_array", required: true,
-    },
+    { name: "material_transactions", label: "Bahan Input / Output / Sisa", type: "material_array", required: true, transactionTypes: ["input", "output", "waste"] },
     { name: "notes", label: "Catatan", type: "textarea", required: false },
   ],
 

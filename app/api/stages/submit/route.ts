@@ -33,14 +33,14 @@ const APPROVAL_REQUIRED = new Set([
   "qc_3",
 ]);
 
-// Default work instruction doc numbers per stage
+// SOP document numbers per stage (from official work instructions)
 const STAGE_WORK_INSTRUCTIONS: Record<string, string> = {
-  racik_bahan: "01-KGJ/OPR-PRD/I/2026",
-  lebur_bahan: "02-KGJ/OPR-PRD/I/2026",
-  pembentukan_cincin: "03-KGJ/OPR-PRD/I/2026",
-  qc_1: "04-KGJ/OPR-PRD/I/2026",
-  kelengkapan: "05-KGJ/OPR-PRD/I/2026",
-  pelunasan: "06-KGJ/OPR-PRD/I/2026",
+  racik_bahan:        "93-04/HC-KGJ/XII/2022",
+  lebur_bahan:        "94-04/HC-KGJ/XII/2022",
+  pembentukan_cincin: "95-04/HC-KGJ/XII/2022",
+  qc_1:               "96-04/HC-KGJ/XII/2022",
+  kelengkapan:        "102-04/HC-KGJ/XII/2022",
+  pelunasan:          "101-04/HC-KGJ/XII/2022",
 };
 
 const ROLE_STAGE_ACCESS: Record<string, string[]> = {
@@ -60,6 +60,18 @@ const ROLE_STAGE_ACCESS: Record<string, string[]> = {
 };
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
+
+/** Returns a valid ISO timestamp, or the fallback if value is missing/invalid.
+ *  Handles bare time strings like "14:30" by combining with today's local date. */
+function toValidIso(value: string | undefined, fallback: string): string {
+  if (!value) return fallback;
+  let d = new Date(value);
+  if (isNaN(d.getTime()) && /^\d{2}:\d{2}(:\d{2})?$/.test(value)) {
+    const today = new Date().toISOString().split("T")[0];
+    d = new Date(`${today}T${value}`);
+  }
+  return isNaN(d.getTime()) ? fallback : d.toISOString();
+}
 
 async function getWorkInstructionId(
   admin: ReturnType<typeof createAdminClient>,
@@ -109,8 +121,8 @@ async function insertStageResult(
       data: params.data,
       notes: params.notes ?? null,
       work_instruction_id: params.work_instruction_id ?? null,
-      started_at: params.started_at ?? now,
-      finished_at: params.finished_at ?? now,
+      started_at: toValidIso(params.started_at, now),
+      finished_at: toValidIso(params.finished_at, now),
     })
     .select("id")
     .single();
@@ -476,7 +488,8 @@ async function handleMaterialStage(
     order_id: orderId,
     user_id: userId,
     stage,
-    data: stageData,
+    // Include material_transactions snapshot so supervisor can review what was submitted
+    data: { ...stageData, material_transactions: Array.isArray(material_transactions) ? material_transactions : [] },
     notes: notes ?? null,
     work_instruction_id: wiId,
     started_at: started_at ?? undefined,
@@ -579,18 +592,17 @@ async function handleKonfirmasiAwal(
   orderId: string,
   data: Record<string, unknown>,
 ) {
-  const {
-    confirmation_type,
-    confirmation_method,
-    photos_sent_at,
-    confirmation_status,
-    rejection_reason,
-    change_requests,
-    confirmed_at,
-    notes,
-    started_at,
-    ...stageData
-  } = data as Record<string, any>;
+  const rawData = data as Record<string, any>;
+  // UI sends confirmation fields nested under confirmation_form (compound type)
+  const cf: Record<string, any> = rawData.confirmation_form ?? rawData;
+  const confirmation_type     = cf.confirmation_type;
+  const confirmation_method   = cf.confirmation_method;
+  const photos_sent_at        = cf.photos_sent_at;
+  const confirmation_status   = cf.confirmation_status;
+  const rejection_reason      = cf.rejection_reason;
+  const change_requests       = cf.change_requests;
+  const confirmed_at          = cf.confirmed_at;
+  const { notes, started_at, confirmation_form: _drop, ...stageData } = rawData;
 
   const srId = await insertStageResult(admin, {
     order_id: orderId,

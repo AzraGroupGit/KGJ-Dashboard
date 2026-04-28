@@ -13,37 +13,36 @@ const PRODUCTION_STAGES = new Set([
 ]);
 
 const OPERATIONAL_STAGES = new Set([
-  "qc_awal",
+  "penerimaan_order",
   "racik_bahan",
   "qc_1",
   "konfirmasi_awal",
   "laser",
   "qc_2",
-  "pelunasan",
   "kelengkapan",
   "qc_3",
   "packing",
+  "pelunasan",
   "pengiriman",
 ]);
 
 const STAGE_LABELS: Record<string, string> = {
-  penerimaan_order: "Order Masuk",
-  qc_awal: "QC Awal",
-  racik_bahan: "Racik Bahan",
-  lebur_bahan: "Lebur Bahan",
-  pembentukan_cincin: "Bentuk Cincin",
-  pemasangan_permata: "Setting Permata",
-  pemolesan: "Pemolesan",
-  qc_1: "QC 1",
-  konfirmasi_awal: "Konfirmasi",
-  finishing: "Finishing",
-  laser: "Laser",
-  qc_2: "QC 2",
-  pelunasan: "Pelunasan",
-  kelengkapan: "Kelengkapan",
-  qc_3: "QC 3",
-  packing: "Packing",
-  pengiriman: "Pengiriman",
+  penerimaan_order:   "Penerimaan Order",
+  racik_bahan:        "Racik Bahan",
+  lebur_bahan:        "Lebur Bahan",
+  pembentukan_cincin: "Pembentukan Cincin",
+  pemasangan_permata: "Pemasangan Permata",
+  pemolesan:          "Pemolesan",
+  qc_1:               "QC 1",
+  konfirmasi_awal:    "Konfirmasi Awal",
+  finishing:          "Finishing",
+  laser:              "Laser Engraving",
+  qc_2:               "QC 2",
+  kelengkapan:        "Kelengkapan",
+  qc_3:               "QC 3",
+  packing:            "Packing",
+  pelunasan:          "Pelunasan",
+  pengiriman:         "Pengiriman",
 };
 
 async function verifySupervisor(userId: string) {
@@ -107,15 +106,13 @@ export async function GET() {
           .not("finished_at", "is", null)
           .limit(1),
 
-        // Pending approvals count
+        // Pending approvals count — authoritative: orders waiting supervisor action
         admin
-          .from("stage_results")
-          .select("id, stage, order_id, data, orders!inner(current_stage, status)", {
-            count: "exact",
-          })
-          .not("finished_at", "is", null)
-          .gte("finished_at", new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
-          .limit(200),
+          .from("orders")
+          .select("id", { count: "exact" })
+          .eq("status", "waiting_approval")
+          .is("deleted_at", null)
+          .limit(1),
       ]);
 
     const orders =
@@ -124,20 +121,10 @@ export async function GET() {
       submissionsTodayResult.status === "fulfilled"
         ? submissionsTodayResult.value.count || 0
         : 0;
-    const pendingRaw =
+    const pendingCount =
       pendingCountResult.status === "fulfilled"
-        ? pendingCountResult.value.data || []
-        : [];
-
-    // Filter pending: stage matches current_stage, not yet processed by supervisor
-    const pendingCount = pendingRaw.filter((r: any) => {
-      const order = r.orders;
-      if (!order) return false;
-      if (order.status === "completed" || order.status === "cancelled") return false;
-      if (r.stage !== order.current_stage) return false;
-      const svAction = r.data?._sv_action;
-      return !svAction; // Not yet processed
-    }).length;
+        ? pendingCountResult.value.count ?? 0
+        : 0;
 
     // Get latest stage_results per order (for "last worker" info)
     const orderIds = orders.map((o: any) => o.id);
