@@ -207,9 +207,9 @@ export default function SupervisorMonitoringPage() {
           role="supervisor"
           logoutPath="/workshop/login"
         />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {/* Page header */}
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-y-3">
             <div>
               <h2 className="text-xl font-bold text-slate-900">
                 Monitoring Workshop
@@ -218,7 +218,7 @@ export default function SupervisorMonitoringPage() {
                 Status real-time semua order aktif
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               {data?.stats.pendingApprovals ? (
                 <Link
                   href="/dashboard/supervisor/approval"
@@ -262,7 +262,7 @@ export default function SupervisorMonitoringPage() {
           ) : !data ? null : (
             <div className="space-y-6">
               {/* Stats row */}
-              <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 <StatCard
                   label="Total Aktif"
                   value={data.stats.totalActive}
@@ -296,34 +296,36 @@ export default function SupervisorMonitoringPage() {
               </div>
 
               {/* Filter tabs */}
-              <div className="flex items-center gap-1 border-b border-slate-200">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setFilter(tab.key)}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                      filter === tab.key
-                        ? "border-slate-800 text-slate-900"
-                        : "border-transparent text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    {tab.label}
-                    {tab.count !== undefined && (
-                      <span
-                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                          filter === tab.key
-                            ? "bg-slate-800 text-white"
-                            : "bg-slate-100 text-slate-500"
-                        }`}
-                      >
-                        {tab.count}
-                      </span>
-                    )}
-                  </button>
-                ))}
+              <div className="border-b border-slate-200 overflow-x-auto">
+                <div className="flex items-center gap-1 min-w-max">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setFilter(tab.key)}
+                      className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                        filter === tab.key
+                          ? "border-slate-800 text-slate-900"
+                          : "border-transparent text-slate-500 hover:text-slate-700"
+                      }`}
+                    >
+                      {tab.label}
+                      {tab.count !== undefined && (
+                        <span
+                          className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                            filter === tab.key
+                              ? "bg-slate-800 text-white"
+                              : "bg-slate-100 text-slate-500"
+                          }`}
+                        >
+                          {tab.count}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Orders table */}
+              {/* Orders list */}
               {filteredOrders.length === 0 ? (
                 <div className="py-16 text-center">
                   <Users className="mx-auto mb-3 h-8 w-8 text-slate-300" />
@@ -332,120 +334,193 @@ export default function SupervisorMonitoringPage() {
                   </p>
                 </div>
               ) : (
-                <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50/70">
-                        <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                          Order
-                        </th>
-                        <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                          Produk
-                        </th>
-                        <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                          Tahap
-                        </th>
-                        <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 hidden md:table-cell">
-                          Tukang / Petugas
-                        </th>
-                        <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 hidden lg:table-cell">
-                          Lama di Tahap
-                        </th>
-                        <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 hidden lg:table-cell">
-                          Deadline
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {filteredOrders.map((order) => {
-                        const dl = formatDeadline(order.deadline);
-                        const hoursLabel =
-                          order.hours_at_stage !== null
-                            ? order.hours_at_stage >= 24
-                              ? `${Math.floor(order.hours_at_stage / 24)}h ${order.hours_at_stage % 24}j`
-                              : `${order.hours_at_stage}j`
-                            : "—";
-                        const isStuck =
-                          order.hours_at_stage !== null &&
-                          order.hours_at_stage > 24;
-
-                        return (
-                          <tr
-                            key={order.id}
-                            className="hover:bg-slate-50/60 transition-colors"
-                          >
-                            <td className="px-4 py-3">
+                <>
+                  {/* Mobile cards (< md) */}
+                  <div className="block md:hidden space-y-3">
+                    {filteredOrders.map((order) => {
+                      const dl = formatDeadline(order.deadline);
+                      const hoursLabel =
+                        order.hours_at_stage !== null
+                          ? order.hours_at_stage >= 24
+                            ? `${Math.floor(order.hours_at_stage / 24)}h ${order.hours_at_stage % 24}j`
+                            : `${order.hours_at_stage}j`
+                          : "—";
+                      const isStuck =
+                        order.hours_at_stage !== null &&
+                        order.hours_at_stage > 24;
+                      return (
+                        <div
+                          key={order.id}
+                          className="rounded-lg border border-slate-200 bg-white p-4"
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <div className="min-w-0">
                               <span className="font-mono text-xs font-semibold text-slate-800">
                                 {order.order_number}
                               </span>
                               {order.customer_name && (
-                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                <p className="text-[11px] text-slate-400 mt-0.5 truncate">
                                   {order.customer_name}
                                 </p>
                               )}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="text-slate-700">
-                                {order.product_name}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span
-                                className={`inline-block rounded-full border px-2 py-0.5 text-[11px] font-medium ${
-                                  STAGE_COLORS[order.stage_group]
-                                }`}
-                              >
-                                {order.stage_label}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 hidden md:table-cell">
-                              {order.last_worker ? (
-                                <div>
-                                  <span className="text-slate-700">
-                                    {order.last_worker}
-                                  </span>
-                                  <p className="text-[11px] text-slate-400 mt-0.5">
-                                    {formatRelative(order.last_submission_at)}
-                                  </p>
-                                </div>
-                              ) : (
-                                <span className="text-slate-300 text-xs">
-                                  Belum ada submission
-                                </span>
+                            </div>
+                            <span
+                              className={`inline-block shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                                STAGE_COLORS[order.stage_group]
+                              }`}
+                            >
+                              {order.stage_label}
+                            </span>
+                          </div>
+                          <p className="text-sm text-slate-700 mb-2.5">
+                            {order.product_name}
+                          </p>
+                          <div className="flex items-center justify-between text-xs gap-2">
+                            <span className="text-slate-500 truncate">
+                              {order.last_worker
+                                ? `${order.last_worker} · ${formatRelative(order.last_submission_at)}`
+                                : "Belum ada submission"}
+                            </span>
+                            <span
+                              className={`shrink-0 ${
+                                dl.urgent
+                                  ? "font-semibold text-rose-600"
+                                  : "text-slate-400"
+                              }`}
+                            >
+                              {dl.urgent && (
+                                <AlertTriangle className="inline h-3 w-3 mr-0.5 -mt-0.5" />
                               )}
-                            </td>
-                            <td className="px-4 py-3 hidden lg:table-cell">
-                              <span
-                                className={`text-sm font-medium ${
-                                  isStuck ? "text-rose-600" : "text-slate-600"
-                                }`}
-                              >
-                                {isStuck && (
-                                  <Clock className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+                              {dl.label}
+                            </span>
+                          </div>
+                          {isStuck && (
+                            <p className="mt-1.5 text-[11px] font-medium text-rose-600">
+                              <Clock className="inline h-3 w-3 mr-0.5 -mt-0.5" />
+                              Tertahan {hoursLabel}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop table (>= md) */}
+                  <div className="hidden md:block rounded-lg border border-slate-200 bg-white overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 bg-slate-50/70">
+                          <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Order
+                          </th>
+                          <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Produk
+                          </th>
+                          <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Tahap
+                          </th>
+                          <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Tukang / Petugas
+                          </th>
+                          <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 hidden lg:table-cell">
+                            Lama di Tahap
+                          </th>
+                          <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 hidden lg:table-cell">
+                            Deadline
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {filteredOrders.map((order) => {
+                          const dl = formatDeadline(order.deadline);
+                          const hoursLabel =
+                            order.hours_at_stage !== null
+                              ? order.hours_at_stage >= 24
+                                ? `${Math.floor(order.hours_at_stage / 24)}h ${order.hours_at_stage % 24}j`
+                                : `${order.hours_at_stage}j`
+                              : "—";
+                          const isStuck =
+                            order.hours_at_stage !== null &&
+                            order.hours_at_stage > 24;
+
+                          return (
+                            <tr
+                              key={order.id}
+                              className="hover:bg-slate-50/60 transition-colors"
+                            >
+                              <td className="px-4 py-3">
+                                <span className="font-mono text-xs font-semibold text-slate-800">
+                                  {order.order_number}
+                                </span>
+                                {order.customer_name && (
+                                  <p className="text-[11px] text-slate-400 mt-0.5">
+                                    {order.customer_name}
+                                  </p>
                                 )}
-                                {hoursLabel}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 hidden lg:table-cell">
-                              <span
-                                className={`text-sm ${
-                                  dl.urgent
-                                    ? "font-semibold text-rose-600"
-                                    : "text-slate-600"
-                                }`}
-                              >
-                                {dl.urgent && (
-                                  <AlertTriangle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-slate-700">
+                                  {order.product_name}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`inline-block rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                                    STAGE_COLORS[order.stage_group]
+                                  }`}
+                                >
+                                  {order.stage_label}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                {order.last_worker ? (
+                                  <div>
+                                    <span className="text-slate-700">
+                                      {order.last_worker}
+                                    </span>
+                                    <p className="text-[11px] text-slate-400 mt-0.5">
+                                      {formatRelative(order.last_submission_at)}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-300 text-xs">
+                                    Belum ada submission
+                                  </span>
                                 )}
-                                {dl.label}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                              </td>
+                              <td className="px-4 py-3 hidden lg:table-cell">
+                                <span
+                                  className={`text-sm font-medium ${
+                                    isStuck ? "text-rose-600" : "text-slate-600"
+                                  }`}
+                                >
+                                  {isStuck && (
+                                    <Clock className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+                                  )}
+                                  {hoursLabel}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 hidden lg:table-cell">
+                                <span
+                                  className={`text-sm ${
+                                    dl.urgent
+                                      ? "font-semibold text-rose-600"
+                                      : "text-slate-600"
+                                  }`}
+                                >
+                                  {dl.urgent && (
+                                    <AlertTriangle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+                                  )}
+                                  {dl.label}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -458,7 +533,7 @@ export default function SupervisorMonitoringPage() {
 function MonitoringSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {[...Array(5)].map((_, i) => (
           <div
             key={i}

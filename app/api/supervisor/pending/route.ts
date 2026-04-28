@@ -19,6 +19,13 @@ const STAGE_LABELS: Record<string, string> = {
   qc_3:               "QC 3",
 };
 
+const STAGE_GROUPS: Record<string, "production" | "operational"> = {
+  penerimaan_order: "operational",
+  racik_bahan:      "production",
+  qc_2:             "production",
+  qc_3:             "production",
+};
+
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -107,20 +114,21 @@ export async function GET() {
       const isPenerimaanOrder = o.current_stage === "penerimaan_order";
 
       return {
-        order_id:       o.id,
-        order_number:   o.order_number,
-        product_name:   o.product_name,
-        customer_name:  o.customers?.name ?? "—",
-        stage:          o.current_stage,
-        stage_label:    STAGE_LABELS[o.current_stage] ?? o.current_stage,
-        waiting_since:  o.updated_at,
+        order_id:        o.id,
+        order_number:    o.order_number,
+        product_name:    o.product_name,
+        customer_name:   o.customers?.name ?? "—",
+        stage:           o.current_stage,
+        stage_label:     STAGE_LABELS[o.current_stage] ?? o.current_stage,
+        stage_group:     STAGE_GROUPS[o.current_stage] ?? "production",
+        waiting_since:   o.updated_at,
         // stage_result fields (null for penerimaan_order)
-        stage_result_id:  sr?.id ?? null,
-        attempt_number:   sr?.attempt_number ?? null,
-        submitted_at:     sr?.finished_at ?? null,
-        worker_name:      isPenerimaanOrder ? (o.users?.full_name ?? "—") : (sr?.user_name ?? "—"),
-        worker_role:      isPenerimaanOrder ? "customer_care" : (sr?.user_role ?? "—"),
-        data:             sr?.data ?? null,
+        stage_result_id: sr?.id ?? null,
+        attempt_number:  sr?.attempt_number ?? null,
+        submitted_at:    sr?.finished_at ?? null,
+        worker_name:     isPenerimaanOrder ? (o.users?.full_name ?? "—") : (sr?.user_name ?? "—"),
+        worker_role:     isPenerimaanOrder ? "customer_care" : (sr?.user_role ?? "—"),
+        data:            sr?.data ?? null,
       };
     }).filter((item: any) => {
       // For non-penerimaan stages, only include if we found an unreviewed stage_result

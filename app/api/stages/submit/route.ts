@@ -35,12 +35,12 @@ const APPROVAL_REQUIRED = new Set([
 
 // Default work instruction doc numbers per stage
 const STAGE_WORK_INSTRUCTIONS: Record<string, string> = {
-  racik_bahan: "93-04/HC-KGJ/XII/2022",
-  lebur_bahan: "94-04/HC-KGJ/XII/2022",
-  pembentukan_cincin: "95-04/HC-KGJ/XII/2022",
-  qc_1: "96-04/HC-KGJ/XII/2022",
-  kelengkapan: "102-04/HC-KGJ/XII/2022",
-  pelunasan: "101-04/HC-KGJ/XII/2022",
+  racik_bahan: "01-KGJ/OPR-PRD/I/2026",
+  lebur_bahan: "02-KGJ/OPR-PRD/I/2026",
+  pembentukan_cincin: "03-KGJ/OPR-PRD/I/2026",
+  qc_1: "04-KGJ/OPR-PRD/I/2026",
+  kelengkapan: "05-KGJ/OPR-PRD/I/2026",
+  pelunasan: "06-KGJ/OPR-PRD/I/2026",
 };
 
 const ROLE_STAGE_ACCESS: Record<string, string[]> = {
@@ -115,7 +115,8 @@ async function insertStageResult(
     .select("id")
     .single();
 
-  if (error || !sr) throw new Error(`stage_results insert failed: ${error?.message}`);
+  if (error || !sr)
+    throw new Error(`stage_results insert failed: ${error?.message}`);
   return sr.id;
 }
 
@@ -240,19 +241,28 @@ async function finalizeStage(
   if (APPROVAL_REQUIRED.has(stage)) {
     await admin
       .from("orders")
-      .update({ status: "waiting_approval", updated_at: new Date().toISOString() })
+      .update({
+        status: "waiting_approval",
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", orderId);
     return null;
   }
 
-  const idx = STAGE_SEQUENCE.indexOf(stage as typeof STAGE_SEQUENCE[number]);
+  const idx = STAGE_SEQUENCE.indexOf(stage as (typeof STAGE_SEQUENCE)[number]);
   const nextStage =
-    idx >= 0 && idx < STAGE_SEQUENCE.length - 1 ? STAGE_SEQUENCE[idx + 1] : null;
+    idx >= 0 && idx < STAGE_SEQUENCE.length - 1
+      ? STAGE_SEQUENCE[idx + 1]
+      : null;
 
   if (nextStage) {
     await admin
       .from("orders")
-      .update({ current_stage: nextStage, status: "in_progress", updated_at: new Date().toISOString() })
+      .update({
+        current_stage: nextStage,
+        status: "in_progress",
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", orderId);
     await insertTransition(admin, orderId, stage, nextStage, userId);
   } else {
@@ -293,7 +303,11 @@ async function handlePenerimaanOrder(
     throw Object.assign(new Error("product_name wajib diisi"), { status: 400 });
   if (!target_weight || Number(target_weight) <= 0)
     throw Object.assign(new Error("target_weight harus > 0"), { status: 400 });
-  if (target_karat === undefined || target_karat === null || target_karat === "")
+  if (
+    target_karat === undefined ||
+    target_karat === null ||
+    target_karat === ""
+  )
     throw Object.assign(new Error("target_karat wajib diisi"), { status: 400 });
 
   // Resolve customer
@@ -305,12 +319,17 @@ async function handlePenerimaanOrder(
       .eq("id", customer_id)
       .is("deleted_at", null)
       .single();
-    if (error || !c) throw Object.assign(new Error("Customer tidak ditemukan"), { status: 404 });
+    if (error || !c)
+      throw Object.assign(new Error("Customer tidak ditemukan"), {
+        status: 404,
+      });
     customerId = c.id;
   } else {
     const nc = new_customer as Record<string, any> | undefined;
     if (!nc?.name?.trim())
-      throw Object.assign(new Error("Nama customer wajib diisi"), { status: 400 });
+      throw Object.assign(new Error("Nama customer wajib diisi"), {
+        status: 400,
+      });
 
     // Try matching by phone to avoid duplicates
     if (nc.phone?.trim()) {
@@ -325,7 +344,11 @@ async function handlePenerimaanOrder(
       } else {
         const { data: created, error: ce } = await admin
           .from("customers")
-          .insert({ name: nc.name.trim(), phone: nc.phone.trim(), wa_contact: nc.wa_contact?.trim() ?? null })
+          .insert({
+            name: nc.name.trim(),
+            phone: nc.phone.trim(),
+            wa_contact: nc.wa_contact?.trim() ?? null,
+          })
           .select("id")
           .single();
         if (ce || !created) throw new Error("Gagal membuat customer");
@@ -334,7 +357,10 @@ async function handlePenerimaanOrder(
     } else {
       const { data: created, error: ce } = await admin
         .from("customers")
-        .insert({ name: nc.name.trim(), wa_contact: nc.wa_contact?.trim() ?? null })
+        .insert({
+          name: nc.name.trim(),
+          wa_contact: nc.wa_contact?.trim() ?? null,
+        })
         .select("id")
         .single();
       if (ce || !created) throw new Error("Gagal membuat customer");
@@ -355,7 +381,7 @@ async function handlePenerimaanOrder(
       special_notes: special_notes?.trim() ?? null,
       engraved_text: engraved_text?.trim() ?? null,
       delivery_method: delivery_method ?? "pickup_store",
-      order_date: order_date ?? null,
+      order_date: order_date ?? new Date().toISOString().split("T")[0],
       deadline: deadline ?? null,
       total_price: total_price ? Number(total_price) : null,
       dp_amount: dp_amount ? Number(dp_amount) : null,
@@ -393,8 +419,16 @@ async function handlePenerimaanOrder(
   // Optional form_order attachment
   if (form_order_path) {
     await insertAttachments(
-      admin, order.id, "penerimaan_order",
-      [{ file_type: "form_order", file_path: form_order_path, file_name: form_order_name ?? null }],
+      admin,
+      order.id,
+      "penerimaan_order",
+      [
+        {
+          file_type: "form_order",
+          file_path: form_order_path,
+          file_name: form_order_name ?? null,
+        },
+      ],
       userId,
     );
   }
@@ -416,7 +450,11 @@ async function handlePenerimaanOrder(
     customer_id: customerId,
   });
 
-  return { order_id: order.id, order_number: order.order_number, customer_id: customerId };
+  return {
+    order_id: order.id,
+    order_number: order.order_number,
+    customer_id: customerId,
+  };
 }
 
 async function handleMaterialStage(
@@ -427,10 +465,12 @@ async function handleMaterialStage(
   data: Record<string, unknown>,
   extraOrderUpdate?: Record<string, unknown>,
 ) {
-  const docNum = (data as any).work_instruction_number ?? STAGE_WORK_INSTRUCTIONS[stage];
+  const docNum =
+    (data as any).work_instruction_number ?? STAGE_WORK_INSTRUCTIONS[stage];
   const wiId = docNum ? await getWorkInstructionId(admin, docNum) : null;
 
-  const { material_transactions, notes, started_at, ...stageData } = data as Record<string, any>;
+  const { material_transactions, notes, started_at, ...stageData } =
+    data as Record<string, any>;
 
   const srId = await insertStageResult(admin, {
     order_id: orderId,
@@ -443,7 +483,10 @@ async function handleMaterialStage(
   });
 
   await insertMaterialTransactions(
-    admin, orderId, srId, stage,
+    admin,
+    orderId,
+    srId,
+    stage,
     Array.isArray(material_transactions) ? material_transactions : [],
     userId,
   );
@@ -454,7 +497,10 @@ async function handleMaterialStage(
 
   const nextStage = await finalizeStage(admin, orderId, stage, userId);
 
-  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, { order_id: orderId, stage });
+  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
+    order_id: orderId,
+    stage,
+  });
 
   return { stage_result_id: srId, next_stage: nextStage };
 }
@@ -465,10 +511,17 @@ async function handleQc1(
   orderId: string,
   data: Record<string, unknown>,
 ) {
-  const { quality_checklist, certificate_logs, attachments, notes, started_at, ...stageData } =
-    data as Record<string, any>;
+  const {
+    quality_checklist,
+    certificate_logs,
+    attachments,
+    notes,
+    started_at,
+    ...stageData
+  } = data as Record<string, any>;
 
-  const docNum = stageData.work_instruction_number ?? STAGE_WORK_INSTRUCTIONS.qc_1;
+  const docNum =
+    stageData.work_instruction_number ?? STAGE_WORK_INSTRUCTIONS.qc_1;
   const wiId = docNum ? await getWorkInstructionId(admin, docNum) : null;
 
   const srId = await insertStageResult(admin, {
@@ -481,7 +534,13 @@ async function handleQc1(
     started_at: started_at ?? undefined,
   });
 
-  await insertQualityChecklist(admin, orderId, srId, Array.isArray(quality_checklist) ? quality_checklist : [], userId);
+  await insertQualityChecklist(
+    admin,
+    orderId,
+    srId,
+    Array.isArray(quality_checklist) ? quality_checklist : [],
+    userId,
+  );
 
   if (Array.isArray(certificate_logs) && certificate_logs.length > 0) {
     await admin.from("certificate_logs").insert(
@@ -497,10 +556,19 @@ async function handleQc1(
     );
   }
 
-  await insertAttachments(admin, orderId, "qc_1", Array.isArray(attachments) ? attachments : [], userId);
+  await insertAttachments(
+    admin,
+    orderId,
+    "qc_1",
+    Array.isArray(attachments) ? attachments : [],
+    userId,
+  );
 
   const nextStage = await finalizeStage(admin, orderId, "qc_1", userId);
-  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, { order_id: orderId, stage: "qc_1" });
+  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
+    order_id: orderId,
+    stage: "qc_1",
+  });
 
   return { stage_result_id: srId, next_stage: nextStage };
 }
@@ -551,9 +619,19 @@ async function handleKonfirmasiAwal(
   if (status === "approved") {
     await admin
       .from("orders")
-      .update({ current_stage: "finishing", status: "in_progress", updated_at: new Date().toISOString() })
+      .update({
+        current_stage: "finishing",
+        status: "in_progress",
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", orderId);
-    await insertTransition(admin, orderId, "konfirmasi_awal", "finishing", userId);
+    await insertTransition(
+      admin,
+      orderId,
+      "konfirmasi_awal",
+      "finishing",
+      userId,
+    );
   } else if (status === "rejected" || status === "request_changes") {
     await admin
       .from("orders")
@@ -576,19 +654,39 @@ async function handleQc2(
   orderId: string,
   data: Record<string, unknown>,
 ) {
-  const { quality_checklist, attachments, notes, started_at, ...stageData } = data as Record<string, any>;
+  const { quality_checklist, attachments, notes, started_at, ...stageData } =
+    data as Record<string, any>;
 
   const srId = await insertStageResult(admin, {
-    order_id: orderId, user_id: userId, stage: "qc_2",
-    data: stageData, notes: notes ?? null, started_at: started_at ?? undefined,
+    order_id: orderId,
+    user_id: userId,
+    stage: "qc_2",
+    data: stageData,
+    notes: notes ?? null,
+    started_at: started_at ?? undefined,
   });
 
-  await insertQualityChecklist(admin, orderId, srId, Array.isArray(quality_checklist) ? quality_checklist : [], userId);
-  await insertAttachments(admin, orderId, "qc_2", Array.isArray(attachments) ? attachments : [], userId);
+  await insertQualityChecklist(
+    admin,
+    orderId,
+    srId,
+    Array.isArray(quality_checklist) ? quality_checklist : [],
+    userId,
+  );
+  await insertAttachments(
+    admin,
+    orderId,
+    "qc_2",
+    Array.isArray(attachments) ? attachments : [],
+    userId,
+  );
 
   // qc_2 requires supervisor approval
   const nextStage = await finalizeStage(admin, orderId, "qc_2", userId);
-  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, { order_id: orderId, stage: "qc_2" });
+  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
+    order_id: orderId,
+    stage: "qc_2",
+  });
 
   return { stage_result_id: srId, next_stage: nextStage };
 }
@@ -599,19 +697,33 @@ async function handleKelengkapan(
   orderId: string,
   data: Record<string, unknown>,
 ) {
-  const { completeness_checklist, packaging_log, attachments, notes, started_at, ...stageData } =
-    data as Record<string, any>;
+  const {
+    completeness_checklist,
+    packaging_log,
+    attachments,
+    notes,
+    started_at,
+    ...stageData
+  } = data as Record<string, any>;
 
-  const docNum = stageData.work_instruction_number ?? STAGE_WORK_INSTRUCTIONS.kelengkapan;
+  const docNum =
+    stageData.work_instruction_number ?? STAGE_WORK_INSTRUCTIONS.kelengkapan;
   const wiId = docNum ? await getWorkInstructionId(admin, docNum) : null;
 
   const srId = await insertStageResult(admin, {
-    order_id: orderId, user_id: userId, stage: "kelengkapan",
-    data: stageData, notes: notes ?? null, work_instruction_id: wiId,
+    order_id: orderId,
+    user_id: userId,
+    stage: "kelengkapan",
+    data: stageData,
+    notes: notes ?? null,
+    work_instruction_id: wiId,
     started_at: started_at ?? undefined,
   });
 
-  if (Array.isArray(completeness_checklist) && completeness_checklist.length > 0) {
+  if (
+    Array.isArray(completeness_checklist) &&
+    completeness_checklist.length > 0
+  ) {
     await admin.from("completeness_checklist").insert(
       completeness_checklist.map((item: Record<string, any>) => ({
         order_id: orderId,
@@ -635,10 +747,19 @@ async function handleKelengkapan(
     });
   }
 
-  await insertAttachments(admin, orderId, "kelengkapan", Array.isArray(attachments) ? attachments : [], userId);
+  await insertAttachments(
+    admin,
+    orderId,
+    "kelengkapan",
+    Array.isArray(attachments) ? attachments : [],
+    userId,
+  );
 
   const nextStage = await finalizeStage(admin, orderId, "kelengkapan", userId);
-  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, { order_id: orderId, stage: "kelengkapan" });
+  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
+    order_id: orderId,
+    stage: "kelengkapan",
+  });
 
   return { stage_result_id: srId, next_stage: nextStage };
 }
@@ -649,19 +770,39 @@ async function handleQc3(
   orderId: string,
   data: Record<string, unknown>,
 ) {
-  const { quality_checklist, attachments, notes, started_at, ...stageData } = data as Record<string, any>;
+  const { quality_checklist, attachments, notes, started_at, ...stageData } =
+    data as Record<string, any>;
 
   const srId = await insertStageResult(admin, {
-    order_id: orderId, user_id: userId, stage: "qc_3",
-    data: stageData, notes: notes ?? null, started_at: started_at ?? undefined,
+    order_id: orderId,
+    user_id: userId,
+    stage: "qc_3",
+    data: stageData,
+    notes: notes ?? null,
+    started_at: started_at ?? undefined,
   });
 
-  await insertQualityChecklist(admin, orderId, srId, Array.isArray(quality_checklist) ? quality_checklist : [], userId);
-  await insertAttachments(admin, orderId, "qc_3", Array.isArray(attachments) ? attachments : [], userId);
+  await insertQualityChecklist(
+    admin,
+    orderId,
+    srId,
+    Array.isArray(quality_checklist) ? quality_checklist : [],
+    userId,
+  );
+  await insertAttachments(
+    admin,
+    orderId,
+    "qc_3",
+    Array.isArray(attachments) ? attachments : [],
+    userId,
+  );
 
   // qc_3 requires supervisor approval
   const nextStage = await finalizeStage(admin, orderId, "qc_3", userId);
-  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, { order_id: orderId, stage: "qc_3" });
+  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
+    order_id: orderId,
+    stage: "qc_3",
+  });
 
   return { stage_result_id: srId, next_stage: nextStage };
 }
@@ -672,17 +813,33 @@ async function handleLaser(
   orderId: string,
   data: Record<string, unknown>,
 ) {
-  const { attachments, notes, started_at, ...stageData } = data as Record<string, any>;
+  const { attachments, notes, started_at, ...stageData } = data as Record<
+    string,
+    any
+  >;
 
   const srId = await insertStageResult(admin, {
-    order_id: orderId, user_id: userId, stage: "laser",
-    data: stageData, notes: notes ?? null, started_at: started_at ?? undefined,
+    order_id: orderId,
+    user_id: userId,
+    stage: "laser",
+    data: stageData,
+    notes: notes ?? null,
+    started_at: started_at ?? undefined,
   });
 
-  await insertAttachments(admin, orderId, "laser", Array.isArray(attachments) ? attachments : [], userId);
+  await insertAttachments(
+    admin,
+    orderId,
+    "laser",
+    Array.isArray(attachments) ? attachments : [],
+    userId,
+  );
 
   const nextStage = await finalizeStage(admin, orderId, "laser", userId);
-  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, { order_id: orderId, stage: "laser" });
+  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
+    order_id: orderId,
+    stage: "laser",
+  });
 
   return { stage_result_id: srId, next_stage: nextStage };
 }
@@ -693,14 +850,25 @@ async function handlePacking(
   orderId: string,
   data: Record<string, unknown>,
 ) {
-  const { delivery, attachments, notes, started_at, ...stageData } = data as Record<string, any>;
+  const { delivery, attachments, notes, started_at, ...stageData } =
+    data as Record<string, any>;
 
   const srId = await insertStageResult(admin, {
-    order_id: orderId, user_id: userId, stage: "packing",
-    data: stageData, notes: notes ?? null, started_at: started_at ?? undefined,
+    order_id: orderId,
+    user_id: userId,
+    stage: "packing",
+    data: stageData,
+    notes: notes ?? null,
+    started_at: started_at ?? undefined,
   });
 
-  await insertAttachments(admin, orderId, "packing", Array.isArray(attachments) ? attachments : [], userId);
+  await insertAttachments(
+    admin,
+    orderId,
+    "packing",
+    Array.isArray(attachments) ? attachments : [],
+    userId,
+  );
 
   // Create the deliveries record
   if (delivery) {
@@ -718,7 +886,10 @@ async function handlePacking(
   }
 
   const nextStage = await finalizeStage(admin, orderId, "packing", userId);
-  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, { order_id: orderId, stage: "packing" });
+  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
+    order_id: orderId,
+    stage: "packing",
+  });
 
   return { stage_result_id: srId, next_stage: nextStage };
 }
@@ -729,22 +900,38 @@ async function handlePelunasan(
   orderId: string,
   data: Record<string, unknown>,
 ) {
-  const { payments, attachments, notes, started_at, update_total_price, update_dp_amount, ...stageData } =
-    data as Record<string, any>;
+  const {
+    payments,
+    attachments,
+    notes,
+    started_at,
+    update_total_price,
+    update_dp_amount,
+    ...stageData
+  } = data as Record<string, any>;
 
-  const docNum = stageData.work_instruction_number ?? STAGE_WORK_INSTRUCTIONS.pelunasan;
+  const docNum =
+    stageData.work_instruction_number ?? STAGE_WORK_INSTRUCTIONS.pelunasan;
   const wiId = docNum ? await getWorkInstructionId(admin, docNum) : null;
 
   const srId = await insertStageResult(admin, {
-    order_id: orderId, user_id: userId, stage: "pelunasan",
-    data: stageData, notes: notes ?? null, work_instruction_id: wiId,
+    order_id: orderId,
+    user_id: userId,
+    stage: "pelunasan",
+    data: stageData,
+    notes: notes ?? null,
+    work_instruction_id: wiId,
     started_at: started_at ?? undefined,
   });
 
   // Update order price totals if provided
-  const priceUpdate: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (update_total_price != null) priceUpdate.total_price = Number(update_total_price);
-  if (update_dp_amount != null) priceUpdate.dp_amount = Number(update_dp_amount);
+  const priceUpdate: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (update_total_price != null)
+    priceUpdate.total_price = Number(update_total_price);
+  if (update_dp_amount != null)
+    priceUpdate.dp_amount = Number(update_dp_amount);
   if (Object.keys(priceUpdate).length > 1)
     await admin.from("orders").update(priceUpdate).eq("id", orderId);
 
@@ -764,10 +951,19 @@ async function handlePelunasan(
     }
   }
 
-  await insertAttachments(admin, orderId, "pelunasan", Array.isArray(attachments) ? attachments : [], userId);
+  await insertAttachments(
+    admin,
+    orderId,
+    "pelunasan",
+    Array.isArray(attachments) ? attachments : [],
+    userId,
+  );
 
   const nextStage = await finalizeStage(admin, orderId, "pelunasan", userId);
-  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, { order_id: orderId, stage: "pelunasan" });
+  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
+    order_id: orderId,
+    stage: "pelunasan",
+  });
 
   return { stage_result_id: srId, next_stage: nextStage };
 }
@@ -778,12 +974,23 @@ async function handlePengiriman(
   orderId: string,
   data: Record<string, unknown>,
 ) {
-  const { delivery_update, handover, order_update, attachments, notes, started_at, ...stageData } =
-    data as Record<string, any>;
+  const {
+    delivery_update,
+    handover,
+    order_update,
+    attachments,
+    notes,
+    started_at,
+    ...stageData
+  } = data as Record<string, any>;
 
   const srId = await insertStageResult(admin, {
-    order_id: orderId, user_id: userId, stage: "pengiriman",
-    data: stageData, notes: notes ?? null, started_at: started_at ?? undefined,
+    order_id: orderId,
+    user_id: userId,
+    stage: "pengiriman",
+    data: stageData,
+    notes: notes ?? null,
+    started_at: started_at ?? undefined,
   });
 
   // Update delivery record
@@ -798,14 +1005,17 @@ async function handlePengiriman(
       .maybeSingle();
 
     if (delivery) {
-      await admin.from("deliveries").update({
-        status: delivery_update.status ?? "dispatched",
-        tracking_number: delivery_update.tracking_number ?? null,
-        dispatched_at: delivery_update.dispatched_at ?? null,
-        delivered_at: delivery_update.delivered_at ?? null,
-        confirmed_by: userId,
-        updated_at: new Date().toISOString(),
-      }).eq("id", delivery.id);
+      await admin
+        .from("deliveries")
+        .update({
+          status: delivery_update.status ?? "dispatched",
+          tracking_number: delivery_update.tracking_number ?? null,
+          dispatched_at: delivery_update.dispatched_at ?? null,
+          delivered_at: delivery_update.delivered_at ?? null,
+          confirmed_by: userId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", delivery.id);
     }
   }
 
@@ -813,16 +1023,22 @@ async function handlePengiriman(
   if (handover) {
     const attachmentRows = Array.isArray(attachments) ? attachments : [];
     let handoverAttachmentId: string | null = null;
-    const handoverForm = attachmentRows.find((a: Record<string, any>) => a.file_type === "handover_form");
+    const handoverForm = attachmentRows.find(
+      (a: Record<string, any>) => a.file_type === "handover_form",
+    );
     if (handoverForm) {
-      const { data: att } = await admin.from("attachments").insert({
-        order_id: orderId,
-        stage: "pengiriman",
-        file_type: "handover_form",
-        file_path: handoverForm.file_path,
-        file_name: handoverForm.file_name ?? null,
-        uploaded_by: userId,
-      }).select("id").single();
+      const { data: att } = await admin
+        .from("attachments")
+        .insert({
+          order_id: orderId,
+          stage: "pengiriman",
+          file_type: "handover_form",
+          file_path: handoverForm.file_path,
+          file_name: handoverForm.file_name ?? null,
+          uploaded_by: userId,
+        })
+        .select("id")
+        .single();
       handoverAttachmentId = att?.id ?? null;
     }
 
@@ -837,29 +1053,41 @@ async function handlePengiriman(
   }
 
   // Remaining attachments
-  const otherAttachments = (Array.isArray(attachments) ? attachments : []).filter(
-    (a: Record<string, any>) => a.file_type !== "handover_form",
+  const otherAttachments = (
+    Array.isArray(attachments) ? attachments : []
+  ).filter((a: Record<string, any>) => a.file_type !== "handover_form");
+  await insertAttachments(
+    admin,
+    orderId,
+    "pengiriman",
+    otherAttachments,
+    userId,
   );
-  await insertAttachments(admin, orderId, "pengiriman", otherAttachments, userId);
 
   // Update order completion fields
   const now = new Date().toISOString();
   const ou = order_update ?? {};
-  await admin.from("orders").update({
-    current_stage: "selesai",
-    status: "completed",
-    completed_at: now,
-    store_arrival_date: (ou as any).store_arrival_date ?? null,
-    customer_notified_at: (ou as any).customer_notified_at ?? null,
-    picked_up_at: (ou as any).picked_up_at ?? null,
-    updated_at: now,
-  }).eq("id", orderId);
+  await admin
+    .from("orders")
+    .update({
+      current_stage: "selesai",
+      status: "completed",
+      completed_at: now,
+      store_arrival_date: (ou as any).store_arrival_date ?? null,
+      customer_notified_at: (ou as any).customer_notified_at ?? null,
+      picked_up_at: (ou as any).picked_up_at ?? null,
+      updated_at: now,
+    })
+    .eq("id", orderId);
 
   // Two transitions: pelunasan → pengiriman already done by finalizeStage of pelunasan
   // Now log pengiriman → selesai
   await insertTransition(admin, orderId, "pengiriman", "selesai", userId);
 
-  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, { order_id: orderId, stage: "pengiriman" });
+  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
+    order_id: orderId,
+    stage: "pengiriman",
+  });
 
   return { stage_result_id: srId, next_stage: "selesai" };
 }
@@ -869,7 +1097,10 @@ async function handlePengiriman(
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user: authUser },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !authUser)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -877,28 +1108,40 @@ export async function POST(request: Request) {
 
     const { order_id: rawOrderId, stage, data } = await request.json();
     if (!stage || !data)
-      return NextResponse.json({ error: "stage dan data wajib diisi" }, { status: 400 });
+      return NextResponse.json(
+        { error: "stage dan data wajib diisi" },
+        { status: 400 },
+      );
 
     const orderId = rawOrderId as string | null;
 
     // penerimaan_order doesn't need an existing order
     if (!orderId && stage !== "penerimaan_order")
-      return NextResponse.json({ error: "order_id wajib diisi" }, { status: 400 });
+      return NextResponse.json(
+        { error: "order_id wajib diisi" },
+        { status: 400 },
+      );
 
     // Fetch user profile
     const { data: userData } = await admin
       .from("users")
-      .select("id, full_name, role:roles!users_role_id_fkey(id, name, role_group, allowed_stages, permissions)")
+      .select(
+        "id, full_name, role:roles!users_role_id_fkey(id, name, role_group, allowed_stages, permissions)",
+      )
       .eq("id", authUser.id)
       .is("deleted_at", null)
       .single();
 
     if (!userData)
-      return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 });
+      return NextResponse.json(
+        { error: "User tidak ditemukan" },
+        { status: 404 },
+      );
 
     const roleName: string = (userData.role as any)?.name ?? "";
     const roleGroup: string = (userData.role as any)?.role_group ?? "";
-    const allowedStages: string[] = (userData.role as any)?.allowed_stages ?? [];
+    const allowedStages: string[] =
+      (userData.role as any)?.allowed_stages ?? [];
     const roleStages = ROLE_STAGE_ACCESS[roleName];
     const workshopGroups = ["production", "operational", "management"];
 
@@ -911,7 +1154,10 @@ export async function POST(request: Request) {
           : workshopGroups.includes(roleGroup));
 
     if (!hasAccess)
-      return NextResponse.json({ error: "Anda tidak memiliki akses ke tahap ini" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Anda tidak memiliki akses ke tahap ini" },
+        { status: 403 },
+      );
 
     // For non-penerimaan stages, validate order state
     if (orderId && stage !== "penerimaan_order") {
@@ -923,14 +1169,22 @@ export async function POST(request: Request) {
         .single();
 
       if (oe || !order)
-        return NextResponse.json({ error: "Order tidak ditemukan" }, { status: 404 });
+        return NextResponse.json(
+          { error: "Order tidak ditemukan" },
+          { status: 404 },
+        );
 
       if (order.status === "completed" || order.status === "cancelled")
-        return NextResponse.json({ error: "Order sudah selesai atau dibatalkan" }, { status: 422 });
+        return NextResponse.json(
+          { error: "Order sudah selesai atau dibatalkan" },
+          { status: 422 },
+        );
 
       if (order.current_stage !== stage)
         return NextResponse.json(
-          { error: `Order saat ini di tahap '${order.current_stage}', bukan '${stage}'` },
+          {
+            error: `Order saat ini di tahap '${order.current_stage}', bukan '${stage}'`,
+          },
           { status: 409 },
         );
     }
@@ -949,7 +1203,11 @@ export async function POST(request: Request) {
       case "pemolesan":
       case "finishing":
         result = await handleMaterialStage(
-          admin, authUser.id, orderId!, stage, data,
+          admin,
+          authUser.id,
+          orderId!,
+          stage,
+          data,
           stage === "finishing" && (data as any).rhodium_specification
             ? { rhodium_specification: (data as any).rhodium_specification }
             : undefined,
@@ -993,7 +1251,10 @@ export async function POST(request: Request) {
         break;
 
       default:
-        return NextResponse.json({ error: `Stage '${stage}' tidak dikenali` }, { status: 400 });
+        return NextResponse.json(
+          { error: `Stage '${stage}' tidak dikenali` },
+          { status: 400 },
+        );
     }
 
     const waitingApproval = APPROVAL_REQUIRED.has(stage);
