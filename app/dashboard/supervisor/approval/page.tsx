@@ -60,6 +60,29 @@ function formatDataValue(value: unknown): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "boolean") return value ? "Ya" : "Tidak";
   if (typeof value === "number") return value.toLocaleString("id-ID");
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "—";
+    // Summarise array of objects (e.g. material_transactions)
+    if (typeof value[0] === "object" && value[0] !== null) {
+      return value
+        .map((item: any) => {
+          const parts: string[] = [];
+          if (item.transaction_type) parts.push(item.transaction_type);
+          if (item.material_type)    parts.push(item.material_type);
+          if (item.weight_grams)     parts.push(`${item.weight_grams}g`);
+          if (item.karat)            parts.push(`${item.karat}K`);
+          return parts.length ? parts.join(" ") : JSON.stringify(item);
+        })
+        .join(" | ");
+    }
+    return value.join(", ");
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== null && v !== undefined && v !== "")
+      .map(([k, v]) => `${humanizeKey(k)}: ${typeof v === "boolean" ? (v ? "Ya" : "Tidak") : String(v)}`);
+    return entries.length ? entries.join(", ") : "—";
+  }
   return String(value);
 }
 
@@ -337,7 +360,7 @@ export default function SupervisorApprovalPage() {
       if (!res.ok) { router.push("/workshop/login"); return; }
       const json = await res.json();
       const u = json.data;
-      if (u.role.name !== "supervisor" && u.role.name !== "superadmin") {
+      if (u.role.name !== "superadmin" && u.role.role_group !== "management") {
         router.push("/workshop/login");
         return;
       }
@@ -401,7 +424,7 @@ export default function SupervisorApprovalPage() {
           order_id: orderId,
           stage,
           action: "reject",
-          notes,
+          remarks: notes,
         }),
       });
       const json = await res.json();
