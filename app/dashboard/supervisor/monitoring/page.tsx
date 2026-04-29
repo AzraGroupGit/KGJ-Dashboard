@@ -33,6 +33,7 @@ interface OrderRow {
   last_worker: string | null;
   last_submission_at: string | null;
   hours_at_stage: number | null;
+  last_stage: string | null;
 }
 
 interface MonitoringStats {
@@ -55,6 +56,14 @@ const STAGE_COLORS: Record<string, string> = {
   operational: "bg-blue-100 text-blue-800 border-blue-200",
   other: "bg-slate-100 text-slate-700 border-slate-200",
 };
+
+const APPROVAL_STAGES = [
+  "approval_penerimaan_order",
+  "approval_qc_1",
+  "approval_qc_2",
+  "approval_qc_3",
+  "approval_pelunasan",
+];
 
 const DEADLINE_WARN_DAYS = 2;
 
@@ -123,7 +132,9 @@ function StatCard({
   };
   const t = toneMap[tone];
   return (
-    <div className={`rounded-lg border border-slate-200 bg-white p-3 sm:p-5${className ? ` ${className}` : ""}`}>
+    <div
+      className={`rounded-lg border border-slate-200 bg-white p-3 sm:p-5${className ? ` ${className}` : ""}`}
+    >
       <div className="flex items-start justify-between">
         <div className="min-w-0">
           <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -150,6 +161,523 @@ function StatCard({
 
 type FilterTab = "all" | "production" | "operational" | "pending";
 
+// ── Order Detail Popup ───────────────────────────────────────────────────────
+
+interface OrderDetail {
+  order: {
+    id: string;
+    order_number: string;
+    product_name: string;
+    target_weight: number;
+    target_karat: number;
+    ring_size: string | null;
+    model_description: string | null;
+    special_notes: string | null;
+    engraved_text: string | null;
+    delivery_method: string;
+    order_date: string;
+    deadline: string | null;
+    total_price: number | null;
+    dp_amount: number | null;
+    rhodium_specification: string | null;
+    current_stage: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+    ring_identity_number: string | null;
+    customer: {
+      name: string | null;
+      phone: string | null;
+      wa_contact: string | null;
+      email: string | null;
+      address: string | null;
+    } | null;
+  };
+  gemstones: Array<{
+    gemstone_type: string;
+    shape: string | null;
+    weight_ct: number | null;
+    weight_grams: number | null;
+    clarity: string | null;
+    color: string | null;
+    quantity: number;
+    source: string;
+    certificate_no: string | null;
+  }>;
+  transitions: Array<{
+    from_stage: string | null;
+    to_stage: string;
+    reason: string | null;
+    transitioned_at: string;
+  }>;
+  stageResults: Array<{
+    id: string;
+    stage: string;
+    attempt_number: number;
+    data: Record<string, unknown>;
+    notes: string | null;
+    started_at: string;
+    finished_at: string;
+    users: { full_name: string } | null;
+  }>;
+  payments: Array<{
+    type: string;
+    amount: number;
+    method: string;
+    reference_no: string | null;
+    paid_at: string;
+  }>;
+}
+
+const STAGE_LABELS_DETAIL: Record<string, string> = {
+  penerimaan_order: "Penerimaan Order",
+  approval_penerimaan_order: "Approval Penerimaan",
+  racik_bahan: "Racik Bahan",
+  lebur_bahan: "Lebur Bahan",
+  pembentukan_cincin: "Pembentukan Cincin",
+  pemasangan_permata: "Pemasangan Permata",
+  pemolesan: "Pemolesan",
+  qc_1: "QC 1",
+  approval_qc_1: "Approval QC 1",
+  finishing: "Finishing",
+  laser: "Laser",
+  qc_2: "QC 2",
+  approval_qc_2: "Approval QC 2",
+  kelengkapan: "Kelengkapan",
+  qc_3: "QC 3",
+  approval_qc_3: "Approval QC 3",
+  packing: "Packing",
+  pelunasan: "Pelunasan",
+  approval_pelunasan: "Approval Pelunasan",
+  pengiriman: "Pengiriman",
+  selesai: "Selesai",
+};
+
+function OrderDetailPopup({
+  orderId,
+  orderNumber,
+  onClose,
+}: {
+  orderId: string;
+  orderNumber: string;
+  onClose: () => void;
+}) {
+  const [detail, setDetail] = useState<OrderDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"info" | "stages" | "payments">("info");
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `/api/supervisor/order-detail?order_id=${orderId}`,
+        );
+        if (!res.ok) throw new Error("Gagal memuat detail");
+        const json = await res.json();
+        setDetail(json.data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Gagal memuat");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [orderId]);
+
+  const formatCurrency = (val: number | null) =>
+    val ? `Rp ${val.toLocaleString("id-ID")}` : "—";
+
+  const formatDate = (iso: string | null) =>
+    iso
+      ? new Date(iso).toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : "—";
+
+  const formatDateTime = (iso: string) =>
+    new Date(iso).toLocaleString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-xl bg-white shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-5 py-4 rounded-t-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="font-mono text-xs font-semibold text-slate-500">
+                {orderNumber}
+              </span>
+              <h3 className="text-sm font-semibold text-slate-800 mt-0.5">
+                {detail?.order.product_name || "Memuat..."}
+              </h3>
+            </div>
+            <button
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                className="h-5 w-5"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw className="h-6 w-6 animate-spin text-slate-300" />
+          </div>
+        ) : error ? (
+          <div className="py-12 text-center">
+            <AlertTriangle className="mx-auto h-8 w-8 text-rose-400 mb-2" />
+            <p className="text-sm text-slate-600">{error}</p>
+          </div>
+        ) : detail ? (
+          <>
+            {/* Tabs */}
+            <div className="flex border-b border-slate-100 px-5">
+              {(["info", "stages", "payments"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`px-3 py-2.5 text-xs font-medium border-b-2 transition-colors ${
+                    tab === t
+                      ? "border-slate-800 text-slate-900"
+                      : "border-transparent text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {t === "info"
+                    ? "Info Order"
+                    : t === "stages"
+                      ? "Riwayat Tahap"
+                      : "Pembayaran"}
+                </button>
+              ))}
+            </div>
+
+            <div className="p-5">
+              {/* ── INFO TAB ── */}
+              {tab === "info" && (
+                <div className="space-y-4">
+                  {/* Customer */}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                      Pelanggan
+                    </p>
+                    <div className="rounded-lg bg-slate-50 p-3 space-y-1">
+                      <p className="text-sm font-medium text-slate-800">
+                        {detail.order.customer?.name || "—"}
+                      </p>
+                      {detail.order.customer?.phone && (
+                        <p className="text-xs text-slate-500">
+                          📞 {detail.order.customer.phone}
+                        </p>
+                      )}
+                      {detail.order.customer?.wa_contact && (
+                        <p className="text-xs text-slate-500">
+                          💬 WA: {detail.order.customer.wa_contact}
+                        </p>
+                      )}
+                      {detail.order.customer?.email && (
+                        <p className="text-xs text-slate-500">
+                          📧 {detail.order.customer.email}
+                        </p>
+                      )}
+                      {detail.order.customer?.address && (
+                        <p className="text-xs text-slate-500">
+                          📍 {detail.order.customer.address}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Specs */}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                      Spesifikasi
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-slate-50 rounded p-2">
+                        <span className="text-slate-400">Target Berat</span>
+                        <p className="font-medium text-slate-700">
+                          {detail.order.target_weight}g
+                        </p>
+                      </div>
+                      <div className="bg-slate-50 rounded p-2">
+                        <span className="text-slate-400">Target Karat</span>
+                        <p className="font-medium text-slate-700">
+                          {detail.order.target_karat}K
+                        </p>
+                      </div>
+                      <div className="bg-slate-50 rounded p-2">
+                        <span className="text-slate-400">Ukuran Cincin</span>
+                        <p className="font-medium text-slate-700">
+                          {detail.order.ring_size || "—"}
+                        </p>
+                      </div>
+                      <div className="bg-slate-50 rounded p-2">
+                        <span className="text-slate-400">Delivery</span>
+                        <p className="font-medium text-slate-700">
+                          {detail.order.delivery_method}
+                        </p>
+                      </div>
+                    </div>
+                    {detail.order.model_description && (
+                      <div className="mt-2 bg-slate-50 rounded p-2 text-xs">
+                        <span className="text-slate-400">Deskripsi Model</span>
+                        <p className="font-medium text-slate-700 mt-0.5">
+                          {detail.order.model_description}
+                        </p>
+                      </div>
+                    )}
+                    {detail.order.engraved_text && (
+                      <div className="mt-2 bg-slate-50 rounded p-2 text-xs">
+                        <span className="text-slate-400">Teks Ukiran</span>
+                        <p className="font-medium text-slate-700 mt-0.5 font-mono">
+                          {detail.order.engraved_text}
+                        </p>
+                      </div>
+                    )}
+                    {detail.order.special_notes && (
+                      <div className="mt-2 bg-amber-50 rounded p-2 text-xs border border-amber-100">
+                        <span className="text-amber-600">Catatan Khusus</span>
+                        <p className="font-medium text-slate-700 mt-0.5">
+                          {detail.order.special_notes}
+                        </p>
+                      </div>
+                    )}
+                    {detail.order.ring_identity_number && (
+                      <div className="mt-2 bg-slate-50 rounded p-2 text-xs">
+                        <span className="text-slate-400">
+                          No. Identitas Cincin
+                        </span>
+                        <p className="font-medium text-slate-700 mt-0.5 font-mono">
+                          {detail.order.ring_identity_number}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Gemstones */}
+                  {detail.gemstones.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                        Batu Permata ({detail.gemstones.length})
+                      </p>
+                      <div className="space-y-2">
+                        {detail.gemstones.map((g, i) => (
+                          <div
+                            key={i}
+                            className="rounded-lg bg-purple-50 border border-purple-100 p-2.5 text-xs"
+                          >
+                            <p className="font-medium text-slate-700">
+                              {g.gemstone_type} — {g.shape || "—"} ×{" "}
+                              {g.quantity}
+                            </p>
+                            <p className="text-slate-500 mt-0.5">
+                              {g.weight_ct ? `${g.weight_ct}ct` : ""}
+                              {g.weight_grams ? ` (${g.weight_grams}g)` : ""}
+                              {g.clarity ? ` · ${g.clarity}` : ""}
+                              {g.color ? ` · ${g.color}` : ""}
+                            </p>
+                            <p className="text-slate-400 mt-0.5">
+                              Sumber: {g.source} · Sertifikat:{" "}
+                              {g.certificate_no || "—"}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Price */}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                      Harga
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-slate-50 rounded p-2">
+                        <span className="text-slate-400">Total Harga</span>
+                        <p className="font-semibold text-slate-700">
+                          {formatCurrency(detail.order.total_price)}
+                        </p>
+                      </div>
+                      <div className="bg-slate-50 rounded p-2">
+                        <span className="text-slate-400">DP</span>
+                        <p className="font-semibold text-slate-700">
+                          {formatCurrency(detail.order.dp_amount)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dates */}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                      Tanggal
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-slate-50 rounded p-2">
+                        <span className="text-slate-400">Order</span>
+                        <p className="font-medium text-slate-700">
+                          {formatDate(detail.order.order_date)}
+                        </p>
+                      </div>
+                      <div className="bg-slate-50 rounded p-2">
+                        <span className="text-slate-400">Deadline</span>
+                        <p
+                          className={`font-medium ${detail.order.deadline && new Date(detail.order.deadline) < new Date() ? "text-rose-600" : "text-slate-700"}`}
+                        >
+                          {formatDate(detail.order.deadline)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STAGES TAB ── */}
+              {tab === "stages" && (
+                <div className="space-y-3">
+                  {/* Stage history timeline */}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-3">
+                      Riwayat Perpindahan Tahap
+                    </p>
+                    <div className="space-y-0">
+                      {detail.transitions.map((t, i) => (
+                        <div key={i} className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <div
+                              className={`h-2.5 w-2.5 rounded-full border-2 ${i === 0 ? "bg-slate-800 border-slate-800" : "bg-white border-slate-300"}`}
+                            />
+                            {i < detail.transitions.length - 1 && (
+                              <div className="w-px flex-1 bg-slate-200 my-0.5" />
+                            )}
+                          </div>
+                          <div className="pb-3 flex-1 min-w-0">
+                            <p className="text-xs font-medium text-slate-700">
+                              {STAGE_LABELS_DETAIL[t.to_stage] || t.to_stage}
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                              {formatDateTime(t.transitioned_at)}
+                            </p>
+                            {t.reason && (
+                              <p className="text-[11px] text-slate-500 mt-0.5">
+                                {t.reason}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Stage results */}
+                  {detail.stageResults.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2 mt-4">
+                        Submission Terakhir
+                      </p>
+                      <div className="space-y-2">
+                        {detail.stageResults.map((sr) => (
+                          <div
+                            key={sr.id}
+                            className="rounded-lg border border-slate-200 p-2.5 text-xs"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-slate-700">
+                                {STAGE_LABELS_DETAIL[sr.stage] || sr.stage}
+                              </span>
+                              {sr.attempt_number > 1 && (
+                                <span className="text-[10px] bg-rose-100 text-rose-700 rounded px-1.5 py-0.5">
+                                  Percobaan {sr.attempt_number}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-slate-400 mt-0.5">
+                              {sr.users?.full_name || "—"} ·{" "}
+                              {formatDateTime(sr.finished_at)}
+                            </p>
+                            {sr.notes && (
+                              <p className="text-slate-500 mt-1 italic">
+                                "{sr.notes}"
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── PAYMENTS TAB ── */}
+              {tab === "payments" && (
+                <div className="space-y-3">
+                  {detail.payments.length === 0 ? (
+                    <p className="text-sm text-slate-400 text-center py-8">
+                      Belum ada pembayaran tercatat
+                    </p>
+                  ) : (
+                    detail.payments.map((p, i) => (
+                      <div
+                        key={i}
+                        className="rounded-lg border border-slate-200 p-3 text-xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${p.type === "dp" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}
+                          >
+                            {p.type === "dp"
+                              ? "DP"
+                              : p.type === "pelunasan"
+                                ? "Pelunasan"
+                                : p.type}
+                          </span>
+                          <span className="text-slate-400">
+                            {formatDate(p.paid_at)}
+                          </span>
+                        </div>
+                        <p className="text-lg font-semibold text-slate-800 mt-1">
+                          {formatCurrency(p.amount)}
+                        </p>
+                        <p className="text-slate-500 mt-0.5">
+                          {p.method}{" "}
+                          {p.reference_no ? `· ${p.reference_no}` : ""}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SupervisorMonitoringPage() {
@@ -162,6 +690,8 @@ export default function SupervisorMonitoringPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [userEmail, setUserEmail] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
+  const [detailOrderNumber, setDetailOrderNumber] = useState<string>("");
 
   // Load user identity
   useEffect(() => {
@@ -208,7 +738,9 @@ export default function SupervisorMonitoringPage() {
     if (filter === "all") return true;
     if (filter === "production") return o.stage_group === "production";
     if (filter === "operational") return o.stage_group === "operational";
-    if (filter === "pending") return !o.last_worker; // no submission yet at current stage
+    if (filter === "pending") {
+      return APPROVAL_STAGES.includes(o.current_stage);
+    }
     return true;
   });
 
@@ -227,7 +759,7 @@ export default function SupervisorMonitoringPage() {
     {
       key: "pending",
       label: "Perlu Tindakan",
-      count: data?.orders.filter((o) => !o.last_worker).length,
+      count: data?.stats.pendingApprovals,
     },
   ];
 
@@ -402,9 +934,13 @@ export default function SupervisorMonitoringPage() {
                         order.hours_at_stage !== null &&
                         order.hours_at_stage > 24;
                       return (
-                        <div
+                        <button
                           key={order.id}
-                          className="rounded-lg border border-slate-200 bg-white p-3 sm:p-4 active:bg-slate-50 transition-colors"
+                          onClick={() => {
+                            setDetailOrderId(order.id);
+                            setDetailOrderNumber(order.order_number);
+                          }}
+                          className="w-full text-left rounded-lg border border-slate-200 bg-white p-3 sm:p-4 active:bg-slate-50 transition-colors hover:border-slate-300"
                         >
                           {/* Header */}
                           <div className="flex items-start justify-between gap-2 mb-1.5">
@@ -440,11 +976,13 @@ export default function SupervisorMonitoringPage() {
                                 : "Belum ada submission"}
                             </span>
                             <div className="flex items-center gap-2">
-                              {/* Stuck indicator */}
-                              {isStuck && (
-                                <span className="inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-medium text-rose-600">
-                                  <Clock className="h-3 w-3" />
-                                  {hoursLabel}
+                              {/* Stage + duration — always visible */}
+                              {hoursLabel !== "—" && (
+                                <span
+                                  className={`inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-medium ${isStuck ? "text-rose-600" : "text-slate-400"}`}
+                                >
+                                  {isStuck && <Clock className="h-3 w-3" />}
+                                  {order.stage_label} · {hoursLabel}
                                 </span>
                               )}
                               {/* Deadline */}
@@ -462,7 +1000,7 @@ export default function SupervisorMonitoringPage() {
                               </span>
                             </div>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -509,7 +1047,11 @@ export default function SupervisorMonitoringPage() {
                             return (
                               <tr
                                 key={order.id}
-                                className="hover:bg-slate-50/60 transition-colors"
+                                onClick={() => {
+                                  setDetailOrderId(order.id);
+                                  setDetailOrderNumber(order.order_number);
+                                }}
+                                className="hover:bg-slate-50/60 transition-colors cursor-pointer"
                               >
                                 <td className="px-4 py-3">
                                   <span className="font-mono text-xs font-semibold text-slate-800">
@@ -554,18 +1096,29 @@ export default function SupervisorMonitoringPage() {
                                   )}
                                 </td>
                                 <td className="px-4 py-3 hidden lg:table-cell">
-                                  <span
-                                    className={`text-sm font-medium ${
-                                      isStuck
-                                        ? "text-rose-600"
-                                        : "text-slate-600"
-                                    }`}
-                                  >
-                                    {isStuck && (
-                                      <Clock className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
-                                    )}
-                                    {hoursLabel}
-                                  </span>
+                                  {hoursLabel !== "—" ? (
+                                    <div>
+                                      <span
+                                        className={`text-sm font-medium ${
+                                          isStuck
+                                            ? "text-rose-600"
+                                            : "text-slate-600"
+                                        }`}
+                                      >
+                                        {isStuck && (
+                                          <Clock className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+                                        )}
+                                        {hoursLabel}
+                                      </span>
+                                      <p className="text-[11px] text-slate-400 mt-0.5">
+                                        {order.stage_label}
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-slate-300">
+                                      —
+                                    </span>
+                                  )}
                                 </td>
                                 <td className="px-4 py-3 hidden lg:table-cell">
                                   <span
@@ -593,6 +1146,14 @@ export default function SupervisorMonitoringPage() {
             </div>
           )}
         </main>
+        {/* Order Detail Popup */}
+        {detailOrderId && (
+          <OrderDetailPopup
+            orderId={detailOrderId}
+            orderNumber={detailOrderNumber}
+            onClose={() => setDetailOrderId(null)}
+          />
+        )}
       </div>
     </div>
   );

@@ -43,6 +43,374 @@ type ActionState =
   | { type: "loading" }
   | { type: "done"; result: "approved" | "rejected"; message: string };
 
+// ── Stage Verification Guidelines + Real Data Display ────────────────────────
+
+function StageInfoPopup({
+  stage,
+  orderData,
+  stageData,
+  onClose,
+}: {
+  stage: string;
+  orderData: {
+    order_number: string;
+    product_name: string;
+    customer_name: string;
+  };
+  stageData: Record<string, unknown> | null;
+  onClose: () => void;
+}) {
+  // Define what to check per stage based on what the worker actually submitted
+  const getStageGuidelines = (): {
+    label: string;
+    detail: string;
+    dataKey?: string;
+    dataValue?: unknown;
+  }[] => {
+    const d = stageData ?? {};
+
+    switch (stage) {
+      case "approval_penerimaan_order":
+        // For penerimaan_order, data comes from the orders table, not stage_results
+        return [
+          {
+            label: "Nama Produk",
+            detail: "Pastikan nama produk sudah jelas dan spesifik.",
+            dataKey: "product_name",
+            dataValue: orderData.product_name,
+          },
+          {
+            label: "Nama Pelanggan",
+            detail:
+              "Pastikan data pelanggan sudah lengkap (nama, telepon, alamat).",
+            dataKey: "customer_name",
+            dataValue: orderData.customer_name,
+          },
+          {
+            label: "Target Berat",
+            detail:
+              "Target berat dalam gram harus realistis untuk jenis produk.",
+            dataKey: "target_weight",
+            dataValue: d.target_weight,
+          },
+          {
+            label: "Target Karat",
+            detail: "Target karat (0-24K) sesuai permintaan customer.",
+            dataKey: "target_karat",
+            dataValue: d.target_karat,
+          },
+          {
+            label: "Ukuran Cincin",
+            detail: "Ukuran cincin sudah dicatat dengan benar (jika ada).",
+            dataKey: "ring_size",
+            dataValue: d.ring_size,
+          },
+          {
+            label: "Deskripsi Model",
+            detail: "Deskripsi cukup detail untuk tim produksi memahami.",
+            dataKey: "model_description",
+            dataValue: d.model_description,
+          },
+          {
+            label: "Teks Ukiran",
+            detail: "Pastikan tidak ada typo pada teks ukiran (jika ada).",
+            dataKey: "engraved_text",
+            dataValue: d.engraved_text,
+          },
+          {
+            label: "Metode Pengambilan",
+            detail: "Metode delivery sudah ditentukan dengan benar.",
+            dataKey: "delivery_method",
+            dataValue: d.delivery_method,
+          },
+          {
+            label: "Total Harga & DP",
+            detail: "Total harga dan DP masuk akal. DP harus sudah dibayar.",
+            dataKey: "total_price",
+            dataValue: d.total_price
+              ? `Rp ${Number(d.total_price).toLocaleString("id-ID")}`
+              : null,
+          },
+          {
+            label: "Batu Permata",
+            detail:
+              "Jika ada batu, spesifikasi harus lengkap (jenis, berat, clarity, dll).",
+            dataKey: "gemstone_list",
+            dataValue: Array.isArray(d.gemstone_list)
+              ? `${(d.gemstone_list as any[]).length} batu`
+              : null,
+          },
+        ];
+
+      case "approval_qc_1":
+        return [
+          {
+            label: "Inspeksi Fisik Berlian/Batu",
+            detail: "Semua batu harus lolos inspeksi fisik.",
+            dataKey: "physical_diamond_inspection",
+            dataValue: getChecklistValue(d, "physical_diamond_inspection"),
+          },
+          {
+            label: "Kesesuaian Sertifikat",
+            detail: "Sertifikat harus sesuai dengan batu yang dipasang.",
+            dataKey: "certificate_match",
+            dataValue: getChecklistValue(d, "certificate_match"),
+          },
+          {
+            label: "Kesesuaian Desain",
+            detail: "Desain akhir harus sesuai dengan order awal.",
+            dataKey: "design_match",
+            dataValue: getChecklistValue(d, "design_match"),
+          },
+          {
+            label: "Berat Minimum",
+            detail: "Berat harus ≥ 0.2g dari target.",
+            dataKey: "minimum_weight_requirement",
+            dataValue: getChecklistValue(d, "minimum_weight_requirement"),
+          },
+          {
+            label: "Selisih Berat OK",
+            detail: "Weight variance dalam batas toleransi.",
+            dataKey: "weight_variance_met",
+            dataValue: d.weight_variance_met,
+          },
+          {
+            label: "Foto QC 1",
+            detail: "4 foto wajib: depan, samping, atas, dengan penggaris.",
+            dataKey: "attachments",
+            dataValue: Array.isArray(d.attachments)
+              ? `${(d.attachments as any[]).length} foto`
+              : null,
+          },
+          {
+            label: "Sertifikat Batu",
+            detail: "Semua sertifikat batu sudah dicatat.",
+            dataKey: "certificate_logs",
+            dataValue: Array.isArray(d.certificate_logs)
+              ? `${(d.certificate_logs as any[]).length} sertifikat`
+              : null,
+          },
+        ];
+
+      case "approval_qc_2":
+        return [
+          {
+            label: "Kualitas Laser/Ukiran",
+            detail: "Hasil laser harus bersih dan terbaca.",
+            dataKey: "laser_quality",
+            dataValue: getChecklistValue(d, "laser_quality"),
+          },
+          {
+            label: "Kualitas Finishing",
+            detail: "Rhodium rata, tidak ada bercak.",
+            dataKey: "finishing_quality",
+            dataValue: getChecklistValue(d, "finishing_quality"),
+          },
+          {
+            label: "Verifikasi Teks Ukiran",
+            detail: "Teks ukiran sesuai order (cek ejaan!).",
+            dataKey: "engraving_verified",
+            dataValue: getChecklistValue(d, "engraving_verified"),
+          },
+          {
+            label: "Nomor Identitas Cincin",
+            detail: "Ring identity number terverifikasi.",
+            dataKey: "identity_number_verified",
+            dataValue: getChecklistValue(d, "identity_number_verified"),
+          },
+          {
+            label: "Kesesuaian Bentuk",
+            detail: "Bentuk akhir sesuai order.",
+            dataKey: "shape_match",
+            dataValue: getChecklistValue(d, "shape_match"),
+          },
+          {
+            label: "Label Berat Final",
+            detail: "Label berat final sudah terpasang.",
+            dataKey: "final_weight_label",
+            dataValue: getChecklistValue(d, "final_weight_label"),
+          },
+          {
+            label: "Penyesuaian Berat Batu",
+            detail: "Berat batu disesuaikan jika > 200mg.",
+            dataKey: "stone_weight_adjusted",
+            dataValue: getChecklistValue(d, "stone_weight_adjusted"),
+          },
+          {
+            label: "Nilai Penyesuaian Berat",
+            detail: "Nilai adjustment jika ada.",
+            dataKey: "weight_adjustment",
+            dataValue: d.weight_adjustment ? `${d.weight_adjustment}g` : null,
+          },
+          {
+            label: "Label Berat Final Dicetak",
+            detail: "Konfirmasi label sudah dicetak.",
+            dataKey: "final_weight_label_printed",
+            dataValue: d.final_weight_label_printed,
+          },
+          {
+            label: "Foto QC 2",
+            detail: "Foto final dan custom (jika ada).",
+            dataKey: "attachments",
+            dataValue: Array.isArray(d.attachments)
+              ? `${(d.attachments as any[]).length} foto`
+              : null,
+          },
+        ];
+
+      case "approval_qc_3":
+        return [
+          {
+            label: "Kualitas Produk Final",
+            detail: "Produk akhir harus sempurna.",
+            dataKey: "final_product_quality",
+            dataValue: getChecklistValue(d, "final_product_quality"),
+          },
+          {
+            label: "Kelengkapan Dokumen",
+            detail: "Semua dokumen harus lengkap.",
+            dataKey: "kelengkapan_complete",
+            dataValue: getChecklistValue(d, "kelengkapan_complete"),
+          },
+          {
+            label: "Foto Produk Jadi",
+            detail: "Foto final harus jelas.",
+            dataKey: "attachments",
+            dataValue: Array.isArray(d.attachments)
+              ? `${(d.attachments as any[]).length} foto`
+              : null,
+          },
+        ];
+
+      case "approval_pelunasan":
+        return [
+          {
+            label: "Total Harga Final",
+            detail: "Pastikan total harga sudah benar.",
+            dataKey: "update_total_price",
+            dataValue: d.update_total_price
+              ? `Rp ${Number(d.update_total_price).toLocaleString("id-ID")}`
+              : null,
+          },
+          {
+            label: "DP Sebelumnya",
+            detail: "DP yang sudah dibayar sebelumnya.",
+            dataKey: "update_dp_amount",
+            dataValue: d.update_dp_amount
+              ? `Rp ${Number(d.update_dp_amount).toLocaleString("id-ID")}`
+              : null,
+          },
+          {
+            label: "Pembayaran",
+            detail: "Bukti pembayaran harus jelas dan valid.",
+            dataKey: "payments",
+            dataValue: Array.isArray(d.payments)
+              ? `${(d.payments as any[]).length} pembayaran`
+              : null,
+          },
+          {
+            label: "Bukti Pembayaran",
+            detail: "File bukti pembayaran sudah diupload.",
+            dataKey: "attachments",
+            dataValue: Array.isArray(d.attachments)
+              ? `${(d.attachments as any[]).length} file`
+              : null,
+          },
+        ];
+
+      default:
+        return [];
+    }
+  };
+
+  const guidelines = getStageGuidelines();
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl bg-white shadow-xl p-5 sm:p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+        >
+          <XCircle className="h-5 w-5" />
+        </button>
+
+        {/* Header */}
+        <div className="mb-4 pr-8">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+            #{orderData.order_number}
+          </p>
+          <h3 className="text-sm font-semibold text-slate-800 mt-0.5">
+            {orderData.product_name}
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {orderData.customer_name}
+          </p>
+        </div>
+
+        {/* Guidelines with real data */}
+        <ul className="space-y-3">
+          {guidelines.map((item, idx) => (
+            <li key={idx} className="flex gap-3">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-700 mt-0.5">
+                {idx + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-medium text-slate-700">
+                  {item.label}
+                </p>
+                <p className="text-[12px] text-slate-500">{item.detail}</p>
+                {item.dataValue !== undefined && item.dataValue !== null && (
+                  <div className="mt-1 rounded bg-slate-50 border border-slate-100 px-2 py-1">
+                    <span className="text-[10px] text-slate-400 uppercase">
+                      Data disubmit:{" "}
+                    </span>
+                    <span className="text-[12px] font-medium text-slate-700">
+                      {typeof item.dataValue === "boolean"
+                        ? item.dataValue
+                          ? "Lolos"
+                          : "Gagal"
+                        : String(item.dataValue)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        {/* Dismiss button */}
+        <button
+          onClick={onClose}
+          className="mt-5 w-full rounded-lg bg-slate-800 py-2.5 text-sm font-medium text-white hover:bg-slate-900 transition-colors"
+        >
+          Mengerti
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Helper: extract checklist value from quality_checklist array
+function getChecklistValue(
+  data: Record<string, unknown>,
+  key: string,
+): boolean | null {
+  const checklist = data.quality_checklist as
+    | Array<{ check_key: string; passed: boolean }>
+    | undefined;
+  if (!checklist) return null;
+  const item = checklist.find((c) => c.check_key === key);
+  return item?.passed ?? null;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatRelative(iso: string | null): string {
@@ -177,6 +545,7 @@ function PendingCard({
   const [state, setState] = useState<ActionState>({ type: "idle" });
   const [rejectNotes, setRejectNotes] = useState("");
   const [dataExpanded, setDataExpanded] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   const isProduction = item.stage_group === "production";
 
@@ -266,6 +635,14 @@ function PendingCard({
               >
                 {item.stage_label}
               </span>
+              <button
+                onClick={() => setShowInfo(true)}
+                className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+                title="Lihat data verifikasi"
+              >
+                <AlertTriangle className="h-3 w-3" />
+                Verifikasi
+              </button>
               {(item.attempt_number ?? 0) > 1 && (
                 <span className="rounded-full bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] sm:text-[11px] font-medium text-rose-700">
                   Percobaan ke-{item.attempt_number}
@@ -350,6 +727,19 @@ function PendingCard({
             <RefreshCw className="h-4 w-4 animate-spin text-slate-400" />
             <span className="ml-2 text-sm text-slate-500">Memproses...</span>
           </div>
+        )}
+
+        {showInfo && (
+          <StageInfoPopup
+            stage={item.stage}
+            orderData={{
+              order_number: item.order_number,
+              product_name: item.product_name,
+              customer_name: item.customer_name,
+            }}
+            stageData={item.data}
+            onClose={() => setShowInfo(false)}
+          />
         )}
       </div>
     </div>
