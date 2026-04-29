@@ -36,11 +36,11 @@ const APPROVAL_REQUIRED = new Set([
 // SOP document numbers per stage (from official work instructions)
 const STAGE_WORK_INSTRUCTIONS: Record<string, string> = {
   racik_bahan:        "93-04/HC-KGJ/XII/2022",
-  lebur_bahan:        "94-04/HC-KGJ/XII/2022",
-  pembentukan_cincin: "95-04/HC-KGJ/XII/2022",
-  qc_1:               "96-04/HC-KGJ/XII/2022",
-  kelengkapan:        "102-04/HC-KGJ/XII/2022",
-  pelunasan:          "101-04/HC-KGJ/XII/2022",
+  lebur_bahan:        "002-KGJ/OPR-PRD/I/2026",
+  pembentukan_cincin: "003-KGJ/OPR-PRD/I/2026",
+  qc_1:               "004-KGJ/OPR-PRD/I/2026",
+  kelengkapan:        "005-KGJ/OPR-PRD/I/2026",
+  pelunasan:          "006-KGJ/OPR-PRD/I/2026",
 };
 
 const ROLE_STAGE_ACCESS: Record<string, string[]> = {

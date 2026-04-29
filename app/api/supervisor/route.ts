@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const PRODUCTION_STAGES = new Set([
+  "racik_bahan",
   "lebur_bahan",
   "pembentukan_cincin",
   "pemasangan_permata",
@@ -14,7 +15,6 @@ const PRODUCTION_STAGES = new Set([
 
 const OPERATIONAL_STAGES = new Set([
   "penerimaan_order",
-  "racik_bahan",
   "qc_1",
   "konfirmasi_awal",
   "laser",

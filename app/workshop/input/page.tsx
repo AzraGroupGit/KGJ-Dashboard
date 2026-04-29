@@ -222,6 +222,15 @@ function PhaseOrderList({
   const roleLabel =
     roleStages.map((s) => STAGE_LABELS[s] ?? s).join(", ") || user.role.name;
 
+  // Only show orders that are at this worker's stage(s); exclude terminal/approval-pending states
+  const displayOrders = orders.filter(
+    (o) =>
+      roleStages.includes(o.current_stage) &&
+      o.status !== "completed" &&
+      o.status !== "cancelled" &&
+      o.status !== "waiting_approval",
+  );
+
   const fetchOrders = useCallback(async (q: string) => {
     setIsFetching(true);
     setFetchError(null);
@@ -368,7 +377,7 @@ function PhaseOrderList({
               Coba lagi
             </button>
           </div>
-        ) : orders.length === 0 ? (
+        ) : displayOrders.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-14 px-6 text-center">
             <svg
               viewBox="0 0 24 24"
@@ -386,7 +395,7 @@ function PhaseOrderList({
             <p className="text-[14px] font-medium text-stone-400">
               {search
                 ? "Order tidak ditemukan"
-                : "Belum ada order untuk ditangani"}
+                : "Tidak ada order yang perlu ditangani saat ini"}
             </p>
             {search && (
               <p className="text-[12px] text-stone-300">Coba kata kunci lain</p>
@@ -394,7 +403,7 @@ function PhaseOrderList({
           </div>
         ) : (
           <ul className="divide-y divide-stone-100">
-            {orders.map((order) => {
+            {displayOrders.map((order) => {
               const isSelecting = selectingId === order.id;
               const isRework = order.status === "rework";
               const overdue = isOverdue(order.deadline);
@@ -409,10 +418,15 @@ function PhaseOrderList({
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         {/* Order number + stage badge */}
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="font-mono text-[12px] font-semibold text-stone-500">
                             #{order.order_number}
                           </span>
+                          {roleStages.length > 1 && (
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${theme.badge}`}>
+                              {STAGE_LABELS[order.current_stage] ?? order.current_stage}
+                            </span>
+                          )}
                           {isRework && (
                             <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
                               Rework
@@ -483,7 +497,7 @@ function PhaseOrderList({
       </div>
 
       {/* Refresh hint */}
-      {!isFetching && !fetchError && orders.length > 0 && (
+      {!isFetching && !fetchError && displayOrders.length > 0 && (
         <button
           onClick={() => fetchOrders(search)}
           className="mt-3 w-full text-center text-[12px] text-stone-300 hover:text-stone-500 transition-colors py-1"
