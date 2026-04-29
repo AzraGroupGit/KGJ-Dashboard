@@ -60,38 +60,58 @@ type Phase = "loading" | "list" | "create" | "form" | "success";
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const ROLE_STAGE_MAP: Record<string, string[]> = {
-  jewelry_expert_lebur_bahan: ["lebur_bahan"],
-  jewelry_expert_pembentukan_awal: ["pembentukan_cincin", "pemolesan"],
-  jewelry_expert_finishing: ["finishing", "pemolesan"],
-  micro_setting: ["pemasangan_permata"],
+  // Production roles
   racik: ["racik_bahan"],
+  jewelry_expert_lebur_bahan: ["lebur_bahan"],
+  jewelry_expert_pembentukan_awal: ["pembentukan_cincin"],
+  micro_setting: ["pemasangan_permata"],
+  jewelry_expert_finishing: ["pemolesan", "finishing"],
+  laser: ["laser"],
+
+  // QC roles
   qc_1: ["qc_1"],
   qc_2: ["qc_2"],
   qc_3: ["qc_3"],
-  laser: ["laser"],
-  packing: ["packing"],
+
+  // Support roles
   kelengkapan: ["kelengkapan"],
-  after_sales: ["pengiriman"],
-  customer_care: ["penerimaan_order", "konfirmasi_awal", "pelunasan"],
+  packing: ["packing", "pengiriman"],
+  after_sales: ["pelunasan"],
+
+  // Customer-facing roles
+  customer_care: ["penerimaan_order"],
+
+  // Supervisor / Management (approval gates)
+  supervisor: [
+    "approval_penerimaan_order",
+    "approval_qc_1",
+    "approval_qc_2",
+    "approval_qc_3",
+    "approval_pelunasan",
+  ],
 };
 
 const STAGE_LABELS: Record<string, string> = {
   penerimaan_order: "Penerimaan Order",
+  approval_penerimaan_order: "Approval Penerimaan Order",
   racik_bahan: "Racik Bahan",
   lebur_bahan: "Lebur Bahan",
   pembentukan_cincin: "Pembentukan Cincin",
   pemasangan_permata: "Pemasangan Permata",
   pemolesan: "Pemolesan",
-  qc_1: "QC 1",
-  konfirmasi_awal: "Konfirmasi Awal",
+  qc_1: "Quality Control 1",
+  approval_qc_1: "Approval QC 1",
   finishing: "Finishing",
-  laser: "Laser",
-  qc_2: "QC 2",
+  laser: "Laser Engraving",
+  qc_2: "Quality Control 2",
+  approval_qc_2: "Approval QC 2",
   kelengkapan: "Kelengkapan",
-  qc_3: "QC 3",
+  qc_3: "Quality Control 3 (Final)",
+  approval_qc_3: "Approval QC 3",
   packing: "Packing",
-  pelunasan: "Pelunasan",
-  pengiriman: "Pengiriman",
+  pelunasan: "Pelunasan & Pembayaran",
+  approval_pelunasan: "Approval Pelunasan",
+  pengiriman: "Pengiriman & Handover",
 };
 
 // ── Theming ───────────────────────────────────────────────────────────────────
@@ -217,15 +237,15 @@ function PhaseOrderList({
     user.role.allowed_stages.length > 0
       ? user.role.allowed_stages
       : (ROLE_STAGE_MAP[user.role.name] ?? [])
-  ).filter((s) => s !== "penerimaan_order");
+  ).filter((s) => s !== "penerimaan_order" && !s.startsWith("approval_"));
 
   const roleLabel =
     roleStages.map((s) => STAGE_LABELS[s] ?? s).join(", ") || user.role.name;
 
-  // Only show orders that are at this worker's stage(s); exclude terminal/approval-pending states
+  // Only show orders that are at this worker's stage(s); exclude terminal/approval-pending states.
   const displayOrders = orders.filter(
     (o) =>
-      roleStages.includes(o.current_stage) &&
+      (roleStages.length === 0 || roleStages.includes(o.current_stage)) &&
       o.status !== "completed" &&
       o.status !== "cancelled" &&
       o.status !== "waiting_approval",
@@ -423,8 +443,11 @@ function PhaseOrderList({
                             #{order.order_number}
                           </span>
                           {roleStages.length > 1 && (
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${theme.badge}`}>
-                              {STAGE_LABELS[order.current_stage] ?? order.current_stage}
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${theme.badge}`}
+                            >
+                              {STAGE_LABELS[order.current_stage] ??
+                                order.current_stage}
                             </span>
                           )}
                           {isRework && (
@@ -609,7 +632,7 @@ function PhaseCreate({
           <span
             className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${theme.badge}`}
           >
-            Customer Care
+            Customer Service
           </span>
           <button
             onClick={onLogout}
@@ -1030,13 +1053,14 @@ function WorkshopInputContent() {
       if (!user) return;
 
       const allowedStages: string[] = user.role.allowed_stages ?? [];
-      const roleStages = ROLE_STAGE_MAP[user.role.name] ?? [];
-      const myStages = allowedStages.length > 0 ? allowedStages : roleStages;
+      const roleStageMap = ROLE_STAGE_MAP[user.role.name] ?? [];
+      const myStages = allowedStages.length > 0 ? allowedStages : roleStageMap;
 
-      const targetStage =
-        myStages.find((s) => s === selectedOrder.current_stage) ?? null;
-
-      if (!targetStage) {
+      // Only reject if we know the worker's stages AND this stage isn't one of them.
+      if (
+        myStages.length > 0 &&
+        !myStages.includes(selectedOrder.current_stage)
+      ) {
         const stageNames = myStages.map((s) => STAGE_LABELS[s] ?? s).join(", ");
         throw new Error(
           `Order di tahap "${STAGE_LABELS[selectedOrder.current_stage] ?? selectedOrder.current_stage}". Anda menangani: ${stageNames}.`,
@@ -1044,14 +1068,17 @@ function WorkshopInputContent() {
       }
 
       const configRes = await fetch(
-        `/api/stages/form-config?order_id=${selectedOrder.id}&stage=${targetStage}`,
+        `/api/stages/form-config?order_id=${selectedOrder.id}&stage=${selectedOrder.current_stage}`,
       );
       const configJson = await configRes.json();
       if (!configRes.ok)
         throw new Error(configJson.error ?? "Gagal memuat form");
 
       setOrder(selectedOrder);
-      setConfig({ ...configJson.data.config, stage: targetStage });
+      setConfig({
+        ...configJson.data.config,
+        stage: selectedOrder.current_stage,
+      });
       setPhase("form");
     },
     [user],

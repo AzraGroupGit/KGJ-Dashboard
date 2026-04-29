@@ -8,61 +8,89 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const STAGE_SEQUENCE = [
   "penerimaan_order",
+  "approval_penerimaan_order",
   "racik_bahan",
   "lebur_bahan",
   "pembentukan_cincin",
   "pemasangan_permata",
   "pemolesan",
   "qc_1",
-  "konfirmasi_awal",
+  "approval_qc_1",
   "finishing",
   "laser",
   "qc_2",
+  "approval_qc_2",
   "kelengkapan",
   "qc_3",
+  "approval_qc_3",
   "packing",
   "pelunasan",
+  "approval_pelunasan",
   "pengiriman",
 ] as const;
 
 // Stages that require supervisor approval before advancing
 const APPROVAL_REQUIRED = new Set([
   "penerimaan_order",
-  "racik_bahan",
+  "qc_1",
   "qc_2",
   "qc_3",
+  "pelunasan",
 ]);
+
+// Approval stage mapping: production stage → its approval stage key
+const APPROVAL_STAGE_MAP: Record<string, string> = {
+  penerimaan_order: "approval_penerimaan_order",
+  qc_1: "approval_qc_1",
+  qc_2: "approval_qc_2",
+  qc_3: "approval_qc_3",
+  pelunasan: "approval_pelunasan",
+};
 
 // SOP document numbers per stage (from official work instructions)
 const STAGE_WORK_INSTRUCTIONS: Record<string, string> = {
-  racik_bahan:        "93-04/HC-KGJ/XII/2022",
-  lebur_bahan:        "002-KGJ/OPR-PRD/I/2026",
+  racik_bahan: "001-KGJ/OPR-PRD/I/2026",
+  lebur_bahan: "002-KGJ/OPR-PRD/I/2026",
   pembentukan_cincin: "003-KGJ/OPR-PRD/I/2026",
-  qc_1:               "004-KGJ/OPR-PRD/I/2026",
-  kelengkapan:        "005-KGJ/OPR-PRD/I/2026",
-  pelunasan:          "006-KGJ/OPR-PRD/I/2026",
+  qc_1: "004-KGJ/OPR-PRD/I/2026",
+  kelengkapan: "005-KGJ/OPR-PRD/I/2026",
+  pelunasan: "006-KGJ/OPR-PRD/I/2026",
 };
 
 const ROLE_STAGE_ACCESS: Record<string, string[]> = {
-  jewelry_expert_lebur_bahan: ["lebur_bahan"],
-  jewelry_expert_pembentukan_awal: ["pembentukan_cincin", "pemolesan"],
-  jewelry_expert_finishing: ["finishing", "pemolesan"],
-  micro_setting: ["pemasangan_permata"],
+  // Production roles
   racik: ["racik_bahan"],
+  jewelry_expert_lebur_bahan: ["lebur_bahan"],
+  jewelry_expert_pembentukan_awal: ["pembentukan_cincin"],
+  micro_setting: ["pemasangan_permata"],
+  jewelry_expert_finishing: ["pemolesan", "finishing"],
+  laser: ["laser"],
+
+  // QC roles
   qc_1: ["qc_1"],
   qc_2: ["qc_2"],
   qc_3: ["qc_3"],
-  laser: ["laser"],
-  packing: ["packing"],
+
+  // Support roles
   kelengkapan: ["kelengkapan"],
-  after_sales: ["pengiriman"],
-  customer_care: ["penerimaan_order", "konfirmasi_awal", "pelunasan"],
+  packing: ["packing", "pengiriman"],
+  after_sales: ["pelunasan"],
+
+  // Customer-facing roles
+  customer_service: ["penerimaan_order"],
+
+  // Supervisor / Management (approval gates)
+  supervisor: [
+    "approval_penerimaan_order",
+    "approval_qc_1",
+    "approval_qc_2",
+    "approval_qc_3",
+    "approval_pelunasan",
+  ],
 };
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
-/** Returns a valid ISO timestamp, or the fallback if value is missing/invalid.
- *  Handles bare time strings like "14:30" by combining with today's local date. */
 function toValidIso(value: string | undefined, fallback: string): string {
   if (!value) return fallback;
   let d = new Date(value);
@@ -250,7 +278,22 @@ async function finalizeStage(
   stage: string,
   userId: string,
 ) {
+  // If this stage requires approval, mark waiting and advance to approval stage
   if (APPROVAL_REQUIRED.has(stage)) {
+    const approvalStage = APPROVAL_STAGE_MAP[stage];
+    if (approvalStage) {
+      await admin
+        .from("orders")
+        .update({
+          current_stage: approvalStage,
+          status: "waiting_approval",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", orderId);
+      await insertTransition(admin, orderId, stage, approvalStage, userId);
+      return approvalStage;
+    }
+    // Fallback: just mark waiting_approval without advancing
     await admin
       .from("orders")
       .update({
@@ -261,6 +304,7 @@ async function finalizeStage(
     return null;
   }
 
+  // No approval needed — advance to next production stage
   const idx = STAGE_SEQUENCE.indexOf(stage as (typeof STAGE_SEQUENCE)[number]);
   const nextStage =
     idx >= 0 && idx < STAGE_SEQUENCE.length - 1
@@ -277,8 +321,6 @@ async function finalizeStage(
       })
       .eq("id", orderId);
     await insertTransition(admin, orderId, stage, nextStage, userId);
-  } else {
-    // Final stage (pengiriman) is completed inside its own handler
   }
   return nextStage;
 }
@@ -306,7 +348,6 @@ async function handlePenerimaanOrder(
     total_price,
     dp_amount,
     gemstone_list,
-    // optional single attachment already uploaded to storage
     form_order_path,
     form_order_name,
   } = data as Record<string, any>;
@@ -343,7 +384,6 @@ async function handlePenerimaanOrder(
         status: 400,
       });
 
-    // Try matching by phone to avoid duplicates
     if (nc.phone?.trim()) {
       const { data: existing } = await admin
         .from("customers")
@@ -398,7 +438,7 @@ async function handlePenerimaanOrder(
       total_price: total_price ? Number(total_price) : null,
       dp_amount: dp_amount ? Number(dp_amount) : null,
       current_stage: "penerimaan_order",
-      status: "waiting_approval",
+      status: "in_progress",
       created_by: userId,
     })
     .select("id, order_number")
@@ -457,6 +497,14 @@ async function handlePenerimaanOrder(
     });
   }
 
+  // Move to approval
+  const nextStage = await finalizeStage(
+    admin,
+    order.id,
+    "penerimaan_order",
+    userId,
+  );
+
   await logActivity(admin, userId, "CREATE_ORDER", "orders", order.id, {
     order_number: order.order_number,
     customer_id: customerId,
@@ -466,6 +514,116 @@ async function handlePenerimaanOrder(
     order_id: order.id,
     order_number: order.order_number,
     customer_id: customerId,
+    next_stage: nextStage,
+  };
+}
+
+async function handleApproval(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  orderId: string,
+  stage: string,
+  data: Record<string, unknown>,
+) {
+  const { decision, remarks } = data as Record<string, any>;
+
+  if (!decision || !["approved", "rejected"].includes(decision)) {
+    throw Object.assign(new Error("decision harus approved atau rejected"), {
+      status: 400,
+    });
+  }
+
+  // Find the production stage this approval belongs to
+  const productionStage = Object.entries(APPROVAL_STAGE_MAP).find(
+    ([, approvalStage]) => approvalStage === stage,
+  )?.[0];
+
+  if (!productionStage) {
+    throw Object.assign(
+      new Error(`Tidak dapat menentukan production stage untuk ${stage}`),
+      { status: 500 },
+    );
+  }
+
+  // Find the latest stage_result for the production stage
+  const { data: lastResult } = await admin
+    .from("stage_results")
+    .select("id")
+    .eq("order_id", orderId)
+    .eq("stage", productionStage)
+    .order("attempt_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // Insert approval record
+  await admin.from("approvals").insert({
+    order_id: orderId,
+    approver_id: userId,
+    stage,
+    decision,
+    remarks: remarks ?? null,
+    stage_result_id: lastResult?.id ?? null,
+    decided_at: new Date().toISOString(),
+  });
+
+  if (decision === "rejected") {
+    // Send back to the production stage for rework
+    await admin
+      .from("orders")
+      .update({
+        current_stage: productionStage,
+        status: "rework",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", orderId);
+    await insertTransition(
+      admin,
+      orderId,
+      stage,
+      productionStage,
+      userId,
+      remarks,
+    );
+
+    await logActivity(admin, userId, "REJECT_APPROVAL", "orders", orderId, {
+      stage,
+      production_stage: productionStage,
+      remarks,
+    });
+
+    return {
+      decision: "rejected",
+      next_stage: productionStage,
+    };
+  }
+
+  // Approved — advance to the next stage after this approval
+  const idx = STAGE_SEQUENCE.indexOf(stage as (typeof STAGE_SEQUENCE)[number]);
+  const nextStage =
+    idx >= 0 && idx < STAGE_SEQUENCE.length - 1
+      ? STAGE_SEQUENCE[idx + 1]
+      : null;
+
+  if (nextStage) {
+    await admin
+      .from("orders")
+      .update({
+        current_stage: nextStage,
+        status: "in_progress",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", orderId);
+    await insertTransition(admin, orderId, stage, nextStage, userId);
+  }
+
+  await logActivity(admin, userId, "APPROVE_STAGE", "orders", orderId, {
+    stage,
+    next_stage: nextStage,
+  });
+
+  return {
+    decision: "approved",
+    next_stage: nextStage,
   };
 }
 
@@ -488,8 +646,12 @@ async function handleMaterialStage(
     order_id: orderId,
     user_id: userId,
     stage,
-    // Include material_transactions snapshot so supervisor can review what was submitted
-    data: { ...stageData, material_transactions: Array.isArray(material_transactions) ? material_transactions : [] },
+    data: {
+      ...stageData,
+      material_transactions: Array.isArray(material_transactions)
+        ? material_transactions
+        : [],
+    },
     notes: notes ?? null,
     work_instruction_id: wiId,
     started_at: started_at ?? undefined,
@@ -577,6 +739,7 @@ async function handleQc1(
     userId,
   );
 
+  // qc_1 now requires supervisor approval → moves to approval_qc_1
   const nextStage = await finalizeStage(admin, orderId, "qc_1", userId);
   await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
     order_id: orderId,
@@ -584,80 +747,6 @@ async function handleQc1(
   });
 
   return { stage_result_id: srId, next_stage: nextStage };
-}
-
-async function handleKonfirmasiAwal(
-  admin: ReturnType<typeof createAdminClient>,
-  userId: string,
-  orderId: string,
-  data: Record<string, unknown>,
-) {
-  const rawData = data as Record<string, any>;
-  // UI sends confirmation fields nested under confirmation_form (compound type)
-  const cf: Record<string, any> = rawData.confirmation_form ?? rawData;
-  const confirmation_type     = cf.confirmation_type;
-  const confirmation_method   = cf.confirmation_method;
-  const photos_sent_at        = cf.photos_sent_at;
-  const confirmation_status   = cf.confirmation_status;
-  const rejection_reason      = cf.rejection_reason;
-  const change_requests       = cf.change_requests;
-  const confirmed_at          = cf.confirmed_at;
-  const { notes, started_at, confirmation_form: _drop, ...stageData } = rawData;
-
-  const srId = await insertStageResult(admin, {
-    order_id: orderId,
-    user_id: userId,
-    stage: "konfirmasi_awal",
-    data: { ...stageData, confirmation_status },
-    notes: notes ?? null,
-    started_at: started_at ?? undefined,
-  });
-
-  await admin.from("customer_confirmations").insert({
-    order_id: orderId,
-    stage_result_id: srId,
-    confirmation_type: confirmation_type ?? "initial",
-    confirmation_method: confirmation_method ?? null,
-    photos_sent_at: photos_sent_at ?? null,
-    confirmation_status: confirmation_status ?? "pending",
-    rejection_reason: rejection_reason ?? null,
-    change_requests: change_requests ?? {},
-    confirmed_at: confirmed_at ?? null,
-    processed_by: userId,
-  });
-
-  const status = confirmation_status ?? "pending";
-
-  if (status === "approved") {
-    await admin
-      .from("orders")
-      .update({
-        current_stage: "finishing",
-        status: "in_progress",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", orderId);
-    await insertTransition(
-      admin,
-      orderId,
-      "konfirmasi_awal",
-      "finishing",
-      userId,
-    );
-  } else if (status === "rejected" || status === "request_changes") {
-    await admin
-      .from("orders")
-      .update({ status: "rework", updated_at: new Date().toISOString() })
-      .eq("id", orderId);
-  }
-
-  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
-    order_id: orderId,
-    stage: "konfirmasi_awal",
-    confirmation_status: status,
-  });
-
-  return { stage_result_id: srId, confirmation_status: status };
 }
 
 async function handleQc2(
@@ -693,7 +782,7 @@ async function handleQc2(
     userId,
   );
 
-  // qc_2 requires supervisor approval
+  // qc_2 requires supervisor approval → moves to approval_qc_2
   const nextStage = await finalizeStage(admin, orderId, "qc_2", userId);
   await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
     order_id: orderId,
@@ -809,7 +898,7 @@ async function handleQc3(
     userId,
   );
 
-  // qc_3 requires supervisor approval
+  // qc_3 requires supervisor approval → moves to approval_qc_3
   const nextStage = await finalizeStage(admin, orderId, "qc_3", userId);
   await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
     order_id: orderId,
@@ -971,6 +1060,7 @@ async function handlePelunasan(
     userId,
   );
 
+  // pelunasan requires supervisor approval → moves to approval_pelunasan
   const nextStage = await finalizeStage(admin, orderId, "pelunasan", userId);
   await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
     order_id: orderId,
@@ -1076,7 +1166,7 @@ async function handlePengiriman(
     userId,
   );
 
-  // Update order completion fields
+  // Complete the order
   const now = new Date().toISOString();
   const ou = order_update ?? {};
   await admin
@@ -1092,8 +1182,6 @@ async function handlePengiriman(
     })
     .eq("id", orderId);
 
-  // Two transitions: pelunasan → pengiriman already done by finalizeStage of pelunasan
-  // Now log pengiriman → selesai
   await insertTransition(admin, orderId, "pengiriman", "selesai", userId);
 
   await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
@@ -1208,6 +1296,22 @@ export async function POST(request: Request) {
         result = await handlePenerimaanOrder(admin, authUser.id, data);
         break;
 
+      // Approval gates
+      case "approval_penerimaan_order":
+      case "approval_qc_1":
+      case "approval_qc_2":
+      case "approval_qc_3":
+      case "approval_pelunasan":
+        result = await handleApproval(
+          admin,
+          authUser.id,
+          orderId!,
+          stage,
+          data,
+        );
+        break;
+
+      // Material stages (no approval, auto-advance)
       case "racik_bahan":
       case "lebur_bahan":
       case "pembentukan_cincin":
@@ -1226,28 +1330,26 @@ export async function POST(request: Request) {
         );
         break;
 
+      // QC stages (require approval after)
       case "qc_1":
         result = await handleQc1(admin, authUser.id, orderId!, data);
-        break;
-
-      case "konfirmasi_awal":
-        result = await handleKonfirmasiAwal(admin, authUser.id, orderId!, data);
-        break;
-
-      case "laser":
-        result = await handleLaser(admin, authUser.id, orderId!, data);
         break;
 
       case "qc_2":
         result = await handleQc2(admin, authUser.id, orderId!, data);
         break;
 
-      case "kelengkapan":
-        result = await handleKelengkapan(admin, authUser.id, orderId!, data);
-        break;
-
       case "qc_3":
         result = await handleQc3(admin, authUser.id, orderId!, data);
+        break;
+
+      // Other stages
+      case "laser":
+        result = await handleLaser(admin, authUser.id, orderId!, data);
+        break;
+
+      case "kelengkapan":
+        result = await handleKelengkapan(admin, authUser.id, orderId!, data);
         break;
 
       case "packing":
@@ -1269,12 +1371,18 @@ export async function POST(request: Request) {
         );
     }
 
+    const isApproval = stage.startsWith("approval_");
     const waitingApproval = APPROVAL_REQUIRED.has(stage);
+
     return NextResponse.json({
       success: true,
-      message: waitingApproval
-        ? "Data tersimpan. Menunggu persetujuan supervisor."
-        : "Data berhasil disimpan.",
+      message: isApproval
+        ? result.decision === "approved"
+          ? "Order disetujui. Melanjutkan ke tahap berikutnya."
+          : "Order ditolak. Dikembalikan untuk perbaikan."
+        : waitingApproval
+          ? "Data tersimpan. Menunggu persetujuan supervisor."
+          : "Data berhasil disimpan.",
       data: result,
     });
   } catch (err: any) {
