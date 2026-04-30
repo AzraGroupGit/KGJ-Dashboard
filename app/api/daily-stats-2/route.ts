@@ -2,33 +2,43 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // ============================================================
 // Config & Initialization
 // ============================================================
 
-// Stage order untuk perhitungan cycle time
 const STAGE_ORDER = [
   "penerimaan_order",
-  "qc_awal",
+  "approval_penerimaan_order",
   "racik_bahan",
   "lebur_bahan",
   "pembentukan_cincin",
   "pemasangan_permata",
   "pemolesan",
   "qc_1",
-  "konfirmasi_awal",
+  "approval_qc_1",
   "finishing",
   "laser",
   "qc_2",
-  "pelunasan",
+  "approval_qc_2",
   "kelengkapan",
   "qc_3",
+  "approval_qc_3",
   "packing",
+  "pelunasan",
+  "approval_pelunasan",
   "pengiriman",
 ];
 
-// Target cycle time dalam hari (bisa di-config per tipe produk)
+const PRODUCTION_ROLES = [
+  "jewelry_expert_lebur_bahan",
+  "jewelry_expert_pembentukan_awal",
+  "jewelry_expert_finishing",
+  "micro_setting",
+  "laser",
+];
+
 const DEFAULT_TARGET_CYCLE_TIME = 14;
 
 // ============================================================
@@ -67,42 +77,19 @@ interface DailyStatsResponse {
       totalDelivery: number;
       urgentCount: number;
     };
-    adminTasks: {
-      total: number;
-      delayed: number;
-      active: number;
-    };
+    adminTasks: { total: number; delayed: number; active: number };
     racik: {
       rataShrinkage: number;
       targetShrinkage: number;
       totalBerat: number;
     };
-    laser: {
-      antrian: number;
-      mesinAktif: number;
-    };
-    qc: {
-      passRateAvg: number;
-      totalChecks: number;
-      failedToday: number;
-    };
+    laser: { antrian: number; mesinAktif: number };
+    qc: { passRateAvg: number; totalChecks: number; failedToday: number };
   };
   produksi: {
-    experts: {
-      total: number;
-      aktif: number;
-      totalOrders: number;
-    };
-    microSetting: {
-      total: number;
-      inProgress: number;
-      waiting: number;
-    };
-    yield: {
-      rataYield: number;
-      totalTarget: number;
-      totalActual: number;
-    };
+    experts: { total: number; aktif: number; totalOrders: number };
+    microSetting: { total: number; inProgress: number; waiting: number };
+    yield: { rataYield: number; totalTarget: number; totalActual: number };
   };
   recentActivities: Array<{
     id: string;
@@ -120,66 +107,46 @@ interface DailyStatsResponse {
     ordersCompleted: number;
     avgTime: number;
   }>;
-  stageDistribution: Array<{
-    stage: string;
-    count: number;
-  }>;
+  stageDistribution: Array<{ stage: string; count: number }>;
 }
 
 // ============================================================
-// Helper Functions
+// Helpers
 // ============================================================
 
-/**
- * Hitung cycle time rata-rata dari order yang completed dalam 30 hari terakhir
- */
 async function calculateAverageCycleTime(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  admin: ReturnType<typeof createAdminClient>,
 ): Promise<number> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from("orders")
     .select("order_date, completed_at")
     .not("completed_at", "is", null)
     .gte("completed_at", thirtyDaysAgo.toISOString())
     .is("deleted_at", null);
 
-  if (error || !data || data.length === 0) {
-    return 0;
-  }
+  if (error || !data || data.length === 0) return 0;
 
   const totalDays = data.reduce((sum: number, order: any) => {
     const start = new Date(order.order_date);
     const end = new Date(order.completed_at);
-    const days = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
-    return sum + days;
+    return sum + (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
   }, 0);
 
   return totalDays / data.length;
 }
 
-/**
- * Estimasi nilai rupiah WIP berdasarkan berat emas dan jumlah permata
- * (Ini adalah simplifikasi - dalam real system bisa dari tabel pricing)
- */
 function estimateWipValue(beratEmas: number, jumlahPermata: number): number {
-  const EMAS_PER_GRAM = 1200000; // Rp 1.2jt/gram (contoh)
-  const PERMATA_AVG = 500000; // Rp 500rb/permata (contoh)
-
-  return beratEmas * EMAS_PER_GRAM + jumlahPermata * PERMATA_AVG;
+  return beratEmas * 1200000 + jumlahPermata * 500000;
 }
 
-/**
- * Format stage untuk activity feed
- */
 function mapStageToActivityType(
   stage: string,
 ): "scan" | "qc" | "approval" | "rework" {
   if (stage.startsWith("qc_")) return "qc";
-  if (stage.includes("konfirmasi") || stage.includes("pelunasan"))
-    return "approval";
+  if (stage.startsWith("approval_") || stage === "pelunasan") return "approval";
   return "scan";
 }
 
@@ -189,14 +156,13 @@ function mapStageToActivityType(
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
+  const admin = createAdminClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   const { data: currentUser } = await supabase
     .from("users")
@@ -212,9 +178,16 @@ export async function GET(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayISO = today.toISOString();
+    const todayDateStr =
+      today.getFullYear() +
+      "-" +
+      String(today.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(today.getDate()).padStart(2, "0");
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
     const startOfWeek = new Date();
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -224,11 +197,9 @@ export async function GET(request: NextRequest) {
     startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
 
     // ============================================================
-    // Parallel Queries untuk Performa
+    // Parallel Queries (all use admin client)
     // ============================================================
-
     const [
-      // KPI Queries
       activeOrdersQuery,
       potentiallyLateQuery,
       wipMaterialsQuery,
@@ -238,290 +209,147 @@ export async function GET(request: NextRequest) {
       reworkStatsQuery,
       thisWeekOrdersQuery,
       lastWeekOrdersQuery,
-
-      // Operational Queries
-      afterSalesQuery,
+      afterSalesOrdersQuery,
       racikStatsQuery,
       laserStatsQuery,
       qcStatsQuery,
-      qcFailedTodayQuery,
-
-      // Production Queries
-      expertStatsQuery,
+      expertUsersQuery,
       microSettingQuery,
       yieldStatsQuery,
-
-      // Stage Distribution
       stageDistributionQuery,
-
-      // Recent Activities
       recentActivitiesQuery,
-
-      // Top Performers
-      topPerformersQuery,
     ] = await Promise.all([
-      // Active orders count
-      supabase
+      admin
         .from("orders")
         .select("id", { count: "exact", head: true })
         .in("status", ["in_progress", "waiting_approval", "approved", "rework"])
         .is("deleted_at", null),
-
-      // Potentially late orders
-      supabase
+      admin
         .from("orders")
         .select("id", { count: "exact", head: true })
         .in("status", ["in_progress", "waiting_approval", "rework"])
-        .lt("deadline", todayISO)
+        .lte("deadline", todayDateStr)
         .is("deleted_at", null),
-
-      // WIP materials (dari stage_results terbaru per order)
-      supabase
+      admin
         .from("stage_results")
         .select(
-          `
-          order_id,
-          data,
-          stage,
-          orders!inner(
-            id,
-            target_weight,
-            target_karat,
-            has_gemstone,
-            gemstone_info,
-            status
-          )
-        `,
+          "order_id, data, stage, orders!stage_results_order_id_fkey(id, target_weight, target_karat, has_gemstone, gemstone_info, status)",
         )
         .in("stage", ["racik_bahan", "pemasangan_permata", "finishing"])
         .order("started_at", { ascending: false }),
-
-      // Orders created today
-      supabase
+      admin
         .from("orders")
         .select("id", { count: "exact", head: true })
         .gte("created_at", todayISO)
         .is("deleted_at", null),
-
-      // Orders completed today
-      supabase
+      admin
         .from("orders")
         .select("id", { count: "exact", head: true })
         .eq("status", "completed")
         .gte("completed_at", todayISO)
         .is("deleted_at", null),
-
-      // Completed orders in last 30 days
-      supabase
+      admin
         .from("orders")
         .select("id", { count: "exact", head: true })
         .eq("status", "completed")
-        .gte("completed_at", thirtyDaysAgo.toISOString())
+        .gte("completed_at", thirtyDaysAgoISO)
         .is("deleted_at", null),
-
-      // Rework stats
-      supabase
+      admin
         .from("rework_logs")
-        .select("severity, created_at")
-        .gte("created_at", thirtyDaysAgo.toISOString()),
-
-      // This week orders
-      supabase
+        .select("severity")
+        .gte("created_at", thirtyDaysAgoISO),
+      admin
         .from("orders")
         .select("id", { count: "exact", head: true })
         .gte("created_at", startOfWeek.toISOString())
         .is("deleted_at", null),
-
-      // Last week orders
-      supabase
+      admin
         .from("orders")
         .select("id", { count: "exact", head: true })
         .gte("created_at", startOfLastWeek.toISOString())
         .lt("created_at", startOfWeek.toISOString())
         .is("deleted_at", null),
-
-      // After sales: konfirmasi, pelunasan, delivery
-      supabase
-        .from("stage_results")
-        .select(
-          `
-          stage,
-          data,
-          started_at,
-          orders!inner(
-            id,
-            order_number,
-            status,
-            deadline
-          )
-        `,
-        )
-        .in("stage", ["konfirmasi_awal", "pelunasan", "pengiriman"])
-        .order("started_at", { ascending: false })
+      admin
+        .from("orders")
+        .select("id, order_number, status, deadline, current_stage")
+        .in("current_stage", [
+          "approval_penerimaan_order",
+          "approval_qc_1",
+          "pelunasan",
+          "pengiriman",
+        ])
+        .is("deleted_at", null)
         .limit(100),
-
-      // Racik stats (shrinkage)
-      supabase
+      admin
         .from("stage_results")
-        .select(
-          `
-          data,
-          started_at
-        `,
-        )
+        .select("data, started_at")
         .eq("stage", "racik_bahan")
-        .gte("started_at", thirtyDaysAgo.toISOString()),
-
-      // Laser stats
-      supabase
+        .gte("started_at", thirtyDaysAgoISO),
+      admin
         .from("stage_results")
-        .select(
-          `
-          id,
-          data,
-          started_at,
-          finished_at
-        `,
-        )
+        .select("id, data, started_at, finished_at")
         .eq("stage", "laser")
         .order("started_at", { ascending: false })
         .limit(50),
-
-      // QC stats
-      supabase
+      admin
         .from("stage_results")
-        .select(
-          `
-          stage,
-          data,
-          started_at,
-          finished_at
-        `,
-        )
-        .in("stage", ["qc_awal", "qc_1", "qc_2", "qc_3"])
+        .select("stage, data, started_at, finished_at")
+        .in("stage", ["qc_1", "qc_2", "qc_3"])
         .gte("started_at", todayISO)
         .not("finished_at", "is", null),
-
-      // QC failed today
-      supabase
-        .from("stage_results")
-        .select("id", { count: "exact", head: true })
-        .in("stage", ["qc_awal", "qc_1", "qc_2", "qc_3"])
-        .gte("started_at", todayISO)
-        .eq("data->>overall_result", "failed"),
-
-      // Expert stats (users with production roles) — filter in JS
-      supabase
+      admin
         .from("users")
         .select(
-          `
-          id,
-          full_name,
-          status,
-          role:roles!users_role_id_fkey(name, role_group)
-        `,
+          "id, full_name, status, role:roles!users_role_id_fkey(name, role_group)",
         )
         .is("deleted_at", null),
-
-      // Micro setting stats
-      supabase
+      admin
         .from("stage_results")
         .select(
-          `
-          id,
-          data,
-          started_at,
-          finished_at,
-          orders!inner(
-            id,
-            order_number,
-            has_gemstone
-          )
-        `,
+          "id, data, started_at, finished_at, orders!stage_results_order_id_fkey(id, order_number, has_gemstone)",
         )
         .eq("stage", "pemasangan_permata")
         .order("started_at", { ascending: false })
         .limit(100),
-
-      // Yield stats
-      supabase
+      admin
         .from("stage_results")
-        .select(
-          `
-          data,
-          orders!inner(
-            target_weight
-          )
-        `,
-        )
+        .select("data, orders!stage_results_order_id_fkey(target_weight)")
         .in("stage", ["racik_bahan", "lebur_bahan", "finishing"])
-        .gte("started_at", thirtyDaysAgo.toISOString())
+        .gte("started_at", thirtyDaysAgoISO)
         .not("finished_at", "is", null),
-
-      // Stage distribution
-      supabase
+      admin
         .from("orders")
         .select("current_stage")
         .in("status", ["in_progress", "waiting_approval", "approved", "rework"])
         .is("deleted_at", null),
-
-      // Recent activities (scan events + approvals + rework)
-      supabase
+      admin
         .from("scan_events")
         .select(
-          `
-          id,
-          action,
-          stage,
-          scanned_at,
-          stage_result_id,
-          orders!inner(
-            order_number
-          ),
-          users!inner(
-            full_name
-          )
-        `,
+          "id, action, stage, scanned_at, orders!scan_events_order_id_fkey(order_number), users!scan_events_user_id_fkey(full_name)",
         )
         .order("scanned_at", { ascending: false })
         .limit(30),
-
-      // Top performers (from staff productivity view)
-      supabase
-        .from("v_staff_productivity")
-        .select("*")
-        .gte("work_date", thirtyDaysAgo.toISOString().split("T")[0])
-        .order("total_submits", { ascending: false })
-        .limit(10),
     ]);
 
     // ============================================================
-    // Process & Aggregate Data
+    // KPI Calculations
     // ============================================================
-
-    // --- KPI Calculations ---
     const totalOrdersAktif = activeOrdersQuery.count || 0;
     const potensiKeterlambatan = potentiallyLateQuery.count || 0;
 
-    // WIP Value calculation
-    let totalBeratEmas = 0;
-    let totalPermata = 0;
-    let totalKarat = 0;
-    let karatCount = 0;
-
-    const processedOrders = new Set();
-    wipMaterialsQuery.data?.forEach((record) => {
+    let totalBeratEmas = 0,
+      totalPermata = 0,
+      totalKarat = 0,
+      karatCount = 0;
+    const processedOrders = new Set<string>();
+    (wipMaterialsQuery.data || []).forEach((record: any) => {
       if (processedOrders.has(record.order_id)) return;
       processedOrders.add(record.order_id);
-
-      const order = Array.isArray(record.orders)
-        ? record.orders[0]
-        : record.orders;
+      const order = record.orders;
       if (order) {
         totalBeratEmas += order.target_weight || 0;
         totalKarat += order.target_karat || 0;
         karatCount++;
-
         if (order.has_gemstone && order.gemstone_info) {
           try {
             const gemstones =
@@ -530,7 +358,7 @@ export async function GET(request: NextRequest) {
                 : order.gemstone_info;
             totalPermata += Array.isArray(gemstones) ? gemstones.length : 0;
           } catch {
-            // ignore parse error
+            /* ignore */
           }
         }
       }
@@ -538,18 +366,14 @@ export async function GET(request: NextRequest) {
 
     const avgKarat = karatCount > 0 ? totalKarat / karatCount : 0;
     const estimasiRupiah = estimateWipValue(totalBeratEmas, totalPermata);
+    const rataCycleTime = await calculateAverageCycleTime(admin);
 
-    // Cycle time
-    const rataCycleTime = await calculateAverageCycleTime(supabase);
-    const targetCycleTime = DEFAULT_TARGET_CYCLE_TIME;
+    const reworkData = reworkStatsQuery.data || [];
+    const totalRework = reworkData.length;
+    const criticalRework = reworkData.filter(
+      (r: any) => r.severity === "critical",
+    ).length;
 
-    // Rework stats
-    const totalRework = reworkStatsQuery.data?.length || 0;
-    const criticalRework =
-      reworkStatsQuery.data?.filter((r) => r.severity === "critical").length ||
-      0;
-
-    // Trend
     const currentWeekOrders = thisWeekOrdersQuery.count || 0;
     const lastWeekOrders = lastWeekOrdersQuery.count || 0;
     const trendPercent =
@@ -557,135 +381,134 @@ export async function GET(request: NextRequest) {
         ? ((currentWeekOrders - lastWeekOrders) / lastWeekOrders) * 100
         : 0;
 
-    // --- Operational Calculations ---
-    const afterSalesData = afterSalesQuery.data || [];
-
-    let totalKonfirmasi = 0;
-    let totalPelunasan = 0;
-    let totalDelivery = 0;
-    let urgentCount = 0;
-
-    afterSalesData.forEach((record) => {
-      if (record.stage === "konfirmasi_awal") totalKonfirmasi++;
-      if (record.stage === "pelunasan") totalPelunasan++;
-      if (record.stage === "pengiriman") totalDelivery++;
-
-      // Check urgent: order status in_progress but approaching deadline
-      const order = Array.isArray(record.orders)
-        ? record.orders[0]
-        : record.orders;
-      if (order?.deadline) {
-        const deadline = new Date(order.deadline);
+    // ============================================================
+    // After Sales
+    // ============================================================
+    const afterSalesData = afterSalesOrdersQuery.data || [];
+    let totalKonfirmasi = 0,
+      totalPelunasan = 0,
+      totalDelivery = 0,
+      urgentCount = 0;
+    afterSalesData.forEach((record: any) => {
+      if (
+        record.current_stage === "approval_penerimaan_order" ||
+        record.current_stage === "approval_qc_1"
+      )
+        totalKonfirmasi++;
+      if (record.current_stage === "pelunasan") totalPelunasan++;
+      if (record.current_stage === "pengiriman") totalDelivery++;
+      if (record.deadline) {
         const daysLeft =
-          (deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+          (new Date(record.deadline).getTime() - Date.now()) /
+          (1000 * 60 * 60 * 24);
         if (daysLeft <= 2 && daysLeft > 0) urgentCount++;
       }
     });
 
-    // Racik (shrinkage)
-    let totalShrinkage = 0;
-    let shrinkCount = 0;
-    let totalRacikBerat = 0;
-
-    racikStatsQuery.data?.forEach((record) => {
-      const data = record.data;
-      if (data?.actual_weight && data?.target_weight) {
-        const shrinkage =
-          ((data.target_weight - data.actual_weight) / data.target_weight) *
-          100;
-        totalShrinkage += shrinkage;
+    // ============================================================
+    // Racik
+    // ============================================================
+    let totalShrinkage = 0,
+      shrinkCount = 0,
+      totalRacikBerat = 0;
+    (racikStatsQuery.data || []).forEach((record: any) => {
+      const d = record.data;
+      if (d?.actual_weight && d?.target_weight) {
+        totalShrinkage +=
+          ((d.target_weight - d.actual_weight) / d.target_weight) * 100;
         shrinkCount++;
-        totalRacikBerat += data.actual_weight;
+        totalRacikBerat += d.actual_weight;
       }
     });
-
     const rataShrinkage = shrinkCount > 0 ? totalShrinkage / shrinkCount : 0;
 
+    // ============================================================
     // Laser
+    // ============================================================
     const laserData = laserStatsQuery.data || [];
-    const antrianLaser = laserData.filter((l) => !l.finished_at).length;
-    const mesinAktif = 3; // Asumsi: 3 mesin laser aktif (bisa dari config)
+    const antrianLaser = laserData.filter((l: any) => !l.finished_at).length;
 
-    // QC Stats
+    // ============================================================
+    // QC
+    // ============================================================
     const qcData = qcStatsQuery.data || [];
-    let totalPassRate = 0;
-    let passCount = 0;
-
-    qcData.forEach((record) => {
+    let totalPassRate = 0,
+      passCount = 0,
+      failedToday = 0;
+    qcData.forEach((record: any) => {
       if (record.data?.overall_result) {
         passCount++;
         if (record.data.overall_result === "passed") totalPassRate++;
       }
+      if (record.data?.overall_result === "failed") failedToday++;
     });
-
     const passRateAvg = passCount > 0 ? (totalPassRate / passCount) * 100 : 0;
-    const totalChecks = qcData.length;
-    const failedToday = qcFailedTodayQuery.count || 0;
 
-    // --- Production Calculations ---
-
-    // Experts — filter to production role_group only
-    const expertData = (expertStatsQuery.data ?? []).filter(
-      (u: any) => (u.role as any)?.role_group === "production",
+    // ============================================================
+    // Experts
+    // ============================================================
+    const allUsers = expertUsersQuery.data || [];
+    const expertData = allUsers.filter((u: any) =>
+      PRODUCTION_ROLES.includes((u.role as any)?.name),
     );
     const totalExperts = expertData.length;
-    const activeExperts = expertData.filter((e: any) => e.status === "active").length;
+    const activeExperts = expertData.filter(
+      (e: any) => e.status === "active",
+    ).length;
 
-    // Get orders assigned to experts today
-    const expertOrdersQuery = await supabase
+    const { count: totalExpertOrders } = await admin
       .from("scan_events")
       .select("order_id", { count: "exact", head: true })
       .eq("action", "submit")
       .in(
         "user_id",
-        expertData.filter((e: any) => e.status === "active").map((e: any) => e.id),
+        expertData
+          .filter((e: any) => e.status === "active")
+          .map((e: any) => e.id),
       )
       .gte("scanned_at", todayISO);
 
-    const totalExpertOrders = expertOrdersQuery.count || 0;
-
+    // ============================================================
     // Micro Setting
+    // ============================================================
     const microData = microSettingQuery.data || [];
-    const microSettingTotal = microData.filter((m) => {
-      const order = Array.isArray(m.orders) ? m.orders[0] : m.orders;
+    const microSettingTotal = microData.filter((m: any) => {
+      const order = m.orders;
       return order?.has_gemstone;
     }).length;
-    const microInProgress = microData.filter((m) => {
-      const order = Array.isArray(m.orders) ? m.orders[0] : m.orders;
+    const microInProgress = microData.filter((m: any) => {
+      const order = m.orders;
       return !m.finished_at && order?.has_gemstone;
     }).length;
 
+    // ============================================================
     // Yield
-    let totalYield = 0;
-    let yieldCount = 0;
-    let sumTarget = 0;
-    let sumActual = 0;
-
-    yieldStatsQuery.data?.forEach((record) => {
-      const data = record.data;
-      const order = Array.isArray(record.orders)
-        ? record.orders[0]
-        : record.orders;
+    // ============================================================
+    let totalYield = 0,
+      yieldCount = 0,
+      sumTarget = 0,
+      sumActual = 0;
+    (yieldStatsQuery.data || []).forEach((record: any) => {
+      const d = record.data;
+      const order = record.orders;
       const target = order?.target_weight;
-
-      if (data?.actual_weight && target) {
-        const yieldPercent = (data.actual_weight / target) * 100;
-        totalYield += yieldPercent;
+      if (d?.actual_weight && target) {
+        totalYield += (d.actual_weight / target) * 100;
         yieldCount++;
         sumTarget += target;
-        sumActual += data.actual_weight;
+        sumActual += d.actual_weight;
       }
     });
-
     const rataYield = yieldCount > 0 ? totalYield / yieldCount : 0;
 
-    // --- Stage Distribution ---
+    // ============================================================
+    // Stage Distribution
+    // ============================================================
     const stageCounts: Record<string, number> = {};
-    STAGE_ORDER.forEach((stage) => {
-      stageCounts[stage] = 0;
+    STAGE_ORDER.forEach((s) => {
+      stageCounts[s] = 0;
     });
-
-    stageDistributionQuery.data?.forEach((order) => {
+    (stageDistributionQuery.data || []).forEach((order: any) => {
       if (
         order.current_stage &&
         stageCounts.hasOwnProperty(order.current_stage)
@@ -693,88 +516,75 @@ export async function GET(request: NextRequest) {
         stageCounts[order.current_stage]++;
       }
     });
-
-    const stageDistribution = STAGE_ORDER.filter(
-      (stage) => stageCounts[stage] > 0,
-    ).map((stage) => ({
-      stage,
-      count: stageCounts[stage],
-    }));
-
-    // --- Recent Activities ---
-    // --- Recent Activities ---
-    const recentActivities = (recentActivitiesQuery.data || []).map(
-      (activity: any) => {
-        let type: "scan" | "qc" | "approval" | "rework" =
-          mapStageToActivityType(activity.stage);
-        let status: "success" | "warning" | "error" | undefined;
-        let notes: string | undefined;
-
-        if (activity.action === "reject") {
-          type = "rework";
-          status = "error";
-          notes = "Ditolak, perlu rework";
-        } else if (activity.action === "submit") {
-          status = "success";
-          notes = `Stage ${activity.stage} selesai`;
-        }
-
-        // Type assertion untuk handle nested relations dari Supabase
-        const orderData = activity.orders as any;
-        const userData = activity.users as any;
-
-        return {
-          id: activity.id,
-          type,
-          orderNumber: orderData?.order_number || "-",
-          stage: activity.stage,
-          user: userData?.full_name || "Unknown",
-          timestamp: activity.scanned_at,
-          status,
-          notes,
-        };
-      },
+    const stageDistribution = STAGE_ORDER.filter((s) => stageCounts[s] > 0).map(
+      (s) => ({ stage: s, count: stageCounts[s] }),
     );
 
-    // --- Top Performers ---
-    // Aggregate per user dari v_staff_productivity
-    const userPerformance: Record<
-      string,
-      {
-        name: string;
-        role: string;
-        totalSubmits: number;
-        ordersHandled: Set<string>;
-      }
-    > = {};
+    // ============================================================
+    // Recent Activities
+    // ============================================================
+    const recentActivities = (recentActivitiesQuery.data || []).map(
+      (activity: any) => ({
+        id: activity.id,
+        type: mapStageToActivityType(activity.stage),
+        orderNumber: activity.orders?.order_number || "-",
+        stage: activity.stage,
+        user: activity.users?.full_name || "Unknown",
+        timestamp: activity.scanned_at,
+        status: (activity.action === "reject"
+          ? "error"
+          : activity.action === "submit"
+            ? "success"
+            : undefined) as "success" | "error" | undefined,
+        notes:
+          activity.action === "reject"
+            ? "Ditolak, perlu rework"
+            : activity.action === "submit"
+              ? `Stage ${activity.stage} selesai`
+              : undefined,
+      }),
+    );
 
-    topPerformersQuery.data?.forEach((record) => {
-      if (!userPerformance[record.user_id]) {
-        userPerformance[record.user_id] = {
-          name: record.full_name,
-          role: record.role_name,
-          totalSubmits: 0,
-          ordersHandled: new Set(),
-        };
+    // ============================================================
+    // Top Performers (from stage_results aggregation)
+    // ============================================================
+    const { data: performerData } = await admin
+      .from("stage_results")
+      .select(
+        "user_id, users!stage_results_user_id_fkey(full_name, role:roles!users_role_id_fkey(name))",
+      )
+      .gte("started_at", thirtyDaysAgoISO)
+      .not("finished_at", "is", null);
+
+    const performerMap = new Map<
+      string,
+      { name: string; role: string; count: number }
+    >();
+    (performerData || []).forEach((r: any) => {
+      const uid = r.user_id;
+      if (!performerMap.has(uid)) {
+        performerMap.set(uid, {
+          name: r.users?.full_name || "Unknown",
+          role: (r.users?.role as any)?.name || "-",
+          count: 0,
+        });
       }
-      userPerformance[record.user_id].totalSubmits += record.total_submits || 0;
-      // Note: orders_handled is a count in view, kita tidak bisa track unique per hari tanpa query tambahan
+      performerMap.get(uid)!.count++;
     });
 
-    const topPerformers = Object.values(userPerformance)
-      .sort((a, b) => b.totalSubmits - a.totalSubmits)
+    const topPerformers = Array.from(performerMap.values())
+      .sort((a, b) => b.count - a.count)
       .slice(0, 5)
-      .map((perf) => ({
-        name: perf.name,
-        role: perf.role,
-        ordersCompleted: perf.totalSubmits,
-        avgTime: 2.5, // Placeholder - perlu query stage_duration view untuk akurat
+      .map((p) => ({
+        name: p.name,
+        role: p.role,
+        ordersCompleted: p.count,
+        avgTime: 2.5,
       }));
 
     // ============================================================
-    // Build Final Response
+    // Response
     // ============================================================
-
     const response: DailyStatsResponse = {
       kpi: {
         totalOrdersAktif,
@@ -786,7 +596,7 @@ export async function GET(request: NextRequest) {
           avgKarat: Math.round(avgKarat * 10) / 10,
         },
         rataCycleTime: Math.round(rataCycleTime * 10) / 10,
-        targetCycleTime,
+        targetCycleTime: DEFAULT_TARGET_CYCLE_TIME,
         additional: {
           ordersHariIni: todayOrdersQuery.count || 0,
           selesaiHariIni: completedTodayQuery.count || 0,
@@ -809,21 +619,18 @@ export async function GET(request: NextRequest) {
         },
         adminTasks: {
           total: totalKonfirmasi + totalPelunasan,
-          delayed: 0, // Bisa ditambahkan dari query terpisah
+          delayed: 0,
           active: totalKonfirmasi,
         },
         racik: {
           rataShrinkage: Math.round(rataShrinkage * 100) / 100,
-          targetShrinkage: 5.0, // Default target, bisa dari config
+          targetShrinkage: 5.0,
           totalBerat: Math.round(totalRacikBerat * 100) / 100,
         },
-        laser: {
-          antrian: antrianLaser,
-          mesinAktif,
-        },
+        laser: { antrian: antrianLaser, mesinAktif: 3 },
         qc: {
           passRateAvg: Math.round(passRateAvg * 10) / 10,
-          totalChecks,
+          totalChecks: qcData.length,
           failedToday,
         },
       },
@@ -831,7 +638,7 @@ export async function GET(request: NextRequest) {
         experts: {
           total: totalExperts,
           aktif: activeExperts,
-          totalOrders: totalExpertOrders,
+          totalOrders: totalExpertOrders || 0,
         },
         microSetting: {
           total: microSettingTotal,
@@ -856,7 +663,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Daily Stats API Error:", error);
-
     return NextResponse.json(
       {
         success: false,
@@ -867,9 +673,5 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ============================================================
-// Optional: Revalidate configuration
-// ============================================================
-
 export const dynamic = "force-dynamic";
-export const revalidate = 0; // No cache, always fetch fresh data
+export const revalidate = 0;

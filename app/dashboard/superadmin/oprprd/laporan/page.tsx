@@ -61,7 +61,7 @@ const REPORTS: ReportCard[] = [
     type: "quality",
     title: "Laporan QC",
     description:
-      "Semua hasil pemeriksaan Quality Control (QC Awal, QC 1, QC 2, QC 3) beserta ringkasan pass rate per tahap.",
+      "Semua hasil pemeriksaan Quality Control (QC 1, QC 2, QC 3) beserta ringkasan pass rate per tahap.",
     columns: [
       "Tanggal",
       "No Order",
@@ -96,12 +96,7 @@ const REPORTS: ReportCard[] = [
     title: "Laporan Lengkap",
     description:
       "Gabungan laporan produksi, QC, dan performa staff dalam satu file CSV — ideal untuk arsip bulanan.",
-    columns: [
-      "Data Produksi",
-      "Data QC",
-      "Performa Staff",
-      "Semua tahap",
-    ],
+    columns: ["Data Produksi", "Data QC", "Performa Staff", "Semua tahap"],
     icon: <FileSpreadsheet className="h-5 w-5" />,
     tone: "amber",
   },
@@ -156,7 +151,10 @@ export default function LaporanPage() {
 
   useEffect(() => {
     const cu = getClientUser();
-    if (!cu) { router.push("/login"); return; }
+    if (!cu) {
+      router.push("/login");
+      return;
+    }
     setClientUser(cu);
   }, [router]);
 
@@ -172,7 +170,9 @@ export default function LaporanPage() {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error ?? `Gagal mengunduh laporan (${res.status})`);
+        throw new Error(
+          json.error ?? `Gagal mengunduh laporan (${res.status})`,
+        );
       }
 
       const blob = await res.blob();
@@ -191,7 +191,9 @@ export default function LaporanPage() {
 
       setLastDownloaded(type);
     } catch (err) {
-      setDownloadError(err instanceof Error ? err.message : "Terjadi kesalahan");
+      setDownloadError(
+        err instanceof Error ? err.message : "Terjadi kesalahan",
+      );
     } finally {
       setDownloading(null);
     }
@@ -203,7 +205,6 @@ export default function LaporanPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
         <main className="flex-1 overflow-y-auto p-6">
-
           {/* ── Header ── */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
             <div>
@@ -235,7 +236,10 @@ export default function LaporanPage() {
                 className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-200"
               />
               <p className="text-[11px] text-slate-400">
-                Periode: <span className="font-medium text-slate-600">{periodLabel(period)}</span>
+                Periode:{" "}
+                <span className="font-medium text-slate-600">
+                  {periodLabel(period)}
+                </span>
               </p>
             </div>
           </div>
@@ -245,7 +249,9 @@ export default function LaporanPage() {
             <div className="mb-5 flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
               <AlertTriangle className="mt-0.5 h-4 w-4 flex-none text-rose-600" />
               <div>
-                <p className="text-sm font-medium text-rose-800">Gagal mengunduh laporan</p>
+                <p className="text-sm font-medium text-rose-800">
+                  Gagal mengunduh laporan
+                </p>
                 <p className="text-xs text-rose-700">{downloadError}</p>
               </div>
             </div>
@@ -265,9 +271,7 @@ export default function LaporanPage() {
                 >
                   {/* Card Header */}
                   <div className="flex items-start gap-3">
-                    <div
-                      className={`flex-none rounded-lg p-2.5 ${tc.iconBg}`}
-                    >
+                    <div className={`flex-none rounded-lg p-2.5 ${tc.iconBg}`}>
                       {report.icon}
                     </div>
                     <div className="min-w-0">
@@ -298,7 +302,10 @@ export default function LaporanPage() {
                   {/* Footer */}
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] text-slate-400">
-                      Format: <span className="font-medium text-slate-600">CSV (Excel-compatible)</span>
+                      Format:{" "}
+                      <span className="font-medium text-slate-600">
+                        CSV (Excel-compatible)
+                      </span>
                     </p>
                     <button
                       onClick={() => handleDownload(report.type)}
@@ -336,7 +343,8 @@ export default function LaporanPage() {
             <ul className="space-y-1.5 text-xs text-slate-600">
               <li className="flex items-start gap-2">
                 <span className="mt-0.5 h-1.5 w-1.5 flex-none rounded-full bg-slate-400" />
-                Pilih <strong>periode (bulan)</strong> di sudut kanan atas sebelum mengunduh.
+                Pilih <strong>periode (bulan)</strong> di sudut kanan atas
+                sebelum mengunduh.
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-0.5 h-1.5 w-1.5 flex-none rounded-full bg-slate-400" />
@@ -344,15 +352,17 @@ export default function LaporanPage() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-0.5 h-1.5 w-1.5 flex-none rounded-full bg-slate-400" />
-                <strong>Laporan Lengkap</strong> menggabungkan tiga laporan sekaligus — cocok untuk arsip bulanan.
+                <strong>Laporan Lengkap</strong> menggabungkan tiga laporan
+                sekaligus — cocok untuk arsip bulanan.
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-0.5 h-1.5 w-1.5 flex-none rounded-full bg-slate-400" />
-                Data susut hanya muncul untuk tahap <strong>Lebur Bahan</strong>, <strong>Pembentukan Cincin</strong>, dan <strong>Pemolesan</strong>.
+                Data susut hanya muncul untuk tahap <strong>Lebur Bahan</strong>
+                , <strong>Pembentukan Cincin</strong>, dan{" "}
+                <strong>Pemolesan</strong>.
               </li>
             </ul>
           </div>
-
         </main>
       </div>
     </div>

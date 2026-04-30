@@ -2,12 +2,14 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const PRODUCTION_ROLES = [
   "jewelry_expert_lebur_bahan",
   "jewelry_expert_pembentukan_awal",
   "jewelry_expert_finishing",
   "micro_setting",
+  "laser",
 ];
 
 const STAGE_LABELS: Record<string, string> = {
@@ -18,7 +20,6 @@ const STAGE_LABELS: Record<string, string> = {
   pemolesan: "Pemolesan",
   laser: "Laser",
   finishing: "Finishing",
-  qc_awal: "QC Awal",
   qc_1: "QC 1",
   qc_2: "QC 2",
   qc_3: "QC 3",
@@ -37,7 +38,10 @@ function fmtDate(iso: string | null): string {
   });
 }
 
-function fmtDuration(startedAt: string | null, finishedAt: string | null): string {
+function fmtDuration(
+  startedAt: string | null,
+  finishedAt: string | null,
+): string {
   if (!startedAt || !finishedAt) return "-";
   const mins =
     (new Date(finishedAt).getTime() - new Date(startedAt).getTime()) / 60_000;
@@ -57,35 +61,42 @@ function fmtPct(n: number | null | undefined): string {
   return `${n.toFixed(2).replace(".", ",")}%`;
 }
 
-function toCSV(headers: string[], rows: (string | number | null)[][]): string {
-  const esc = (v: string | number | null) => {
-    if (v == null) return "";
-    const s = String(v);
-    return s.includes(",") || s.includes('"') || s.includes("\n")
-      ? `"${s.replace(/"/g, '""')}"`
-      : s;
-  };
-  return [headers, ...rows].map((row) => row.map(esc).join(",")).join("\r\n");
+function escapeCSV(v: string | number | null): string {
+  if (v == null) return "";
+  const s = String(v);
+  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
 }
+
+function toCSV(headers: string[], rows: (string | number | null)[][]): string {
+  const headerLine = headers.map(escapeCSV).join(",");
+  const dataLines = rows.map((row) => row.map(escapeCSV).join(","));
+  return [headerLine, ...dataLines].join("\r\n");
+}
+
+// ─── Main handler ─────────────────────────────────────────────────────────────
 
 export async function GET(request: Request) {
   try {
     const supabase = await createClient();
+    const admin = createAdminClient();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user)
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const { data: profile } = await supabase
       .from("users")
       .select("id, role:roles!users_role_id_fkey(name)")
-      .eq("id", user.id)
+      .eq("id", authData.user.id)
       .single();
 
-    if ((profile?.role as any)?.name !== "superadmin")
+    if ((profile?.role as any)?.name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type") ?? "complete";
@@ -95,9 +106,9 @@ export async function GET(request: Request) {
     let toDate: Date;
 
     if (period && /^\d{4}-\d{2}$/.test(period)) {
-      const [yr, mo] = period.split("-").map(Number);
-      fromDate = new Date(yr, mo - 1, 1);
-      toDate = new Date(yr, mo, 0, 23, 59, 59, 999);
+      const parts = period.split("-").map(Number);
+      fromDate = new Date(parts[0], parts[1] - 1, 1);
+      toDate = new Date(parts[0], parts[1], 0, 23, 59, 59, 999);
     } else {
       toDate = new Date();
       fromDate = new Date(toDate);
@@ -106,23 +117,16 @@ export async function GET(request: Request) {
 
     const fromISO = fromDate.toISOString();
     const toISO = toDate.toISOString();
-    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
-    const BOM = "﻿";
+    const now = new Date();
+    const timestamp = now.toISOString().slice(0, 19).replace(/:/g, "-");
+    const BOM = "\uFEFF";
 
-    // ── PRODUCTION REPORT ─────────────────────────────────────────────────────
+    // ── PRODUCTION REPORT ─────────────────────────────────────────────────
     if (type === "production") {
-      const { data, error } = await supabase
+      const { data, error } = await admin
         .from("stage_results")
         .select(
-          `
-          stage,
-          started_at,
-          finished_at,
-          attempt_number,
-          data,
-          orders ( order_number, product_name ),
-          users ( full_name, role:roles!users_role_id_fkey(name) )
-        `,
+          "stage, started_at, finished_at, attempt_number, data, orders!stage_results_order_id_fkey(order_number, product_name), users!stage_results_user_id_fkey(full_name, role:roles!users_role_id_fkey(name))",
         )
         .in("stage", [
           "racik_bahan",
@@ -139,7 +143,6 @@ export async function GET(request: Request) {
         .order("started_at", { ascending: false });
 
       if (error) {
-        console.error("[reports-oprprd] production:", error.message);
         return NextResponse.json(
           { error: "Gagal mengambil data produksi" },
           { status: 500 },
@@ -147,27 +150,21 @@ export async function GET(request: Request) {
       }
 
       const rows = (data ?? []).map((r: any, i: number) => {
-        const susut = (() => {
-          if (r.stage === "lebur_bahan")
-            return r.data?.shrinkage_percent != null
-              ? fmtPct(parseFloat(r.data.shrinkage_percent))
-              : "-";
-          if (r.stage === "pembentukan_cincin") {
-            const lost = parseFloat(r.data?.weight_lost);
-            const inp = parseFloat(r.data?.weight_input);
-            return !isNaN(lost) && !isNaN(inp) && inp > 0
-              ? fmtPct((lost / inp) * 100)
-              : "-";
-          }
-          if (r.stage === "pemolesan") {
-            const lost = parseFloat(r.data?.weight_lost);
-            const bef = parseFloat(r.data?.weight_before_polish);
-            return !isNaN(lost) && !isNaN(bef) && bef > 0
-              ? fmtPct((lost / bef) * 100)
-              : "-";
-          }
-          return "-";
-        })();
+        let susut = "-";
+        if (r.stage === "lebur_bahan") {
+          const sp = parseFloat(r.data?.shrinkage_percent);
+          if (!isNaN(sp)) susut = fmtPct(sp);
+        } else if (r.stage === "pembentukan_cincin") {
+          const lost = parseFloat(r.data?.weight_lost);
+          const inp = parseFloat(r.data?.weight_input);
+          if (!isNaN(lost) && !isNaN(inp) && inp > 0)
+            susut = fmtPct((lost / inp) * 100);
+        } else if (r.stage === "pemolesan") {
+          const lost = parseFloat(r.data?.weight_lost);
+          const bef = parseFloat(r.data?.weight_before_polish);
+          if (!isNaN(lost) && !isNaN(bef) && bef > 0)
+            susut = fmtPct((lost / bef) * 100);
+        }
 
         return [
           i + 1,
@@ -202,34 +199,25 @@ export async function GET(request: Request) {
       return new Response(BOM + csv, {
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="Laporan_Produksi${period ? "_" + period : ""}_${timestamp}.csv"`,
+          "Content-Disposition": `attachment; filename="Laporan_Produksi_${timestamp}.csv"`,
         },
       });
     }
 
-    // ── QUALITY REPORT ────────────────────────────────────────────────────────
+    // ── QUALITY REPORT ────────────────────────────────────────────────────
     if (type === "quality") {
-      const { data, error } = await supabase
+      const { data, error } = await admin
         .from("stage_results")
         .select(
-          `
-          stage,
-          started_at,
-          finished_at,
-          notes,
-          data,
-          orders ( order_number, product_name ),
-          users ( full_name )
-        `,
+          "stage, started_at, finished_at, notes, data, orders!stage_results_order_id_fkey(order_number, product_name), users!stage_results_user_id_fkey(full_name)",
         )
-        .in("stage", ["qc_awal", "qc_1", "qc_2", "qc_3"])
+        .in("stage", ["qc_1", "qc_2", "qc_3"])
         .gte("started_at", fromISO)
         .lte("started_at", toISO)
         .not("finished_at", "is", null)
         .order("finished_at", { ascending: false });
 
       if (error) {
-        console.error("[reports-oprprd] quality:", error.message);
         return NextResponse.json(
           { error: "Gagal mengambil data QC" },
           { status: 500 },
@@ -248,11 +236,8 @@ export async function GET(request: Request) {
         fmtDuration(r.started_at, r.finished_at),
       ]);
 
-      // Summary per QC type
-      const stageSummary: Record<
-        string,
-        { total: number; passed: number }
-      > = {};
+      const stageSummary: Record<string, { total: number; passed: number }> =
+        {};
       (data ?? []).forEach((r: any) => {
         const acc = stageSummary[r.stage] ?? { total: 0, passed: 0 };
         acc.total += 1;
@@ -261,85 +246,102 @@ export async function GET(request: Request) {
         stageSummary[r.stage] = acc;
       });
 
-      const summaryRows: (string | number | null)[][] = [
-        [],
-        ["=== RINGKASAN QC ==="],
-        ["Tahap", "Total", "Lulus", "Gagal", "Pass Rate"],
+      const summaryLines: string[] = [
+        "",
+        "=== RINGKASAN QC ===",
+        "Tahap,Total,Lulus,Gagal,Pass Rate",
       ];
       Object.entries(stageSummary).forEach(([stage, acc]) => {
         const failed = acc.total - acc.passed;
-        summaryRows.push([
-          STAGE_LABELS[stage] ?? stage,
-          fmtNum(acc.total),
-          fmtNum(acc.passed),
-          fmtNum(failed),
-          acc.total > 0 ? fmtPct((acc.passed / acc.total) * 100) : "-",
-        ]);
+        const rate =
+          acc.total > 0 ? fmtPct((acc.passed / acc.total) * 100) : "-";
+        summaryLines.push(
+          [
+            STAGE_LABELS[stage] ?? stage,
+            fmtNum(acc.total),
+            fmtNum(acc.passed),
+            fmtNum(failed),
+            rate,
+          ]
+            .map(escapeCSV)
+            .join(","),
+        );
       });
 
       const detail = toCSV(
-        ["No", "Tanggal", "No Order", "Produk", "Tahap QC", "Inspektor", "Hasil", "Catatan", "Durasi"],
+        [
+          "No",
+          "Tanggal",
+          "No Order",
+          "Produk",
+          "Tahap QC",
+          "Inspektor",
+          "Hasil",
+          "Catatan",
+          "Durasi",
+        ],
         rows,
       );
 
-      const summarySection = summaryRows
-        .map((r) => r.map((v) => (v == null ? "" : String(v))).join(","))
-        .join("\r\n");
-
-      return new Response(BOM + detail + "\r\n" + summarySection, {
+      return new Response(BOM + detail + "\r\n" + summaryLines.join("\r\n"), {
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="Laporan_QC${period ? "_" + period : ""}_${timestamp}.csv"`,
+          "Content-Disposition": `attachment; filename="Laporan_QC_${timestamp}.csv"`,
         },
       });
     }
 
-    // ── STAFF REPORT ──────────────────────────────────────────────────────────
+    // ── STAFF REPORT ──────────────────────────────────────────────────────
     if (type === "staff") {
       const [staffRes, stageRes, scanRes] = await Promise.all([
-        supabase
+        admin
           .from("users")
-          .select(
-            "id, full_name, status, role:roles!users_role_id_fkey(name, role_group)",
-          )
+          .select("id, full_name, role:roles!users_role_id_fkey(name)")
           .eq("status", "active")
           .is("deleted_at", null),
-
-        supabase
+        admin
           .from("stage_results")
-          .select("user_id, stage, data, started_at, finished_at")
+          .select("user_id, stage, data")
           .gte("started_at", fromISO)
           .lte("started_at", toISO)
           .not("finished_at", "is", null),
-
-        supabase
+        admin
           .from("scan_events")
           .select("user_id, order_id")
           .gte("scanned_at", fromISO)
           .lte("scanned_at", toISO),
       ]);
 
-      const allStaff = staffRes.data ?? [];
-      const allStages = stageRes.data ?? [];
-      const allScans = scanRes.data ?? [];
+      const allStaff: any[] = staffRes.data ?? [];
+      const allStages: any[] = stageRes.data ?? [];
+      const allScans: any[] = scanRes.data ?? [];
 
-      const productionStaff = (allStaff as any[]).filter((u) =>
+      const productionStaff = allStaff.filter((u: any) =>
         PRODUCTION_ROLES.includes((u.role as any)?.name),
       );
 
-      const scanMap = new Map<string, { scans: number; orders: Set<string> }>();
-      (allScans as any[]).forEach((s) => {
-        const e = scanMap.get(s.user_id) ?? { scans: 0, orders: new Set<string>() };
+      const scanMap = new Map<
+        string,
+        { scans: number; orderSet: Set<string> }
+      >();
+      allScans.forEach((s: any) => {
+        const e = scanMap.get(s.user_id) ?? {
+          scans: 0,
+          orderSet: new Set<string>(),
+        };
         e.scans += 1;
-        if (s.order_id) e.orders.add(s.order_id);
+        if (s.order_id) e.orderSet.add(s.order_id);
         scanMap.set(s.user_id, e);
       });
 
       const stagesMap = new Map<string, number>();
       const susutMap = new Map<string, { sum: number; count: number }>();
-      (allStages as any[]).forEach((sr: any) => {
+
+      allStages.forEach((sr: any) => {
         stagesMap.set(sr.user_id, (stagesMap.get(sr.user_id) ?? 0) + 1);
-        if (["lebur_bahan", "pembentukan_cincin", "pemolesan"].includes(sr.stage)) {
+        if (
+          ["lebur_bahan", "pembentukan_cincin", "pemolesan"].includes(sr.stage)
+        ) {
           let susut: number | null = null;
           if (sr.stage === "lebur_bahan") {
             const v = parseFloat(sr.data?.shrinkage_percent);
@@ -372,62 +374,78 @@ export async function GET(request: Request) {
           u.full_name,
           (u.role as any)?.name ?? "-",
           fmtNum(scan?.scans ?? 0),
-          fmtNum(scan?.orders.size ?? 0),
+          fmtNum(scan?.orderSet.size ?? 0),
           fmtNum(stagesMap.get(u.id) ?? 0),
           avgSusut != null ? fmtPct(avgSusut) : "-",
         ];
       });
 
       const csv = toCSV(
-        ["No", "Nama Staff", "Role", "Total Scan", "Total Order", "Tahap Selesai", "Rata Susut"],
+        [
+          "No",
+          "Nama Staff",
+          "Role",
+          "Total Scan",
+          "Total Order",
+          "Tahap Selesai",
+          "Rata Susut",
+        ],
         rows,
       );
 
       return new Response(BOM + csv, {
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="Laporan_Staff_Produksi${period ? "_" + period : ""}_${timestamp}.csv"`,
+          "Content-Disposition": `attachment; filename="Laporan_Staff_${timestamp}.csv"`,
         },
       });
     }
 
-    // ── COMPLETE REPORT ───────────────────────────────────────────────────────
+    // ── COMPLETE REPORT ───────────────────────────────────────────────────
     const [prodRes, qcRes, staffAll, scanAll, stageAll] = await Promise.all([
-      supabase
+      admin
         .from("stage_results")
         .select(
-          "stage, started_at, finished_at, data, orders(order_number), users(full_name, role:roles!users_role_id_fkey(name))",
+          "stage, started_at, finished_at, data, orders!stage_results_order_id_fkey(order_number), users!stage_results_user_id_fkey(full_name, role:roles!users_role_id_fkey(name))",
         )
-        .in("stage", ["racik_bahan", "lebur_bahan", "pembentukan_cincin", "pemasangan_permata", "pemolesan", "laser", "finishing"])
+        .in("stage", [
+          "racik_bahan",
+          "lebur_bahan",
+          "pembentukan_cincin",
+          "pemasangan_permata",
+          "pemolesan",
+          "laser",
+          "finishing",
+        ])
         .gte("started_at", fromISO)
         .lte("started_at", toISO)
         .not("finished_at", "is", null)
         .order("started_at", { ascending: false }),
 
-      supabase
+      admin
         .from("stage_results")
         .select(
-          "stage, finished_at, data, notes, orders(order_number), users(full_name)",
+          "stage, finished_at, data, notes, orders!stage_results_order_id_fkey(order_number), users!stage_results_user_id_fkey(full_name)",
         )
-        .in("stage", ["qc_awal", "qc_1", "qc_2", "qc_3"])
+        .in("stage", ["qc_1", "qc_2", "qc_3"])
         .gte("started_at", fromISO)
         .lte("started_at", toISO)
         .not("finished_at", "is", null)
         .order("finished_at", { ascending: false }),
 
-      supabase
+      admin
         .from("users")
         .select("id, full_name, role:roles!users_role_id_fkey(name)")
         .eq("status", "active")
         .is("deleted_at", null),
 
-      supabase
+      admin
         .from("scan_events")
         .select("user_id, order_id")
         .gte("scanned_at", fromISO)
         .lte("scanned_at", toISO),
 
-      supabase
+      admin
         .from("stage_results")
         .select("user_id, stage, data")
         .gte("started_at", fromISO)
@@ -435,7 +453,7 @@ export async function GET(request: Request) {
         .not("finished_at", "is", null),
     ]);
 
-    const exportDate = new Date().toLocaleDateString("id-ID", {
+    const exportDate = now.toLocaleDateString("id-ID", {
       weekday: "long",
       year: "numeric",
       month: "long",
@@ -462,61 +480,83 @@ export async function GET(request: Request) {
       r.notes ?? "-",
     ]);
 
-    // Staff summary
-    const productionStaff = (staffAll.data ?? [] as any[]).filter((u: any) =>
+    const prodStaff: any[] = (staffAll.data ?? []).filter((u: any) =>
       PRODUCTION_ROLES.includes((u.role as any)?.name),
     );
-    const scanMap2 = new Map<string, { scans: number; orders: Set<string> }>();
+
+    const scanMap2 = new Map<
+      string,
+      { scans: number; orderSet: Set<string> }
+    >();
     (scanAll.data ?? []).forEach((s: any) => {
-      const e = scanMap2.get(s.user_id) ?? { scans: 0, orders: new Set<string>() };
+      const e = scanMap2.get(s.user_id) ?? {
+        scans: 0,
+        orderSet: new Set<string>(),
+      };
       e.scans += 1;
-      if (s.order_id) e.orders.add(s.order_id);
+      if (s.order_id) e.orderSet.add(s.order_id);
       scanMap2.set(s.user_id, e);
     });
+
     const stageMap2 = new Map<string, number>();
     (stageAll.data ?? []).forEach((s: any) => {
       stageMap2.set(s.user_id, (stageMap2.get(s.user_id) ?? 0) + 1);
     });
 
-    const staffRows = productionStaff.map((u: any, i: number) => {
+    const staffRows = prodStaff.map((u: any, i: number) => {
       const sc = scanMap2.get(u.id);
       return [
         i + 1,
         u.full_name,
         (u.role as any)?.name ?? "-",
         fmtNum(sc?.scans ?? 0),
-        fmtNum(sc?.orders.size ?? 0),
+        fmtNum(sc?.orderSet.size ?? 0),
         fmtNum(stageMap2.get(u.id) ?? 0),
       ];
     });
 
-    const prodCSV = toCSV(
-      ["No", "Tanggal", "No Order", "Tahap", "Staff", "Role", "Durasi"],
-      prodRows,
-    );
-    const qcCSV = toCSV(
-      ["No", "Tanggal", "No Order", "Tahap QC", "Inspektor", "Hasil", "Catatan"],
-      qcRows,
-    );
-    const staffCSV = toCSV(
-      ["No", "Nama Staff", "Role", "Total Scan", "Total Order", "Tahap Selesai"],
-      staffRows,
-    );
-
-    const content =
-      `LAPORAN LENGKAP OPR-PRD - DIEKSPOR: ${exportDate}\r\n` +
-      `================================================================\r\n\r\n` +
-      `=== DATA PRODUKSI ===\r\n` +
-      prodCSV +
-      `\r\n\r\n=== DATA QC ===\r\n` +
-      qcCSV +
-      `\r\n\r\n=== PERFORMA STAFF PRODUKSI ===\r\n` +
-      staffCSV;
+    const content = [
+      `LAPORAN LENGKAP OPR-PRD - DIEKSPOR: ${exportDate}`,
+      `================================================================`,
+      ``,
+      `=== DATA PRODUKSI ===`,
+      toCSV(
+        ["No", "Tanggal", "No Order", "Tahap", "Staff", "Role", "Durasi"],
+        prodRows,
+      ),
+      ``,
+      `=== DATA QC ===`,
+      toCSV(
+        [
+          "No",
+          "Tanggal",
+          "No Order",
+          "Tahap QC",
+          "Inspektor",
+          "Hasil",
+          "Catatan",
+        ],
+        qcRows,
+      ),
+      ``,
+      `=== PERFORMA STAFF PRODUKSI ===`,
+      toCSV(
+        [
+          "No",
+          "Nama Staff",
+          "Role",
+          "Total Scan",
+          "Total Order",
+          "Tahap Selesai",
+        ],
+        staffRows,
+      ),
+    ].join("\r\n");
 
     return new Response(BOM + content, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="Laporan_Lengkap_OPRPRD${period ? "_" + period : ""}_${timestamp}.csv"`,
+        "Content-Disposition": `attachment; filename="Laporan_Lengkap_${timestamp}.csv"`,
       },
     });
   } catch (error) {
