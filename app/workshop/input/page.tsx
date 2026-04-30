@@ -534,6 +534,14 @@ function PhaseOrderList({
 
 // ── Phase: Create (penerimaan_order) ─────────────────────────────────────────
 
+function formatNumber(value: string): string {
+  // Remove non-digit characters
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+  // Format with dots
+  return Number(digits).toLocaleString("id-ID");
+}
+
 function PhaseCreate({
   user,
   theme,
@@ -665,26 +673,15 @@ function PhaseCreate({
                 className={inputCls(theme)}
               />
             </FieldRow>
-            <div className="grid grid-cols-2 gap-3">
-              <FieldRow label="No. Telepon" theme={theme}>
-                <input
-                  type="tel"
-                  value={form.customer_phone}
-                  onChange={set("customer_phone")}
-                  placeholder="08xx-xxxx-xxxx"
-                  className={inputCls(theme)}
-                />
-              </FieldRow>
-              <FieldRow label="WhatsApp" theme={theme}>
-                <input
-                  type="tel"
-                  value={form.customer_wa}
-                  onChange={set("customer_wa")}
-                  placeholder="08xx-xxxx-xxxx"
-                  className={inputCls(theme)}
-                />
-              </FieldRow>
-            </div>
+            <FieldRow label="No HP" theme={theme}>
+              <input
+                type="tel"
+                value={form.customer_wa}
+                onChange={set("customer_wa")}
+                placeholder="08xx-xxxx-xxxx"
+                className={inputCls(theme)}
+              />
+            </FieldRow>
           </div>
         </div>
 
@@ -733,7 +730,7 @@ function PhaseCreate({
                 />
               </FieldRow>
             </div>
-            <FieldRow label="Ukuran Cincin" theme={theme}>
+            <FieldRow label="Ukuran" theme={theme}>
               <input
                 type="text"
                 value={form.ring_size}
@@ -794,21 +791,27 @@ function PhaseCreate({
           <div className="grid grid-cols-2 gap-3">
             <FieldRow label="Total Harga (IDR)" theme={theme}>
               <input
-                type="number"
-                value={form.total_price}
-                onChange={set("total_price")}
+                type="text"
+                inputMode="numeric"
+                value={form.total_price ? formatNumber(form.total_price) : ""}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, "");
+                  setForm((prev) => ({ ...prev, total_price: raw }));
+                }}
                 placeholder="0"
-                min="0"
                 className={inputCls(theme)}
               />
             </FieldRow>
             <FieldRow label="Jumlah DP (IDR)" theme={theme}>
               <input
-                type="number"
-                value={form.dp_amount}
-                onChange={set("dp_amount")}
+                type="text"
+                inputMode="numeric"
+                value={form.dp_amount ? formatNumber(form.dp_amount) : ""}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, "");
+                  setForm((prev) => ({ ...prev, dp_amount: raw }));
+                }}
                 placeholder="0"
-                min="0"
                 className={inputCls(theme)}
               />
             </FieldRow>

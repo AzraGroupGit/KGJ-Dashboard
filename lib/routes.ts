@@ -114,7 +114,7 @@ export const WORKSHOP_ROUTES = {
 } as const;
 
 export const SUPERVISOR_ROUTES = {
-  DASHBOARD: "/dashboard/supervisor",
+  DASHBOARD: "/dashboard/supervisor/bottleneck",
   MONITORING: "/dashboard/supervisor/monitoring",
   APPROVAL: "/dashboard/supervisor/approval",
 } as const;

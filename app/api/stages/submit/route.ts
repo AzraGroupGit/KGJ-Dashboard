@@ -680,6 +680,96 @@ async function handleMaterialStage(
   return { stage_result_id: srId, next_stage: nextStage };
 }
 
+async function handlePemasanganPermata(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  orderId: string,
+  data: Record<string, unknown>,
+) {
+  const {
+    material_transactions,
+    notes,
+    started_at,
+    gemstone_total_weight,
+    gemstone_size,
+    gemstone_position,
+    gemstone_spacing,
+    ultrasonic_cleaned,
+    ...stageData
+  } = data as Record<string, any>;
+
+  const srId = await insertStageResult(admin, {
+    order_id: orderId,
+    user_id: userId,
+    stage: "pemasangan_permata",
+    data: {
+      ...stageData,
+      gemstone_total_weight: gemstone_total_weight ?? null,
+      gemstone_size: gemstone_size ?? null,
+      gemstone_position: gemstone_position ?? null,
+      gemstone_spacing: gemstone_spacing ?? null,
+      ultrasonic_cleaned: ultrasonic_cleaned ?? false,
+      material_transactions: Array.isArray(material_transactions)
+        ? material_transactions
+        : [],
+    },
+    notes: notes ?? null,
+    started_at: started_at ?? undefined,
+  });
+
+  // Insert material transactions (input + output)
+  await insertMaterialTransactions(
+    admin,
+    orderId,
+    srId,
+    "pemasangan_permata",
+    Array.isArray(material_transactions) ? material_transactions : [],
+    userId,
+  );
+
+  // Update gemstone_info on the orders table with total weight if provided
+  if (gemstone_total_weight) {
+    // Get current gemstone_info
+    const { data: order } = await admin
+      .from("orders")
+      .select("gemstone_info")
+      .eq("id", orderId)
+      .single();
+
+    const currentInfo = (order?.gemstone_info as any[]) || [];
+
+    // Append the setting info to gemstone_info
+    const updatedInfo = currentInfo.map((g: any) => ({
+      ...g,
+      total_weight_set: gemstone_total_weight,
+      set_at: new Date().toISOString(),
+    }));
+
+    await admin
+      .from("orders")
+      .update({
+        gemstone_info: updatedInfo.length > 0 ? updatedInfo : currentInfo,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", orderId);
+  }
+
+  // Auto-advance to pemolesan (no approval needed)
+  const nextStage = await finalizeStage(
+    admin,
+    orderId,
+    "pemasangan_permata",
+    userId,
+  );
+
+  await logActivity(admin, userId, "SUBMIT_STAGE", "stage_results", srId, {
+    order_id: orderId,
+    stage: "pemasangan_permata",
+  });
+
+  return { stage_result_id: srId, next_stage: nextStage };
+}
+
 async function handleQc1(
   admin: ReturnType<typeof createAdminClient>,
   userId: string,
@@ -1315,7 +1405,7 @@ export async function POST(request: Request) {
       case "racik_bahan":
       case "lebur_bahan":
       case "pembentukan_cincin":
-      case "pemasangan_permata":
+      // case "pemasangan_permata":
       case "pemolesan":
       case "finishing":
         result = await handleMaterialStage(
@@ -1344,6 +1434,14 @@ export async function POST(request: Request) {
         break;
 
       // Other stages
+      case "pemasangan_permata":
+        result = await handlePemasanganPermata(
+          admin,
+          authUser.id,
+          orderId!,
+          data,
+        );
+        break;
       case "laser":
         result = await handleLaser(admin, authUser.id, orderId!, data);
         break;

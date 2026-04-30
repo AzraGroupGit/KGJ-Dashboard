@@ -113,6 +113,11 @@ const menuItems: Record<string, MenuItem[]> = {
     },
   ],
   supervisor: [
+    {
+      name: "Dashboard",
+      icon: "bottleneck",
+      href: SUPERVISOR_ROUTES.DASHBOARD,
+    },
     { name: "Monitoring", icon: "monitor", href: SUPERVISOR_ROUTES.MONITORING },
     { name: "Persetujuan", icon: "approval", href: SUPERVISOR_ROUTES.APPROVAL },
   ],
@@ -381,11 +386,16 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
   const getRoleTitle = () => {
     switch (role) {
-      case "superadmin": return "Super Admin";
-      case "customer_service": return "CS";
-      case "marketing": return "Marketing";
-      case "supervisor": return "Supervisor";
-      default: return "Dashboard";
+      case "superadmin":
+        return "Super Admin";
+      case "customer_service":
+        return "CS";
+      case "marketing":
+        return "Marketing";
+      case "supervisor":
+        return "Supervisor";
+      default:
+        return "Dashboard";
     }
   };
 

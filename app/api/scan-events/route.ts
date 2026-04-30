@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // ─── Type Definitions ─────────────────────────────────────────────────────────
 
@@ -367,6 +368,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
+    const admin = createAdminClient();
 
     const {
       data: { user },
@@ -413,7 +415,7 @@ export async function POST(request: Request) {
     }
 
     // Verify order exists
-    const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await admin
       .from("orders")
       .select("id, order_number, current_stage")
       .eq("id", order_id)
@@ -428,7 +430,7 @@ export async function POST(request: Request) {
     }
 
     // Create scan event
-    const { data: scanEvent, error: insertError } = await supabase
+    const { data: scanEvent, error: insertError } = await admin
       .from("scan_events")
       .insert({
         order_id,
@@ -464,7 +466,7 @@ export async function POST(request: Request) {
     }
 
     // Log activity
-    await supabase.from("activity_logs").insert({
+    await admin.from("activity_logs").insert({
       user_id: user.id,
       action: "CREATE_SCAN_EVENT",
       entity_type: "scan_events",
@@ -498,6 +500,7 @@ export async function POST(request: Request) {
 export async function GET_STATS(request: Request) {
   try {
     const supabase = await createClient();
+    const admin = createAdminClient();
 
     const {
       data: { user },
@@ -516,7 +519,7 @@ export async function GET_STATS(request: Request) {
     );
 
     // Get all scan events in date range
-    const { data: events, error: eventsError } = await supabase
+    const { data: events, error: eventsError } = await admin
       .from("scan_events")
       .select(
         `

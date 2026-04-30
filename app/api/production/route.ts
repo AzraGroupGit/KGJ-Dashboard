@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // Role yang termasuk "Jewelry Expert"
 const EXPERT_ROLES = [
@@ -21,9 +22,9 @@ const ROLE_DEFAULT_STAGE: Record<string, string> = {
 
 // Stage yang dipakai untuk deteksi "active order" per expert
 const EXPERT_STAGES = [
-  "racik_bahan",
   "lebur_bahan",
   "pembentukan_cincin",
+  "pemasangan_permata",
   "pemolesan",
   "laser",
   "finishing",
@@ -32,6 +33,7 @@ const EXPERT_STAGES = [
 export async function GET() {
   try {
     const supabase = await createClient();
+    const admin = createAdminClient();
 
     // ========== AUTH ==========
     const {
@@ -74,8 +76,7 @@ export async function GET() {
     const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
     // ========== 1. DAFTAR EXPERT USERS ==========
-    // Fetch semua users dengan role yang termasuk EXPERT_ROLES.
-    const { data: expertUsers, error: expertUsersError } = await supabase
+    const { data: expertUsers, error: expertUsersError } = await admin
       .from("users")
       .select(
         `
@@ -90,7 +91,7 @@ export async function GET() {
 
     if (expertUsersError) {
       console.error(
-        "[GET /api/produksi] expert users:",
+        "[GET /api/production] expert users:",
         expertUsersError.message,
       );
       return NextResponse.json(
@@ -108,10 +109,10 @@ export async function GET() {
       }));
     const expertUserIds = expertUserList.map((u) => u.id);
 
-    // ========== 2. SCAN EVENTS HARI INI (untuk total_scans & orders_handled) ==========
+    // ========== 2. SCAN EVENTS HARI INI ==========
     const { data: todayScans, error: scansError } =
       expertUserIds.length > 0
-        ? await supabase
+        ? await admin
             .from("scan_events")
             .select("user_id, order_id")
             .in("user_id", expertUserIds)
@@ -119,14 +120,13 @@ export async function GET() {
         : { data: [], error: null };
 
     if (scansError) {
-      console.error("[GET /api/produksi] scans:", scansError.message);
+      console.error("[GET /api/production] scans:", scansError.message);
       return NextResponse.json(
         { error: "Gagal mengambil data scan" },
         { status: 500 },
       );
     }
 
-    // Agregasi di JS: total_scans dan distinct orders per user
     const scanStats = new Map<
       string,
       { totalScans: number; orderSet: Set<string> }
@@ -142,17 +142,16 @@ export async function GET() {
     });
 
     // ========== 3. ACTIVE ORDERS PER EXPERT ==========
-    // Stage_results yang finished_at IS NULL, hanya untuk expert stages.
     const { data: activeWork, error: activeWorkError } =
       expertUserIds.length > 0
-        ? await supabase
+        ? await admin
             .from("stage_results")
             .select(
               `
               user_id,
               stage,
               started_at,
-              orders!inner ( order_number )
+              orders!stage_results_order_id_fkey ( order_number )
             `,
             )
             .in("user_id", expertUserIds)
@@ -163,7 +162,7 @@ export async function GET() {
 
     if (activeWorkError) {
       console.error(
-        "[GET /api/produksi] active work:",
+        "[GET /api/production] active work:",
         activeWorkError.message,
       );
       return NextResponse.json(
@@ -172,7 +171,6 @@ export async function GET() {
       );
     }
 
-    // Ambil yang paling baru per user (DISTINCT ON user_id equivalent)
     const activeByUser = new Map<
       string,
       { orderNumber: string; startedAt: string; stage: string }
@@ -188,29 +186,20 @@ export async function GET() {
     });
 
     // ========== 4. METRIK SUSUT/DEVIASI PER EXPERT ==========
-    // Metrik berbeda per stage — hitung terpisah di JS untuk akurasi.
-    //   lebur_bahan       → shrinkage_percent dari JSONB
-    //   pembentukan_cincin → deviasi = weight_lost / weight_input * 100
-    //   pemolesan         → deviasi = weight_lost / weight_before_polish * 100
-    //   Lain (racik, laser, finishing) → tidak dihitung susut
     const { data: recentResults, error: recentResultsError } =
       expertUserIds.length > 0
-        ? await supabase
+        ? await admin
             .from("stage_results")
             .select("user_id, stage, data")
             .in("user_id", expertUserIds)
-            .in("stage", [
-              "lebur_bahan",
-              "pembentukan_cincin",
-              "pemolesan",
-            ] as string[])
+            .in("stage", ["lebur_bahan", "pembentukan_cincin", "pemolesan"])
             .gte("finished_at", thirtyDaysAgoISO)
             .not("finished_at", "is", null)
         : { data: [], error: null };
 
     if (recentResultsError) {
       console.error(
-        "[GET /api/produksi] recent results:",
+        "[GET /api/production] recent results:",
         recentResultsError.message,
       );
       return NextResponse.json(
@@ -219,7 +208,6 @@ export async function GET() {
       );
     }
 
-    // Akumulasi per user: sum deviasi dan count
     const susutByUser = new Map<string, { sum: number; count: number }>();
     (recentResults || []).forEach((row: any) => {
       const stat = susutByUser.get(row.user_id) ?? { sum: 0, count: 0 };
@@ -250,19 +238,14 @@ export async function GET() {
     });
 
     // ========== 5. TARGET SUSUT DARI WORK_INSTRUCTIONS ==========
-    const { data: targetRows } = await supabase
+    const { data: targetRows } = await admin
       .from("work_instructions")
       .select("stage, parameters")
-      .in("stage", [
-        "lebur_bahan",
-        "pembentukan_cincin",
-        "pemolesan",
-      ] as string[])
+      .in("stage", ["lebur_bahan", "pembentukan_cincin", "pemolesan"])
       .eq("is_active", true);
 
     const targetMap: Record<string, number> = {};
     (targetRows || []).forEach((row: any) => {
-      // Ambil shrinkage_buffer_percent atau max_shrinkage_percent dari params
       const params = row.parameters || {};
       const target =
         parseFloat(params.shrinkage_buffer_percent) ||
@@ -298,10 +281,7 @@ export async function GET() {
           totalScans: stats.totalScans,
           ordersHandled: stats.orderSet.size,
           activeOrder: active
-            ? {
-                orderNumber: active.orderNumber,
-                startedAt: active.startedAt,
-              }
+            ? { orderNumber: active.orderNumber, startedAt: active.startedAt }
             : null,
           rataSusut,
           targetSusut,
@@ -310,16 +290,14 @@ export async function GET() {
       .sort((a, b) => b.ordersHandled - a.ordersHandled);
 
     // ========== 7. MICRO SETTING ==========
-    // Orders dengan has_gemstone yang sedang / baru melewati pemasangan_permata.
-    // current_stage filter: pemasangan_permata (sedang), pemolesan, qc_1,
-    // konfirmasi_awal (baru selesai setting).
-    const { data: microOrders, error: microOrdersError } = await supabase
+    const { data: microOrders, error: microOrdersError } = await admin
       .from("orders")
       .select(
         `
         id,
         order_number,
         gemstone_info,
+        has_gemstone,
         current_stage,
         status
       `,
@@ -327,17 +305,12 @@ export async function GET() {
       .is("deleted_at", null)
       .eq("has_gemstone", true)
       .not("status", "in", "(completed,cancelled)")
-      .in("current_stage", [
-        "pemasangan_permata",
-        "pemolesan",
-        "qc_1",
-        "konfirmasi_awal",
-      ])
-      .limit(30);
+      .in("current_stage", ["pemasangan_permata", "pemolesan", "qc_1"])
+      .limit(10);
 
     if (microOrdersError) {
       console.error(
-        "[GET /api/produksi] micro orders:",
+        "[GET /api/production] micro orders:",
         microOrdersError.message,
       );
       return NextResponse.json(
@@ -346,12 +319,11 @@ export async function GET() {
       );
     }
 
-    // Ambil stage_result attempt terbaru per order untuk stage pemasangan_permata
     const microOrderIds = (microOrders || []).map((o: any) => o.id);
 
     const { data: microResults } =
       microOrderIds.length > 0
-        ? await supabase
+        ? await admin
             .from("stage_results")
             .select(
               `
@@ -360,7 +332,7 @@ export async function GET() {
               finished_at,
               attempt_number,
               data,
-              users ( full_name )
+              users!stage_results_user_id_fkey ( full_name )
             `,
             )
             .eq("stage", "pemasangan_permata")
@@ -368,7 +340,6 @@ export async function GET() {
             .order("attempt_number", { ascending: false })
         : { data: [] };
 
-    // Map: order_id → attempt tertinggi
     const latestMicroByOrder = new Map<string, any>();
     (microResults || []).forEach((row: any) => {
       if (!latestMicroByOrder.has(row.order_id)) {
@@ -408,7 +379,6 @@ export async function GET() {
           status,
         };
       })
-      // Sort: in_progress > waiting > completed; lalu started_at desc
       .sort((a: any, b: any) => {
         const order = { in_progress: 0, waiting: 1, completed: 2 };
         const ao = order[a.status as keyof typeof order];
@@ -421,11 +391,7 @@ export async function GET() {
       .slice(0, 20);
 
     // ========== 8. YIELD MATERIAL ==========
-    // Orders completed dalam 7 hari. Untuk tiap order ambil:
-    //   - target_weight (dari orders)
-    //   - actual (dari stage_results qc_2 → weight_final_label)
-    //   - susut = target - actual (total loss end-to-end)
-    const { data: completedOrders, error: completedError } = await supabase
+    const { data: completedOrders, error: completedError } = await admin
       .from("orders")
       .select("id, order_number, created_at, target_weight, completed_at")
       .eq("status", "completed")
@@ -435,7 +401,7 @@ export async function GET() {
 
     if (completedError) {
       console.error(
-        "[GET /api/produksi] completed orders:",
+        "[GET /api/production] completed orders:",
         completedError.message,
       );
       return NextResponse.json(
@@ -446,10 +412,9 @@ export async function GET() {
 
     const completedOrderIds = (completedOrders || []).map((o: any) => o.id);
 
-    // Fetch stage_results qc_2 untuk semua order yang sudah completed
     const { data: qc2Results } =
       completedOrderIds.length > 0
-        ? await supabase
+        ? await admin
             .from("stage_results")
             .select("order_id, data")
             .eq("stage", "qc_2")
@@ -460,7 +425,6 @@ export async function GET() {
     const qc2ByOrder = new Map<string, number>();
     (qc2Results || []).forEach((row: any) => {
       if (!qc2ByOrder.has(row.order_id)) {
-        // Field yang benar di v7: weight_final_label
         const weight = parseFloat(row.data?.weight_final_label);
         if (!isNaN(weight)) qc2ByOrder.set(row.order_id, weight);
       }
@@ -491,7 +455,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("[GET /api/produksi] unexpected:", error);
+    console.error("[GET /api/production] unexpected:", error);
     return NextResponse.json(
       { error: "Terjadi kesalahan server" },
       { status: 500 },

@@ -80,6 +80,35 @@ interface ProduksiData {
   yieldData: YieldRow[];
 }
 
+interface BottleneckItem {
+  order_number: string;
+  product_name: string;
+  hours_waiting: number | null;
+  status: string;
+}
+
+interface StageBottleneck {
+  stage: string;
+  stage_label: string;
+  stage_group: string;
+  order_count: number;
+  waiting_orders: number;
+  in_progress_orders: number;
+  avg_hours: number | null;
+  longest_hours: number | null;
+  bottlenecks: BottleneckItem[];
+}
+
+interface BottleneckData {
+  bottlenecks: StageBottleneck[];
+  summary: {
+    total_stages_with_orders: number;
+    total_orders: number;
+    busiest_stage: StageBottleneck | null;
+    slowest_stage: StageBottleneck | null;
+  };
+}
+
 export const dynamic = "force-dynamic";
 
 // ============================================================
@@ -87,16 +116,15 @@ export const dynamic = "force-dynamic";
 // ============================================================
 
 const ROLE_CONFIG: Record<string, { name: string; Icon: LucideIcon }> = {
-  staff_racik: { name: "Racik Bahan", Icon: Gem },
-  staff_lebur: { name: "Lebur Bahan", Icon: Flame },
-  staff_bentuk: { name: "Pembentukan", Icon: Hammer },
-  staff_pemolesan: { name: "Pemolesan", Icon: Sparkles },
-  staff_laser: { name: "Laser", Icon: ScanLine },
-  staff_finishing: { name: "Finishing", Icon: Wrench },
+  jewelry_expert_lebur_bahan: { name: "Lebur Bahan", Icon: Flame },
+  jewelry_expert_pembentukan_awal: { name: "Pembentukan Cincin", Icon: Hammer },
+  jewelry_expert_finishing: { name: "Finishing & Poles", Icon: Sparkles },
+  micro_setting: { name: "Micro Setting", Icon: Gem },
+  laser: { name: "Laser Engraving", Icon: ScanLine },
 };
 
 function getRoleConfig(roleName: string) {
-  return ROLE_CONFIG[roleName] ?? { name: roleName, Icon: User };
+  return ROLE_CONFIG[roleName] ?? { name: roleName, Icon: Wrench };
 }
 
 // ============================================================
@@ -127,6 +155,17 @@ export default function ProduksiPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [bottleneckData, setBottleneckData] = useState<BottleneckData | null>(
+    null,
+  );
+  const [bottleneckFilter, setBottleneckFilter] = useState<
+    "all" | "production" | "operational"
+  >("all");
+  const filteredBottlenecks =
+    bottleneckData?.bottlenecks.filter((b) => {
+      if (bottleneckFilter === "all") return true;
+      return b.stage_group === bottleneckFilter;
+    }) || [];
 
   useEffect(() => {
     const cu = getClientUser();
@@ -142,13 +181,24 @@ export default function ProduksiPage() {
       if (isManualRefresh) setRefreshing(true);
       setError(null);
       const res = await fetch("/api/production");
+
+      const json = await res.json();
+      setData(json.data ?? json);
+      setLastUpdated(new Date());
+
+      const [bottleneckRes] = await Promise.allSettled([
+        fetch("/api/bottleneck"),
+      ]);
+
       if (!res.ok) {
         if (res.status === 401) throw new Error("Sesi Anda telah habis");
         throw new Error("Gagal mengambil data produksi");
       }
-      const json = await res.json();
-      setData(json.data ?? json);
-      setLastUpdated(new Date());
+
+      if (bottleneckRes.status === "fulfilled" && bottleneckRes.value.ok) {
+        const bJson = await bottleneckRes.value.json();
+        setBottleneckData(bJson.data);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
@@ -191,6 +241,12 @@ export default function ProduksiPage() {
     : { avgYield: 0, totalTarget: 0, totalActual: 0 };
 
   const activeExperts = data?.experts.filter((e) => e.activeOrder).length ?? 0;
+  const productionBottleneckCount =
+    bottleneckData?.bottlenecks.filter((b) => b.stage_group === "production")
+      .length || 0;
+  const operationalBottleneckCount =
+    bottleneckData?.bottlenecks.filter((b) => b.stage_group === "operational")
+      .length || 0;
 
   return (
     <div className="flex h-screen bg-slate-50">
@@ -278,6 +334,123 @@ export default function ProduksiPage() {
                   </div>
                 )}
               </section>
+
+              {/* ========== SECTION: BOTTLENECK MONITORING ========== */}
+              {bottleneckData && (
+                <section className="rounded-lg border border-slate-200 bg-white">
+                  <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      <h2 className="text-sm font-semibold text-slate-900">
+                        Bottleneck Monitoring — Per Tahap
+                      </h2>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                      <span>
+                        <span className="font-medium text-slate-700">
+                          {bottleneckData.summary.total_stages_with_orders}
+                        </span>{" "}
+                        tahap
+                      </span>
+                      <span>
+                        <span className="font-medium text-slate-700">
+                          {bottleneckData.summary.total_orders}
+                        </span>{" "}
+                        order
+                      </span>
+                    </div>
+                  </header>
+
+                  {/* Filter tabs */}
+                  <div className="border-b border-slate-100 overflow-x-auto px-5">
+                    <div className="flex items-center gap-1 min-w-max">
+                      {(
+                        [
+                          {
+                            key: "all",
+                            label: "Semua",
+                            count: bottleneckData.bottlenecks.length,
+                          },
+                          {
+                            key: "production",
+                            label: "Produksi",
+                            count: productionBottleneckCount,
+                          },
+                          {
+                            key: "operational",
+                            label: "Operasional",
+                            count: operationalBottleneckCount,
+                          },
+                        ] as const
+                      ).map((tab) => (
+                        <button
+                          key={tab.key}
+                          onClick={() => setBottleneckFilter(tab.key)}
+                          className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+                            bottleneckFilter === tab.key
+                              ? "border-slate-800 text-slate-900"
+                              : "border-transparent text-slate-500 hover:text-slate-700"
+                          }`}
+                        >
+                          {tab.label}
+                          <span
+                            className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                              bottleneckFilter === tab.key
+                                ? "bg-slate-800 text-white"
+                                : tab.count > 0
+                                  ? "bg-slate-100 text-slate-700"
+                                  : "bg-slate-50 text-slate-400"
+                            }`}
+                          >
+                            {tab.count}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {filteredBottlenecks.length === 0 ? (
+                    <div className="p-12 text-center">
+                      <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-300" />
+                      <p className="text-sm text-slate-400">
+                        Tidak ada bottleneck di kategori ini
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-100 text-xs">
+                            <th className="px-5 py-2.5 text-left font-medium text-slate-500">
+                              Tahap
+                            </th>
+                            <th className="px-3 py-2.5 text-center font-medium text-slate-500">
+                              Order
+                            </th>
+                            <th className="px-3 py-2.5 text-center font-medium text-slate-500">
+                              Rata² Waktu
+                            </th>
+                            <th className="px-3 py-2.5 text-center font-medium text-slate-500">
+                              Terlama
+                            </th>
+                            <th className="px-3 py-2.5 text-left font-medium text-slate-500">
+                              Order Terlambat
+                            </th>
+                            <th className="px-5 py-2.5 text-center font-medium text-slate-500">
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredBottlenecks.map((stage) => (
+                            <BottleneckRow key={stage.stage} stage={stage} />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              )}
 
               {/* ========== SECTION 2: MICRO SETTING & YIELD ========== */}
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -679,6 +852,110 @@ function StatCard({
         {value}
       </p>
     </div>
+  );
+}
+
+// ============================================================
+// Sub: BottleneckRow
+// ============================================================
+
+function BottleneckRow({ stage }: { stage: StageBottleneck }) {
+  const isProduction = stage.stage_group === "production";
+  const isSlow = stage.avg_hours && stage.avg_hours > 8;
+  const isCritical = stage.avg_hours && stage.avg_hours > 24;
+
+  return (
+    <tr
+      className={`border-b border-slate-50 last:border-0 transition-colors hover:bg-slate-50 ${isCritical ? "bg-rose-50/40" : isSlow ? "bg-amber-50/30" : ""}`}
+    >
+      <td className="px-5 py-3">
+        <div className="flex items-center gap-2">
+          <span
+            className={`h-2 w-2 rounded-full ${isProduction ? "bg-amber-400" : "bg-blue-400"}`}
+          />
+          <span className="text-sm font-medium text-slate-800">
+            {stage.stage_label}
+          </span>
+        </div>
+      </td>
+      <td className="px-3 py-3 text-center">
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+          {stage.order_count}
+          {stage.waiting_orders > 0 && (
+            <span className="text-rose-500">
+              ({stage.waiting_orders} tunggu)
+            </span>
+          )}
+        </span>
+      </td>
+      <td className="px-3 py-3 text-center">
+        {stage.avg_hours ? (
+          <span
+            className={`text-xs font-semibold ${isCritical ? "text-rose-600" : isSlow ? "text-amber-600" : "text-slate-600"}`}
+          >
+            {stage.avg_hours >= 24
+              ? `${Math.floor(stage.avg_hours / 24)}h ${Math.round(stage.avg_hours % 24)}j`
+              : `${stage.avg_hours}j`}
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400">—</span>
+        )}
+      </td>
+      <td className="px-3 py-3 text-center">
+        {stage.longest_hours ? (
+          <span
+            className={`text-xs font-semibold ${stage.longest_hours > 48 ? "text-rose-600" : stage.longest_hours > 24 ? "text-amber-600" : "text-slate-600"}`}
+          >
+            {stage.longest_hours >= 24
+              ? `${Math.floor(stage.longest_hours / 24)}h ${Math.round(stage.longest_hours % 24)}j`
+              : `${stage.longest_hours}j`}
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400">—</span>
+        )}
+      </td>
+      <td className="px-3 py-3">
+        <div className="space-y-0.5">
+          {stage.bottlenecks.length === 0 ? (
+            <span className="text-xs text-slate-400">—</span>
+          ) : (
+            stage.bottlenecks.map((item, idx) => (
+              <div key={idx} className="flex items-center gap-1.5 text-xs">
+                <span className="font-mono text-slate-500">
+                  {item.order_number}
+                </span>
+                <span className="truncate text-slate-600">
+                  — {item.product_name}
+                </span>
+                <span
+                  className={`ml-auto shrink-0 font-medium ${(item.hours_waiting || 0) > 48 ? "text-rose-600" : (item.hours_waiting || 0) > 24 ? "text-amber-600" : "text-slate-400"}`}
+                >
+                  {item.hours_waiting ? `${item.hours_waiting}j` : "—"}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </td>
+      <td className="px-5 py-3 text-center">
+        {isCritical ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700 ring-1 ring-inset ring-rose-200">
+            <AlertTriangle className="h-3 w-3" />
+            Kritis
+          </span>
+        ) : isSlow ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
+            <Clock className="h-3 w-3" />
+            Lambat
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+            <CheckCircle2 className="h-3 w-3" />
+            Normal
+          </span>
+        )}
+      </td>
+    </tr>
   );
 }
 
