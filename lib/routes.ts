@@ -224,7 +224,7 @@ export function getDashboardPath(role: unknown): string | null {
 
   // Supervisor — punya dashboard sendiri
   if (role === "supervisor") {
-    return ROUTES.DASHBOARD_SUPERVISOR + "/monitoring";
+    return ROUTES.DASHBOARD_SUPERVISOR + "/bottleneck";
   }
 
   // Cek WorkshopRole — semua role workshop diarahkan ke QR login
