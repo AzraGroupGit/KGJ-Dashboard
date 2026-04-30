@@ -82,7 +82,6 @@ const STAGE_LABELS: Record<string, string> = {
   pemolesan: "Pemolesan",
   laser: "Laser",
   finishing: "Finishing",
-  qc_awal: "QC Awal",
   qc_1: "QC 1",
   qc_2: "QC 2",
   qc_3: "QC 3",
@@ -93,14 +92,26 @@ const STAGE_LABELS: Record<string, string> = {
 };
 
 const ROLE_CONFIG: Record<string, { label: string; color: string }> = {
-  jewelry_expert_lebur_bahan: { label: "Lebur", color: "bg-orange-100 text-orange-700" },
-  jewelry_expert_pembentukan_awal: { label: "Bentuk", color: "bg-amber-100 text-amber-700" },
-  jewelry_expert_finishing: { label: "Finishing", color: "bg-emerald-100 text-emerald-700" },
-  micro_setting: { label: "Micro Setting", color: "bg-violet-100 text-violet-700" },
+  jewelry_expert_lebur_bahan: {
+    label: "Lebur",
+    color: "bg-orange-100 text-orange-700",
+  },
+  jewelry_expert_pembentukan_awal: {
+    label: "Bentuk",
+    color: "bg-amber-100 text-amber-700",
+  },
+  jewelry_expert_finishing: {
+    label: "Finishing",
+    color: "bg-emerald-100 text-emerald-700",
+  },
+  micro_setting: {
+    label: "Micro Setting",
+    color: "bg-violet-100 text-violet-700",
+  },
+  laser: { label: "Laser", color: "bg-sky-100 text-sky-700" },
 };
 
 const QC_LABELS: Record<string, string> = {
-  qc_awal: "QC Awal",
   qc_1: "QC 1",
   qc_2: "QC 2",
   qc_3: "QC 3",

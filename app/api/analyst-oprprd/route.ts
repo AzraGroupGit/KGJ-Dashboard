@@ -2,16 +2,18 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const PRODUCTION_ROLES = [
   "jewelry_expert_lebur_bahan",
   "jewelry_expert_pembentukan_awal",
   "jewelry_expert_finishing",
   "micro_setting",
+  "laser",
 ];
 
 const SUSUT_STAGES = ["lebur_bahan", "pembentukan_cincin", "pemolesan"];
-const QC_STAGES = ["qc_awal", "qc_1", "qc_2", "qc_3"];
+const QC_STAGES = ["qc_1", "qc_2", "qc_3"]; // Removed qc_awal
 
 function computeSusut(stage: string, data: any): number | null {
   if (stage === "lebur_bahan") {
@@ -38,6 +40,7 @@ function computeSusut(stage: string, data: any): number | null {
 export async function GET(request: Request) {
   try {
     const supabase = await createClient();
+    const admin = createAdminClient();
 
     const {
       data: { user },
@@ -56,7 +59,7 @@ export async function GET(request: Request) {
 
     // ── Period ──────────────────────────────────────────────────────────────
     const { searchParams } = new URL(request.url);
-    const period = searchParams.get("period"); // YYYY-MM
+    const period = searchParams.get("period");
 
     let fromDate: Date;
     let toDate: Date;
@@ -73,19 +76,16 @@ export async function GET(request: Request) {
 
     const fromISO = fromDate.toISOString();
     const toISO = toDate.toISOString();
-    const fromDateStr = fromISO.split("T")[0];
-    const toDateStr = toISO.split("T")[0];
 
-    // ── Parallel fetch ───────────────────────────────────────────────────────
+    // ── Parallel fetch using admin client ───────────────────────────────────
     const [
       staffRes,
       stageResultsRes,
       scanEventsRes,
       completedOrdersRes,
-      qcSummaryRes,
-      stageDurationRes,
+      qcChecklistRes,
     ] = await Promise.allSettled([
-      supabase
+      admin
         .from("users")
         .select(
           "id, full_name, status, role:roles!users_role_id_fkey(name, role_group)",
@@ -93,38 +93,31 @@ export async function GET(request: Request) {
         .eq("status", "active")
         .is("deleted_at", null),
 
-      supabase
+      admin
         .from("stage_results")
         .select("user_id, stage, data, started_at, finished_at")
         .gte("started_at", fromISO)
         .lte("started_at", toISO)
         .not("finished_at", "is", null),
 
-      supabase
+      admin
         .from("scan_events")
         .select("user_id, order_id, stage, scanned_at")
         .gte("scanned_at", fromISO)
         .lte("scanned_at", toISO),
 
-      supabase
+      admin
         .from("orders")
         .select("id, completed_at")
         .eq("status", "completed")
         .gte("completed_at", fromISO)
         .lte("completed_at", toISO),
 
-      supabase
-        .from("v_quality_summary")
-        .select("*")
-        .gte("qc_date", fromDateStr)
-        .lte("qc_date", toDateStr),
-
-      supabase
-        .from("v_stage_duration")
-        .select("stage, duration_minutes, finished_at")
-        .gte("started_at", fromISO)
-        .lte("started_at", toISO)
-        .not("finished_at", "is", null),
+      admin
+        .from("quality_checklist_results")
+        .select("check_key, passed, stage_result_id, created_at")
+        .gte("created_at", fromISO)
+        .lte("created_at", toISO),
     ]);
 
     const allStaff =
@@ -141,29 +134,64 @@ export async function GET(request: Request) {
       completedOrdersRes.status === "fulfilled"
         ? (completedOrdersRes.value.data ?? [])
         : [];
-    const qcSummaryRaw =
-      qcSummaryRes.status === "fulfilled"
-        ? (qcSummaryRes.value.data ?? [])
-        : [];
-    const stageDurationRaw =
-      stageDurationRes.status === "fulfilled"
-        ? (stageDurationRes.value.data ?? [])
+    const qcChecklistRaw =
+      qcChecklistRes.status === "fulfilled"
+        ? (qcChecklistRes.value.data ?? [])
         : [];
 
-    if (staffRes.status === "fulfilled" && staffRes.value.error)
-      console.error("[analyst-oprprd] staff:", staffRes.value.error.message);
-    if (stageResultsRes.status === "fulfilled" && stageResultsRes.value.error)
-      console.error(
-        "[analyst-oprprd] stage_results:",
-        stageResultsRes.value.error.message,
-      );
+    // Log errors
+    [
+      staffRes,
+      stageResultsRes,
+      scanEventsRes,
+      completedOrdersRes,
+      qcChecklistRes,
+    ].forEach((r, i) => {
+      const labels = [
+        "staff",
+        "stage_results",
+        "scan_events",
+        "completed_orders",
+        "qc_checklist",
+      ];
+      if (r.status === "fulfilled" && (r.value as any).error) {
+        console.error(
+          `[analyst-oprprd] ${labels[i]}:`,
+          (r.value as any).error.message,
+        );
+      }
+    });
 
-    // ── Expert Performance ────────────────────────────────────────────────────
+    // ── Fetch stage_results for QC checklist mapping ─────────────────────────
+    const srIds = [
+      ...new Set(
+        (qcChecklistRaw as any[])
+          .map((r: any) => r.stage_result_id)
+          .filter(Boolean),
+      ),
+    ];
+    let stageMap = new Map<string, { stage: string; finished_at: string }>();
+
+    if (srIds.length > 0) {
+      const { data: srData } = await admin
+        .from("stage_results")
+        .select("id, stage, finished_at")
+        .in("id", srIds);
+
+      (srData || []).forEach((sr: any) => {
+        stageMap.set(sr.id, { stage: sr.stage, finished_at: sr.finished_at });
+      });
+    }
+
+    // ── Expert Performance ──────────────────────────────────────────────────
     const productionStaff = (allStaff as any[]).filter((u) =>
       PRODUCTION_ROLES.includes((u.role as any)?.name),
     );
 
-    const scanByUser = new Map<string, { scans: number; orders: Set<string> }>();
+    const scanByUser = new Map<
+      string,
+      { scans: number; orders: Set<string> }
+    >();
     (scanEvents as any[]).forEach((s) => {
       const entry = scanByUser.get(s.user_id) ?? {
         scans: 0,
@@ -209,169 +237,85 @@ export async function GET(request: Request) {
       })
       .sort((a, b) => b.stagesCompleted - a.stagesCompleted);
 
-    // ── Stage Efficiency ──────────────────────────────────────────────────────
-    // Try v_stage_duration first, fallback to computed from stage_results
-    const stageEfficiency: {
-      stage: string;
-      totalCompleted: number;
-      avgDurationMinutes: number | null;
-      minDurationMinutes: number | null;
-      maxDurationMinutes: number | null;
-    }[] = [];
+    // ── Stage Efficiency (from stage_results) ────────────────────────────────
+    const stageEffMap = new Map<
+      string,
+      { totalMin: number; count: number; mins: number[] }
+    >();
+    (stageResults as any[]).forEach((sr: any) => {
+      if (!sr.finished_at || !sr.started_at) return;
+      const durMs =
+        new Date(sr.finished_at).getTime() - new Date(sr.started_at).getTime();
+      const durMin = durMs / 60_000;
+      const entry = stageEffMap.get(sr.stage) ?? {
+        totalMin: 0,
+        count: 0,
+        mins: [],
+      };
+      entry.totalMin += durMin;
+      entry.count += 1;
+      entry.mins.push(durMin);
+      stageEffMap.set(sr.stage, entry);
+    });
 
-    if ((stageDurationRaw as any[]).length > 0) {
-      const byStage = new Map<
-        string,
-        { durations: number[]; count: number }
-      >();
-      (stageDurationRaw as any[]).forEach((row) => {
-        const dur = parseFloat(row.duration_minutes);
-        if (!isNaN(dur)) {
-          const entry = byStage.get(row.stage) ?? {
-            durations: [],
-            count: 0,
-          };
-          entry.durations.push(dur);
-          entry.count += 1;
-          byStage.set(row.stage, entry);
-        }
-      });
-      byStage.forEach((val, stage) => {
-        const sum = val.durations.reduce((a, b) => a + b, 0);
-        stageEfficiency.push({
-          stage,
-          totalCompleted: val.count,
-          avgDurationMinutes:
-            val.count > 0
-              ? Math.round((sum / val.count) * 10) / 10
-              : null,
-          minDurationMinutes: Math.min(...val.durations),
-          maxDurationMinutes: Math.max(...val.durations),
-        });
-      });
-    } else {
-      // Fallback: compute from stage_results
-      const byStage = new Map<
-        string,
-        { totalMin: number; count: number; mins: number[] }
-      >();
-      (stageResults as any[]).forEach((sr: any) => {
-        if (!sr.finished_at || !sr.started_at) return;
-        const durMs =
-          new Date(sr.finished_at).getTime() -
-          new Date(sr.started_at).getTime();
-        const durMin = durMs / 60_000;
-        const entry = byStage.get(sr.stage) ?? {
-          totalMin: 0,
-          count: 0,
-          mins: [],
-        };
-        entry.totalMin += durMin;
-        entry.count += 1;
-        entry.mins.push(durMin);
-        byStage.set(sr.stage, entry);
-      });
-      byStage.forEach((val, stage) => {
-        stageEfficiency.push({
-          stage,
-          totalCompleted: val.count,
-          avgDurationMinutes:
-            val.count > 0
-              ? Math.round((val.totalMin / val.count) * 10) / 10
-              : null,
-          minDurationMinutes:
-            val.mins.length > 0
-              ? Math.round(Math.min(...val.mins) * 10) / 10
-              : null,
-          maxDurationMinutes:
-            val.mins.length > 0
-              ? Math.round(Math.max(...val.mins) * 10) / 10
-              : null,
-        });
-      });
-    }
+    const stageEfficiency = Array.from(stageEffMap.entries())
+      .map(([stage, val]) => ({
+        stage,
+        totalCompleted: val.count,
+        avgDurationMinutes:
+          val.count > 0
+            ? Math.round((val.totalMin / val.count) * 10) / 10
+            : null,
+        minDurationMinutes:
+          val.mins.length > 0
+            ? Math.round(Math.min(...val.mins) * 10) / 10
+            : null,
+        maxDurationMinutes:
+          val.mins.length > 0
+            ? Math.round(Math.max(...val.mins) * 10) / 10
+            : null,
+      }))
+      .sort((a, b) => b.totalCompleted - a.totalCompleted);
 
-    stageEfficiency.sort((a, b) => b.totalCompleted - a.totalCompleted);
+    // ── QC Metrics (from quality_checklist_results) ──────────────────────────
+    const qcByStage = new Map<
+      string,
+      { total: number; passed: number; failed: number }
+    >();
 
-    // ── QC Metrics ────────────────────────────────────────────────────────────
-    let qcMetrics: {
-      stage: string;
-      totalChecks: number;
-      passed: number;
-      failed: number;
-      passRate: number;
-    }[];
+    (qcChecklistRaw as any[]).forEach((row: any) => {
+      const sr = stageMap.get(row.stage_result_id);
+      if (!sr || !QC_STAGES.includes(sr.stage)) return;
+      const entry = qcByStage.get(sr.stage) ?? {
+        total: 0,
+        passed: 0,
+        failed: 0,
+      };
+      entry.total++;
+      if (row.passed) entry.passed++;
+      else entry.failed++;
+      qcByStage.set(sr.stage, entry);
+    });
 
-    if ((qcSummaryRaw as any[]).length > 0) {
-      // Aggregate from v_quality_summary
-      const byStage = new Map<
-        string,
-        { totalChecks: number; passed: number; failed: number }
-      >();
-      (qcSummaryRaw as any[]).forEach((row) => {
-        const entry = byStage.get(row.qc_type) ?? {
-          totalChecks: 0,
-          passed: 0,
-          failed: 0,
-        };
-        entry.totalChecks += row.total_checks ?? 0;
-        entry.passed += row.passed ?? 0;
-        entry.failed += row.failed ?? 0;
-        byStage.set(row.qc_type, entry);
-      });
-      qcMetrics = QC_STAGES.map((stage) => {
-        const agg = byStage.get(stage) ?? {
-          totalChecks: 0,
-          passed: 0,
-          failed: 0,
-        };
-        return {
-          stage,
-          ...agg,
-          passRate:
-            agg.totalChecks > 0
-              ? Math.round((agg.passed / agg.totalChecks) * 1000) / 10
-              : 0,
-        };
-      });
-    } else {
-      // Fallback: compute from stage_results JSONB
-      const byStage = new Map<
-        string,
-        { total: number; passed: number }
-      >();
-      (stageResults as any[]).forEach((sr: any) => {
-        if (!QC_STAGES.includes(sr.stage)) return;
-        const entry = byStage.get(sr.stage) ?? { total: 0, passed: 0 };
-        entry.total += 1;
-        const result = sr.data?.overall_result ?? sr.data?.result;
-        if (result === "passed" || result === "lulus") entry.passed += 1;
-        byStage.set(sr.stage, entry);
-      });
-      qcMetrics = QC_STAGES.map((stage) => {
-        const agg = byStage.get(stage) ?? { total: 0, passed: 0 };
-        const failed = agg.total - agg.passed;
-        return {
-          stage,
-          totalChecks: agg.total,
-          passed: agg.passed,
-          failed,
-          passRate:
-            agg.total > 0
-              ? Math.round((agg.passed / agg.total) * 1000) / 10
-              : 0,
-        };
-      });
-    }
+    const qcMetrics = QC_STAGES.map((stage) => {
+      const agg = qcByStage.get(stage) ?? { total: 0, passed: 0, failed: 0 };
+      return {
+        stage,
+        totalChecks: agg.total,
+        passed: agg.passed,
+        failed: agg.failed,
+        passRate:
+          agg.total > 0 ? Math.round((agg.passed / agg.total) * 1000) / 10 : 0,
+      };
+    });
 
-    // ── Order Flow (daily completions) ────────────────────────────────────────
+    // ── Order Flow (daily completions) ──────────────────────────────────────
     const flowMap = new Map<string, number>();
     (completedOrders as any[]).forEach((o) => {
       const day = (o.completed_at as string).split("T")[0];
       flowMap.set(day, (flowMap.get(day) ?? 0) + 1);
     });
 
-    // Fill all days in range
     const orderFlow: { date: string; completed: number }[] = [];
     const cur = new Date(fromDate);
     cur.setHours(0, 0, 0, 0);
@@ -383,7 +327,7 @@ export async function GET(request: Request) {
       cur.setDate(cur.getDate() + 1);
     }
 
-    // ── Summary ───────────────────────────────────────────────────────────────
+    // ── Summary ─────────────────────────────────────────────────────────────
     const totalQCChecks = qcMetrics.reduce((s, q) => s + q.totalChecks, 0);
     const totalQCPassed = qcMetrics.reduce((s, q) => s + q.passed, 0);
 
