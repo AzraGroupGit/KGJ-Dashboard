@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 function prevDay(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
@@ -33,6 +34,10 @@ function formatActivity(action: string, userName: string): string {
     CS_INPUT: `${userName} menginput data leads & closing`,
     MKT_INPUT: `${userName} menginput data marketing`,
     LOGIN: `${userName} masuk ke sistem`,
+    CREATE_ORDER: `Order baru dibuat`,
+    SUBMIT_STAGE: `Stage disubmit`,
+    APPROVE_STAGE: `Stage disetujui supervisor`,
+    REJECT_STAGE: `Stage ditolak supervisor`,
   };
   return (
     map[action] ??
@@ -40,15 +45,10 @@ function formatActivity(action: string, userName: string): string {
   );
 }
 
-/**
- * GET /api/superadmin/snapshot
- * Query params: date (YYYY-MM-DD, default: today)
- * Returns today's BMS snapshot + recent activity + auto-generated alerts.
- * Hanya superadmin.
- */
 export async function GET(request: Request) {
   try {
     const supabase = await createClient();
+    const admin = createAdminClient();
 
     const {
       data: { user },
@@ -73,16 +73,28 @@ export async function GET(request: Request) {
       searchParams.get("date") ?? new Date().toISOString().slice(0, 10);
     const prev = prevDay(dateStr);
 
-    // Fetch in parallel: today + yesterday CS inputs + recent activity
-    const [todayRes, prevRes, activityRes] = await Promise.all([
+    // ========== PARALLEL FETCHES ==========
+    const [
+      todayRes,
+      prevRes,
+      activityRes,
+      activeOrdersRes,
+      completedOrdersRes,
+      approvalOrdersRes,
+    ] = await Promise.all([
+      // BMS: today's CS inputs
       supabase
         .from("cs_inputs")
         .select("lead_masuk, closing, omset")
         .eq("input_date", dateStr),
+
+      // BMS: yesterday's CS inputs
       supabase
         .from("cs_inputs")
         .select("lead_masuk, closing, omset")
         .eq("input_date", prev),
+
+      // Activity feed
       supabase
         .from("activity_logs")
         .select(
@@ -93,12 +105,54 @@ export async function GET(request: Request) {
         )
         .order("created_at", { ascending: false })
         .limit(8),
+
+      // OPRPRD: Active production orders
+      admin
+        .from("orders")
+        .select("id", { count: "exact" })
+        .in("current_stage", [
+          "racik_bahan",
+          "lebur_bahan",
+          "pembentukan_cincin",
+          "pemasangan_permata",
+          "pemolesan",
+          "qc_1",
+          "finishing",
+          "laser",
+          "qc_2",
+          "kelengkapan",
+          "qc_3",
+          "packing",
+        ])
+        .not("status", "in", "(completed,cancelled)")
+        .is("deleted_at", null),
+
+      // OPRPRD: Completed orders in last 7 days with deadlines
+      admin
+        .from("orders")
+        .select("completed_at, deadline")
+        .eq("status", "completed")
+        .gte("completed_at", new Date(Date.now() - 7 * 86400000).toISOString())
+        .is("deleted_at", null),
+
+      // OPRPRD: Orders waiting approval (backlog)
+      admin
+        .from("orders")
+        .select("id", { count: "exact" })
+        .in("current_stage", [
+          "approval_penerimaan_order",
+          "approval_qc_1",
+          "approval_qc_2",
+          "approval_qc_3",
+          "approval_pelunasan",
+        ])
+        .is("deleted_at", null),
     ]);
 
+    // ── BMS metrics ──────────────────────────────────────────────────────────
     const todayCS = todayRes.data ?? [];
     const prevCS = prevRes.data ?? [];
 
-    // ── BMS metrics ──────────────────────────────────────────────────────────
     const lead_masuk = todayCS.reduce((s, r) => s + (r.lead_masuk ?? 0), 0);
     const closing = todayCS.reduce((s, r) => s + (r.closing ?? 0), 0);
     const omset = todayCS.reduce((s, r) => s + (r.omset ?? 0), 0);
@@ -106,6 +160,38 @@ export async function GET(request: Request) {
 
     const prevLead = prevCS.reduce((s, r) => s + (r.lead_masuk ?? 0), 0);
     const prevClosing = prevCS.reduce((s, r) => s + (r.closing ?? 0), 0);
+
+    // ── OPRPRD metrics ───────────────────────────────────────────────────────
+    const produksi = activeOrdersRes.data?.length ?? activeOrdersRes.count ?? 0;
+
+    // Total active orders as target
+    const { count: totalActive } = await admin
+      .from("orders")
+      .select("id", { count: "exact" })
+      .not("status", "in", "(completed,cancelled)")
+      .is("deleted_at", null);
+    const target = totalActive ?? 0;
+
+    // On-time calculation
+    const completedOrders = completedOrdersRes.data || [];
+    let onTimeCount = 0;
+    completedOrders.forEach((o: any) => {
+      if (
+        o.deadline &&
+        o.completed_at &&
+        new Date(o.completed_at) <= new Date(o.deadline)
+      ) {
+        onTimeCount++;
+      }
+    });
+    const onTimePct =
+      completedOrders.length > 0
+        ? Math.round((onTimeCount / completedOrders.length) * 100)
+        : 0;
+
+    // Backlog
+    const backlog =
+      approvalOrdersRes.data?.length ?? approvalOrdersRes.count ?? 0;
 
     // ── Activity ─────────────────────────────────────────────────────────────
     const activity = (activityRes.data ?? []).map((row: any) => {
@@ -141,19 +227,21 @@ export async function GET(request: Request) {
         level: "warning",
         message: `Conversion rate hari ini ${cr.toFixed(1)}% — di bawah ambang batas minimal 15%.`,
       });
-    } else if (cr >= 30) {
+    }
+
+    if (backlog > 5) {
       alerts.push({
-        id: "cr-good",
-        level: "info",
-        message: `Conversion rate hari ini ${cr.toFixed(1)}% — performa sangat baik!`,
+        id: "backlog-high",
+        level: "warning",
+        message: `${backlog} order menunggu persetujuan supervisor — perlu tindakan.`,
       });
     }
 
-    if (closing > prevClosing && prevClosing > 0) {
+    if (onTimePct < 50 && completedOrders.length > 0) {
       alerts.push({
-        id: "closing-up",
-        level: "info",
-        message: `Closing hari ini (${closing}) naik dibanding kemarin (${prevClosing}).`,
+        id: "ontime-low",
+        level: "danger",
+        message: `On-time delivery rendah: ${onTimePct}% dalam 7 hari terakhir.`,
       });
     }
 
@@ -167,16 +255,16 @@ export async function GET(request: Request) {
         closing_delta: closing - prevClosing,
       },
       oprprd: {
-        produksi: 0,
-        target: 0,
-        on_time_pct: 0,
-        backlog: 0,
+        produksi,
+        target,
+        on_time_pct: onTimePct,
+        backlog,
       },
       activity,
       alerts,
     });
   } catch (error) {
-    console.error("[GET /api/superadmin/snapshot] unexpected:", error);
+    console.error("[GET /api/overview] unexpected:", error);
     return NextResponse.json(
       { error: "Terjadi kesalahan server" },
       { status: 500 },

@@ -1,167 +1,53 @@
-// app/dashboard/supervisor/monitoring/page.tsx
+// app/dashboard/supervisor/bottleneck/page.tsx
 
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
 import {
-  Activity,
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Hammer,
   RefreshCw,
-  Settings,
-  ShieldCheck,
-  Users,
+  TrendingUp,
+  Layers,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface OrderRow {
-  id: string;
+interface BottleneckItem {
+  order_id: string;
   order_number: string;
   product_name: string;
-  current_stage: string;
+  hours_waiting: number | null;
+  status: string;
+}
+
+interface StageBottleneck {
+  stage: string;
   stage_label: string;
-  stage_group: "production" | "operational" | "other";
-  deadline: string | null;
-  customer_name: string | null;
-  last_worker: string | null;
-  last_submission_at: string | null;
-  hours_at_stage: number | null;
-  last_stage: string | null;
+  stage_group: string;
+  order_count: number;
+  waiting_orders: number;
+  in_progress_orders: number;
+  avg_hours: number | null;
+  longest_hours: number | null;
+  bottlenecks: BottleneckItem[];
 }
 
-interface MonitoringStats {
-  totalActive: number;
-  productionCount: number;
-  operationalCount: number;
-  submissionsToday: number;
-  pendingApprovals: number;
-}
-
-interface MonitoringData {
-  stats: MonitoringStats;
-  orders: OrderRow[];
-}
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const STAGE_COLORS: Record<string, string> = {
-  production: "bg-amber-100 text-amber-800 border-amber-200",
-  operational: "bg-blue-100 text-blue-800 border-blue-200",
-  other: "bg-slate-100 text-slate-700 border-slate-200",
-};
-
-const APPROVAL_STAGES = [
-  "approval_penerimaan_order",
-  "approval_qc_1",
-  "approval_qc_2",
-  "approval_qc_3",
-  "approval_pelunasan",
-];
-
-const DEADLINE_WARN_DAYS = 2;
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatRelative(iso: string | null): string {
-  if (!iso) return "—";
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diffMs / 60_000);
-  const hours = Math.floor(diffMs / 3_600_000);
-  if (mins < 1) return "baru saja";
-  if (mins < 60) return `${mins}m lalu`;
-  if (hours < 24) return `${hours}j lalu`;
-  return `${Math.floor(hours / 24)}h lalu`;
-}
-
-function formatDeadline(iso: string | null): {
-  label: string;
-  urgent: boolean;
-} {
-  if (!iso) return { label: "—", urgent: false };
-  const date = new Date(iso);
-  const diffDays = Math.ceil((date.getTime() - Date.now()) / 86_400_000);
-  const label = date.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-  });
-  return { label, urgent: diffDays <= DEADLINE_WARN_DAYS };
-}
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  tone,
-  note,
-  className,
-}: {
-  label: string;
-  value: number | string;
-  icon: React.ElementType;
-  tone: "slate" | "amber" | "blue" | "emerald" | "rose";
-  note?: string;
-  className?: string;
-}) {
-  const toneMap = {
-    slate: {
-      bg: "bg-slate-50",
-      icon: "text-slate-500",
-      ring: "ring-slate-200",
-    },
-    amber: {
-      bg: "bg-amber-50",
-      icon: "text-amber-600",
-      ring: "ring-amber-200",
-    },
-    blue: { bg: "bg-blue-50", icon: "text-blue-600", ring: "ring-blue-200" },
-    emerald: {
-      bg: "bg-emerald-50",
-      icon: "text-emerald-600",
-      ring: "ring-emerald-200",
-    },
-    rose: { bg: "bg-rose-50", icon: "text-rose-600", ring: "ring-rose-200" },
+interface BottleneckData {
+  bottlenecks: StageBottleneck[];
+  summary: {
+    total_stages_with_orders: number;
+    total_orders: number;
+    busiest_stage: StageBottleneck | null;
+    slowest_stage: StageBottleneck | null;
   };
-  const t = toneMap[tone];
-  return (
-    <div
-      className={`rounded-lg border border-slate-200 bg-white p-3 sm:p-5${className ? ` ${className}` : ""}`}
-    >
-      <div className="flex items-start justify-between">
-        <div className="min-w-0">
-          <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-slate-500">
-            {label}
-          </p>
-          <p className="mt-1 sm:mt-2 text-xl sm:text-3xl font-semibold tabular-nums text-slate-900">
-            {value}
-          </p>
-          {note && (
-            <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-slate-400">
-              {note}
-            </p>
-          )}
-        </div>
-        <div
-          className={`flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset ${t.bg} ${t.ring} ml-2`}
-        >
-          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${t.icon}`} />
-        </div>
-      </div>
-    </div>
-  );
 }
-
-type FilterTab = "all" | "production" | "operational" | "pending";
-
-// ── Order Detail Popup ───────────────────────────────────────────────────────
 
 interface OrderDetail {
   order: {
@@ -229,6 +115,8 @@ interface OrderDetail {
   }>;
 }
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
 const STAGE_LABELS_DETAIL: Record<string, string> = {
   penerimaan_order: "Penerimaan Order",
   approval_penerimaan_order: "Approval Penerimaan",
@@ -252,6 +140,292 @@ const STAGE_LABELS_DETAIL: Record<string, string> = {
   pengiriman: "Pengiriman",
   selesai: "Selesai",
 };
+
+const STAGE_LABELS: Record<string, string> = {
+  racik_bahan: "Racik Bahan",
+  lebur_bahan: "Lebur Bahan",
+  pembentukan_cincin: "Pembentukan Cincin",
+  pemasangan_permata: "Pemasangan Permata",
+  pemolesan: "Pemolesan",
+  qc_1: "QC 1",
+  finishing: "Finishing",
+  laser: "Laser Engraving",
+  qc_2: "QC 2",
+  kelengkapan: "Kelengkapan",
+  qc_3: "QC 3",
+  packing: "Packing",
+  pelunasan: "Pelunasan",
+  pengiriman: "Pengiriman",
+  approval_penerimaan_order: "Approval Order Baru",
+  approval_qc_1: "Approval QC 1",
+  approval_qc_2: "Approval QC 2",
+  approval_qc_3: "Approval QC 3",
+  approval_pelunasan: "Approval Pelunasan",
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function formatHours(hours: number | null): string {
+  if (hours === null) return "—";
+  if (hours >= 24) {
+    const d = Math.floor(hours / 24);
+    const h = Math.round(hours % 24);
+    return h > 0 ? `${d}h ${h}j` : `${d}h`;
+  }
+  if (hours < 1) return `${Math.round(hours * 60)}m`;
+  return `${Math.round(hours * 10) / 10}j`;
+}
+
+function getStageColor(stageGroup: string): string {
+  return stageGroup === "production"
+    ? "bg-amber-100 text-amber-800 border-amber-200"
+    : "bg-blue-100 text-blue-800 border-blue-200";
+}
+
+function getStatusInfo(avgHours: number | null): {
+  label: string;
+  className: string;
+  Icon: React.ElementType;
+} {
+  if (avgHours === null) {
+    return {
+      label: "Normal",
+      className: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+      Icon: CheckCircle2,
+    };
+  }
+  if (avgHours > 24) {
+    return {
+      label: "Kritis",
+      className: "bg-rose-50 text-rose-700 ring-rose-200",
+      Icon: AlertTriangle,
+    };
+  }
+  if (avgHours > 8) {
+    return {
+      label: "Lambat",
+      className: "bg-amber-50 text-amber-700 ring-amber-200",
+      Icon: Clock,
+    };
+  }
+  return {
+    label: "Normal",
+    className: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    Icon: CheckCircle2,
+  };
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function StatCard({
+  label,
+  value,
+  subtitle,
+  icon: Icon,
+  tone,
+}: {
+  label: string;
+  value: string | number;
+  subtitle?: string;
+  icon: React.ElementType;
+  tone: "slate" | "rose" | "amber" | "emerald";
+}) {
+  const toneMap = {
+    slate: {
+      bg: "bg-slate-50",
+      icon: "text-slate-500",
+      ring: "ring-slate-200",
+    },
+    rose: { bg: "bg-rose-50", icon: "text-rose-600", ring: "ring-rose-200" },
+    amber: {
+      bg: "bg-amber-50",
+      icon: "text-amber-600",
+      ring: "ring-amber-200",
+    },
+    emerald: {
+      bg: "bg-emerald-50",
+      icon: "text-emerald-600",
+      ring: "ring-emerald-200",
+    },
+  };
+  const t = toneMap[tone];
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3 sm:p-4">
+      <div className="flex items-start justify-between">
+        <div className="min-w-0">
+          <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-slate-500">
+            {label}
+          </p>
+          <p className="mt-1 sm:mt-2 text-xl sm:text-2xl font-semibold tabular-nums text-slate-900">
+            {value}
+          </p>
+          {subtitle && (
+            <p className="mt-0.5 text-[10px] sm:text-xs text-slate-400">
+              {subtitle}
+            </p>
+          )}
+        </div>
+        <div
+          className={`flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset ${t.bg} ${t.ring} ml-2`}
+        >
+          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${t.icon}`} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BottleneckTableRow({
+  stage,
+  isExpanded,
+  onToggle,
+  onOrderClick,
+}: {
+  stage: StageBottleneck;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onOrderClick: (orderId: string, orderNumber: string) => void;
+}) {
+  const status = getStatusInfo(stage.avg_hours);
+  const StatusIcon = status.Icon;
+  const isProduction = stage.stage_group === "production";
+  const hasBottlenecks = stage.bottlenecks.length > 0;
+
+  return (
+    <>
+      <tr
+        onClick={onToggle}
+        className={`border-b border-slate-50 transition-colors cursor-pointer ${
+          status.label === "Kritis"
+            ? "bg-rose-50/30 hover:bg-rose-50/50"
+            : status.label === "Lambat"
+              ? "bg-amber-50/20 hover:bg-amber-50/40"
+              : "hover:bg-slate-50/60"
+        }`}
+      >
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${isProduction ? "bg-amber-400" : "bg-blue-400"}`}
+            />
+            <span className="text-sm font-medium text-slate-800">
+              {STAGE_LABELS[stage.stage] || stage.stage_label}
+            </span>
+          </div>
+        </td>
+        <td className="px-3 py-3 text-center">
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+            {stage.order_count}
+            {stage.waiting_orders > 0 && (
+              <span className="text-rose-500 text-[10px]">
+                ({stage.waiting_orders})
+              </span>
+            )}
+          </span>
+        </td>
+        <td className="px-3 py-3 text-center hidden sm:table-cell">
+          <span
+            className={`text-xs font-semibold ${
+              status.label === "Kritis"
+                ? "text-rose-600"
+                : status.label === "Lambat"
+                  ? "text-amber-600"
+                  : "text-slate-600"
+            }`}
+          >
+            {formatHours(stage.avg_hours)}
+          </span>
+        </td>
+        <td className="px-3 py-3 text-center hidden sm:table-cell">
+          <span
+            className={`text-xs font-semibold ${
+              (stage.longest_hours || 0) > 48
+                ? "text-rose-600"
+                : (stage.longest_hours || 0) > 24
+                  ? "text-amber-600"
+                  : "text-slate-600"
+            }`}
+          >
+            {formatHours(stage.longest_hours)}
+          </span>
+        </td>
+        <td className="px-4 py-3 text-center">
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${status.className}`}
+          >
+            <StatusIcon className="h-3 w-3" />
+            {status.label}
+          </span>
+        </td>
+        <td className="px-2 py-3 text-center">
+          {hasBottlenecks &&
+            (isExpanded ? (
+              <ChevronUp className="h-4 w-4 text-slate-400" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-slate-400" />
+            ))}
+        </td>
+      </tr>
+      {/* Expanded detail rows */}
+      {isExpanded && hasBottlenecks && (
+        <tr className="bg-slate-50/50">
+          <td colSpan={6} className="px-4 py-3">
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                Order Terlambat di Tahap Ini
+              </p>
+              {stage.bottlenecks.map((item, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    onOrderClick(item.order_id, item.order_number);
+                  }}
+                  className="flex items-center gap-3 text-xs bg-white rounded-md border border-slate-100 px-3 py-2 hover:border-slate-300 hover:bg-slate-50 transition-colors w-full text-left cursor-pointer"
+                >
+                  <span className="font-mono text-slate-500 w-32 shrink-0">
+                    {item.order_number}
+                  </span>
+                  <span className="text-slate-600 truncate flex-1">
+                    {item.product_name}
+                  </span>
+                  <span
+                    className={`shrink-0 font-semibold ${
+                      (item.hours_waiting || 0) > 48
+                        ? "text-rose-600"
+                        : (item.hours_waiting || 0) > 24
+                          ? "text-amber-600"
+                          : "text-slate-500"
+                    }`}
+                  >
+                    {formatHours(item.hours_waiting)}
+                  </span>
+                  <span
+                    className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                      item.status === "waiting_approval"
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {item.status === "waiting_approval" ? "Menunggu" : "Proses"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </td>
+        </tr>
+      )}
+      {isExpanded && !hasBottlenecks && (
+        <tr className="bg-slate-50/50">
+          <td colSpan={6} className="px-4 py-3 text-center">
+            <p className="text-xs text-slate-400">
+              Tidak ada order terlambat signifikan
+            </p>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
 
 function OrderDetailPopup({
   orderId,
@@ -675,20 +849,19 @@ function OrderDetailPopup({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function SupervisorMonitoringPage() {
+export default function SupervisorBottleneckPage() {
   const router = useRouter();
-  const [data, setData] = useState<MonitoringData | null>(null);
+  const [data, setData] = useState<BottleneckData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<FilterTab>("all");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [userEmail, setUserEmail] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
   const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
   const [detailOrderNumber, setDetailOrderNumber] = useState<string>("");
 
-  // Load user identity
   useEffect(() => {
     (async () => {
       const res = await fetch("/api/me");
@@ -698,7 +871,11 @@ export default function SupervisorMonitoringPage() {
       }
       const json = await res.json();
       const u = json.data;
-      if (u.role.name !== "superadmin" && u.role.role_group !== "management") {
+      if (
+        u.role.name !== "superadmin" &&
+        u.role.role_group !== "management" &&
+        u.role.name !== "supervisor"
+      ) {
         router.push("/workshop/login");
         return;
       }
@@ -710,8 +887,8 @@ export default function SupervisorMonitoringPage() {
     if (manual) setRefreshing(true);
     setError(null);
     try {
-      const res = await fetch("/api/supervisor");
-      if (!res.ok) throw new Error("Gagal memuat data monitoring");
+      const res = await fetch("/api/bottleneck");
+      if (!res.ok) throw new Error("Gagal memuat data bottleneck");
       const json = await res.json();
       setData(json.data);
       setLastUpdated(new Date());
@@ -725,49 +902,37 @@ export default function SupervisorMonitoringPage() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(() => fetchData(false), 30_000);
+    const interval = setInterval(() => fetchData(false), 60_000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  const filteredOrders = (data?.orders || []).filter((o) => {
-    if (filter === "all") return true;
-    if (filter === "production") return o.stage_group === "production";
-    if (filter === "operational") return o.stage_group === "operational";
-    if (filter === "pending") {
-      return APPROVAL_STAGES.includes(o.current_stage);
-    }
-    return true;
-  });
+  const toggleStage = (stage: string) => {
+    setExpandedStages((prev) => {
+      const next = new Set(prev);
+      if (next.has(stage)) {
+        next.delete(stage);
+      } else {
+        next.add(stage);
+      }
+      return next;
+    });
+  };
 
-  const tabs: { key: FilterTab; label: string; count?: number }[] = [
-    { key: "all", label: "Semua", count: data?.orders.length },
-    {
-      key: "production",
-      label: "Produksi",
-      count: data?.stats.productionCount,
-    },
-    {
-      key: "operational",
-      label: "Operasional",
-      count: data?.stats.operationalCount,
-    },
-    {
-      key: "pending",
-      label: "Perlu Tindakan",
-      count: data?.stats.pendingApprovals,
-    },
-  ];
+  const criticalCount =
+    data?.bottlenecks.filter((b) => (b.avg_hours || 0) > 24).length || 0;
+  const slowCount =
+    data?.bottlenecks.filter(
+      (b) => (b.avg_hours || 0) > 8 && (b.avg_hours || 0) <= 24,
+    ).length || 0;
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-slate-50">
-      {/* Sidebar */}
       <Sidebar
         role="supervisor"
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header
           userEmail={userEmail}
@@ -781,27 +946,13 @@ export default function SupervisorMonitoringPage() {
           <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-slate-900">
-                Monitoring Workshop
+                Bottleneck Monitoring
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                Status real-time semua order aktif
+                Identifikasi tahap dengan waktu tunggu terlama
               </p>
             </div>
             <div className="flex items-center justify-between sm:justify-end gap-2">
-              {data?.stats.pendingApprovals ? (
-                <Link
-                  href="/dashboard/supervisor/approval"
-                  className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 border border-amber-200 px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors whitespace-nowrap"
-                >
-                  <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
-                  <span className="hidden sm:inline">
-                    {data.stats.pendingApprovals} menunggu persetujuan
-                  </span>
-                  <span className="sm:hidden">
-                    {data.stats.pendingApprovals} approval
-                  </span>
-                </Link>
-              ) : null}
               {lastUpdated && (
                 <span className="text-[10px] sm:text-xs text-slate-400 whitespace-nowrap">
                   {lastUpdated.toLocaleTimeString("id-ID", {
@@ -824,7 +975,7 @@ export default function SupervisorMonitoringPage() {
           </div>
 
           {loading ? (
-            <MonitoringSkeleton />
+            <BottleneckSkeleton />
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center px-4">
               <AlertTriangle className="mb-3 h-8 w-8 text-rose-400" />
@@ -839,308 +990,122 @@ export default function SupervisorMonitoringPage() {
           ) : !data ? null : (
             <div className="space-y-4 sm:space-y-6">
               {/* Stats row */}
-              <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-4">
                 <StatCard
-                  label="Total Aktif"
-                  value={data.stats.totalActive}
-                  icon={Activity}
+                  label="Total Tahap Aktif"
+                  value={data.summary.total_stages_with_orders}
+                  icon={Layers}
                   tone="slate"
                 />
                 <StatCard
-                  label="Produksi"
-                  value={data.stats.productionCount}
-                  icon={Hammer}
-                  tone="amber"
+                  label="Total Order"
+                  value={data.summary.total_orders}
+                  icon={TrendingUp}
+                  tone="slate"
                 />
                 <StatCard
-                  label="Operasional"
-                  value={data.stats.operationalCount}
-                  icon={Settings}
-                  tone="blue"
+                  label="Kritis"
+                  value={criticalCount}
+                  subtitle=">24 jam"
+                  icon={AlertTriangle}
+                  tone={criticalCount > 0 ? "rose" : "emerald"}
                 />
                 <StatCard
-                  label="Submission Hari Ini"
-                  value={data.stats.submissionsToday}
-                  icon={CheckCircle2}
-                  tone="emerald"
-                />
-                <StatCard
-                  label="Perlu Persetujuan"
-                  value={data.stats.pendingApprovals}
-                  icon={ShieldCheck}
-                  tone={data.stats.pendingApprovals > 0 ? "rose" : "slate"}
-                  className="col-span-2 sm:col-span-1"
+                  label="Lambat"
+                  value={slowCount}
+                  subtitle="8-24 jam"
+                  icon={Clock}
+                  tone={slowCount > 0 ? "amber" : "emerald"}
                 />
               </div>
 
-              {/* Filter tabs - Horizontal scroll di mobile */}
-              <div className="border-b border-slate-200 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
-                <div className="flex items-center gap-1 min-w-max">
-                  {tabs.map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => setFilter(tab.key)}
-                      className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
-                        filter === tab.key
-                          ? "border-slate-800 text-slate-900"
-                          : "border-transparent text-slate-500 hover:text-slate-700"
-                      }`}
-                    >
-                      {tab.label}
-                      {tab.count !== undefined && (
-                        <span
-                          className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                            filter === tab.key
-                              ? "bg-slate-800 text-white"
-                              : tab.count > 0
-                                ? "bg-slate-100 text-slate-700"
-                                : "bg-slate-50 text-slate-400"
-                          }`}
-                        >
-                          {tab.count}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Orders list */}
-              {filteredOrders.length === 0 ? (
-                <div className="py-12 sm:py-16 text-center">
-                  <Users className="mx-auto mb-3 h-8 w-8 text-slate-300" />
-                  <p className="text-sm text-slate-400">
-                    Tidak ada order aktif di kategori ini
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* Mobile cards (< md) */}
-                  <div className="block md:hidden space-y-2 sm:space-y-3">
-                    {filteredOrders.map((order) => {
-                      const dl = formatDeadline(order.deadline);
-                      const hoursLabel =
-                        order.hours_at_stage !== null
-                          ? order.hours_at_stage >= 24
-                            ? `${Math.floor(order.hours_at_stage / 24)}h ${order.hours_at_stage % 24}j`
-                            : `${order.hours_at_stage}j`
-                          : "—";
-                      const isStuck =
-                        order.hours_at_stage !== null &&
-                        order.hours_at_stage > 24;
-                      return (
-                        <button
-                          key={order.id}
-                          onClick={() => {
-                            setDetailOrderId(order.id);
-                            setDetailOrderNumber(order.order_number);
-                          }}
-                          className="w-full text-left rounded-lg border border-slate-200 bg-white p-3 sm:p-4 active:bg-slate-50 transition-colors hover:border-slate-300"
-                        >
-                          {/* Header */}
-                          <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <div className="min-w-0">
-                              <span className="font-mono text-xs sm:text-sm font-semibold text-slate-800">
-                                {order.order_number}
-                              </span>
-                              {order.customer_name && (
-                                <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">
-                                  {order.customer_name}
-                                </p>
-                              )}
-                            </div>
-                            <span
-                              className={`inline-block shrink-0 rounded-full border px-2 py-0.5 text-[10px] sm:text-[11px] font-medium ${
-                                STAGE_COLORS[order.stage_group]
-                              }`}
-                            >
-                              {order.stage_label}
-                            </span>
-                          </div>
-
-                          {/* Product */}
-                          <p className="text-sm text-slate-700 mb-2.5">
-                            {order.product_name}
-                          </p>
-
-                          {/* Info Row */}
-                          <div className="flex items-center justify-between text-xs gap-2 flex-wrap">
-                            <span className="text-slate-500 truncate max-w-[60%]">
-                              {order.last_worker
-                                ? `${order.last_worker} · ${formatRelative(order.last_submission_at)}`
-                                : "Belum ada submission"}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              {/* Stage + duration — always visible */}
-                              {hoursLabel !== "—" && (
-                                <span
-                                  className={`inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-medium ${isStuck ? "text-rose-600" : "text-slate-400"}`}
-                                >
-                                  {isStuck && <Clock className="h-3 w-3" />}
-                                  {order.stage_label} · {hoursLabel}
-                                </span>
-                              )}
-                              {/* Deadline */}
-                              <span
-                                className={`${
-                                  dl.urgent
-                                    ? "font-semibold text-rose-600"
-                                    : "text-slate-400"
-                                }`}
-                              >
-                                {dl.urgent && (
-                                  <AlertTriangle className="inline h-3 w-3 mr-0.5 -mt-0.5" />
-                                )}
-                                {dl.label}
-                              </span>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Desktop table (>= md) */}
-                  <div className="hidden md:block rounded-lg border border-slate-200 bg-white overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-slate-100 bg-slate-50/70">
-                            <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                              Order
-                            </th>
-                            <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                              Produk
-                            </th>
-                            <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                              Tahap
-                            </th>
-                            <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                              Tukang / Petugas
-                            </th>
-                            <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 hidden lg:table-cell">
-                              Lama di Tahap
-                            </th>
-                            <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 hidden lg:table-cell">
-                              Deadline
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                          {filteredOrders.map((order) => {
-                            const dl = formatDeadline(order.deadline);
-                            const hoursLabel =
-                              order.hours_at_stage !== null
-                                ? order.hours_at_stage >= 24
-                                  ? `${Math.floor(order.hours_at_stage / 24)}h ${order.hours_at_stage % 24}j`
-                                  : `${order.hours_at_stage}j`
-                                : "—";
-                            const isStuck =
-                              order.hours_at_stage !== null &&
-                              order.hours_at_stage > 24;
-
-                            return (
-                              <tr
-                                key={order.id}
-                                onClick={() => {
-                                  setDetailOrderId(order.id);
-                                  setDetailOrderNumber(order.order_number);
-                                }}
-                                className="hover:bg-slate-50/60 transition-colors cursor-pointer"
-                              >
-                                <td className="px-4 py-3">
-                                  <span className="font-mono text-xs font-semibold text-slate-800">
-                                    {order.order_number}
-                                  </span>
-                                  {order.customer_name && (
-                                    <p className="text-[11px] text-slate-400 mt-0.5">
-                                      {order.customer_name}
-                                    </p>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  <span className="text-slate-700">
-                                    {order.product_name}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3">
-                                  <span
-                                    className={`inline-block rounded-full border px-2 py-0.5 text-[11px] font-medium ${
-                                      STAGE_COLORS[order.stage_group]
-                                    }`}
-                                  >
-                                    {order.stage_label}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3">
-                                  {order.last_worker ? (
-                                    <div>
-                                      <span className="text-slate-700">
-                                        {order.last_worker}
-                                      </span>
-                                      <p className="text-[11px] text-slate-400 mt-0.5">
-                                        {formatRelative(
-                                          order.last_submission_at,
-                                        )}
-                                      </p>
-                                    </div>
-                                  ) : (
-                                    <span className="text-slate-300 text-xs">
-                                      Belum ada submission
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 hidden lg:table-cell">
-                                  {hoursLabel !== "—" ? (
-                                    <div>
-                                      <span
-                                        className={`text-sm font-medium ${
-                                          isStuck
-                                            ? "text-rose-600"
-                                            : "text-slate-600"
-                                        }`}
-                                      >
-                                        {isStuck && (
-                                          <Clock className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
-                                        )}
-                                        {hoursLabel}
-                                      </span>
-                                      <p className="text-[11px] text-slate-400 mt-0.5">
-                                        {order.stage_label}
-                                      </p>
-                                    </div>
-                                  ) : (
-                                    <span className="text-xs text-slate-300">
-                                      —
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 hidden lg:table-cell">
-                                  <span
-                                    className={`text-sm ${
-                                      dl.urgent
-                                        ? "font-semibold text-rose-600"
-                                        : "text-slate-600"
-                                    }`}
-                                  >
-                                    {dl.urgent && (
-                                      <AlertTriangle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
-                                    )}
-                                    {dl.label}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+              {/* Summary alert */}
+              {data.summary.slowest_stage &&
+                (data.summary.slowest_stage.avg_hours || 0) > 8 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-800">
+                        Tahap dengan waktu tunggu terlama:{" "}
+                        {STAGE_LABELS[data.summary.slowest_stage.stage] ||
+                          data.summary.slowest_stage.stage_label}
+                      </p>
+                      <p className="text-xs text-amber-600 mt-0.5">
+                        Rata-rata{" "}
+                        {formatHours(data.summary.slowest_stage.avg_hours)} per
+                        order — {data.summary.slowest_stage.order_count} order
+                        menunggu
+                      </p>
                     </div>
                   </div>
-                </>
-              )}
+                )}
+
+              {/* Main table */}
+              <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Detail Per Tahap
+                  </h3>
+                  <span className="text-xs text-slate-400">
+                    Klik baris untuk detail order
+                  </span>
+                </div>
+
+                {data.bottlenecks.length === 0 ? (
+                  <div className="py-16 text-center">
+                    <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-300" />
+                    <p className="text-sm font-medium text-slate-500">
+                      Tidak ada bottleneck terdeteksi
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Semua order berjalan lancar
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 bg-slate-50/70">
+                          <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Tahap
+                          </th>
+                          <th className="px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Order
+                          </th>
+                          <th className="px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-500 hidden sm:table-cell">
+                            Rata² Waktu
+                          </th>
+                          <th className="px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-500 hidden sm:table-cell">
+                            Terlama
+                          </th>
+                          <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Status
+                          </th>
+                          <th className="px-2 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-500 w-10"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {data.bottlenecks.map((stage) => (
+                          <BottleneckTableRow
+                            key={stage.stage}
+                            stage={stage}
+                            isExpanded={expandedStages.has(stage.stage)}
+                            onToggle={() => toggleStage(stage.stage)}
+                            onOrderClick={(orderId, orderNumber) => {
+                              setDetailOrderId(orderId);
+                              setDetailOrderNumber(orderNumber);
+                            }}
+                          />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </main>
+
         {/* Order Detail Popup */}
         {detailOrderId && (
           <OrderDetailPopup
@@ -1154,11 +1119,11 @@ export default function SupervisorMonitoringPage() {
   );
 }
 
-function MonitoringSkeleton() {
+function BottleneckSkeleton() {
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {[...Array(5)].map((_, i) => (
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
           <div
             key={i}
             className="h-20 sm:h-24 animate-pulse rounded-lg border border-slate-200 bg-white"

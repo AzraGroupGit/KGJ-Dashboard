@@ -140,20 +140,64 @@ interface OperasionalData {
   };
 }
 
+interface BottleneckItem {
+  order_number: string;
+  product_name: string;
+  hours_waiting: number | null;
+  status: string;
+}
+
+interface StageBottleneck {
+  stage: string;
+  stage_label: string;
+  stage_group: string;
+  order_count: number;
+  waiting_orders: number;
+  in_progress_orders: number;
+  avg_hours: number | null;
+  longest_hours: number | null;
+  bottlenecks: BottleneckItem[];
+}
+
+interface BottleneckData {
+  bottlenecks: StageBottleneck[];
+  summary: {
+    total_stages_with_orders: number;
+    total_orders: number;
+    busiest_stage: StageBottleneck | null;
+    slowest_stage: StageBottleneck | null;
+  };
+}
+
 // ============================================================
 
 export const dynamic = "force-dynamic";
 
 // Labels
 const STAGE_LABELS: Record<string, string> = {
-  pelunasan: "Customer Care",
+  penerimaan_order: "Penerimaan Order",
+  approval_penerimaan_order: "Approval Penerimaan",
+  racik_bahan: "Racik Bahan",
+  lebur_bahan: "Lebur Bahan",
+  pembentukan_cincin: "Pembentukan Cincin",
+  pemasangan_permata: "Pemasangan Permata",
+  pemolesan: "Pemolesan",
+  qc_1: "QC 1",
+  approval_qc_1: "Approval QC 1",
+  finishing: "Finishing",
+  laser: "Laser Engraving",
+  qc_2: "QC 2",
+  approval_qc_2: "Approval QC 2",
   kelengkapan: "Kelengkapan",
+  qc_3: "QC 3",
+  approval_qc_3: "Approval QC 3",
   packing: "Packing",
+  pelunasan: "Pelunasan",
+  approval_pelunasan: "Approval Pelunasan",
   pengiriman: "Pengiriman",
 };
 
 const QC_LABELS: Record<string, string> = {
-  qc_awal: "QC Awal",
   qc_1: "QC 1",
   qc_2: "QC 2",
   qc_3: "QC 3",
@@ -232,6 +276,12 @@ export default function OperasionalPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [bottleneckData, setBottleneckData] = useState<BottleneckData | null>(
+    null,
+  );
+  const [bottleneckFilter, setBottleneckFilter] = useState<
+    "all" | "production" | "operational"
+  >("all");
 
   useEffect(() => {
     const cu = getClientUser();
@@ -246,13 +296,26 @@ export default function OperasionalPage() {
     try {
       if (isManualRefresh) setRefreshing(true);
       setError(null);
-      const res = await fetch("/api/operational");
-      if (!res.ok) {
-        if (res.status === 401) throw new Error("Sesi Anda telah habis");
+
+      const [opRes, bnRes] = await Promise.allSettled([
+        fetch("/api/operational"),
+        fetch("/api/bottleneck"),
+      ]);
+
+      if (opRes.status === "fulfilled" && opRes.value.ok) {
+        const json = await opRes.value.json();
+        setData(json.data ?? json);
+      } else if (opRes.status === "fulfilled") {
+        if (opRes.value.status === 401)
+          throw new Error("Sesi Anda telah habis");
         throw new Error("Gagal mengambil data operasional");
       }
-      const json = await res.json();
-      setData(json.data ?? json);
+
+      if (bnRes.status === "fulfilled" && bnRes.value.ok) {
+        const bJson = await bnRes.value.json();
+        setBottleneckData(bJson.data);
+      }
+
       setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
@@ -275,6 +338,18 @@ export default function OperasionalPage() {
   const totalKonfirmasi = data?.afterSales.konfirmasi.length ?? 0;
   const totalPelunasan = data?.afterSales.pelunasan.length ?? 0;
   const totalDelivery = data?.afterSales.delivery.length ?? 0;
+  const filteredBottlenecks =
+    bottleneckData?.bottlenecks.filter((b) => {
+      if (bottleneckFilter === "all") return true;
+      return b.stage_group === bottleneckFilter;
+    }) || [];
+
+  const productionBottleneckCount =
+    bottleneckData?.bottlenecks.filter((b) => b.stage_group === "production")
+      .length || 0;
+  const operationalBottleneckCount =
+    bottleneckData?.bottlenecks.filter((b) => b.stage_group === "operational")
+      .length || 0;
 
   return (
     <div className="flex h-screen bg-slate-50">
@@ -505,6 +580,126 @@ export default function OperasionalPage() {
                   </KanbanColumn>
                 </div>
               </section>
+
+              {/* ========== SECTION: BOTTLENECK MONITORING ========== */}
+              {bottleneckData && bottleneckData.bottlenecks.length > 0 && (
+                <section className="rounded-lg border border-slate-200 bg-white">
+                  <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      <h2 className="text-sm font-semibold text-slate-900">
+                        Bottleneck — Per Tahap Operasional
+                      </h2>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                      <span>
+                        <span className="font-medium text-slate-700">
+                          {bottleneckData.summary.total_stages_with_orders}
+                        </span>{" "}
+                        tahap
+                      </span>
+                      <span>
+                        <span className="font-medium text-slate-700">
+                          {bottleneckData.summary.total_orders}
+                        </span>{" "}
+                        order
+                      </span>
+                    </div>
+                  </header>
+
+                  {/* Filter tabs */}
+                  <div className="border-b border-slate-100 overflow-x-auto px-5">
+                    <div className="flex items-center gap-1 min-w-max">
+                      {(
+                        [
+                          {
+                            key: "all",
+                            label: "Semua",
+                            count: bottleneckData.bottlenecks.length,
+                          },
+                          {
+                            key: "production",
+                            label: "Produksi",
+                            count: productionBottleneckCount,
+                          },
+                          {
+                            key: "operational",
+                            label: "Operasional",
+                            count: operationalBottleneckCount,
+                          },
+                        ] as const
+                      ).map((tab) => (
+                        <button
+                          key={tab.key}
+                          onClick={() => setBottleneckFilter(tab.key)}
+                          className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+                            bottleneckFilter === tab.key
+                              ? "border-slate-800 text-slate-900"
+                              : "border-transparent text-slate-500 hover:text-slate-700"
+                          }`}
+                        >
+                          {tab.label}
+                          <span
+                            className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                              bottleneckFilter === tab.key
+                                ? "bg-slate-800 text-white"
+                                : tab.count > 0
+                                  ? "bg-slate-100 text-slate-700"
+                                  : "bg-slate-50 text-slate-400"
+                            }`}
+                          >
+                            {tab.count}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {filteredBottlenecks.length === 0 ? (
+                    <div className="p-12 text-center">
+                      <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-300" />
+                      <p className="text-sm text-slate-400">
+                        Tidak ada bottleneck di kategori ini
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-100 text-xs">
+                            <th className="px-5 py-2.5 text-left font-medium text-slate-500">
+                              Tahap
+                            </th>
+                            <th className="px-3 py-2.5 text-center font-medium text-slate-500">
+                              Order
+                            </th>
+                            <th className="px-3 py-2.5 text-center font-medium text-slate-500">
+                              Rata² Waktu
+                            </th>
+                            <th className="px-3 py-2.5 text-center font-medium text-slate-500">
+                              Terlama
+                            </th>
+                            <th className="px-3 py-2.5 text-left font-medium text-slate-500">
+                              Order Terlambat
+                            </th>
+                            <th className="px-5 py-2.5 text-center font-medium text-slate-500">
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredBottlenecks.map((stage) => (
+                            <OperationalBottleneckRow
+                              key={stage.stage}
+                              stage={stage}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              )}
 
               {/* ========== SECTION 2: ADMIN TASKS & RACIK-LASER ========== */}
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -806,62 +1001,60 @@ export default function OperasionalPage() {
                 </header>
 
                 <div className="grid grid-cols-2 gap-3 border-b border-slate-100 p-5 lg:grid-cols-4">
-                  {(["qc_awal", "qc_1", "qc_2", "qc_3"] as const).map(
-                    (qcType) => {
-                      const latest = data.qc.summary.find(
-                        (s) => s.qc_type === qcType,
-                      ) ?? {
-                        total_checks: 0,
-                        passed: 0,
-                        failed: 0,
-                        pass_rate: 0,
-                      };
-                      const passRate = Number(latest.pass_rate ?? 0);
-                      const isLow = passRate < 70 && latest.total_checks > 0;
+                  {(["qc_1", "qc_2", "qc_3"] as const).map((qcType) => {
+                    const latest = data.qc.summary.find(
+                      (s) => s.qc_type === qcType,
+                    ) ?? {
+                      total_checks: 0,
+                      passed: 0,
+                      failed: 0,
+                      pass_rate: 0,
+                    };
+                    const passRate = Number(latest.pass_rate ?? 0);
+                    const isLow = passRate < 70 && latest.total_checks > 0;
 
-                      return (
-                        <div
-                          key={qcType}
-                          className="rounded-lg border border-slate-200 bg-white p-3"
-                        >
-                          <div className="mb-2 flex items-center justify-between">
-                            <span className="text-xs font-medium text-slate-700">
-                              {QC_LABELS[qcType]}
-                            </span>
-                            <span
-                              className={`text-lg font-semibold ${
-                                isLow
-                                  ? "text-rose-600"
-                                  : latest.total_checks === 0
-                                    ? "text-slate-300"
-                                    : "text-emerald-600"
-                              }`}
-                            >
-                              {latest.total_checks === 0
-                                ? "—"
-                                : `${passRate.toFixed(0)}%`}
-                            </span>
-                          </div>
-                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                            <div
-                              className={`h-full rounded-full transition-all ${
-                                isLow ? "bg-rose-500" : "bg-emerald-500"
-                              }`}
-                              style={{ width: `${passRate}%` }}
-                            />
-                          </div>
-                          <p className="mt-2 text-[11px] text-slate-500">
-                            {latest.passed}/{latest.total_checks} lulus
-                            {latest.failed > 0 && (
-                              <span className="ml-1 text-rose-600">
-                                · {latest.failed} gagal
-                              </span>
-                            )}
-                          </p>
+                    return (
+                      <div
+                        key={qcType}
+                        className="rounded-lg border border-slate-200 bg-white p-3"
+                      >
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-xs font-medium text-slate-700">
+                            {QC_LABELS[qcType]}
+                          </span>
+                          <span
+                            className={`text-lg font-semibold ${
+                              isLow
+                                ? "text-rose-600"
+                                : latest.total_checks === 0
+                                  ? "text-slate-300"
+                                  : "text-emerald-600"
+                            }`}
+                          >
+                            {latest.total_checks === 0
+                              ? "—"
+                              : `${passRate.toFixed(0)}%`}
+                          </span>
                         </div>
-                      );
-                    },
-                  )}
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className={`h-full rounded-full transition-all ${
+                              isLow ? "bg-rose-500" : "bg-emerald-500"
+                            }`}
+                            style={{ width: `${passRate}%` }}
+                          />
+                        </div>
+                        <p className="mt-2 text-[11px] text-slate-500">
+                          {latest.passed}/{latest.total_checks} lulus
+                          {latest.failed > 0 && (
+                            <span className="ml-1 text-rose-600">
+                              · {latest.failed} gagal
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div className="p-5">
@@ -899,13 +1092,11 @@ export default function OperasionalPage() {
                           </span>
                           <span
                             className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                              activity.stage === "qc_awal"
-                                ? "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200"
-                                : activity.stage === "qc_1"
-                                  ? "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200"
-                                  : activity.stage === "qc_2"
-                                    ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
-                                    : "bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200"
+                              activity.stage === "qc_1"
+                                ? "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200"
+                                : activity.stage === "qc_2"
+                                  ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+                                  : "bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200"
                             }`}
                           >
                             {QC_LABELS[activity.stage] ?? activity.stage}
@@ -1045,5 +1236,106 @@ function OperasionalError({
         </button>
       </div>
     </div>
+  );
+}
+
+// ============================================================
+// Sub: OperationalBottleneckRow
+// ============================================================
+
+function OperationalBottleneckRow({ stage }: { stage: StageBottleneck }) {
+  const isProduction = stage.stage_group === "production";
+  const isSlow = stage.avg_hours && stage.avg_hours > 8;
+  const isCritical = stage.avg_hours && stage.avg_hours > 24;
+
+  return (
+    <tr
+      className={`border-b border-slate-50 last:border-0 transition-colors hover:bg-slate-50 ${isCritical ? "bg-rose-50/40" : isSlow ? "bg-amber-50/30" : ""}`}
+    >
+      <td className="px-5 py-3">
+        <div className="flex items-center gap-2">
+          <span
+            className={`h-2 w-2 rounded-full ${isProduction ? "bg-amber-400" : "bg-blue-400"}`}
+          />
+          <span className="text-sm font-medium text-slate-800">
+            {STAGE_LABELS[stage.stage] || stage.stage_label}
+          </span>
+        </div>
+      </td>
+      <td className="px-3 py-3 text-center">
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+          {stage.order_count}
+          {stage.waiting_orders > 0 && (
+            <span className="text-rose-500">
+              ({stage.waiting_orders} tunggu)
+            </span>
+          )}
+        </span>
+      </td>
+      <td className="px-3 py-3 text-center">
+        {stage.avg_hours ? (
+          <span
+            className={`text-xs font-semibold ${isCritical ? "text-rose-600" : isSlow ? "text-amber-600" : "text-slate-600"}`}
+          >
+            {stage.avg_hours >= 24
+              ? `${Math.floor(stage.avg_hours / 24)}h ${Math.round(stage.avg_hours % 24)}j`
+              : `${stage.avg_hours}j`}
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400">—</span>
+        )}
+      </td>
+      <td className="px-3 py-3 text-center">
+        {stage.longest_hours ? (
+          <span
+            className={`text-xs font-semibold ${stage.longest_hours > 48 ? "text-rose-600" : stage.longest_hours > 24 ? "text-amber-600" : "text-slate-600"}`}
+          >
+            {stage.longest_hours >= 24
+              ? `${Math.floor(stage.longest_hours / 24)}h ${Math.round(stage.longest_hours % 24)}j`
+              : `${stage.longest_hours}j`}
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400">—</span>
+        )}
+      </td>
+      <td className="px-3 py-3">
+        <div className="space-y-0.5">
+          {stage.bottlenecks.length === 0 ? (
+            <span className="text-xs text-slate-400">—</span>
+          ) : (
+            stage.bottlenecks.map((item, idx) => (
+              <div key={idx} className="flex items-center gap-1.5 text-xs">
+                <span className="font-mono text-slate-500">
+                  {item.order_number}
+                </span>
+                <span className="truncate text-slate-600">
+                  — {item.product_name}
+                </span>
+                <span
+                  className={`ml-auto shrink-0 font-medium ${(item.hours_waiting || 0) > 48 ? "text-rose-600" : (item.hours_waiting || 0) > 24 ? "text-amber-600" : "text-slate-400"}`}
+                >
+                  {item.hours_waiting ? `${item.hours_waiting}j` : "—"}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </td>
+      <td className="px-5 py-3 text-center">
+        {isCritical ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700 ring-1 ring-inset ring-rose-200">
+            <AlertTriangle className="h-3 w-3" /> Kritis
+          </span>
+        ) : isSlow ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
+            <Clock className="h-3 w-3" /> Lambat
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+            <CheckCircle2 className="h-3 w-3" /> Normal
+          </span>
+        )}
+      </td>
+    </tr>
   );
 }
