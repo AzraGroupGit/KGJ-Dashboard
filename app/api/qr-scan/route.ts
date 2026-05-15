@@ -24,8 +24,7 @@ interface OrderWithCustomer {
   order_number: string;
   current_stage: string;
   status: string;
-  product_name: string;
-  customers: { name: string } | null;
+  customer_name: string;
 }
 
 interface StageResult {
@@ -69,21 +68,23 @@ const VALID_ACTIONS = [
 type ValidAction = (typeof VALID_ACTIONS)[number];
 
 const STAGE_FLOW: StageFlow = {
-  penerimaan_order: "qc_awal",
-  qc_awal: "racik_bahan",
-  racik_bahan: "lebur_bahan",
+  penerimaan_order: "approval_penerimaan_order",
+  approval_penerimaan_order: "racik_bahan",
+  racik_bahan: "approval_racik_bahan",
+  approval_racik_bahan: "lebur_bahan",
   lebur_bahan: "pembentukan_cincin",
-  pembentukan_cincin: "pemasangan_permata",
+  pembentukan_cincin: "cek_kadar",
+  cek_kadar: "pemasangan_permata",
   pemasangan_permata: "pemolesan",
   pemolesan: "qc_1",
-  qc_1: "konfirmasi_awal",
-  konfirmasi_awal: "finishing",
-  finishing: "laser",
-  laser: "qc_2",
-  qc_2: "pelunasan",
-  pelunasan: "kelengkapan",
-  kelengkapan: "qc_3",
-  qc_3: "packing",
+  qc_1: "approval_qc_1",
+  approval_qc_1: "laser",
+  laser: "finishing",
+  finishing: "approval_produksi",
+  approval_produksi: "qc_2",
+  qc_2: "approval_qc_2",
+  approval_qc_2: "konfirmasi",
+  konfirmasi: "packing",
   packing: "pengiriman",
   pengiriman: "selesai",
 };
@@ -175,8 +176,8 @@ export async function GET(request: Request) {
 
     // Validasi order
     const { data: order, error: orderError } = await supabase
-      .from("orders")
-      .select("id, order_number, current_stage, status, product_name, customers!orders_customer_id_fkey(name)")
+      .from("cs_orders")
+      .select("id, order_number, current_stage, status, customer_name")
       .eq("order_number", orderNumber)
       .is("deleted_at", null)
       .single<OrderWithCustomer>();
@@ -208,8 +209,7 @@ export async function GET(request: Request) {
         order: {
           id: order.id,
           order_number: order.order_number,
-          product_name: order.product_name,
-          customer_name: order.customers?.name || null,
+          customer_name: order.customer_name,
           current_stage: order.current_stage,
           status: order.status,
         },
@@ -324,8 +324,8 @@ export async function POST(request: Request) {
 
     // 4. Find order by order_number
     const { data: order, error: orderError } = await supabase
-      .from("orders")
-      .select("id, order_number, current_stage, status, product_name, customers!orders_customer_id_fkey(name)")
+      .from("cs_orders")
+      .select("id, order_number, current_stage, status, customer_name")
       .eq("order_number", order_number)
       .is("deleted_at", null)
       .single<OrderWithCustomer>();
@@ -619,7 +619,7 @@ async function handleEditWork(
 async function handleReadOrder(
   supabase: any,
   order: OrderWithCustomer,
-  qrCode: QRCodeWithRole,
+  _qrCode: QRCodeWithRole,
   userId: string,
   clientIP: string | null,
   timestamp: string,
@@ -642,8 +642,7 @@ async function handleReadOrder(
     data: {
       order_id: order.id,
       order_number: order.order_number,
-      customer_name: order.customers?.name || null,
-      product_name: order.product_name,
+      customer_name: order.customer_name,
       current_stage: order.current_stage,
       status: order.status,
     },
@@ -653,7 +652,7 @@ async function handleReadOrder(
 async function handleDeleteOrder(
   supabase: any,
   order: OrderWithCustomer,
-  qrCode: QRCodeWithRole,
+  _qrCode: QRCodeWithRole,
   userId: string,
   clientIP: string | null,
   timestamp: string,
@@ -677,7 +676,7 @@ async function handleDeleteOrder(
 
   // Soft delete order
   await supabase
-    .from("orders")
+    .from("cs_orders")
     .update({
       deleted_at: timestamp,
       status: "cancelled",
@@ -706,13 +705,13 @@ async function handleDeleteOrder(
 async function handleRejectOrder(
   supabase: any,
   order: OrderWithCustomer,
-  qrCode: QRCodeWithRole,
+  _qrCode: QRCodeWithRole,
   userId: string,
   clientIP: string | null,
   timestamp: string,
 ) {
   await supabase
-    .from("orders")
+    .from("cs_orders")
     .update({
       status: "rejected",
       updated_at: timestamp,

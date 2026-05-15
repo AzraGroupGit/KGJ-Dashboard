@@ -151,7 +151,7 @@ export async function GET() {
               user_id,
               stage,
               started_at,
-              orders!stage_results_order_id_fkey ( order_number )
+              cs_orders!stage_results_order_id_fkey ( order_number )
             `,
             )
             .in("user_id", expertUserIds)
@@ -291,19 +291,9 @@ export async function GET() {
 
     // ========== 7. MICRO SETTING ==========
     const { data: microOrders, error: microOrdersError } = await admin
-      .from("orders")
-      .select(
-        `
-        id,
-        order_number,
-        gemstone_info,
-        has_gemstone,
-        current_stage,
-        status
-      `,
-      )
+      .from("cs_orders")
+      .select("id, order_number, current_stage, status")
       .is("deleted_at", null)
-      .eq("has_gemstone", true)
       .not("status", "in", "(completed,cancelled)")
       .in("current_stage", ["pemasangan_permata", "pemolesan", "qc_1"])
       .limit(10);
@@ -369,7 +359,7 @@ export async function GET() {
         return {
           order_id: o.id,
           order_number: o.order_number,
-          gemstone_info: o.gemstone_info,
+          gemstone_info: null,
           current_stage: o.current_stage,
           staff_name: result?.users?.full_name ?? null,
           started_at: result?.started_at ?? null,
@@ -392,8 +382,8 @@ export async function GET() {
 
     // ========== 8. YIELD MATERIAL ==========
     const { data: completedOrders, error: completedError } = await admin
-      .from("orders")
-      .select("id, order_number, created_at, target_weight, completed_at")
+      .from("cs_orders")
+      .select("id, order_number, created_at, completed_at")
       .eq("status", "completed")
       .gte("completed_at", sevenDaysAgoISO)
       .order("completed_at", { ascending: false })
@@ -432,16 +422,14 @@ export async function GET() {
 
     const yieldData = (completedOrders || [])
       .map((o: any) => {
-        const target = parseFloat(o.target_weight);
         const actual = qc2ByOrder.get(o.id) ?? null;
-        const susut = actual != null && !isNaN(target) ? target - actual : null;
 
         return {
           order_date: o.created_at,
           order_number: o.order_number,
-          target,
+          target: null,
           actual,
-          susut,
+          susut: null,
         };
       })
       .slice(0, 10);

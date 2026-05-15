@@ -56,7 +56,7 @@ interface UnifiedUser {
   last_login: string | null;
   last_login_at: string | null;
   created_at: string;
-  userType: "bms" | "oprprd";
+  userType: "bms" | "supervisor" | "oprprd";
 }
 
 interface Branch {
@@ -79,7 +79,7 @@ type AlertState = {
 } | null;
 
 type UserSegment = "all" | "bms" | "management" | "operational" | "production";
-type NewUserType = "bms" | "oprprd" | null;
+type NewUserType = "bms" | "supervisor" | "oprprd" | null;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -118,6 +118,14 @@ const EMPTY_OPRPRD_FORM = {
   role_id: "",
 };
 
+const EMPTY_SUPERVISOR_FORM = {
+  username: "",
+  full_name: "",
+  email: "",
+  password: "",
+  role: "operational_supervisor" as "operational_supervisor" | "production_supervisor",
+};
+
 const EMPTY_BRANCH_FORM = {
   name: "",
   code: "",
@@ -149,6 +157,7 @@ export default function KelolaAkunPage() {
 
   const [bmsForm, setBmsForm] = useState(EMPTY_BMS_FORM);
   const [oprprdForm, setOprprdForm] = useState(EMPTY_OPRPRD_FORM);
+  const [supervisorForm, setSupervisorForm] = useState(EMPTY_SUPERVISOR_FORM);
 
   const [userToDelete, setUserToDelete] = useState<UnifiedUser | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
@@ -179,6 +188,8 @@ export default function KelolaAkunPage() {
 
     // 409 Conflict — duplikasi data
     if (httpStatus === 409) {
+      if (raw.includes("Supervisor Operasional") || raw.includes("Supervisor Produksi"))
+        return raw; // already a clear user-facing message from the API
       if (raw.toLowerCase().includes("email"))
         return "Email ini sudah terdaftar. Gunakan email lain.";
       if (raw.toLowerCase().includes("username"))
@@ -212,8 +223,8 @@ export default function KelolaAkunPage() {
       return "Untuk role BMS gunakan mode BMS, bukan mode Operasional.";
 
     // Error server (500)
-    if (raw.includes("Gagal membuat akun auth"))
-      return "Gagal membuat akun. Email mungkin sudah pernah terdaftar sebelumnya.";
+    if (raw.startsWith("Gagal membuat akun auth:"))
+      return raw; // pass through real Supabase error for debugging
     if (raw.includes("Gagal menyimpan profil"))
       return "Akun berhasil dibuat di sistem auth, tapi profil gagal disimpan. Hubungi administrator.";
     if (raw.includes("Gagal memperbarui"))
@@ -229,9 +240,12 @@ export default function KelolaAkunPage() {
     return raw;
   };
 
-  const resolveUserType = (u: any): "bms" | "oprprd" => {
+  const resolveUserType = (u: any): "bms" | "supervisor" | "oprprd" => {
     if (u.role && (BMS_ROLES as readonly string[]).includes(u.role))
       return "bms";
+    const roleName = u.roles?.name;
+    if (roleName === "operational_supervisor" || roleName === "production_supervisor")
+      return "supervisor";
     if (u.roles?.role_group) return "oprprd";
     if (u.username && (!u.email || u.email?.endsWith("@internal.local")))
       return "oprprd";
@@ -316,6 +330,7 @@ export default function KelolaAkunPage() {
     setNewUserType(null);
     setBmsForm(EMPTY_BMS_FORM);
     setOprprdForm(EMPTY_OPRPRD_FORM);
+    setSupervisorForm(EMPTY_SUPERVISOR_FORM);
     setIsModalOpen(true);
   };
 
@@ -331,6 +346,16 @@ export default function KelolaAkunPage() {
         role:
           (user.role as (typeof EMPTY_BMS_FORM)["role"]) ?? "customer_service",
         branch_id: user.branch_id ?? "",
+      });
+    } else if (user.userType === "supervisor") {
+      setSupervisorForm({
+        username: user.username ?? "",
+        full_name: user.full_name,
+        email: user.email?.endsWith("@noreply.kodagede.id") ? "" : (user.email ?? ""),
+        password: "",
+        role:
+          (user.roles?.name as "operational_supervisor" | "production_supervisor") ??
+          "operational_supervisor",
       });
     } else {
       setOprprdForm({
@@ -480,6 +505,68 @@ export default function KelolaAkunPage() {
       setTimeout(() => {
         fetchAllUsers();
       }, 500);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ─── Save Supervisor ───────────────────────────────────────────────────────
+
+  const handleSaveSupervisorUser = async () => {
+    if (!supervisorForm.full_name.trim()) {
+      showAlert("error", "Nama lengkap wajib diisi.");
+      return;
+    }
+    if (!isEditMode && !supervisorForm.username.trim()) {
+      showAlert("error", "Username wajib diisi.");
+      return;
+    }
+    if (!supervisorForm.email.trim()) {
+      showAlert("error", "Email wajib diisi untuk akun supervisor.");
+      return;
+    }
+    if (!isEditMode && !supervisorForm.password) {
+      showAlert("error", "Password wajib diisi untuk akun baru.");
+      return;
+    }
+    if (supervisorForm.password && supervisorForm.password.length < 6) {
+      showAlert("error", "Password terlalu pendek, minimal 6 karakter.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const payload: Record<string, string> = {
+        full_name: supervisorForm.full_name.trim(),
+        email: supervisorForm.email.trim().toLowerCase(),
+        role: supervisorForm.role,
+      };
+      if (!isEditMode) payload.username = supervisorForm.username.trim();
+      if (supervisorForm.password) payload.password = supervisorForm.password;
+
+      const res = await fetch(
+        isEditMode ? `/api/users/${selectedUser!.id}` : "/api/users",
+        {
+          method: isEditMode ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+      const json = await res.json();
+
+      if (!res.ok) {
+        showAlert("error", parseApiError(json.error, res.status));
+        return;
+      }
+
+      showAlert(
+        "success",
+        isEditMode
+          ? "Akun supervisor berhasil diperbarui!"
+          : "Akun supervisor baru berhasil dibuat!",
+      );
+      setIsModalOpen(false);
+      setTimeout(() => fetchAllUsers(), 500);
     } finally {
       setIsSaving(false);
     }
@@ -688,11 +775,21 @@ export default function KelolaAkunPage() {
           -
         </span>
       );
-    if (role.name === "supervisor") {
+    if (role.name === "operational_supervisor") {
       return (
         <div className="flex flex-col gap-0.5">
           <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-            Supervisor
+            Spv. Operasional
+          </span>
+          <span className="text-[10px] text-gray-400">Manajemen</span>
+        </div>
+      );
+    }
+    if (role.name === "production_supervisor") {
+      return (
+        <div className="flex flex-col gap-0.5">
+          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-rose-100 text-rose-800">
+            Spv. Produksi
           </span>
           <span className="text-[10px] text-gray-400">Manajemen</span>
         </div>
@@ -1313,12 +1410,22 @@ export default function KelolaAkunPage() {
                     ? "Edit Cabang"
                     : "Tambah Cabang Baru"
                   : isEditMode
-                    ? `Edit Akun — ${selectedUser?.userType === "bms" ? "BMS" : selectedUser?.roles?.role_group === "management" ? "Manajemen" : "Operasional & Produksi"}`
+                    ? `Edit Akun — ${
+                        selectedUser?.userType === "bms"
+                          ? "BMS"
+                          : selectedUser?.userType === "supervisor"
+                            ? selectedUser.roles?.name === "production_supervisor"
+                              ? "Supervisor Produksi"
+                              : "Supervisor Operasional"
+                            : "Operasional & Produksi"
+                      }`
                     : newUserType === null
                       ? "Pilih Tipe Akun"
                       : newUserType === "bms"
                         ? "Buat Akun BMS"
-                        : "Buat Akun OPR-PRD / Supervisor"
+                        : newUserType === "supervisor"
+                          ? "Buat Akun Supervisor"
+                          : "Buat Akun Operasional / Produksi"
               }
               size="md"
             >
@@ -1471,6 +1578,34 @@ export default function KelolaAkunPage() {
                     </div>
                   </button>
                   <button
+                    onClick={() => setNewUserType("supervisor")}
+                    className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-rose-400 hover:bg-rose-50 transition-all text-left"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center shrink-0">
+                      <svg
+                        className="w-5 h-5 text-rose-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-800">
+                        Akun Supervisor
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Supervisor Operasional atau Produksi — satu per tipe, login dengan username
+                      </p>
+                    </div>
+                  </button>
+                  <button
                     onClick={() => setNewUserType("oprprd")}
                     className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-orange-400 hover:bg-orange-50 transition-all text-left"
                   >
@@ -1491,10 +1626,10 @@ export default function KelolaAkunPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-gray-800">
-                        Akun OPR-PRD & Supervisor
+                        Akun Operasional / Produksi
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        Supervisor, Operasional, Produksi — login dengan username
+                        Tim Operasional & Produksi — login dengan username
                       </p>
                     </div>
                   </button>
@@ -1628,6 +1763,101 @@ export default function KelolaAkunPage() {
                   </div>
                 )}
 
+              {/* Form Supervisor */}
+              {activeTab === "users" &&
+                (isEditMode
+                  ? selectedUser?.userType === "supervisor"
+                  : newUserType === "supervisor") && (
+                  <div className="space-y-4">
+                    {!isEditMode && (
+                      <button
+                        onClick={() => setNewUserType(null)}
+                        className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 mb-2"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Ganti tipe akun
+                      </button>
+                    )}
+                    <div className="bg-rose-50 border border-rose-200 rounded-lg p-3 text-xs text-rose-700">
+                      Hanya boleh satu akun aktif per tipe supervisor. Jika sudah ada, pembuatan akan ditolak.
+                    </div>
+                    {!isEditMode && (
+                      <Input
+                        label="Username"
+                        value={supervisorForm.username}
+                        onChange={(e) =>
+                          setSupervisorForm({ ...supervisorForm, username: e.target.value })
+                        }
+                        placeholder="min. 3 karakter"
+                        disabled={isSaving}
+                      />
+                    )}
+                    <Input
+                      label="Email"
+                      type="email"
+                      value={supervisorForm.email}
+                      onChange={(e) =>
+                        setSupervisorForm({ ...supervisorForm, email: e.target.value })
+                      }
+                      placeholder="contoh: supervisor@perusahaan.com"
+                      disabled={isSaving}
+                    />
+                    <Input
+                      label="Nama Lengkap"
+                      value={supervisorForm.full_name}
+                      onChange={(e) =>
+                        setSupervisorForm({ ...supervisorForm, full_name: e.target.value })
+                      }
+                      placeholder="Masukkan nama lengkap"
+                      disabled={isSaving}
+                    />
+                    <Input
+                      label={isEditMode ? "Password Baru (kosongkan jika tidak diubah)" : "Password"}
+                      type="password"
+                      value={supervisorForm.password}
+                      onChange={(e) =>
+                        setSupervisorForm({ ...supervisorForm, password: e.target.value })
+                      }
+                      placeholder="Minimal 6 karakter"
+                      disabled={isSaving}
+                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Tipe Supervisor
+                      </label>
+                      <select
+                        value={supervisorForm.role}
+                        onChange={(e) =>
+                          setSupervisorForm({
+                            ...supervisorForm,
+                            role: e.target.value as typeof supervisorForm.role,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                        disabled={isSaving}
+                      >
+                        <option value="operational_supervisor">Supervisor Operasional</option>
+                        <option value="production_supervisor">Supervisor Produksi</option>
+                      </select>
+                      <p className="mt-1.5 text-xs text-gray-500 italic">
+                        {supervisorForm.role === "operational_supervisor"
+                          ? "Approval: Penerimaan Order, Persiapan Bahan, QC Awal, QC Akhir"
+                          : "Approval: Produksi (Finishing)"}
+                      </p>
+                    </div>
+                    <div className="flex justify-end gap-3 mt-6">
+                      <Button variant="secondary" onClick={handleCloseModal} disabled={isSaving}>
+                        Batal
+                      </Button>
+                      <Button variant="primary" onClick={handleSaveSupervisorUser} isLoading={isSaving}>
+                        {isEditMode ? "Simpan Perubahan" : "Buat Akun"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
               {/* Form OPRPRD */}
               {activeTab === "users" &&
                 (isEditMode
@@ -1742,21 +1972,6 @@ export default function KelolaAkunPage() {
                         disabled={isSaving}
                       >
                         <option value="">Pilih Role</option>
-                        {(() => {
-                          const managementRoles = roles.filter(
-                            (r) => r.role_group === "management",
-                          );
-                          if (managementRoles.length === 0) return null;
-                          return (
-                            <optgroup key="management" label="Manajemen">
-                              {managementRoles.map((r) => (
-                                <option key={r.id} value={r.id}>
-                                  {r.name}
-                                </option>
-                              ))}
-                            </optgroup>
-                          );
-                        })()}
                         {(["operational", "production"] as const).map(
                           (group) => {
                             const groupRoles = roles.filter(

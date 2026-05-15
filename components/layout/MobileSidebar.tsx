@@ -120,6 +120,7 @@ const menuItems: Record<string, MenuItem[]> = {
     },
     { name: "Monitoring", icon: "monitor", href: SUPERVISOR_ROUTES.MONITORING },
     { name: "Persetujuan", icon: "approval", href: SUPERVISOR_ROUTES.APPROVAL },
+    { name: "Kelola Akun", icon: "users", href: SUPERVISOR_ROUTES.ACCOUNTS },
   ],
 };
 

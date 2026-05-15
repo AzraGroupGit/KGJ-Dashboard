@@ -6,11 +6,18 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperadmin, mapUserResponse } from "../route";
 
 const BMS_ROLE_NAMES = ["superadmin", "customer_service", "marketing"] as const;
+const MANAGEMENT_ROLE_NAMES = ["operational_supervisor", "production_supervisor"] as const;
 type BmsRoleName = (typeof BMS_ROLE_NAMES)[number];
 
 function isBmsRoleName(v: unknown): v is BmsRoleName {
   return (
     typeof v === "string" && (BMS_ROLE_NAMES as readonly string[]).includes(v)
+  );
+}
+
+function isManagementRoleName(v: unknown): boolean {
+  return (
+    typeof v === "string" && (MANAGEMENT_ROLE_NAMES as readonly string[]).includes(v)
   );
 }
 
@@ -113,13 +120,13 @@ export async function PUT(
         updatePayload.email = normalizedEmail;
       } else {
         // users.email adalah NOT NULL — saat email dikosongkan (user OPRPRD tanpa
-        // email asli), simpan dummy @internal.local agar constraint terpenuhi.
+        // email asli), simpan dummy @noreply.kodagede.id agar constraint terpenuhi.
         const { data: u } = await supabase
           .from("users")
           .select("username")
           .eq("id", id)
           .single();
-        updatePayload.email = `${u?.username ?? id}@internal.local`;
+        updatePayload.email = `${u?.username ?? id}@noreply.kodagede.id`;
       }
     }
 
@@ -128,12 +135,13 @@ export async function PUT(
       updatePayload.phone = phone?.trim() || null;
     }
 
-    // role — BMS mode (pakai string nama role)
+    // role — bisa BMS string atau management role name
     if (role !== undefined) {
-      if (!isBmsRoleName(role)) {
+      if (!isBmsRoleName(role) && !isManagementRoleName(role)) {
         return NextResponse.json(
           {
-            error: "Role harus: superadmin, customer_service, marketing",
+            error:
+              "Role harus: superadmin, customer_service, marketing, operational_supervisor, atau production_supervisor",
           },
           { status: 400 },
         );
@@ -141,7 +149,7 @@ export async function PUT(
 
       const { data: roleRec } = await supabase
         .from("roles")
-        .select("id")
+        .select("id, name")
         .eq("name", role)
         .single();
 
@@ -154,8 +162,8 @@ export async function PUT(
 
       updatePayload.role_id = roleRec.id;
 
-      // Non-Customer Service tidak perlu branch
-      if (role !== "customer_service") {
+      // customer_service keeps branch; all others clear it
+      if (roleRec.name !== "customer_service") {
         updatePayload.branch_id = null;
       }
     }

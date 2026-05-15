@@ -4,54 +4,69 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const PRODUCTION_STAGES = [
+const ACTIVE_STAGES = [
+  "penerimaan_order",
+  "approval_penerimaan_order",
   "racik_bahan",
+  "approval_racik_bahan",
   "lebur_bahan",
+  "cek_kadar",
   "pembentukan_cincin",
   "pemasangan_permata",
   "pemolesan",
   "qc_1",
-  "finishing",
+  "approval_qc_1",
   "laser",
+  "finishing",
+  "approval_produksi",
   "qc_2",
-  "kelengkapan",
-  "qc_3",
+  "approval_qc_2",
+  "konfirmasi",
   "packing",
-  "pelunasan",
   "pengiriman",
 ] as const;
 
 const STAGE_LABELS: Record<string, string> = {
-  racik_bahan: "Racik Bahan",
+  penerimaan_order: "Penerimaan Order",
+  approval_penerimaan_order: "Approval Penerimaan Order",
+  racik_bahan: "Persiapan Bahan",
+  approval_racik_bahan: "Approval Persiapan Bahan",
   lebur_bahan: "Lebur Bahan",
+  cek_kadar: "Cek Kadar",
   pembentukan_cincin: "Pembentukan Cincin",
-  pemasangan_permata: "Pemasangan Permata",
-  pemolesan: "Pemolesan",
-  qc_1: "QC 1",
-  finishing: "Finishing",
+  pemasangan_permata: "Micro Setting",
+  pemolesan: "Pemolesan Awal",
+  qc_1: "QC Awal",
+  approval_qc_1: "Approval QC Awal",
   laser: "Laser Engraving",
-  qc_2: "QC 2",
-  kelengkapan: "Kelengkapan",
-  qc_3: "QC 3",
-  packing: "Packing",
-  pelunasan: "Pelunasan",
+  finishing: "Finishing",
+  approval_produksi: "Approval Produksi",
+  qc_2: "QC Akhir",
+  approval_qc_2: "Approval QC Akhir",
+  konfirmasi: "Konfirmasi Customer Care",
+  packing: "Packing & Persiapan Kirim",
   pengiriman: "Pengiriman",
 };
 
 const STAGE_GROUPS: Record<string, "production" | "operational"> = {
-  racik_bahan: "production",
+  penerimaan_order: "operational",
+  approval_penerimaan_order: "operational",
+  racik_bahan: "operational",
+  approval_racik_bahan: "operational",
   lebur_bahan: "production",
+  cek_kadar: "production",
   pembentukan_cincin: "production",
   pemasangan_permata: "production",
   pemolesan: "production",
   qc_1: "operational",
+  approval_qc_1: "operational",
+  laser: "operational",
   finishing: "production",
-  laser: "production",
+  approval_produksi: "production",
   qc_2: "operational",
-  kelengkapan: "operational",
-  qc_3: "operational",
+  approval_qc_2: "operational",
+  konfirmasi: "operational",
   packing: "operational",
-  pelunasan: "operational",
   pengiriman: "operational",
 };
 
@@ -66,7 +81,7 @@ interface StageBottleneck {
   longest_hours: number | null;
   bottlenecks: {
     order_number: string;
-    product_name: string;
+    customer_name: string;
     hours_waiting: number | null;
     status: string;
   }[];
@@ -83,60 +98,71 @@ export async function GET() {
     if (!user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { data: profile } = await supabase
+    const { data: profile } = await admin
       .from("users")
-      .select("role:roles!users_role_id_fkey(name, role_group)")
+      .select("role:roles!users_role_id_fkey(name, role_group, allowed_stages)")
       .eq("id", user.id)
+      .is("deleted_at", null)
       .single();
 
-    const roleName = (profile?.role as any)?.name;
-    const roleGroup = (profile?.role as any)?.role_group;
+    const roleName: string = (profile?.role as any)?.name ?? "";
+    const roleGroup: string = (profile?.role as any)?.role_group ?? "";
+    const allowedStages: string[] = (profile?.role as any)?.allowed_stages ?? [];
 
-    // Allow superadmin, management, and supervisor
-    if (
-      roleName !== "superadmin" &&
-      roleGroup !== "management" &&
-      roleName !== "supervisor"
-    ) {
+    const canAccess =
+      roleName === "superadmin" ||
+      roleGroup === "management" ||
+      allowedStages.some((s) => s.startsWith("approval_"));
+
+    if (!canAccess)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
 
     const now = new Date();
 
-    // Get all active orders grouped by current_stage
-    const { data: orders, error: ordersError } = await admin // ← CHANGE
-      .from("orders")
-      .select(
-        "id, order_number, product_name, current_stage, status, updated_at",
-      )
+    const { data: orders, error: ordersError } = await admin
+      .from("cs_orders")
+      .select("id, order_number, customer_name, current_stage, status, updated_at")
       .not("status", "in", "(completed,cancelled)")
-      .in("current_stage", PRODUCTION_STAGES as unknown as string[])
+      .in("current_stage", ACTIVE_STAGES as unknown as string[])
       .is("deleted_at", null)
       .order("updated_at", { ascending: true });
 
-    if (ordersError) {
-      return NextResponse.json(
-        { error: "Gagal mengambil data" },
-        { status: 500 },
-      );
-    }
+    if (ordersError)
+      return NextResponse.json({ error: "Gagal mengambil data" }, { status: 500 });
 
     const orderIds = (orders || []).map((o: any) => o.id);
     let latestResults: any[] = [];
+    let approvalsData: any[] = [];
     if (orderIds.length > 0) {
       const { data: results } = await admin
         .from("stage_results")
-        .select("order_id, finished_at")
+        .select(`order_id, stage, finished_at,
+          users!stage_results_user_id_fkey ( full_name )`)
         .in("order_id", orderIds)
         .not("finished_at", "is", null)
         .order("finished_at", { ascending: false });
       latestResults = results || [];
+
+      const { data: approvals } = await admin
+        .from("approvals")
+        .select(`order_id, stage, decision, decided_at,
+          users!approvals_approver_id_fkey ( full_name )`)
+        .in("order_id", orderIds)
+        .order("decided_at", { ascending: false });
+      approvalsData = approvals || [];
     }
 
-    const latestByOrder = new Map<string, string>();
+    const latestByOrder = new Map<string, any>();
     for (const r of latestResults) {
       if (!latestByOrder.has(r.order_id)) {
-        latestByOrder.set(r.order_id, r.finished_at);
+        latestByOrder.set(r.order_id, r);
+      }
+    }
+
+    const approvalByOrder = new Map<string, any>();
+    for (const a of approvalsData) {
+      if (!approvalByOrder.has(a.order_id)) {
+        approvalByOrder.set(a.order_id, a);
       }
     }
 
@@ -148,7 +174,7 @@ export async function GET() {
       stageMap.get(stage)!.push(order);
     }
 
-    const bottlenecks: StageBottleneck[] = PRODUCTION_STAGES.map((stage) => {
+    const bottlenecks: StageBottleneck[] = ACTIVE_STAGES.map((stage) => {
       const stageOrders = stageMap.get(stage) || [];
       const waitingOrders = stageOrders.filter(
         (o: any) => o.status === "waiting_approval",
@@ -157,13 +183,23 @@ export async function GET() {
         (o: any) => o.status !== "waiting_approval",
       );
 
-      // Calculate hours waiting
       const ordersWithHours = inProgressOrders.map((o: any) => {
-        const arrivedAt =
-          latestByOrder.get(o.id) || o.updated_at || o.created_at;
-        const hours =
-          (now.getTime() - new Date(arrivedAt).getTime()) / 3_600_000;
-        return { ...o, hours_waiting: hours };
+        const latest = latestByOrder.get(o.id);
+        const arrivedAt = latest?.finished_at || o.updated_at;
+        const hours = (now.getTime() - new Date(arrivedAt).getTime()) / 3_600_000;
+        const approval = approvalByOrder.get(o.id);
+        return {
+          order_id: o.id,
+          order_number: o.order_number,
+          customer_name: o.customer_name ?? null,
+          hours_waiting: Math.round(hours * 10) / 10,
+          status: o.status,
+          last_worker: latest?.users?.full_name ?? null,
+          last_submission: latest?.finished_at ?? null,
+          approval_decision: approval?.decision ?? null,
+          approved_by: approval?.users?.full_name ?? null,
+          approved_at: approval?.decided_at ?? null,
+        };
       });
 
       const hoursValues = ordersWithHours
@@ -171,34 +207,26 @@ export async function GET() {
         .filter((h: number) => h > 0);
       const avgHours =
         hoursValues.length > 0
-          ? hoursValues.reduce((a: number, b: number) => a + b, 0) /
-            hoursValues.length
+          ? hoursValues.reduce((a: number, b: number) => a + b, 0) / hoursValues.length
           : null;
-      const longestHours =
-        hoursValues.length > 0 ? Math.max(...hoursValues) : null;
+      const longestHours = hoursValues.length > 0 ? Math.max(...hoursValues) : null;
 
-      // Top bottleneck items (longest waiting)
-      const topBottlenecks = ordersWithHours
+      const topBottlenecks = [...ordersWithHours]
         .sort((a: any, b: any) => b.hours_waiting - a.hours_waiting)
-        .slice(0, 3)
-        .map((o: any) => ({
-          order_id: o.id,
-          order_number: o.order_number,
-          product_name: o.product_name,
-          hours_waiting: Math.round(o.hours_waiting * 10) / 10,
-          status: o.status,
-        }));
+        .slice(0, 3);
 
+      const sortedOrders = [...ordersWithHours].sort((a: any, b: any) => b.hours_waiting - a.hours_waiting);
       return {
         stage,
         stage_label: STAGE_LABELS[stage] || stage,
-        stage_group: STAGE_GROUPS[stage] || "production",
+        stage_group: STAGE_GROUPS[stage] || "operational",
         order_count: stageOrders.length,
         waiting_orders: waitingOrders.length,
         in_progress_orders: inProgressOrders.length,
         avg_hours: avgHours ? Math.round(avgHours * 10) / 10 : null,
         longest_hours: longestHours ? Math.round(longestHours * 10) / 10 : null,
         bottlenecks: topBottlenecks,
+        orders: sortedOrders,
       };
     }).filter((b) => b.order_count > 0);
 
@@ -211,26 +239,19 @@ export async function GET() {
           total_orders: (orders || []).length,
           busiest_stage:
             bottlenecks.length > 0
-              ? bottlenecks.reduce((a, b) =>
-                  a.order_count > b.order_count ? a : b,
-                )
+              ? bottlenecks.reduce((a, b) => (a.order_count > b.order_count ? a : b))
               : null,
           slowest_stage:
             bottlenecks.filter((b) => b.avg_hours).length > 0
               ? bottlenecks
                   .filter((b) => b.avg_hours)
-                  .reduce((a, b) =>
-                    (a.avg_hours || 0) > (b.avg_hours || 0) ? a : b,
-                  )
+                  .reduce((a, b) => ((a.avg_hours || 0) > (b.avg_hours || 0) ? a : b))
               : null,
         },
       },
     });
   } catch (error) {
     console.error("[GET /api/bottleneck] Error:", error);
-    return NextResponse.json(
-      { error: "Terjadi kesalahan server" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
   }
 }

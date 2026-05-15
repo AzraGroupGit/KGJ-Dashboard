@@ -20,6 +20,33 @@ import {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+interface WorkOrder {
+  cs_order_id: string;
+  cs_order_number: string;
+  customer_name: string;
+  customer_wa: string | null;
+  customer_email: string | null;
+  ukuran_pria: string | null;
+  ukiran_pria: string | null;
+  jenis_cincin_pria: string | null;
+  keterangan_pria: string[] | string | null;
+  ukuran_wanita: string | null;
+  ukiran_wanita: string | null;
+  jenis_cincin_wanita: string | null;
+  keterangan_wanita: string[] | string | null;
+  font: string | null;
+  laser_position: string | null;
+  acara: string | null;
+  alat_ukur: string | null;
+  harga: number | null;
+  dp_amount: number | null;
+  deadline: string | null;
+  pengiriman: string | null;
+  alamat_pengiriman: string | null;
+  reference_image_pria_url: string | null;
+  reference_image_wanita_url: string | null;
+}
+
 interface PendingItem {
   order_id: string;
   order_number: string;
@@ -35,6 +62,7 @@ interface PendingItem {
   worker_role: string;
   submitted_at: string | null;
   data: Record<string, unknown> | null;
+  work_order: WorkOrder | null;
 }
 
 type ActionState =
@@ -71,124 +99,167 @@ function StageInfoPopup({
 
     switch (stage) {
       case "approval_penerimaan_order":
-        // For penerimaan_order, data comes from the orders table, not stage_results
+        // Data comes from cs_orders (via promoted_to_order_id), not stage_results
         return [
           {
-            label: "Nama Produk",
-            detail: "Pastikan nama produk sudah jelas dan spesifik.",
-            dataKey: "product_name",
-            dataValue: orderData.product_name,
-          },
-          {
-            label: "Nama Pelanggan",
-            detail:
-              "Pastikan data pelanggan sudah lengkap (nama, telepon, alamat).",
+            label: "Nama Customer",
+            detail: "Nama customer harus jelas dan sesuai identitas.",
             dataKey: "customer_name",
-            dataValue: orderData.customer_name,
+            dataValue: d.customer_name as string | null ?? orderData.customer_name,
           },
           {
-            label: "Target Berat",
-            detail:
-              "Target berat dalam gram harus realistis untuk jenis produk.",
-            dataKey: "target_weight",
-            dataValue: d.target_weight,
+            label: "No WhatsApp",
+            detail: "Nomor WA harus valid untuk koordinasi dan konfirmasi.",
+            dataKey: "customer_wa",
+            dataValue: d.customer_wa as string | null ?? null,
           },
           {
-            label: "Target Karat",
-            detail: "Target karat (0-24K) sesuai permintaan customer.",
-            dataKey: "target_karat",
-            dataValue: d.target_karat,
+            label: "Ukuran Cincin Pria",
+            detail: "Ukuran cincin pria sudah dicatat dengan benar.",
+            dataKey: "ukuran_pria",
+            dataValue: d.ukuran_pria as string | null ?? null,
           },
           {
-            label: "Ukuran Cincin",
-            detail: "Ukuran cincin sudah dicatat dengan benar (jika ada).",
-            dataKey: "ring_size",
-            dataValue: d.ring_size,
+            label: "Jenis Cincin Pria",
+            detail: "Jenis cincin pria (model/tipe) sudah ditentukan.",
+            dataKey: "jenis_cincin_pria",
+            dataValue: d.jenis_cincin_pria as string | null ?? null,
           },
           {
-            label: "Deskripsi Model",
-            detail: "Deskripsi cukup detail untuk tim produksi memahami.",
-            dataKey: "model_description",
-            dataValue: d.model_description,
+            label: "Ukiran Pria",
+            detail: "Pastikan tidak ada typo pada teks ukiran pria.",
+            dataKey: "ukiran_pria",
+            dataValue: d.ukiran_pria as string | null ?? null,
           },
           {
-            label: "Teks Ukiran",
-            detail: "Pastikan tidak ada typo pada teks ukiran (jika ada).",
-            dataKey: "engraved_text",
-            dataValue: d.engraved_text,
+            label: "Ukuran Cincin Wanita",
+            detail: "Ukuran cincin wanita sudah dicatat dengan benar.",
+            dataKey: "ukuran_wanita",
+            dataValue: d.ukuran_wanita as string | null ?? null,
           },
           {
-            label: "Metode Pengambilan",
-            detail: "Metode delivery sudah ditentukan dengan benar.",
-            dataKey: "delivery_method",
-            dataValue: d.delivery_method,
+            label: "Jenis Cincin Wanita",
+            detail: "Jenis cincin wanita (model/tipe) sudah ditentukan.",
+            dataKey: "jenis_cincin_wanita",
+            dataValue: d.jenis_cincin_wanita as string | null ?? null,
           },
           {
-            label: "Total Harga & DP",
-            detail: "Total harga dan DP masuk akal. DP harus sudah dibayar.",
-            dataKey: "total_price",
-            dataValue: d.total_price
-              ? `Rp ${Number(d.total_price).toLocaleString("id-ID")}`
+            label: "Ukiran Wanita",
+            detail: "Pastikan tidak ada typo pada teks ukiran wanita.",
+            dataKey: "ukiran_wanita",
+            dataValue: d.ukiran_wanita as string | null ?? null,
+          },
+          {
+            label: "Font & Posisi Laser",
+            detail: "Font dan posisi laser harus sesuai permintaan customer.",
+            dataKey: "font",
+            dataValue: d.font
+              ? `${d.font}${d.laser_position ? ` — ${d.laser_position}` : ""}`
               : null,
           },
           {
-            label: "Batu Permata",
-            detail:
-              "Jika ada batu, spesifikasi harus lengkap (jenis, berat, clarity, dll).",
-            dataKey: "gemstone_list",
-            dataValue: Array.isArray(d.gemstone_list)
-              ? `${(d.gemstone_list as any[]).length} batu`
+            label: "Harga & DP",
+            detail: "Harga total dan DP masuk akal. DP harus sudah dibayar.",
+            dataKey: "harga",
+            dataValue: d.harga
+              ? `Rp ${Number(d.harga).toLocaleString("id-ID")} / DP Rp ${Number(d.dp_amount ?? 0).toLocaleString("id-ID")}`
               : null,
+          },
+          {
+            label: "Deadline",
+            detail: "Deadline acara / pengiriman harus realistis.",
+            dataKey: "deadline",
+            dataValue: d.deadline as string | null ?? null,
+          },
+          {
+            label: "Metode Pengiriman",
+            detail: "Metode pengiriman dan alamat sudah sesuai.",
+            dataKey: "pengiriman",
+            dataValue: d.pengiriman as string | null ?? null,
+          },
+        ];
+
+      case "approval_racik_bahan":
+        return [
+          {
+            label: "Bahan Tersedia",
+            detail: "Konfirmasi semua bahan baku yang diperlukan sudah disiapkan.",
+            dataKey: "notes",
+            dataValue: d.notes as string | null ?? null,
+          },
+          {
+            label: "Jenis & Karat Bahan",
+            detail: "Pastikan jenis dan karat bahan sesuai dengan spesifikasi order.",
+          },
+          {
+            label: "Kuantitas Bahan",
+            detail: "Jumlah bahan yang disiapkan cukup untuk target berat produk.",
+          },
+          {
+            label: "Kualitas Bahan",
+            detail: "Tidak ada cacat atau kontaminasi pada bahan baku.",
           },
         ];
 
       case "approval_qc_1":
         return [
           {
-            label: "Inspeksi Fisik Berlian/Batu",
-            detail: "Semua batu harus lolos inspeksi fisik.",
-            dataKey: "physical_diamond_inspection",
-            dataValue: getChecklistValue(d, "physical_diamond_inspection"),
+            label: "Bentuk Sesuai Order",
+            detail: "Bentuk cincin harus sesuai dengan deskripsi model order.",
+            dataKey: "bentuk_sesuai",
+            dataValue: getChecklistValue(d, "bentuk_sesuai"),
           },
           {
-            label: "Kesesuaian Sertifikat",
-            detail: "Sertifikat harus sesuai dengan batu yang dipasang.",
-            dataKey: "certificate_match",
-            dataValue: getChecklistValue(d, "certificate_match"),
+            label: "Ukuran Cincin Sesuai",
+            detail: "Ukuran cincin harus tepat sesuai order.",
+            dataKey: "ukuran_sesuai",
+            dataValue: getChecklistValue(d, "ukuran_sesuai"),
           },
           {
-            label: "Kesesuaian Desain",
-            detail: "Desain akhir harus sesuai dengan order awal.",
-            dataKey: "design_match",
-            dataValue: getChecklistValue(d, "design_match"),
+            label: "Berat Memenuhi Syarat",
+            detail: "Berat cincin harus memenuhi syarat minimum.",
+            dataKey: "berat_minimum",
+            dataValue: getChecklistValue(d, "berat_minimum"),
           },
           {
-            label: "Berat Minimum",
-            detail: "Berat harus ≥ 0.2g dari target.",
-            dataKey: "minimum_weight_requirement",
-            dataValue: getChecklistValue(d, "minimum_weight_requirement"),
+            label: "Permukaan Bersih",
+            detail: "Permukaan harus bersih, tidak ada cacat, penyok, atau goresan.",
+            dataKey: "permukaan_bersih",
+            dataValue: getChecklistValue(d, "permukaan_bersih"),
           },
           {
-            label: "Selisih Berat OK",
-            detail: "Weight variance dalam batas toleransi.",
-            dataKey: "weight_variance_met",
-            dataValue: d.weight_variance_met,
+            label: "Sambungan Rapi",
+            detail: "Sambungan / patri harus rapi, kuat, dan tidak terlihat kasar.",
+            dataKey: "solder_rapi",
+            dataValue: getChecklistValue(d, "solder_rapi"),
           },
           {
-            label: "Foto QC 1",
-            detail: "4 foto wajib: depan, samping, atas, dengan penggaris.",
-            dataKey: "attachments",
-            dataValue: Array.isArray(d.attachments)
-              ? `${(d.attachments as any[]).length} foto`
-              : null,
+            label: "Catatan QC",
+            detail: "Temuan QC atau catatan perbaikan dari petugas.",
+            dataKey: "notes",
+            dataValue: d.notes as string | null ?? null,
+          },
+        ];
+
+      case "approval_produksi":
+        return [
+          {
+            label: "Kualitas Hasil Laser",
+            detail: "Ukiran laser harus bersih, terbaca, dan sesuai teks order.",
+            dataKey: "notes",
+            dataValue: d.notes as string | null ?? null,
           },
           {
-            label: "Sertifikat Batu",
-            detail: "Semua sertifikat batu sudah dicatat.",
-            dataKey: "certificate_logs",
-            dataValue: Array.isArray(d.certificate_logs)
-              ? `${(d.certificate_logs as any[]).length} sertifikat`
-              : null,
+            label: "Finishing Merata",
+            detail: "Finishing permukaan merata di seluruh bagian cincin.",
+          },
+          {
+            label: "Tidak Ada Cacat Visual",
+            detail: "Tidak ada goresan, bercak, atau cacat lain setelah finishing.",
+          },
+          {
+            label: "Produk Siap QC Akhir",
+            detail: "Produk layak dan siap memasuki tahap QC akhir.",
           },
         ];
 
@@ -197,124 +268,38 @@ function StageInfoPopup({
           {
             label: "Kualitas Laser/Ukiran",
             detail: "Hasil laser harus bersih dan terbaca.",
-            dataKey: "laser_quality",
-            dataValue: getChecklistValue(d, "laser_quality"),
+            dataKey: "kualitas_laser",
+            dataValue: getChecklistValue(d, "kualitas_laser"),
           },
           {
             label: "Kualitas Finishing",
-            detail: "Rhodium rata, tidak ada bercak.",
-            dataKey: "finishing_quality",
-            dataValue: getChecklistValue(d, "finishing_quality"),
+            detail: "Finishing merata, tidak ada bercak.",
+            dataKey: "kualitas_finishing",
+            dataValue: getChecklistValue(d, "kualitas_finishing"),
           },
           {
-            label: "Verifikasi Teks Ukiran",
-            detail: "Teks ukiran sesuai order (cek ejaan!).",
-            dataKey: "engraving_verified",
-            dataValue: getChecklistValue(d, "engraving_verified"),
+            label: "Teks Ukiran Benar",
+            detail: "Teks ukiran sesuai order — cek ejaan dengan teliti!",
+            dataKey: "teks_ukiran_benar",
+            dataValue: getChecklistValue(d, "teks_ukiran_benar"),
           },
           {
-            label: "Nomor Identitas Cincin",
-            detail: "Ring identity number terverifikasi.",
-            dataKey: "identity_number_verified",
-            dataValue: getChecklistValue(d, "identity_number_verified"),
+            label: "Bentuk Final Sesuai",
+            detail: "Bentuk cincin final sesuai spesifikasi order.",
+            dataKey: "bentuk_final_sesuai",
+            dataValue: getChecklistValue(d, "bentuk_final_sesuai"),
           },
           {
-            label: "Kesesuaian Bentuk",
-            detail: "Bentuk akhir sesuai order.",
-            dataKey: "shape_match",
-            dataValue: getChecklistValue(d, "shape_match"),
+            label: "Produk Bersih",
+            detail: "Produk bersih dan siap untuk serah terima ke customer.",
+            dataKey: "produk_bersih",
+            dataValue: getChecklistValue(d, "produk_bersih"),
           },
           {
-            label: "Label Berat Final",
-            detail: "Label berat final sudah terpasang.",
-            dataKey: "final_weight_label",
-            dataValue: getChecklistValue(d, "final_weight_label"),
-          },
-          {
-            label: "Penyesuaian Berat Batu",
-            detail: "Berat batu disesuaikan jika > 200mg.",
-            dataKey: "stone_weight_adjusted",
-            dataValue: getChecklistValue(d, "stone_weight_adjusted"),
-          },
-          {
-            label: "Nilai Penyesuaian Berat",
-            detail: "Nilai adjustment jika ada.",
-            dataKey: "weight_adjustment",
-            dataValue: d.weight_adjustment ? `${d.weight_adjustment}g` : null,
-          },
-          {
-            label: "Label Berat Final Dicetak",
-            detail: "Konfirmasi label sudah dicetak.",
-            dataKey: "final_weight_label_printed",
-            dataValue: d.final_weight_label_printed,
-          },
-          {
-            label: "Foto QC 2",
-            detail: "Foto final dan custom (jika ada).",
-            dataKey: "attachments",
-            dataValue: Array.isArray(d.attachments)
-              ? `${(d.attachments as any[]).length} foto`
-              : null,
-          },
-        ];
-
-      case "approval_qc_3":
-        return [
-          {
-            label: "Kualitas Produk Final",
-            detail: "Produk akhir harus sempurna.",
-            dataKey: "final_product_quality",
-            dataValue: getChecklistValue(d, "final_product_quality"),
-          },
-          {
-            label: "Kelengkapan Dokumen",
-            detail: "Semua dokumen harus lengkap.",
-            dataKey: "kelengkapan_complete",
-            dataValue: getChecklistValue(d, "kelengkapan_complete"),
-          },
-          {
-            label: "Foto Produk Jadi",
-            detail: "Foto final harus jelas.",
-            dataKey: "attachments",
-            dataValue: Array.isArray(d.attachments)
-              ? `${(d.attachments as any[]).length} foto`
-              : null,
-          },
-        ];
-
-      case "approval_pelunasan":
-        return [
-          {
-            label: "Total Harga Final",
-            detail: "Pastikan total harga sudah benar.",
-            dataKey: "update_total_price",
-            dataValue: d.update_total_price
-              ? `Rp ${Number(d.update_total_price).toLocaleString("id-ID")}`
-              : null,
-          },
-          {
-            label: "DP Sebelumnya",
-            detail: "DP yang sudah dibayar sebelumnya.",
-            dataKey: "update_dp_amount",
-            dataValue: d.update_dp_amount
-              ? `Rp ${Number(d.update_dp_amount).toLocaleString("id-ID")}`
-              : null,
-          },
-          {
-            label: "Pembayaran",
-            detail: "Bukti pembayaran harus jelas dan valid.",
-            dataKey: "payments",
-            dataValue: Array.isArray(d.payments)
-              ? `${(d.payments as any[]).length} pembayaran`
-              : null,
-          },
-          {
-            label: "Bukti Pembayaran",
-            detail: "File bukti pembayaran sudah diupload.",
-            dataKey: "attachments",
-            dataValue: Array.isArray(d.attachments)
-              ? `${(d.attachments as any[]).length} file`
-              : null,
+            label: "Catatan QC Akhir",
+            detail: "Temuan QC akhir dari petugas.",
+            dataKey: "notes",
+            dataValue: d.notes as string | null ?? null,
           },
         ];
 
@@ -345,46 +330,90 @@ function StageInfoPopup({
         {/* Header */}
         <div className="mb-4 pr-8">
           <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-            #{orderData.order_number}
+            #{orderData.order_number} · {orderData.customer_name}
           </p>
           <h3 className="text-sm font-semibold text-slate-800 mt-0.5">
             {orderData.product_name}
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {orderData.customer_name}
-          </p>
+          {(() => {
+            const failCount = guidelines.filter(
+              (g) => g.dataValue === false,
+            ).length;
+            const passCount = guidelines.filter(
+              (g) => g.dataValue === true,
+            ).length;
+            if (passCount === 0 && failCount === 0) return null;
+            return (
+              <div className="mt-2 flex items-center gap-2">
+                {passCount > 0 && (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                    {passCount} lolos
+                  </span>
+                )}
+                {failCount > 0 && (
+                  <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-600">
+                    {failCount} tidak lolos
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Guidelines with real data */}
-        <ul className="space-y-3">
-          {guidelines.map((item, idx) => (
-            <li key={idx} className="flex gap-3">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-700 mt-0.5">
-                {idx + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium text-slate-700">
-                  {item.label}
-                </p>
-                <p className="text-[12px] text-slate-500">{item.detail}</p>
-                {item.dataValue !== undefined && item.dataValue !== null && (
-                  <div className="mt-1 rounded bg-slate-50 border border-slate-100 px-2 py-1">
-                    <span className="text-[10px] text-slate-400 uppercase">
-                      Data disubmit:{" "}
-                    </span>
-                    <span className="text-[12px] font-medium text-slate-700">
-                      {typeof item.dataValue === "boolean"
-                        ? item.dataValue
-                          ? "Lolos"
-                          : "Gagal"
-                        : String(item.dataValue)}
-                    </span>
+        {guidelines.length === 0 ? (
+          <p className="text-sm text-slate-400 italic text-center py-4">
+            Tidak ada panduan verifikasi tersedia untuk tahap ini.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {guidelines.map((item, idx) => {
+              const isBoolean = typeof item.dataValue === "boolean";
+              const hasData = item.dataValue !== undefined && item.dataValue !== null;
+              const passed = isBoolean ? (item.dataValue as boolean) : null;
+
+              return (
+                <li key={idx} className="flex gap-3">
+                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold mt-0.5 ${
+                    passed === true
+                      ? "bg-emerald-100 text-emerald-700"
+                      : passed === false
+                        ? "bg-rose-100 text-rose-600"
+                        : "bg-slate-100 text-slate-500"
+                  }`}>
+                    {passed === true ? "✓" : passed === false ? "✗" : idx + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-[13px] font-medium ${
+                      passed === false ? "text-rose-700" : "text-slate-700"
+                    }`}>
+                      {item.label}
+                    </p>
+                    <p className="text-[12px] text-slate-500">{item.detail}</p>
+                    {hasData && (
+                      <div className={`mt-1 rounded px-2 py-1 border ${
+                        passed === true
+                          ? "bg-emerald-50 border-emerald-100"
+                          : passed === false
+                            ? "bg-rose-50 border-rose-100"
+                            : "bg-slate-50 border-slate-100"
+                      }`}>
+                        <span className="text-[10px] text-slate-400 uppercase">Data: </span>
+                        <span className={`text-[12px] font-semibold ${
+                          passed === true ? "text-emerald-700" : passed === false ? "text-rose-600" : "text-slate-700"
+                        }`}>
+                          {isBoolean
+                            ? (passed ? "Lolos ✓" : "Tidak Lolos ✗")
+                            : String(item.dataValue)}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         {/* Dismiss button */}
         <button
@@ -404,10 +433,10 @@ function getChecklistValue(
   key: string,
 ): boolean | null {
   const checklist = data.quality_checklist as
-    | Array<{ check_key: string; passed: boolean }>
+    | Array<{ key?: string; check_key?: string; passed: boolean }>
     | undefined;
   if (!checklist) return null;
-  const item = checklist.find((c) => c.check_key === key);
+  const item = checklist.find((c) => (c.key ?? c.check_key) === key);
   return item?.passed ?? null;
 }
 
@@ -457,8 +486,76 @@ function formatDataValue(value: unknown): string {
   return String(value);
 }
 
+const KEY_LABELS: Record<string, string> = {
+  craftsman_type: "Pengerjaan oleh",
+  result: "Hasil",
+  delivery_method: "Metode pengiriman",
+  recipient_name: "Nama penerima",
+  recipient_phone: "No HP penerima",
+  delivery_address: "Alamat pengiriman",
+  is_delivered: "Status pengiriman",
+  courier_name: "Nama kurir",
+  tracking_number: "Nomor resi",
+};
+
+const VALUE_LABELS: Record<string, string> = {
+  internal: "Tukang Internal",
+  external: "Tukang Eksternal",
+  lolos: "Lolos",
+  tidak_lolos: "Tidak Lolos",
+  pickup_store: "Ambil di Toko",
+  courier_local: "Kurir Lokal",
+  courier_intercity: "Kurir Antar Kota",
+  in_house_delivery: "Antar ke Rumah",
+  delivered: "Sudah Sampai",
+  dispatched: "Dalam Perjalanan",
+  failed: "Gagal Dikirim",
+};
+
 function humanizeKey(key: string): string {
-  return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return KEY_LABELS[key] ?? key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function humanizeValue(val: string): string {
+  return VALUE_LABELS[val] ?? val;
+}
+
+// ── QC Checklist renderer ─────────────────────────────────────────────────────
+
+const CHECKLIST_LABELS: Record<string, string> = {
+  bentuk_sesuai: "Bentuk cincin sesuai order",
+  ukuran_sesuai: "Ukuran cincin sesuai",
+  berat_minimum: "Berat memenuhi syarat minimum",
+  permukaan_bersih: "Permukaan bersih, tidak ada cacat",
+  solder_rapi: "Sambungan / patri rapi dan kuat",
+  kualitas_laser: "Hasil laser / ukiran bersih dan terbaca",
+  kualitas_finishing: "Finishing merata, tidak ada bercak",
+  teks_ukiran_benar: "Teks ukiran sesuai order",
+  bentuk_final_sesuai: "Bentuk final sesuai order",
+  produk_bersih: "Produk bersih, siap serah terima",
+};
+
+function QcChecklistDisplay({ items }: { items: Array<{ key?: string; check_key?: string; passed: boolean }> }) {
+  return (
+    <div className="space-y-1">
+      {items.map((item, i) => {
+        const key = item.key ?? item.check_key ?? "";
+        const label = CHECKLIST_LABELS[key] ?? humanizeKey(key);
+        return (
+          <div key={i} className="flex items-center gap-2">
+            <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold ${
+              item.passed ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-600"
+            }`}>
+              {item.passed ? "✓" : "✗"}
+            </span>
+            <span className={`text-[12px] ${item.passed ? "text-slate-700" : "text-rose-600 font-medium"}`}>
+              {label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 // ── Sub: Data viewer ──────────────────────────────────────────────────────────
@@ -472,51 +569,214 @@ function DataViewer({
   expanded: boolean;
   onToggle: () => void;
 }) {
+  const checklist = Array.isArray(data.quality_checklist)
+    ? (data.quality_checklist as Array<{ key?: string; check_key?: string; passed: boolean }>)
+    : null;
+
+  const notes = typeof data.notes === "string" && data.notes.trim() ? data.notes.trim() : null;
+
   const entries = Object.entries(data).filter(
-    ([k]) => !k.startsWith("_sv_") && k !== "notes",
+    ([k]) => !k.startsWith("_sv_") && k !== "notes" && k !== "quality_checklist",
   );
 
-  if (entries.length === 0) {
-    return (
-      <p className="text-xs text-slate-400 italic">Tidak ada data tersimpan</p>
-    );
+  const hasContent = checklist || notes || entries.length > 0;
+  if (!hasContent) {
+    return <p className="text-xs text-slate-400 italic">Tidak ada data tersimpan</p>;
   }
 
   const preview = entries.slice(0, 3);
   const hasMore = entries.length > 3;
 
   return (
-    <div>
-      <dl className="space-y-1.5">
-        {(expanded ? entries : preview).map(([key, val]) => (
-          <div
-            key={key}
-            className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5 sm:gap-3"
-          >
-            <dt className="text-[11px] text-slate-400 shrink-0">
-              {humanizeKey(key)}
-            </dt>
-            <dd className="text-[12px] font-medium text-slate-700 sm:text-right break-words">
-              {formatDataValue(val)}
-            </dd>
-          </div>
-        ))}
-      </dl>
+    <div className="space-y-2.5">
+      {/* Key-value fields */}
+      {entries.length > 0 && (
+        <dl className="space-y-1.5">
+          {(expanded ? entries : preview).map(([key, val]) => (
+            <div key={key} className="flex items-baseline justify-between gap-3">
+              <dt className="text-[11px] text-slate-400 shrink-0">{humanizeKey(key)}</dt>
+              <dd className="text-[12px] font-medium text-slate-700 text-right break-words">
+                {typeof val === "string" ? humanizeValue(val) : formatDataValue(val)}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
       {hasMore && (
         <button
           onClick={onToggle}
-          className="mt-2 flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-600 transition-colors min-h-[28px]"
+          className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-600 transition-colors min-h-[28px]"
         >
           {expanded ? (
-            <>
-              <ChevronUp className="h-3 w-3" /> Sembunyikan
-            </>
+            <><ChevronUp className="h-3 w-3" /> Sembunyikan</>
           ) : (
-            <>
-              <ChevronDown className="h-3 w-3" /> +{entries.length - 3} lainnya
-            </>
+            <><ChevronDown className="h-3 w-3" /> +{entries.length - 3} lainnya</>
           )}
         </button>
+      )}
+
+      {/* QC Checklist */}
+      {checklist && (
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
+            Checklist QC
+          </p>
+          <QcChecklistDisplay items={checklist} />
+          {checklist.some((i) => !i.passed) && (
+            <p className="mt-1.5 text-[11px] font-medium text-rose-600">
+              {checklist.filter((i) => !i.passed).length} item tidak lolos
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Notes */}
+      {notes && (
+        <div className="rounded-md border border-amber-100 bg-amber-50/60 px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-600 mb-0.5">Catatan</p>
+          <p className="text-[12px] text-slate-700">{notes}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Sub: Work order ring specs ────────────────────────────────────────────────
+
+function WorkOrderCard({ wo }: { wo: WorkOrder }) {
+  const [open, setOpen] = useState(false);
+
+  const hasPria = wo.ukuran_pria || wo.jenis_cincin_pria || wo.ukiran_pria;
+  const hasWanita = wo.ukuran_wanita || wo.jenis_cincin_wanita || wo.ukiran_wanita;
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 overflow-hidden mb-3">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-slate-100 transition-colors"
+      >
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          Spesifikasi Cincin · {wo.cs_order_number}
+        </span>
+        {open ? (
+          <ChevronUp className="h-3.5 w-3.5 text-slate-400" />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+        )}
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3 space-y-2.5 border-t border-slate-200 pt-2.5">
+          {hasPria && (
+            <div>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase mb-1">Pria</p>
+              <dl className="space-y-1">
+                {wo.ukuran_pria && (
+                  <div className="flex justify-between">
+                    <dt className="text-[11px] text-slate-500">Ukuran</dt>
+                    <dd className="text-[11px] font-semibold text-slate-700">{wo.ukuran_pria}</dd>
+                  </div>
+                )}
+                {wo.jenis_cincin_pria && (
+                  <div className="flex justify-between">
+                    <dt className="text-[11px] text-slate-500">Jenis</dt>
+                    <dd className="text-[11px] font-semibold text-slate-700">{wo.jenis_cincin_pria}</dd>
+                  </div>
+                )}
+                {wo.ukiran_pria && (
+                  <div className="flex justify-between">
+                    <dt className="text-[11px] text-slate-500">Ukiran</dt>
+                    <dd className="text-[11px] font-semibold text-slate-700 text-right max-w-[55%]">{wo.ukiran_pria}</dd>
+                  </div>
+                )}
+                {wo.keterangan_pria && (
+                  <div className="flex justify-between">
+                    <dt className="text-[11px] text-slate-500">Ket.</dt>
+                    <dd className="text-[11px] text-slate-600 text-right max-w-[60%]">
+                      {Array.isArray(wo.keterangan_pria) ? wo.keterangan_pria.join(", ") : wo.keterangan_pria}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
+
+          {hasWanita && (
+            <div>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase mb-1">Wanita</p>
+              <dl className="space-y-1">
+                {wo.ukuran_wanita && (
+                  <div className="flex justify-between">
+                    <dt className="text-[11px] text-slate-500">Ukuran</dt>
+                    <dd className="text-[11px] font-semibold text-slate-700">{wo.ukuran_wanita}</dd>
+                  </div>
+                )}
+                {wo.jenis_cincin_wanita && (
+                  <div className="flex justify-between">
+                    <dt className="text-[11px] text-slate-500">Jenis</dt>
+                    <dd className="text-[11px] font-semibold text-slate-700">{wo.jenis_cincin_wanita}</dd>
+                  </div>
+                )}
+                {wo.ukiran_wanita && (
+                  <div className="flex justify-between">
+                    <dt className="text-[11px] text-slate-500">Ukiran</dt>
+                    <dd className="text-[11px] font-semibold text-slate-700 text-right max-w-[55%]">{wo.ukiran_wanita}</dd>
+                  </div>
+                )}
+                {wo.keterangan_wanita && (
+                  <div className="flex justify-between">
+                    <dt className="text-[11px] text-slate-500">Ket.</dt>
+                    <dd className="text-[11px] text-slate-600 text-right max-w-[60%]">
+                      {Array.isArray(wo.keterangan_wanita) ? wo.keterangan_wanita.join(", ") : wo.keterangan_wanita}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
+
+          {(wo.font || wo.laser_position) && (
+            <div className="flex gap-3">
+              {wo.font && (
+                <div>
+                  <p className="text-[10px] text-slate-400">Font</p>
+                  <p className="text-[11px] font-semibold text-slate-700">{wo.font}</p>
+                </div>
+              )}
+              {wo.laser_position && (
+                <div>
+                  <p className="text-[10px] text-slate-400">Posisi Laser</p>
+                  <p className="text-[11px] font-semibold text-slate-700">{wo.laser_position}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {(wo.reference_image_pria_url || wo.reference_image_wanita_url) && (
+            <div className="flex gap-2">
+              {wo.reference_image_pria_url && (
+                <a
+                  href={wo.reference_image_pria_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-center text-[10px] font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+                >
+                  Referensi Pria ↗
+                </a>
+              )}
+              {wo.reference_image_wanita_url && (
+                <a
+                  href={wo.reference_image_wanita_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-center text-[10px] font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+                >
+                  Referensi Wanita ↗
+                </a>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -620,14 +880,14 @@ function PendingCard({
 
       <div className="p-3 sm:p-5">
         {/* Header row */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono text-sm font-semibold text-slate-800">
-                {item.order_number}
+            <div className="flex items-center gap-1.5 flex-wrap mb-1">
+              <span className="font-mono text-[13px] font-semibold text-slate-500">
+                #{item.order_number}
               </span>
               <span
-                className={`rounded-full border px-2 py-0.5 text-[10px] sm:text-[11px] font-medium ${
+                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
                   isProduction
                     ? "bg-amber-100 text-amber-800 border-amber-200"
                     : "bg-blue-100 text-blue-800 border-blue-200"
@@ -635,37 +895,40 @@ function PendingCard({
               >
                 {item.stage_label}
               </span>
-              <button
-                onClick={() => setShowInfo(true)}
-                className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 hover:bg-amber-100 transition-colors"
-                title="Lihat data verifikasi"
-              >
-                <AlertTriangle className="h-3 w-3" />
-                Verifikasi
-              </button>
               {(item.attempt_number ?? 0) > 1 && (
-                <span className="rounded-full bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] sm:text-[11px] font-medium text-rose-700">
-                  Percobaan ke-{item.attempt_number}
+                <span className="rounded-full bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
+                  Attempt #{item.attempt_number}
                 </span>
               )}
             </div>
-            <p className="mt-1 text-sm text-slate-600">{item.product_name}</p>
+            <p className="text-[15px] font-semibold text-slate-800 leading-snug">
+              {item.product_name}
+            </p>
+            <p className="text-[12px] text-slate-400 mt-0.5">{item.customer_name}</p>
           </div>
-          <div className="sm:text-right shrink-0 flex sm:block items-center gap-2">
-            <p className="text-xs font-medium text-slate-700">
-              {item.worker_name}
-            </p>
-            <p className="text-[11px] text-slate-400 sm:mt-0.5">
-              {formatRelative(item.submitted_at)}
-            </p>
+          <div className="sm:text-right shrink-0">
+            <p className="text-[12px] font-medium text-slate-700">{item.worker_name}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">{formatRelative(item.submitted_at)}</p>
           </div>
         </div>
 
+        {/* Ring specs from cs_order */}
+        {item.work_order && <WorkOrderCard wo={item.work_order} />}
+
         {/* Submitted data */}
-        <div className="rounded-md bg-slate-50 border border-slate-100 px-3 py-2.5 mb-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
-            Data yang disubmit
-          </p>
+        <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2.5 mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              Data disubmit
+            </p>
+            <button
+              onClick={() => setShowInfo(true)}
+              className="flex items-center gap-1 rounded-full border border-amber-200 bg-white px-2 py-0.5 text-[10px] font-medium text-amber-700 hover:bg-amber-50 transition-colors"
+            >
+              <AlertTriangle className="h-3 w-3" />
+              Panduan Verifikasi
+            </button>
+          </div>
           <DataViewer
             data={item.data ?? {}}
             expanded={dataExpanded}
@@ -749,6 +1012,7 @@ function PendingCard({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 type FilterTab = "all" | "production" | "operational";
+type SupervisorGroup = "all" | "production" | "operational";
 
 export default function SupervisorApprovalPage() {
   const router = useRouter();
@@ -760,6 +1024,7 @@ export default function SupervisorApprovalPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [userEmail, setUserEmail] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [supervisorGroup, setSupervisorGroup] = useState<SupervisorGroup>("all");
 
   // Verify supervisor identity
   useEffect(() => {
@@ -771,11 +1036,25 @@ export default function SupervisorApprovalPage() {
       }
       const json = await res.json();
       const u = json.data;
-      if (u.role.name !== "superadmin" && u.role.role_group !== "management") {
+      const allowedStages: string[] = u.role?.allowed_stages ?? [];
+      const canAccess =
+        u.role?.name === "superadmin" ||
+        u.role?.role_group === "management" ||
+        allowedStages.some((s: string) => s.startsWith("approval_"));
+      if (!canAccess) {
         router.push("/workshop/login");
         return;
       }
       setUserEmail(u.username || u.full_name || "");
+      if (u.role?.name === "production_supervisor") {
+        setSupervisorGroup("production");
+        setFilter("production");
+      } else if (u.role?.name === "operational_supervisor") {
+        setSupervisorGroup("operational");
+        setFilter("operational");
+      } else {
+        setSupervisorGroup("all");
+      }
     })();
   }, [router]);
 
@@ -856,26 +1135,20 @@ export default function SupervisorApprovalPage() {
     (i) => i.stage_group === "operational",
   ).length;
 
-  const tabs: {
+  const allTabs: {
     key: FilterTab;
     label: string;
     icon: React.ElementType;
     count: number;
   }[] = [
     { key: "all", label: "Semua", icon: Clock, count: items.length },
-    {
-      key: "production",
-      label: "Produksi",
-      icon: Hammer,
-      count: productionCount,
-    },
-    {
-      key: "operational",
-      label: "Operasional",
-      icon: Settings,
-      count: operationalCount,
-    },
+    { key: "production", label: "Produksi", icon: Hammer, count: productionCount },
+    { key: "operational", label: "Operasional", icon: Settings, count: operationalCount },
   ];
+
+  const tabs = supervisorGroup === "all"
+    ? allTabs
+    : allTabs.filter((t) => t.key === "all" || t.key === supervisorGroup);
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-slate-50">
@@ -899,9 +1172,21 @@ export default function SupervisorApprovalPage() {
           {/* Page header */}
           <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900">
-                Persetujuan Tahap
-              </h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+                  Persetujuan Tahap
+                </h2>
+                {supervisorGroup === "production" && (
+                  <span className="rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                    Supervisor Produksi
+                  </span>
+                )}
+                {supervisorGroup === "operational" && (
+                  <span className="rounded-full bg-blue-100 border border-blue-200 px-2 py-0.5 text-[11px] font-semibold text-blue-800">
+                    Supervisor Operasional
+                  </span>
+                )}
+              </div>
               <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
                 Review dan setujui hasil kerja tim
               </p>

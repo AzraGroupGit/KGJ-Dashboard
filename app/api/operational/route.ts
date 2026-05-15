@@ -58,7 +58,7 @@ export async function GET() {
           `
           confirmation_type, confirmation_method, confirmation_status,
           rejection_reason, change_requests, photos_sent_at, confirmed_at, created_at,
-          orders!cc_order_id_fkey (order_number, customers(name, wa_contact)),
+          cs_orders!cc_order_id_fkey (order_number, customer_name, customer_wa),
           stage_results!cc_stage_result_fkey (data)
         `,
         )
@@ -66,15 +66,10 @@ export async function GET() {
         .order("created_at", { ascending: false })
         .limit(30),
 
-      // 2. PELUNASAN — query directly from orders + payments
+      // 2. PELUNASAN — query directly from cs_orders + payments
       admin
-        .from("orders")
-        .select(
-          `
-          id, order_number, total_price, dp_amount,
-          customers!orders_customer_id_fkey (name)
-        `,
-        )
+        .from("cs_orders")
+        .select("id, order_number, harga, dp_amount, customer_name")
         .not("status", "in", "(completed,cancelled)")
         .is("deleted_at", null)
         .order("updated_at", { ascending: false })
@@ -86,7 +81,7 @@ export async function GET() {
         .select(
           `
           data, started_at, finished_at,
-          orders!stage_results_order_id_fkey (
+          cs_orders!stage_results_order_id_fkey (
             order_number, delivery_method, completed_at,
             customers!orders_customer_id_fkey (name)
           )
@@ -102,7 +97,7 @@ export async function GET() {
         .select(
           `
           order_id, stage, started_at, finished_at,
-          orders!stage_results_order_id_fkey (order_number),
+          cs_orders!stage_results_order_id_fkey (order_number),
           users!stage_results_user_id_fkey (full_name, role:roles!users_role_id_fkey(name))
         `,
         )
@@ -117,7 +112,7 @@ export async function GET() {
         .select(
           `
           data, finished_at,
-          orders!stage_results_order_id_fkey (order_number, target_weight),
+          cs_orders!stage_results_order_id_fkey (order_number, target_weight),
           users!stage_results_user_id_fkey (full_name)
         `,
         )
@@ -131,7 +126,7 @@ export async function GET() {
         .select(
           `
           data, started_at, finished_at,
-          orders!stage_results_order_id_fkey (order_number)
+          cs_orders!stage_results_order_id_fkey (order_number)
         `,
         )
         .eq("stage", "laser")
@@ -151,7 +146,7 @@ export async function GET() {
         .select(
           `
           data, notes, stage, finished_at,
-          orders!stage_results_order_id_fkey (order_number),
+          cs_orders!stage_results_order_id_fkey (order_number),
           users!stage_results_user_id_fkey (full_name)
         `,
         )
@@ -182,13 +177,8 @@ export async function GET() {
 
     // ========== KONFIRMASI ==========
     const { data: waitingApprovalOrders, error: waitingError } = await admin
-      .from("orders")
-      .select(
-        `
-        order_number, created_at, current_stage,
-        customers!orders_customer_id_fkey (name, wa_contact)
-      `,
-      )
+      .from("cs_orders")
+      .select("order_number, created_at, current_stage, customer_name, customer_wa")
       .in("status", ["waiting_approval", "in_progress"])
       .in("current_stage", ["approval_penerimaan_order", "approval_qc_1"])
       .is("deleted_at", null)
@@ -210,8 +200,8 @@ export async function GET() {
           : 0;
         return {
           order_number: row.order_number,
-          customer_name: row.customers?.name ?? null,
-          wa_contact: row.customers?.wa_contact ?? null,
+          customer_name: row.customer_name ?? null,
+          wa_contact: row.customer_wa ?? null,
           dp_requested_at: row.created_at,
           dp_received_at: null,
           dp_amount: null,
@@ -230,12 +220,12 @@ export async function GET() {
 
     const pelunasan = (pelunasanRaw as any[])
       .map((row) => {
-        const total = row.total_price || 0;
+        const total = row.harga || 0;
         const dp = row.dp_amount || 0;
         const remaining = total - dp;
         return {
           order_number: row.order_number,
-          customer_name: row.customers?.name ?? null,
+          customer_name: row.customer_name ?? null,
           total_price: total,
           dp_paid: dp,
           remaining_amount: remaining > 0 ? remaining : 0,
@@ -349,7 +339,7 @@ export async function GET() {
     }));
 
     // Fetch antrian racik
-    const [wiRacikResult, antrianRacikResult] = await Promise.allSettled([
+    const [wiRacikResult] = await Promise.allSettled([
       supabase
         .from("work_instructions")
         .select("parameters")
@@ -357,25 +347,13 @@ export async function GET() {
         .eq("is_active", true)
         .limit(1)
         .maybeSingle(),
-      supabase
-        .from("orders")
-        .select("target_weight")
-        .eq("current_stage", "racik_bahan")
-        .is("deleted_at", null),
     ]);
 
     const wiRacik =
       wiRacikResult.status === "fulfilled" ? wiRacikResult.value.data : null;
-    const antrianRacik =
-      antrianRacikResult.status === "fulfilled"
-        ? antrianRacikResult.value.data || []
-        : [];
     const targetShrinkagePercent =
       parseFloat((wiRacik as any)?.parameters?.shrinkage_buffer_percent) || 5.0;
-    const totalBeratTeoritis = (antrianRacik as any[]).reduce(
-      (sum, row) => sum + (parseFloat(row.target_weight) || 0),
-      0,
-    );
+    const totalBeratTeoritis = 0;
 
     // ========== LASER ==========
     const laserRaw =

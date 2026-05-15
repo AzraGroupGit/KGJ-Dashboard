@@ -73,14 +73,9 @@ const menuItems: Record<string, MenuItem[]> = {
           href: SUPERADMIN_ROUTES.OPRPRD_DASHBOARD,
         },
         {
-          name: "Monitoring Operasional",
+          name: "Monitoring OPR-PRD",
           icon: "monitor",
-          href: SUPERADMIN_ROUTES.OPRPRD_MONITORING_OPERASI,
-        },
-        {
-          name: "Monitoring Produksi",
-          icon: "production",
-          href: SUPERADMIN_ROUTES.OPRPRD_MONITORING_PRODUKSI,
+          href: SUPERADMIN_ROUTES.OPRPRD_MONITORING,
         },
         {
           name: "Analisis Kinerja",
@@ -98,6 +93,7 @@ const menuItems: Record<string, MenuItem[]> = {
   customer_service: [
     { name: "Dashboard", icon: "dashboard", href: CS_ROUTES.DASHBOARD },
     { name: "Input Leads", icon: "input", href: CS_ROUTES.INPUT_LEADS },
+    { name: "Input Order", icon: "order", href: CS_ROUTES.INPUT_ORDER },
   ],
   marketing: [
     { name: "Dashboard", icon: "dashboard", href: MARKETING_ROUTES.DASHBOARD },
@@ -111,6 +107,7 @@ const menuItems: Record<string, MenuItem[]> = {
   supervisor: [
     { name: "Monitoring", icon: "monitor", href: SUPERVISOR_ROUTES.MONITORING },
     { name: "Persetujuan", icon: "approval", href: SUPERVISOR_ROUTES.APPROVAL },
+    { name: "Kelola Akun Tim", icon: "users", href: SUPERVISOR_ROUTES.ACCOUNTS },
   ],
 };
 
@@ -293,6 +290,21 @@ const iconMap = {
         strokeLinejoin="round"
         strokeWidth={2}
         d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+  ),
+  order: (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
       />
     </svg>
   ),
