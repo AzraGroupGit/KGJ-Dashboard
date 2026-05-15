@@ -9,6 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // ════════════════════════════════════════════════════════════════════════════
 
 const BMS_ROLE_NAMES = ["superadmin", "customer_service", "marketing"] as const;
+const MANAGEMENT_ROLE_NAMES = ["operational_supervisor", "production_supervisor"] as const;
 const ALL_ROLE_GROUPS = [
   "management",
   "operational",
@@ -19,10 +20,17 @@ const ALL_ROLE_GROUPS = [
 
 type RoleGroup = (typeof ALL_ROLE_GROUPS)[number];
 type BmsRoleName = (typeof BMS_ROLE_NAMES)[number];
+type ManagementRoleName = (typeof MANAGEMENT_ROLE_NAMES)[number];
 
 function isBmsRoleName(v: unknown): v is BmsRoleName {
   return (
     typeof v === "string" && (BMS_ROLE_NAMES as readonly string[]).includes(v)
+  );
+}
+
+function isManagementRoleName(v: unknown): v is ManagementRoleName {
+  return (
+    typeof v === "string" && (MANAGEMENT_ROLE_NAMES as readonly string[]).includes(v)
   );
 }
 
@@ -202,15 +210,21 @@ export async function GET(request: Request) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// POST /api/users — mendukung 2 mode
+// POST /api/users — mendukung 3 mode
 //
 // MODE 1 (BMS): { full_name, email, password, role, branch_id? }
 //   role: 'superadmin' | 'customer_service' | 'marketing'
+//   → email wajib, login via dashboard
 //
-// MODE 2 (OPRPRD): { username, full_name, email?, phone?, password, role_id }
-//   role_id: UUID dari tabel roles (harus non-BMS)
+// MODE 2 (Management/Supervisor): { full_name, username, password, role }
+//   role: 'operational_supervisor' | 'production_supervisor'
+//   → username wajib, login via workshop (QR), role_group: management
 //
-// Deteksi: field `role` (string) → MODE 1, field `role_id` → MODE 2
+// MODE 3 (OPRPRD Worker): { full_name, username, email?, phone?, password, role_id }
+//   role_id: UUID dari tabel roles (harus non-BMS, non-management)
+//   → username wajib, login via workshop (QR)
+//
+// Deteksi: isBmsRoleName(role) → MODE 1 | isManagementRoleName(role) → MODE 2 | role_id UUID → MODE 3
 // ════════════════════════════════════════════════════════════════════════════
 
 export async function POST(request: Request) {
@@ -246,14 +260,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const isBmsMode = typeof role === "string";
-    const isOprprdMode = typeof role_id === "string" && !isBmsMode;
+    const isBmsMode = typeof role === "string" && isBmsRoleName(role);
+    const isManagementMode = typeof role === "string" && isManagementRoleName(role);
+    const isOprprdMode = typeof role_id === "string" && !isBmsMode && !isManagementMode;
 
-    if (!isBmsMode && !isOprprdMode) {
+    if (!isBmsMode && !isManagementMode && !isOprprdMode) {
       return NextResponse.json(
         {
           error:
-            "Harus menyertakan 'role' (untuk BMS) atau 'role_id' (untuk Operasional/Produksi)",
+            "Harus menyertakan 'role' (superadmin/customer_service/marketing/operational_supervisor/production_supervisor) atau 'role_id' (UUID untuk worker)",
         },
         { status: 400 },
       );
@@ -265,15 +280,6 @@ export async function POST(request: Request) {
     let finalRoleGroup: string;
 
     if (isBmsMode) {
-      if (!isBmsRoleName(role)) {
-        return NextResponse.json(
-          {
-            error:
-              "Role harus salah satu: superadmin, customer_service, marketing",
-          },
-          { status: 400 },
-        );
-      }
       if (!email?.trim()) {
         return NextResponse.json(
           { error: "Email wajib diisi untuk user BMS" },
@@ -302,8 +308,63 @@ export async function POST(request: Request) {
       finalRoleId = roleRec.id;
       finalRoleName = roleRec.name;
       finalRoleGroup = roleRec.role_group;
+    } else if (isManagementMode) {
+      // Supervisor (operational_supervisor / production_supervisor) — email + username wajib
+      if (!email?.trim()) {
+        return NextResponse.json(
+          { error: "Email wajib diisi untuk akun supervisor" },
+          { status: 400 },
+        );
+      }
+      if (!username?.trim() || username.trim().length < 3) {
+        return NextResponse.json(
+          { error: "Username minimal 3 karakter untuk akun supervisor" },
+          { status: 400 },
+        );
+      }
+
+      // Use admin client to bypass RLS on roles table
+      const adminCheck = createAdminClient();
+      const { data: roleRec, error: roleErr } = await adminCheck
+        .from("roles")
+        .select("id, name, role_group")
+        .eq("name", role)
+        .single();
+
+      if (!roleRec) {
+        console.error("[POST /api/users] role lookup failed:", roleErr?.message, "role:", role);
+        return NextResponse.json(
+          { error: `Role '${role}' tidak ditemukan di database` },
+          { status: 500 },
+        );
+      }
+      finalRoleId = roleRec.id;
+      finalRoleName = roleRec.name;
+      finalRoleGroup = roleRec.role_group;
+
+      // Enforce one active account per supervisor type
+      const { data: existingSupervisor } = await adminCheck
+        .from("users")
+        .select("id, full_name, username")
+        .eq("role_id", finalRoleId)
+        .eq("status", "active")
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (existingSupervisor) {
+        const label =
+          finalRoleName === "operational_supervisor"
+            ? "Supervisor Operasional"
+            : "Supervisor Produksi";
+        return NextResponse.json(
+          {
+            error: `Akun ${label} sudah ada (${existingSupervisor.full_name} / @${existingSupervisor.username}). Setiap jenis supervisor hanya boleh satu akun aktif.`,
+          },
+          { status: 409 },
+        );
+      }
     } else {
-      // OPRPRD mode
+      // OPRPRD worker mode — role_id UUID
       if (!username?.trim() || username.trim().length < 3) {
         return NextResponse.json(
           { error: "Username minimal 3 karakter" },
@@ -324,11 +385,14 @@ export async function POST(request: Request) {
         );
       }
 
-      if ((BMS_ROLE_NAMES as readonly string[]).includes(roleRec.name)) {
+      if (
+        (BMS_ROLE_NAMES as readonly string[]).includes(roleRec.name) ||
+        (MANAGEMENT_ROLE_NAMES as readonly string[]).includes(roleRec.name)
+      ) {
         return NextResponse.json(
           {
             error:
-              "Untuk role BMS, gunakan field 'role' (string), bukan 'role_id'",
+              "Untuk role BMS atau supervisor, gunakan field 'role' (string nama role), bukan 'role_id'",
           },
           { status: 400 },
         );
@@ -375,8 +439,8 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient();
 
-    // Generate auth email — kalau user tidak punya email asli, pakai dummy
-    const authEmail = normalizedEmail ?? `${normalizedUsername}@internal.local`;
+    // Generate auth email — BMS and supervisor users use real email; OPRPRD workers use dummy if no email given
+    const authEmail = normalizedEmail ?? `${normalizedUsername}@noreply.kodagede.id`;
 
     // Step 1: Buat auth user. Trigger handle_new_user otomatis insert ke public.users
     const { data: authData, error: authError } =
@@ -400,14 +464,14 @@ export async function POST(request: Request) {
         );
       }
       return NextResponse.json(
-        { error: "Gagal membuat akun auth" },
+        { error: `Gagal membuat akun auth: ${authError?.message ?? "unknown error"}` },
         { status: 500 },
       );
     }
 
     // Step 2: Upsert public.users dengan data lengkap
     // Gunakan authEmail (bukan normalizedEmail) karena users.email adalah NOT NULL —
-    // untuk user tanpa email asli, authEmail sudah berisi dummy @internal.local.
+    // untuk user tanpa email asli, authEmail sudah berisi dummy @noreply.kodagede.id.
     const updatePayload: Record<string, unknown> = {
       full_name: full_name.trim(),
       role_id: finalRoleId,
@@ -418,6 +482,7 @@ export async function POST(request: Request) {
     if (phone?.trim()) updatePayload.phone = phone.trim();
     updatePayload.branch_id =
       isBmsMode && role === "customer_service" ? branch_id : null;
+    // Management/supervisor accounts do not use branch
 
     // Pakai upsert agar tetap berjalan meski trigger handle_new_user tidak
     // sempat meng-insert baris public.users (misalnya saat role_id belum ada).

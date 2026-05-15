@@ -24,15 +24,12 @@ interface UserProfile {
 interface OrderInfo {
   id: string;
   order_number: string;
-  product_name: string;
   current_stage: string;
   status: string;
-  target_weight: number | null;
-  target_karat: number | null;
   deadline: string | null;
   updated_at: string | null;
   customer_name: string | null;
-  customer_phone: string | null;
+  customer_wa: string | null;
 }
 
 interface StageField {
@@ -47,71 +44,77 @@ interface StageField {
   max?: number;
 }
 
+interface WorkOrder {
+  deadline: string | null;
+  customer_name: string | null;
+  customer_wa: string | null;
+  customer_email: string | null;
+  acara: string | null;
+  kebutuhan_acara: string | null;
+  alat_ukur: string | null;
+  harga: number | null;
+  dp_amount: number | null;
+  pengiriman: string | null;
+  alamat_pengiriman: string | null;
+  box: string | null;
+  font: string | null;
+  laser_position: string | null;
+  pria: {
+    ukuran: string | null;
+    ukiran: string | null;
+    jenis_cincin: string | null;
+    keterangan: string[] | string | null;
+    reference_image_url: string | null;
+  } | null;
+  wanita: {
+    ukuran: string | null;
+    ukiran: string | null;
+    jenis_cincin: string | null;
+    keterangan: string[] | string | null;
+    reference_image_url: string | null;
+  } | null;
+}
+
 interface FormConfig {
   stage: string;
+  stage_type?: string;
   stage_label: string;
   fields: StageField[];
   permissions: { can_submit: boolean; can_edit: boolean };
   current_data?: Record<string, unknown>;
+  work_order?: WorkOrder;
 }
 
-type Phase = "loading" | "list" | "create" | "form" | "success";
+type Phase = "loading" | "list" | "form" | "success";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+// Fallback only — authoritative stages come from DB via allowed_stages
 const ROLE_STAGE_MAP: Record<string, string[]> = {
-  // Production roles
-  racik: ["racik_bahan"],
-  jewelry_expert_lebur_bahan: ["lebur_bahan"],
-  jewelry_expert_pembentukan_awal: ["pembentukan_cincin"],
-  micro_setting: ["pemasangan_permata"],
-  jewelry_expert_finishing: ["pemolesan", "finishing"],
-  laser: ["laser"],
-
-  // QC roles
-  qc_1: ["qc_1"],
-  qc_2: ["qc_2"],
-  qc_3: ["qc_3"],
-
-  // Support roles
-  kelengkapan: ["kelengkapan"],
-  packing: ["packing", "pengiriman"],
-  after_sales: ["pelunasan"],
-
-  // Customer-facing roles
-  customer_care: ["penerimaan_order"],
-
-  // Supervisor / Management (approval gates)
-  supervisor: [
-    "approval_penerimaan_order",
-    "approval_qc_1",
-    "approval_qc_2",
-    "approval_qc_3",
-    "approval_pelunasan",
-  ],
+  customer_care: ["konfirmasi"],
 };
 
 const STAGE_LABELS: Record<string, string> = {
   penerimaan_order: "Penerimaan Order",
   approval_penerimaan_order: "Approval Penerimaan Order",
-  racik_bahan: "Racik Bahan",
+  racik_bahan: "Persiapan Bahan",
+  approval_racik_bahan: "Approval Persiapan Bahan",
   lebur_bahan: "Lebur Bahan",
   pembentukan_cincin: "Pembentukan Cincin",
-  pemasangan_permata: "Pemasangan Permata",
-  pemolesan: "Pemolesan",
-  qc_1: "Quality Control 1",
-  approval_qc_1: "Approval QC 1",
-  finishing: "Finishing",
+  cek_kadar: "Cek Kadar",
+  pemasangan_permata: "Micro Setting",
+  pemolesan: "Pemolesan Awal",
+  qc_1: "Quality Control Awal",
+  approval_qc_1: "Approval QC Awal",
   laser: "Laser Engraving",
-  qc_2: "Quality Control 2",
-  approval_qc_2: "Approval QC 2",
-  kelengkapan: "Kelengkapan",
-  qc_3: "Quality Control 3 (Final)",
-  approval_qc_3: "Approval QC 3",
-  packing: "Packing",
-  pelunasan: "Pelunasan & Pembayaran",
-  approval_pelunasan: "Approval Pelunasan",
-  pengiriman: "Pengiriman & Handover",
+  finishing: "Finishing",
+  approval_produksi: "Approval Produksi",
+  qc_2: "Quality Control Akhir",
+  approval_qc_2: "Approval QC Akhir",
+  konfirmasi: "Konfirmasi Customer Care",
+  packing: "Packing & Persiapan Kirim",
+  pengiriman: "Pengiriman",
+  selesai: "Selesai",
 };
 
 // ── Theming ───────────────────────────────────────────────────────────────────
@@ -457,26 +460,16 @@ function PhaseOrderList({
                           )}
                         </div>
 
-                        {/* Product name */}
+                        {/* Customer name */}
                         <p className="text-[14px] font-semibold text-stone-800 truncate leading-snug">
-                          {order.product_name}
+                          {order.customer_name ?? "—"}
                         </p>
 
-                        {/* Customer + weight */}
+                        {/* WA */}
                         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                          {order.customer_name && (
+                          {order.customer_wa && (
                             <span className="text-[12px] text-stone-400">
-                              {order.customer_name}
-                            </span>
-                          )}
-                          {order.target_weight && (
-                            <span className="text-[12px] text-stone-400">
-                              {order.target_weight} g
-                            </span>
-                          )}
-                          {order.target_karat && (
-                            <span className="text-[12px] text-stone-400">
-                              {order.target_karat}K
+                              {order.customer_wa}
                             </span>
                           )}
                         </div>
@@ -532,318 +525,181 @@ function PhaseOrderList({
   );
 }
 
-// ── Phase: Create (penerimaan_order) ─────────────────────────────────────────
+// ── Work Order Card ───────────────────────────────────────────────────────────
 
-function formatNumber(value: string): string {
-  // Remove non-digit characters
-  const digits = value.replace(/\D/g, "");
-  if (!digits) return "";
-  // Format with dots
-  return Number(digits).toLocaleString("id-ID");
-}
+function WorkOrderCard({ wo, theme }: { wo: WorkOrder; theme: Theme }) {
+  const hasPria =
+    wo.pria &&
+    (wo.pria.ukuran ||
+      wo.pria.ukiran ||
+      wo.pria.jenis_cincin ||
+      wo.pria.keterangan);
+  const hasWanita =
+    wo.wanita &&
+    (wo.wanita.ukuran ||
+      wo.wanita.ukiran ||
+      wo.wanita.jenis_cincin ||
+      wo.wanita.keterangan);
+  const hasLaser = wo.font || wo.laser_position;
 
-function PhaseCreate({
-  user,
-  theme,
-  onCreate,
-  onLogout,
-}: {
-  user: UserProfile;
-  theme: Theme;
-  onCreate: (data: Record<string, unknown>) => Promise<void>;
-  onLogout: () => void;
-}) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    customer_name: "",
-    customer_phone: "",
-    customer_wa: "",
-    product_name: "",
-    target_weight: "",
-    target_karat: "",
-    ring_size: "",
-    model_description: "",
-    delivery_method: "pickup_store",
-    deadline: "",
-    total_price: "",
-    dp_amount: "",
-    engraved_text: "",
-    special_notes: "",
-  });
+  const Row = ({
+    label,
+    value,
+  }: {
+    label: string;
+    value: string | number | null | undefined;
+  }) =>
+    value !== null && value !== undefined && value !== "" ? (
+      <div className="flex gap-2 text-[12px]">
+        <span className="shrink-0 text-stone-400 w-28">{label}</span>
+        <span className="text-stone-700 font-medium">{String(value)}</span>
+      </div>
+    ) : null;
 
-  const set =
-    (name: string) =>
-    (
-      e: React.ChangeEvent<
-        HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-      >,
-    ) =>
-      setForm((prev) => ({ ...prev, [name]: e.target.value }));
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.customer_name.trim() || !form.product_name.trim()) {
-      setError("Nama pelanggan dan nama produk wajib diisi");
-      return;
-    }
-    if (!form.target_weight || Number(form.target_weight) <= 0) {
-      setError("Target berat harus lebih dari 0");
-      return;
-    }
-    if (form.target_karat === "") {
-      setError("Target karat wajib diisi");
-      return;
-    }
-    setError(null);
-    setIsSubmitting(true);
-    try {
-      await onCreate({
-        new_customer: {
-          name: form.customer_name.trim(),
-          phone: form.customer_phone.trim() || null,
-          wa_contact: form.customer_wa.trim() || null,
-        },
-        product_name: form.product_name.trim(),
-        target_weight: Number(form.target_weight),
-        target_karat: Number(form.target_karat),
-        ring_size: form.ring_size.trim() || null,
-        model_description: form.model_description.trim() || null,
-        engraved_text: form.engraved_text.trim() || null,
-        delivery_method: form.delivery_method || "pickup_store",
-        deadline: form.deadline || null,
-        total_price: form.total_price ? Number(form.total_price) : null,
-        dp_amount: form.dp_amount ? Number(form.dp_amount) : null,
-        special_notes: form.special_notes.trim() || null,
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal membuat order");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const formatKet = (v: string[] | string | null | undefined) => {
+    if (!v) return null;
+    return Array.isArray(v) ? v.join(", ") : v;
   };
 
   return (
-    <div className="w-full max-w-[420px]">
-      <BrandHeader subtitle="Penerimaan Order" />
-
-      <div className={`mb-5 rounded-xl border px-4 py-3 ${theme.card}`}>
-        <p
-          className={`text-[10px] font-medium uppercase tracking-wider ${theme.label}`}
-        >
-          Masuk sebagai
-        </p>
-        <p className="mt-1 text-[15px] font-semibold text-stone-800">
-          {user.full_name}
-        </p>
-        <div className="mt-1.5 flex items-center justify-between">
-          <span
-            className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${theme.badge}`}
-          >
-            Customer Service
-          </span>
-          <button
-            onClick={onLogout}
-            className="text-[11px] text-stone-400 hover:text-red-500 transition-colors"
-          >
-            Keluar
-          </button>
-        </div>
-      </div>
-
-      <form
-        onSubmit={handleSubmit}
-        className="rounded-2xl border border-stone-200/80 bg-white/90 backdrop-blur-sm p-5 shadow-sm space-y-5"
+    <div
+      className={`mb-5 rounded-xl border px-4 py-3.5 space-y-3 ${theme.card}`}
+    >
+      <p
+        className={`text-[10px] font-semibold uppercase tracking-wider ${theme.label}`}
       >
-        {/* Customer */}
-        <div>
-          <p
-            className={`text-[11px] font-semibold uppercase tracking-wider mb-3 ${theme.label}`}
-          >
-            Data Pelanggan
-          </p>
-          <div className="space-y-3">
-            <FieldRow label="Nama Pelanggan *" theme={theme}>
-              <input
-                type="text"
-                value={form.customer_name}
-                onChange={set("customer_name")}
-                placeholder="Nama lengkap"
-                required
-                className={inputCls(theme)}
-              />
-            </FieldRow>
-            <FieldRow label="No HP" theme={theme}>
-              <input
-                type="tel"
-                value={form.customer_wa}
-                onChange={set("customer_wa")}
-                placeholder="08xx-xxxx-xxxx"
-                className={inputCls(theme)}
-              />
-            </FieldRow>
-          </div>
-        </div>
+        Spesifikasi Order
+      </p>
 
-        {/* Order detail */}
-        <div>
-          <p
-            className={`text-[11px] font-semibold uppercase tracking-wider mb-3 ${theme.label}`}
-          >
-            Detail Pesanan
-          </p>
-          <div className="space-y-3">
-            <FieldRow label="Nama Produk *" theme={theme}>
-              <input
-                type="text"
-                value={form.product_name}
-                onChange={set("product_name")}
-                placeholder="Contoh: Cincin Berlian 18K"
-                required
-                className={inputCls(theme)}
-              />
-            </FieldRow>
-            <div className="grid grid-cols-2 gap-3">
-              <FieldRow label="Target Berat * (g)" theme={theme}>
-                <input
-                  type="number"
-                  value={form.target_weight}
-                  onChange={set("target_weight")}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0.01"
-                  required
-                  className={inputCls(theme)}
-                />
-              </FieldRow>
-              <FieldRow label="Target Karat * (K)" theme={theme}>
-                <input
-                  type="number"
-                  value={form.target_karat}
-                  onChange={set("target_karat")}
-                  placeholder="18"
-                  step="0.5"
-                  min="0"
-                  max="24"
-                  required
-                  className={inputCls(theme)}
-                />
-              </FieldRow>
-            </div>
-            <FieldRow label="Ukuran" theme={theme}>
-              <input
-                type="text"
-                value={form.ring_size}
-                onChange={set("ring_size")}
-                placeholder="Contoh: 12"
-                className={inputCls(theme)}
-              />
-            </FieldRow>
-            <FieldRow label="Teks Ukiran (Laser)" theme={theme}>
-              <input
-                type="text"
-                value={form.engraved_text}
-                onChange={set("engraved_text")}
-                placeholder="Teks yang akan diukir"
-                className={inputCls(theme)}
-              />
-            </FieldRow>
-            <FieldRow label="Deskripsi Model" theme={theme}>
-              <textarea
-                value={form.model_description}
-                onChange={set("model_description")}
-                placeholder="Detail bentuk, desain, model..."
-                rows={2}
-                className={`${inputCls(theme)} resize-none`}
-              />
-            </FieldRow>
-            <FieldRow label="Metode Pengambilan" theme={theme}>
-              <select
-                value={form.delivery_method}
-                onChange={set("delivery_method")}
-                className={inputCls(theme)}
-              >
-                <option value="pickup_store">Ambil di Toko</option>
-                <option value="courier_local">Kurir Lokal</option>
-                <option value="courier_intercity">Kurir Antar Kota</option>
-                <option value="in_house_delivery">Antar ke Rumah</option>
-                <option value="other">Lainnya</option>
-              </select>
-            </FieldRow>
-            <FieldRow label="Target Selesai" theme={theme}>
-              <input
-                type="date"
-                value={form.deadline}
-                onChange={set("deadline")}
-                className={inputCls(theme)}
-              />
-            </FieldRow>
-          </div>
-        </div>
-
-        {/* Harga */}
-        <div>
-          <p
-            className={`text-[11px] font-semibold uppercase tracking-wider mb-3 ${theme.label}`}
-          >
-            Harga & DP
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <FieldRow label="Total Harga (IDR)" theme={theme}>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={form.total_price ? formatNumber(form.total_price) : ""}
-                onChange={(e) => {
-                  const raw = e.target.value.replace(/\D/g, "");
-                  setForm((prev) => ({ ...prev, total_price: raw }));
-                }}
-                placeholder="0"
-                className={inputCls(theme)}
-              />
-            </FieldRow>
-            <FieldRow label="Jumlah DP (IDR)" theme={theme}>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={form.dp_amount ? formatNumber(form.dp_amount) : ""}
-                onChange={(e) => {
-                  const raw = e.target.value.replace(/\D/g, "");
-                  setForm((prev) => ({ ...prev, dp_amount: raw }));
-                }}
-                placeholder="0"
-                className={inputCls(theme)}
-              />
-            </FieldRow>
-          </div>
-        </div>
-
-        <FieldRow label="Catatan Khusus" theme={theme}>
-          <textarea
-            value={form.special_notes}
-            onChange={set("special_notes")}
-            placeholder="Keinginan khusus, detail tambahan..."
-            rows={2}
-            className={`${inputCls(theme)} resize-none`}
+      {/* Customer */}
+      {(wo.customer_name || wo.customer_wa) && (
+        <div className="space-y-1">
+          <Row label="Customer" value={wo.customer_name} />
+          <Row label="WhatsApp" value={wo.customer_wa} />
+          <Row label="Email" value={wo.customer_email} />
+          <Row
+            label="Deadline"
+            value={
+              wo.deadline
+                ? new Date(wo.deadline).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : null
+            }
           />
-        </FieldRow>
+        </div>
+      )}
 
-        {error && <p className="text-[12px] text-red-500">{error}</p>}
+      {/* Acara */}
+      {(wo.acara || wo.kebutuhan_acara) && (
+        <div className="space-y-1">
+          <Row label="Acara" value={wo.acara} />
+          <Row label="Kebutuhan" value={wo.kebutuhan_acara} />
+        </div>
+      )}
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className={`w-full rounded-xl py-3 text-[14px] font-medium text-white shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${theme.btn}`}
-        >
-          {isSubmitting ? (
-            <span className="flex items-center justify-center gap-2">
-              <SpinIcon /> Menyimpan...
-            </span>
-          ) : (
-            "Buat Order"
+      {/* Ring specs — Pria */}
+      {hasPria && (
+        <div>
+          <p
+            className={`text-[10px] font-semibold uppercase tracking-wider mb-1.5 ${theme.label}`}
+          >
+            Pria
+          </p>
+          <div className="space-y-1">
+            <Row label="Ukuran" value={wo.pria!.ukuran} />
+            <Row label="Jenis cincin" value={wo.pria!.jenis_cincin} />
+            <Row label="Ukiran" value={wo.pria!.ukiran} />
+            <Row label="Keterangan" value={formatKet(wo.pria!.keterangan)} />
+          </div>
+          {wo.pria!.reference_image_url && (
+            <a
+              href={wo.pria!.reference_image_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-[11px] font-medium text-blue-600 underline"
+            >
+              Lihat referensi pria ↗
+            </a>
           )}
-        </button>
-      </form>
+        </div>
+      )}
+
+      {/* Ring specs — Wanita */}
+      {hasWanita && (
+        <div>
+          <p
+            className={`text-[10px] font-semibold uppercase tracking-wider mb-1.5 ${theme.label}`}
+          >
+            Wanita
+          </p>
+          <div className="space-y-1">
+            <Row label="Ukuran" value={wo.wanita!.ukuran} />
+            <Row label="Jenis cincin" value={wo.wanita!.jenis_cincin} />
+            <Row label="Ukiran" value={wo.wanita!.ukiran} />
+            <Row label="Keterangan" value={formatKet(wo.wanita!.keterangan)} />
+          </div>
+          {wo.wanita!.reference_image_url && (
+            <a
+              href={wo.wanita!.reference_image_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-[11px] font-medium text-blue-600 underline"
+            >
+              Lihat referensi wanita ↗
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* Laser */}
+      {hasLaser && (
+        <div>
+          <p
+            className={`text-[10px] font-semibold uppercase tracking-wider mb-1.5 ${theme.label}`}
+          >
+            Laser
+          </p>
+          <div className="space-y-1">
+            <Row label="Font" value={wo.font} />
+            <Row label="Posisi" value={wo.laser_position} />
+          </div>
+        </div>
+      )}
+
+      {/* Alat ukur & box */}
+      {(wo.alat_ukur || wo.box) && (
+        <div className="space-y-1">
+          <Row label="Alat ukur" value={wo.alat_ukur} />
+          <Row label="Box" value={wo.box} />
+        </div>
+      )}
+
+      {/* Price */}
+      {(wo.harga || wo.dp_amount) && (
+        <div className="space-y-1">
+          <Row
+            label="Harga"
+            value={wo.harga ? `Rp ${wo.harga.toLocaleString("id-ID")}` : null}
+          />
+          <Row
+            label="DP"
+            value={
+              wo.dp_amount ? `Rp ${wo.dp_amount.toLocaleString("id-ID")}` : null
+            }
+          />
+        </div>
+      )}
+
+      {/* Delivery */}
+      {(wo.pengiriman || wo.alamat_pengiriman) && (
+        <div className="space-y-1">
+          <Row label="Pengiriman" value={wo.pengiriman} />
+          <Row label="Alamat" value={wo.alamat_pengiriman} />
+        </div>
+      )}
     </div>
   );
 }
@@ -910,29 +766,21 @@ function PhaseForm({
         )}
       </div>
 
-      <div className={`mb-5 rounded-xl border px-4 py-3.5 ${theme.card}`}>
+      <div className={`mb-4 rounded-xl border px-4 py-3 ${theme.card}`}>
         <p
           className={`text-[10px] font-medium uppercase tracking-wider ${theme.label}`}
         >
-          Produk
+          Customer
         </p>
         <p className="mt-1 text-[15px] font-semibold text-stone-800">
-          {order.product_name}
+          {order.customer_name ?? "—"}
         </p>
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-          {order.customer_name && (
+        <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5">
+          {order.customer_wa && (
             <p className="text-[12px] text-stone-500">
-              Customer:{" "}
+              WA:{" "}
               <span className="font-medium text-stone-700">
-                {order.customer_name}
-              </span>
-            </p>
-          )}
-          {order.target_weight && (
-            <p className="text-[12px] text-stone-500">
-              Berat:{" "}
-              <span className="font-medium text-stone-700">
-                {order.target_weight} g
+                {order.customer_wa}
               </span>
             </p>
           )}
@@ -950,6 +798,10 @@ function PhaseForm({
           )}
         </div>
       </div>
+
+      {config.work_order && (
+        <WorkOrderCard wo={config.work_order} theme={theme} />
+      )}
 
       <StageInputForm
         fields={config.fields as any}
@@ -974,7 +826,6 @@ function PhaseSuccess({
   theme: Theme;
   onNext: () => void;
 }) {
-  const isCreate = stage === "penerimaan_order";
   return (
     <div className="w-full max-w-[380px] text-center">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-50 border border-green-200">
@@ -993,7 +844,7 @@ function PhaseSuccess({
         </svg>
       </div>
       <h2 className="text-[18px] font-semibold text-stone-800 mb-1">
-        {isCreate ? "Order Berhasil Dibuat" : "Data Tersimpan"}
+        Data Tersimpan
       </h2>
       <p className="text-[13px] text-stone-500 mb-1">
         Tahap{" "}
@@ -1006,7 +857,7 @@ function PhaseSuccess({
         onClick={onNext}
         className={`w-full rounded-xl py-3 text-[14px] font-medium text-white shadow-sm transition-all active:scale-[0.98] ${theme.btn}`}
       >
-        {isCreate ? "Buat Order Baru" : "Kembali ke Daftar"}
+        Kembali ke Daftar
       </button>
     </div>
   );
@@ -1021,9 +872,6 @@ function WorkshopInputContent() {
   const [order, setOrder] = useState<OrderInfo | null>(null);
   const [config, setConfig] = useState<FormConfig | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [createdOrderNumber, setCreatedOrderNumber] = useState<string | null>(
-    null,
-  );
 
   // Load user profile on mount
   useEffect(() => {
@@ -1038,10 +886,7 @@ function WorkshopInputContent() {
         const profile: UserProfile = json.data;
         setUser(profile);
 
-        const dbStages: string[] = profile.role.allowed_stages ?? [];
-        const roleStages = ROLE_STAGE_MAP[profile.role.name] ?? [];
-        const stages = dbStages.length > 0 ? dbStages : roleStages;
-        setPhase(stages.includes("penerimaan_order") ? "create" : "list");
+        setPhase("list");
       } catch (err) {
         setLoadError(err instanceof Error ? err.message : "Gagal memuat sesi");
       }
@@ -1087,32 +932,23 @@ function WorkshopInputContent() {
     [user],
   );
 
-  const handleCreate = useCallback(
-    async (formData: Record<string, unknown>) => {
-      const res = await fetch("/api/stages/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stage: "penerimaan_order", data: formData }),
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error ?? "Gagal membuat order");
-      setCreatedOrderNumber(result.data.order_number);
-      setPhase("success");
-    },
-    [],
-  );
-
   const handleSubmit = useCallback(
     async (formData: Record<string, unknown>) => {
       if (!order || !config) return;
+      const data = { ...formData };
+      // StageInputForm uses check_key; API expects key
+      if (Array.isArray(data.quality_checklist)) {
+        data.quality_checklist = (data.quality_checklist as any[]).map(
+          (item) => ({
+            key: item.check_key ?? item.key,
+            passed: item.passed,
+          }),
+        );
+      }
       const res = await fetch("/api/stages/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          order_id: order.id,
-          stage: config.stage,
-          data: formData,
-        }),
+        body: JSON.stringify({ order_id: order.id, stage: config.stage, data }),
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error ?? "Gagal menyimpan data");
@@ -1130,11 +966,6 @@ function WorkshopInputContent() {
     setOrder(null);
     setConfig(null);
     setPhase("list");
-  }, []);
-
-  const handleNextCreate = useCallback(() => {
-    setCreatedOrderNumber(null);
-    setPhase("create");
   }, []);
 
   if (loadError) {
@@ -1182,17 +1013,6 @@ function WorkshopInputContent() {
     );
   }
 
-  if (phase === "create" && user) {
-    return (
-      <PhaseCreate
-        user={user}
-        theme={theme}
-        onCreate={handleCreate}
-        onLogout={handleLogout}
-      />
-    );
-  }
-
   if (phase === "form" && user && order && config) {
     return (
       <PhaseForm
@@ -1207,13 +1027,12 @@ function WorkshopInputContent() {
   }
 
   if (phase === "success") {
-    const fromCreate = !!createdOrderNumber;
     return (
       <PhaseSuccess
-        orderNumber={fromCreate ? createdOrderNumber! : order!.order_number}
-        stage={fromCreate ? "penerimaan_order" : config!.stage}
+        orderNumber={order!.order_number}
+        stage={config!.stage}
         theme={theme}
-        onNext={fromCreate ? handleNextCreate : handleBackToList}
+        onNext={handleBackToList}
       />
     );
   }

@@ -6,6 +6,7 @@ import { useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BrandHeader from "@/components/qr/BrandHeader";
 import LoginForm from "@/components/qr/LoginForm";
+import { getDashboardPath } from "@/lib/routes";
 
 // Wrapper karena useSearchParams perlu Suspense
 function WorkshopLoginContent() {
@@ -40,7 +41,19 @@ function WorkshopLoginContent() {
           throw new Error(data.error || "Login gagal");
         }
 
-        // Build redirect URL dengan parameter asli dari QR
+        const roleName: string = data.user?.role ?? "";
+        const roleGroup: string = data.user?.roleDetail?.role_group ?? "";
+
+        // Supervisor roles go to the supervisor dashboard, not the workshop input
+        const SUPERVISOR_ROLE_NAMES = ["operational_supervisor", "production_supervisor"];
+        if (SUPERVISOR_ROLE_NAMES.includes(roleName) || roleGroup === "management") {
+          const path = getDashboardPath(roleName) || "/dashboard/supervisor/monitoring";
+          router.push(path);
+          router.refresh();
+          return;
+        }
+
+        // Regular workshop workers — use the QR redirect with original params
         const params = new URLSearchParams();
         if (orderId) params.set("order_id", orderId);
         if (stage) params.set("stage", stage);

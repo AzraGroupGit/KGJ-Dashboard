@@ -1,4 +1,4 @@
-// middleware.ts
+// proxy.ts
 
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
@@ -11,7 +11,7 @@ import {
   isAuthOnlyPath,
 } from "@/lib/routes";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   let res = NextResponse.next({
     request: {
       headers: req.headers,
@@ -22,7 +22,7 @@ export async function middleware(req: NextRequest) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    console.error("[middleware] Missing Supabase env vars");
+    console.error("[proxy] Missing Supabase env vars");
     return res;
   }
 
@@ -107,7 +107,7 @@ export async function middleware(req: NextRequest) {
       if (ownDashboard) {
         return NextResponse.redirect(new URL(ownDashboard, req.url));
       }
-      // Fallback defensive — seharusnya tidak pernah sampai sini
+      // Fallback defensive
       return NextResponse.redirect(new URL(ROUTES.LOGIN, req.url));
     }
   }
@@ -143,7 +143,7 @@ async function fetchUserRoleName(
     .single();
 
   if (error || !data) {
-    console.warn("[middleware] failed to fetch user role:", error?.message);
+    console.warn("[proxy] failed to fetch user role:", error?.message);
     return null;
   }
 
@@ -164,11 +164,11 @@ async function fetchUserRoleName(
 // ════════════════════════════════════════════════════════════════════════════
 
 export const config = {
-  // Matcher mengeksklusi static assets & API routes biar middleware
+  // Matcher mengeksklusi static assets & API routes biar proxy
   // tidak jalan di setiap request yang tidak relevan.
   matcher: [
     /*
-     * Jalankan middleware di semua path KECUALI:
+     * Jalankan proxy di semua path KECUALI:
      * - _next/static (static files)
      * - _next/image (image optimization)
      * - favicon.ico, sitemap.xml, robots.txt

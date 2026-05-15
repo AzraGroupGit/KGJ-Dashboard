@@ -4,38 +4,46 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Maps production stage → its approval stage (what the order.current_stage will be when waiting)
 const PRODUCTION_TO_APPROVAL_STAGE: Record<string, string> = {
   penerimaan_order: "approval_penerimaan_order",
-  qc_1: "approval_qc_1",
-  qc_2: "approval_qc_2",
-  qc_3: "approval_qc_3",
-  pelunasan: "approval_pelunasan",
+  racik_bahan:      "approval_racik_bahan",
+  qc_1:             "approval_qc_1",
+  finishing:        "approval_produksi",
+  qc_2:             "approval_qc_2",
 };
 
-// Full stage sequence — used to determine next stage on approval
+const SUPERVISOR_ALLOWED_STAGES: Record<string, Set<string>> = {
+  operational_supervisor: new Set([
+    "approval_penerimaan_order",
+    "approval_racik_bahan",
+    "approval_qc_1",
+    "approval_qc_2",
+  ]),
+  production_supervisor: new Set(["approval_produksi"]),
+};
+
 const STAGE_SEQUENCE = [
   "penerimaan_order",
   "approval_penerimaan_order",
   "racik_bahan",
+  "approval_racik_bahan",
   "lebur_bahan",
+  "cek_kadar",
   "pembentukan_cincin",
   "pemasangan_permata",
   "pemolesan",
   "qc_1",
   "approval_qc_1",
-  "finishing",
   "laser",
+  "finishing",
+  "approval_produksi",
   "qc_2",
   "approval_qc_2",
-  "kelengkapan",
-  "qc_3",
-  "approval_qc_3",
+  "konfirmasi",
   "packing",
-  "pelunasan",
-  "approval_pelunasan",
   "pengiriman",
-];
+  "selesai",
+] as const;
 
 export async function POST(request: Request) {
   try {
@@ -49,7 +57,6 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient();
 
-    // Verify supervisor / superadmin access
     const { data: profile } = await admin
       .from("users")
       .select(
@@ -60,20 +67,15 @@ export async function POST(request: Request) {
       .single();
 
     if (!profile)
-      return NextResponse.json(
-        { error: "User tidak ditemukan" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 });
 
     const roleName: string = (profile.role as any)?.name ?? "";
     const roleGroup: string = (profile.role as any)?.role_group ?? "";
     const allowedStages: string[] = (profile.role as any)?.allowed_stages ?? [];
 
-    // Allow superadmin, management group, or users with supervisor role / allowed approval stages
     const isSupervisor =
       roleName === "superadmin" ||
       roleGroup === "management" ||
-      roleName === "supervisor" ||
       allowedStages.some((s) => s.startsWith("approval_"));
 
     if (!isSupervisor)
@@ -84,7 +86,6 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { order_id, stage, action, remarks } = body;
-    // stage_result_id is optional (e.g., penerimaan_order may not have one)
     const stage_result_id: string | null = body.stage_result_id ?? null;
 
     if (!order_id || !stage || !action)
@@ -99,28 +100,29 @@ export async function POST(request: Request) {
         { status: 400 },
       );
 
-    // The stage submitted should be an approval stage
-    const isApprovalStage = stage.startsWith("approval_");
-    if (!isApprovalStage)
+    if (!stage.startsWith("approval_"))
       return NextResponse.json(
-        {
-          error: `Tahap '${stage}' bukan tahap approval. Gunakan approval stage yang sesuai.`,
-        },
+        { error: `Tahap '${stage}' bukan tahap approval.` },
         { status: 400 },
       );
 
-    // Validate order
+    if (roleName !== "superadmin" && SUPERVISOR_ALLOWED_STAGES[roleName]) {
+      if (!SUPERVISOR_ALLOWED_STAGES[roleName].has(stage)) {
+        return NextResponse.json(
+          { error: "Anda tidak memiliki akses untuk approval tahap ini" },
+          { status: 403 },
+        );
+      }
+    }
+
     const { data: order, error: orderError } = await admin
-      .from("orders")
+      .from("cs_orders")
       .select("id, current_stage, status")
       .eq("id", order_id)
       .single();
 
     if (orderError || !order)
-      return NextResponse.json(
-        { error: "Order tidak ditemukan" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Order tidak ditemukan" }, { status: 404 });
 
     if (order.current_stage !== stage)
       return NextResponse.json(
@@ -128,7 +130,6 @@ export async function POST(request: Request) {
         { status: 409 },
       );
 
-    // Allow both waiting_approval and in_progress for approval stages
     if (order.status !== "waiting_approval" && order.status !== "in_progress")
       return NextResponse.json(
         {
@@ -137,7 +138,6 @@ export async function POST(request: Request) {
         { status: 409 },
       );
 
-    // Validate stage_result if provided
     if (stage_result_id) {
       const { data: sr, error: srError } = await admin
         .from("stage_results")
@@ -152,7 +152,6 @@ export async function POST(request: Request) {
         );
     }
 
-    // Find the production stage that triggered this approval
     const productionStage =
       Object.entries(PRODUCTION_TO_APPROVAL_STAGE).find(
         ([, approvalStage]) => approvalStage === stage,
@@ -161,46 +160,34 @@ export async function POST(request: Request) {
     const now = new Date().toISOString();
     const supervisorName: string = (profile as any)?.full_name ?? "Supervisor";
 
-    // ── Determine next stage up-front ─────────────────────────────────────────
     let nextStage: string | null = null;
     if (action === "approve") {
-      const idx = STAGE_SEQUENCE.indexOf(stage);
-      nextStage =
-        idx >= 0 && idx < STAGE_SEQUENCE.length - 1
-          ? STAGE_SEQUENCE[idx + 1]
-          : null;
+      const seq = STAGE_SEQUENCE as readonly string[];
+      const idx = seq.indexOf(stage);
+      nextStage = idx >= 0 && idx < seq.length - 1 ? seq[idx + 1] : null;
     }
 
-    // ── 1. Insert into approvals table ────────────────────────────────────────
+    // ── 1. Insert approval record ──────────────────────────────────────────────
     await admin.from("approvals").insert({
       order_id,
       approver_id: authUser.id,
-      stage,
+      stage: productionStage,
       decision: action === "approve" ? "approved" : "rejected",
       remarks: remarks ?? null,
       stage_result_id: stage_result_id ?? null,
       decided_at: now,
     });
 
-    // ── 2. Update order ───────────────────────────────────────────────────────
+    // ── 2. Update order ────────────────────────────────────────────────────────
     if (action === "approve") {
-      const isLastStage =
-        !nextStage ||
-        (nextStage === "pengiriman" && stage === "approval_pelunasan");
-      // Note: pengiriman is handled separately; approval_pelunasan → pengiriman
-      const orderUpdate: Record<string, any> = nextStage
-        ? {
-            current_stage: nextStage,
-            status: "in_progress",
-            updated_at: now,
-          }
-        : {
-            current_stage: "selesai",
-            status: "completed",
-            updated_at: now,
-          };
-
-      await admin.from("orders").update(orderUpdate).eq("id", order_id);
+      await admin
+        .from("cs_orders")
+        .update(
+          nextStage && nextStage !== "selesai"
+            ? { current_stage: nextStage, status: "in_progress", updated_at: now }
+            : { current_stage: "selesai", status: "completed", completed_at: now, updated_at: now },
+        )
+        .eq("id", order_id);
 
       await admin.from("order_stage_transitions").insert({
         order_id,
@@ -211,14 +198,9 @@ export async function POST(request: Request) {
         transitioned_at: now,
       });
     } else {
-      // Reject: send back to the production stage for rework
       await admin
-        .from("orders")
-        .update({
-          current_stage: productionStage,
-          status: "rework",
-          updated_at: now,
-        })
+        .from("cs_orders")
+        .update({ current_stage: productionStage, status: "rework", updated_at: now })
         .eq("id", order_id);
 
       await admin.from("order_stage_transitions").insert({
@@ -230,7 +212,6 @@ export async function POST(request: Request) {
         transitioned_at: now,
       });
 
-      // Also log rework
       await admin.from("rework_logs").insert({
         order_id,
         from_stage: stage,
@@ -242,7 +223,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // ── 3. Tag the stage_result with supervisor action (audit only) ────────────
+    // ── 3. Tag stage_result with supervisor action ─────────────────────────────
     if (stage_result_id) {
       const { data: sr } = await admin
         .from("stage_results")
@@ -264,7 +245,7 @@ export async function POST(request: Request) {
         .eq("id", stage_result_id);
     }
 
-    // ── 4. Activity log ───────────────────────────────────────────────────────
+    // ── 4. Activity log ────────────────────────────────────────────────────────
     await admin.from("activity_logs").insert({
       user_id: authUser.id,
       action: action === "approve" ? "APPROVE_STAGE" : "REJECT_STAGE",
@@ -298,9 +279,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("[POST /api/supervisor/approve] Error:", error);
-    return NextResponse.json(
-      { error: "Terjadi kesalahan server" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
   }
 }

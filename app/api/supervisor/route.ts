@@ -1,13 +1,13 @@
-// app/api/supervisor/route.ts — monitoring data
+// app/api/supervisor/route.ts — monitoring dashboard data
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const PRODUCTION_STAGES = new Set([
-  "racik_bahan",
   "lebur_bahan",
   "pembentukan_cincin",
+  "cek_kadar",
   "pemasangan_permata",
   "pemolesan",
   "finishing",
@@ -15,54 +15,60 @@ const PRODUCTION_STAGES = new Set([
 
 const OPERATIONAL_STAGES = new Set([
   "penerimaan_order",
+  "racik_bahan",
   "qc_1",
-  "laser",
   "qc_2",
-  "kelengkapan",
-  "qc_3",
+  "laser",
+  "konfirmasi",
   "packing",
-  "pelunasan",
   "pengiriman",
 ]);
 
 const APPROVAL_STAGES = new Set([
   "approval_penerimaan_order",
+  "approval_racik_bahan",
   "approval_qc_1",
+  "approval_produksi",
   "approval_qc_2",
-  "approval_qc_3",
-  "approval_pelunasan",
 ]);
 
-// Maps approval stage → production stage for pending count logic
+const OPERATIONAL_APPROVAL_STAGES = new Set([
+  "approval_penerimaan_order",
+  "approval_racik_bahan",
+  "approval_qc_1",
+  "approval_qc_2",
+]);
+
+const PRODUCTION_APPROVAL_STAGES = new Set(["approval_produksi"]);
+
 const APPROVAL_TO_PRODUCTION_STAGE: Record<string, string> = {
   approval_penerimaan_order: "penerimaan_order",
+  approval_racik_bahan: "racik_bahan",
   approval_qc_1: "qc_1",
+  approval_produksi: "finishing",
   approval_qc_2: "qc_2",
-  approval_qc_3: "qc_3",
-  approval_pelunasan: "pelunasan",
 };
 
 const STAGE_LABELS: Record<string, string> = {
   penerimaan_order: "Penerimaan Order",
   approval_penerimaan_order: "Approval Penerimaan Order",
-  racik_bahan: "Racik Bahan",
+  racik_bahan: "Persiapan Bahan",
+  approval_racik_bahan: "Approval Persiapan Bahan",
   lebur_bahan: "Lebur Bahan",
   pembentukan_cincin: "Pembentukan Cincin",
-  pemasangan_permata: "Pemasangan Permata",
-  pemolesan: "Pemolesan",
-  qc_1: "QC 1",
-  approval_qc_1: "Approval QC 1",
-  finishing: "Finishing",
+  cek_kadar: "Cek Kadar",
+  pemasangan_permata: "Micro Setting",
+  pemolesan: "Pemolesan Awal",
+  qc_1: "QC Awal",
+  approval_qc_1: "Approval QC Awal",
   laser: "Laser Engraving",
-  qc_2: "QC 2",
-  approval_qc_2: "Approval QC 2",
-  kelengkapan: "Kelengkapan",
-  qc_3: "QC 3 (Final)",
-  approval_qc_3: "Approval QC 3",
-  packing: "Packing",
-  pelunasan: "Pelunasan & Pembayaran",
-  approval_pelunasan: "Approval Pelunasan",
-  pengiriman: "Pengiriman & Handover",
+  finishing: "Finishing",
+  approval_produksi: "Approval Produksi",
+  qc_2: "QC Akhir",
+  approval_qc_2: "Approval QC Akhir",
+  konfirmasi: "Konfirmasi Customer Care",
+  packing: "Packing & Persiapan Kirim",
+  pengiriman: "Pengiriman",
 };
 
 async function verifySupervisor(userId: string) {
@@ -82,11 +88,9 @@ async function verifySupervisor(userId: string) {
   const roleGroup = (data.role as any)?.role_group;
   const allowedStages: string[] = (data.role as any)?.allowed_stages ?? [];
 
-  // Allow superadmin, management group, supervisor role, or users with approval stages
   if (
     roleName === "superadmin" ||
     roleGroup === "management" ||
-    roleName === "supervisor" ||
     allowedStages.some((s) => s.startsWith("approval_"))
   ) {
     return data;
@@ -97,40 +101,63 @@ async function verifySupervisor(userId: string) {
 export async function GET() {
   try {
     const supabase = await createClient();
-
     const {
       data: { user: authUser },
       error: authError,
     } = await supabase.auth.getUser();
-    if (authError || !authUser) {
+    if (authError || !authUser)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const supervisor = await verifySupervisor(authUser.id);
-    if (!supervisor) {
+    if (!supervisor)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    const svRoleName: string = (supervisor.role as any)?.name ?? "";
+    const svRoleGroup: string = (supervisor.role as any)?.role_group ?? "";
+    const svAllowedStages: string[] =
+      (supervisor.role as any)?.allowed_stages ?? [];
+
+    let supervisorApprovalStages: Set<string>;
+    if (svRoleName === "production_supervisor") {
+      supervisorApprovalStages = PRODUCTION_APPROVAL_STAGES;
+    } else if (svRoleName === "operational_supervisor") {
+      supervisorApprovalStages = OPERATIONAL_APPROVAL_STAGES;
+    } else if (svRoleGroup === "management") {
+      supervisorApprovalStages = APPROVAL_STAGES;
+    } else {
+      const fromAllowed = new Set(
+        svAllowedStages.filter((s) => s.startsWith("approval_")),
+      );
+      supervisorApprovalStages =
+        fromAllowed.size > 0 ? fromAllowed : APPROVAL_STAGES;
     }
 
-    // Admin client bypasses RLS for cross-user monitoring queries
     const admin = createAdminClient();
     const now = new Date();
     const todayStart = new Date(now);
     todayStart.setHours(0, 0, 0, 0);
 
-    // Fetch active orders and today's submission count in parallel
-    const [ordersResult, submissionsTodayResult] = await Promise.allSettled([
-      // Active orders with customer info — include approval stages
+    const [ordersResult, completedResult, submissionsTodayResult] = await Promise.allSettled([
       admin
-        .from("orders")
+        .from("cs_orders")
         .select(
-          "id, order_number, product_name, current_stage, status, created_at, updated_at, deadline, customers!orders_customer_id_fkey(name)",
+          "id, order_number, customer_name, current_stage, status, created_at, updated_at, deadline, completed_at",
         )
         .not("status", "in", "(completed,cancelled)")
         .is("deleted_at", null)
-        .order("created_at", { ascending: false })
+        .order("updated_at", { ascending: false })
         .limit(200),
 
-      // Submissions today — count only
+      admin
+        .from("cs_orders")
+        .select(
+          "id, order_number, customer_name, current_stage, status, created_at, updated_at, deadline, completed_at",
+        )
+        .eq("status", "completed")
+        .is("deleted_at", null)
+        .order("completed_at", { ascending: false })
+        .limit(50),
+
       admin
         .from("stage_results")
         .select("id", { count: "exact" })
@@ -141,49 +168,73 @@ export async function GET() {
 
     const orders =
       ordersResult.status === "fulfilled" ? ordersResult.value.data || [] : [];
+    const completedOrdersRaw =
+      completedResult.status === "fulfilled" ? completedResult.value.data || [] : [];
     const submissionsToday =
       submissionsTodayResult.status === "fulfilled"
         ? submissionsTodayResult.value.count || 0
         : 0;
 
-    // ── Accurate pending count — orders at approval stages ────────────────────
+    // ── Cumulative processing time for completed orders ─────────────────────────
+    const completedOrderIds = completedOrdersRaw.map((o: any) => o.id);
+    let transitionsByOrder = new Map<string, any[]>();
+    if (completedOrderIds.length > 0) {
+      const { data: transitions } = await admin
+        .from("order_stage_transitions")
+        .select("order_id, transitioned_at")
+        .in("order_id", completedOrderIds)
+        .order("transitioned_at", { ascending: true });
+      for (const t of transitions || []) {
+        const arr = transitionsByOrder.get(t.order_id) || [];
+        arr.push(t);
+        transitionsByOrder.set(t.order_id, arr);
+      }
+    }
+
+    const completedOrders = completedOrdersRaw.map((o: any) => {
+      const tx = transitionsByOrder.get(o.id) || [];
+      let totalMs = 0;
+      for (let i = 1; i < tx.length; i++) {
+        const diff = new Date(tx[i].transitioned_at).getTime() - new Date(tx[i - 1].transitioned_at).getTime();
+        if (diff > 0) totalMs += diff;
+      }
+      return { ...o, process_time_ms: totalMs > 0 ? totalMs : null };
+    });
+
+    // ── Pending approval count ─────────────────────────────────────────────────
     let pendingCount = 0;
     const { data: waitingOrders } = await admin
-      .from("orders")
+      .from("cs_orders")
       .select("id, current_stage")
-      .in("status", ["waiting_approval", "in_progress"])
-      .in("current_stage", [...APPROVAL_STAGES])
+      .in("status", ["waiting_approval"])
+      .in("current_stage", [...supervisorApprovalStages])
       .is("deleted_at", null)
       .limit(100);
 
     if (waitingOrders && waitingOrders.length > 0) {
-      // Separate penerimaan_order approvals (no stage_result) from others
-      const penerimaanApprovals = waitingOrders.filter(
+      pendingCount += waitingOrders.filter(
         (o: any) => o.current_stage === "approval_penerimaan_order",
-      );
-      pendingCount += penerimaanApprovals.length;
+      ).length;
 
       const otherIds = waitingOrders
         .filter((o: any) => o.current_stage !== "approval_penerimaan_order")
         .map((o: any) => o.id);
 
       if (otherIds.length > 0) {
-        // Fetch stage_results for the corresponding production stages
-        const { data: srRows } = await admin
-          .from("stage_results")
-          .select("order_id, stage, data, attempt_number")
-          .in("order_id", otherIds)
-          .not("finished_at", "is", null)
-          .order("attempt_number", { ascending: false });
-
-        // Build map: orderId → production stage we expect
         const orderExpectedStage = new Map<string, string>();
         for (const o of waitingOrders) {
           const prodStage = APPROVAL_TO_PRODUCTION_STAGE[o.current_stage];
-          if (prodStage) {
+          if (prodStage && o.current_stage !== "approval_penerimaan_order") {
             orderExpectedStage.set(o.id, prodStage);
           }
         }
+
+        const { data: srRows } = await admin
+          .from("stage_results")
+          .select("order_id, stage, attempt_number")
+          .in("order_id", otherIds)
+          .not("finished_at", "is", null)
+          .order("attempt_number", { ascending: false });
 
         const seen = new Set<string>();
         for (const r of srRows ?? []) {
@@ -196,14 +247,14 @@ export async function GET() {
       }
     }
 
-    // ── Get latest stage_results per order (for "last worker" and duration) ────
+    // ── Latest stage_results per order ─────────────────────────────────────────
     const orderIds = orders.map((o: any) => o.id);
     let latestResults: any[] = [];
     if (orderIds.length > 0) {
       const { data: results } = await admin
         .from("stage_results")
         .select(
-          "order_id, stage, finished_at, user_id, users!stage_results_user_id_fkey(full_name)",
+          "order_id, stage, finished_at, users!stage_results_user_id_fkey(full_name)",
         )
         .in("order_id", orderIds)
         .not("finished_at", "is", null)
@@ -211,38 +262,27 @@ export async function GET() {
       latestResults = results || [];
     }
 
-    // Build a map: orderId -> latest result
     const latestByOrder = new Map<string, any>();
     for (const r of latestResults) {
-      if (!latestByOrder.has(r.order_id)) {
-        latestByOrder.set(r.order_id, r);
-      }
+      if (!latestByOrder.has(r.order_id)) latestByOrder.set(r.order_id, r);
     }
 
-    // ── Enrich orders ─────────────────────────────────────────────────────────
+    // ── Enrich orders ──────────────────────────────────────────────────────────
     const enrichedOrders = orders.map((o: any) => {
       const latest = latestByOrder.get(o.id);
 
-      // Determine stage group
       let group: string;
-      if (PRODUCTION_STAGES.has(o.current_stage)) {
-        group = "production";
-      } else if (OPERATIONAL_STAGES.has(o.current_stage)) {
-        group = "operational";
-      } else if (APPROVAL_STAGES.has(o.current_stage)) {
-        // Approval stages inherit the group of their production stage
+      if (PRODUCTION_STAGES.has(o.current_stage)) group = "production";
+      else if (OPERATIONAL_STAGES.has(o.current_stage)) group = "operational";
+      else if (APPROVAL_STAGES.has(o.current_stage)) {
         const prodStage = APPROVAL_TO_PRODUCTION_STAGE[o.current_stage];
         group =
-          prodStage && OPERATIONAL_STAGES.has(prodStage)
-            ? "operational"
-            : "production";
-      } else {
-        group = "other";
-      }
+          prodStage && PRODUCTION_STAGES.has(prodStage)
+            ? "production"
+            : "operational";
+      } else group = "other";
 
-      // finished_at of the last completed stage = when the order arrived at current stage
-      const arrivedAt =
-        latest?.finished_at || (o as any).updated_at || o.created_at;
+      const arrivedAt = latest?.finished_at || o.updated_at || o.created_at;
       const hoursAtStage = arrivedAt
         ? Math.floor(
             (now.getTime() - new Date(arrivedAt).getTime()) / 3_600_000,
@@ -252,12 +292,12 @@ export async function GET() {
       return {
         id: o.id,
         order_number: o.order_number,
-        product_name: o.product_name,
+        customer_name: o.customer_name,
         current_stage: o.current_stage,
         stage_label: STAGE_LABELS[o.current_stage] || o.current_stage,
         stage_group: group,
+        status: o.status,
         deadline: o.deadline,
-        customer_name: (o as any).customers?.name || null,
         last_worker: (latest?.users as any)?.full_name || null,
         last_submission_at: latest?.finished_at || null,
         hours_at_stage: hoursAtStage,
@@ -265,28 +305,42 @@ export async function GET() {
       };
     });
 
-    const productionCount = enrichedOrders.filter(
-      (o: any) => o.stage_group === "production",
-    ).length;
-    const operationalCount = enrichedOrders.filter(
-      (o: any) => o.stage_group === "operational",
-    ).length;
-    const approvalCount = enrichedOrders.filter((o: any) =>
-      APPROVAL_STAGES.has(o.current_stage),
-    ).length;
+    // Scope the order list to the supervisor's group
+    let scopedOrders = enrichedOrders;
+    if (svRoleName === "production_supervisor") {
+      scopedOrders = enrichedOrders.filter(
+        (o: any) => o.stage_group === "production",
+      );
+    } else if (svRoleName === "operational_supervisor") {
+      scopedOrders = enrichedOrders.filter(
+        (o: any) => o.stage_group === "operational",
+      );
+    }
 
     return NextResponse.json({
       success: true,
       data: {
+        supervisor: {
+          role: svRoleName,
+          role_group: svRoleGroup,
+          approval_stages: [...supervisorApprovalStages],
+        },
         stats: {
-          totalActive: orders.length,
-          productionCount,
-          operationalCount,
-          approvalCount,
+          totalActive: scopedOrders.length,
+          productionCount: scopedOrders.filter(
+            (o: any) => o.stage_group === "production",
+          ).length,
+          operationalCount: scopedOrders.filter(
+            (o: any) => o.stage_group === "operational",
+          ).length,
+          approvalCount: scopedOrders.filter((o: any) =>
+            supervisorApprovalStages.has(o.current_stage),
+          ).length,
           submissionsToday,
           pendingApprovals: pendingCount,
         },
-        orders: enrichedOrders,
+        orders: scopedOrders,
+        completedOrders,
       },
     });
   } catch (error) {

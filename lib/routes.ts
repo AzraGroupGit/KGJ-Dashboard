@@ -87,6 +87,7 @@ export const SUPERADMIN_ROUTES = {
 
   // OPR-PRD submenu
   OPRPRD_DASHBOARD: "/dashboard/superadmin/oprprd",
+  OPRPRD_MONITORING: "/dashboard/superadmin/oprprd/monitoring",
   OPRPRD_MONITORING_OPERASI: "/dashboard/superadmin/oprprd/operasi",
   OPRPRD_MONITORING_PRODUKSI: "/dashboard/superadmin/oprprd/produksi",
   OPRPRD_ANALISIS: "/dashboard/superadmin/oprprd/analisis",
@@ -96,6 +97,7 @@ export const SUPERADMIN_ROUTES = {
 export const CS_ROUTES = {
   DASHBOARD: "/dashboard/cs",
   INPUT_LEADS: "/dashboard/cs/input-leads",
+  INPUT_ORDER: "/dashboard/cs/input-order",
 } as const;
 
 export const MARKETING_ROUTES = {
@@ -117,6 +119,7 @@ export const SUPERVISOR_ROUTES = {
   DASHBOARD: "/dashboard/supervisor/bottleneck",
   MONITORING: "/dashboard/supervisor/monitoring",
   APPROVAL: "/dashboard/supervisor/approval",
+  ACCOUNTS: "/dashboard/supervisor/accounts",
 } as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -222,9 +225,13 @@ export function getDashboardPath(role: unknown): string | null {
     }
   }
 
-  // Supervisor — punya dashboard sendiri
-  if (role === "supervisor") {
-    return ROUTES.DASHBOARD_SUPERVISOR + "/bottleneck";
+  // Supervisor roles — punya dashboard sendiri
+  if (
+    role === "operational_supervisor" ||
+    role === "production_supervisor" ||
+    role === "supervisor"
+  ) {
+    return SUPERVISOR_ROUTES.DASHBOARD;
   }
 
   // Cek WorkshopRole — semua role workshop diarahkan ke QR login
@@ -246,8 +253,12 @@ export function canAccessPath(role: string, path: string): boolean {
   // Superadmin bisa akses semua (termasuk QR)
   if (role === "superadmin") return true;
 
-  // Supervisor — hanya akses dashboard supervisor
-  if (role === "supervisor") {
+  // Supervisor roles — hanya akses dashboard supervisor
+  if (
+    role === "operational_supervisor" ||
+    role === "production_supervisor" ||
+    role === "supervisor"
+  ) {
     return (
       path.startsWith(ROUTES.DASHBOARD_SUPERVISOR) || path.startsWith("/api/")
     );

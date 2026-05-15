@@ -13,7 +13,7 @@ const PRODUCTION_ROLES = [
 ];
 
 const SUSUT_STAGES = ["lebur_bahan", "pembentukan_cincin", "pemolesan"];
-const QC_STAGES = ["qc_1", "qc_2", "qc_3"]; // Removed qc_awal
+const QC_STAGES = ["qc_1", "qc_2", "qc_3"];
 
 function computeSusut(stage: string, data: any): number | null {
   if (stage === "lebur_bahan") {

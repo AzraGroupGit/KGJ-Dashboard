@@ -278,8 +278,8 @@ export default function InputLeadsPage() {
           </div>
 
           {/* Ringkasan bulan ini */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500">
               <p className="text-sm text-gray-600 mb-2">Total Input</p>
               <p className="text-2xl font-bold text-gray-800">
                 {monthInputs.length}

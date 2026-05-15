@@ -4,37 +4,44 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Maps production stage → its approval stage (the current_stage when waiting for approval)
 const PRODUCTION_TO_APPROVAL_STAGE: Record<string, string> = {
   penerimaan_order: "approval_penerimaan_order",
+  racik_bahan: "approval_racik_bahan",
   qc_1: "approval_qc_1",
+  finishing: "approval_produksi",
   qc_2: "approval_qc_2",
-  qc_3: "approval_qc_3",
-  pelunasan: "approval_pelunasan",
 };
 
-// Reverse map: approval stage → production stage
 const APPROVAL_TO_PRODUCTION_STAGE: Record<string, string> = Object.fromEntries(
   Object.entries(PRODUCTION_TO_APPROVAL_STAGE).map(([k, v]) => [v, k]),
 );
 
-// All approval stages currently in the flow
 const APPROVAL_STAGES = new Set(Object.values(PRODUCTION_TO_APPROVAL_STAGE));
 
 const STAGE_LABELS: Record<string, string> = {
   approval_penerimaan_order: "Approval Penerimaan Order",
-  approval_qc_1: "Approval QC 1",
-  approval_qc_2: "Approval QC 2",
-  approval_qc_3: "Approval QC 3",
-  approval_pelunasan: "Approval Pelunasan",
+  approval_racik_bahan: "Approval Persiapan Bahan",
+  approval_qc_1: "Approval QC Awal",
+  approval_produksi: "Approval Produksi",
+  approval_qc_2: "Approval QC Akhir",
 };
 
-const STAGE_GROUPS: Record<string, "production" | "operational"> = {
+const SUPERVISOR_VISIBLE_STAGES: Record<string, Set<string>> = {
+  operational_supervisor: new Set([
+    "approval_penerimaan_order",
+    "approval_racik_bahan",
+    "approval_qc_1",
+    "approval_qc_2",
+  ]),
+  production_supervisor: new Set(["approval_produksi"]),
+};
+
+const STAGE_GROUPS: Record<string, "operational" | "production"> = {
   approval_penerimaan_order: "operational",
-  approval_qc_1: "production",
-  approval_qc_2: "production",
-  approval_qc_3: "production",
-  approval_pelunasan: "operational",
+  approval_racik_bahan: "operational",
+  approval_qc_1: "operational",
+  approval_produksi: "production",
+  approval_qc_2: "operational",
 };
 
 export async function GET() {
@@ -59,68 +66,66 @@ export async function GET() {
       .single();
 
     if (!profile)
-      return NextResponse.json(
-        { error: "User tidak ditemukan" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 });
 
     const roleName: string = (profile.role as any)?.name ?? "";
     const roleGroup: string = (profile.role as any)?.role_group ?? "";
     const allowedStages: string[] = (profile.role as any)?.allowed_stages ?? [];
 
-    // Allow superadmin, management group, supervisor role, or users with approval stages
     const isSupervisor =
       roleName === "superadmin" ||
       roleGroup === "management" ||
-      roleName === "supervisor" ||
       allowedStages.some((s) => s.startsWith("approval_"));
 
     if (!isSupervisor)
       return NextResponse.json(
-        {
-          error:
-            "Forbidden: hanya supervisor yang dapat melihat daftar approval",
-        },
+        { error: "Forbidden: hanya supervisor yang dapat melihat daftar approval" },
         { status: 403 },
       );
 
-    // ── 1. Orders currently at an approval stage ───────────────────────────────
-    //    These are orders submitted by workers that now need supervisor action.
-    //    They can be in "waiting_approval" or "in_progress" status at an approval stage.
+    let visibleApprovalStages: string[];
+    if (roleName === "superadmin") {
+      visibleApprovalStages = [...APPROVAL_STAGES];
+    } else if (SUPERVISOR_VISIBLE_STAGES[roleName]) {
+      visibleApprovalStages = [...SUPERVISOR_VISIBLE_STAGES[roleName]];
+    } else {
+      visibleApprovalStages = [...APPROVAL_STAGES];
+    }
+
+    // ── 1. cs_orders at an approval stage ─────────────────────────────────────
     const { data: pendingOrders, error: ordersError } = await admin
-      .from("orders")
+      .from("cs_orders")
       .select(
-        `
-        id, order_number, product_name, current_stage, status, updated_at,
-        customers!inner ( name ),
-        users!orders_created_by_fkey ( full_name )
-      `,
+        `id, order_number, customer_name, customer_wa, customer_email, customer_instagram,
+         current_stage, status, updated_at, tgl_order,
+         deadline, harga, dp_amount, acara, kebutuhan_acara, alat_ukur,
+         ukuran_pria, ukiran_pria, jenis_cincin_pria, keterangan_pria,
+         ukuran_wanita, ukiran_wanita, jenis_cincin_wanita, keterangan_wanita,
+         font, laser_position, pengiriman, box, alamat_pengiriman,
+         reference_image_pria_url, reference_image_wanita_url,
+         users!cs_orders_created_by_fkey ( full_name )`,
       )
       .in("status", ["waiting_approval", "in_progress"])
-      .in("current_stage", [...APPROVAL_STAGES])
+      .in("current_stage", visibleApprovalStages)
       .is("deleted_at", null)
       .order("updated_at", { ascending: false })
       .limit(100);
 
     if (ordersError) {
-      console.error("[Pending] Orders query error:", ordersError);
-      return NextResponse.json(
-        { error: "Gagal mengambil data" },
-        { status: 500 },
-      );
+      console.error("[Pending] cs_orders query error:", ordersError);
+      return NextResponse.json({ error: "Gagal mengambil data" }, { status: 500 });
     }
 
-    // ── 2. Fetch the latest stage_result for the PRODUCTION stage ──────────────
-    //    Each approval stage corresponds to a production stage (e.g., approval_qc_1 ← qc_1).
-    //    The stage_result was created at the production stage, not the approval stage.
+    // ── 2. stage_results for non-penerimaan_order approvals ──────────────────
+    // stage_results.order_id references cs_orders.id
     const orderProductionStageMap: Record<string, string> = {};
-    const orderIds: string[] = [];
+    const stageResultOrderIds: string[] = [];
 
     for (const o of pendingOrders ?? []) {
       const productionStage = APPROVAL_TO_PRODUCTION_STAGE[o.current_stage];
-      if (productionStage) {
-        orderProductionStageMap[o.id] = productionStage;
-        orderIds.push(o.id);
+      if (productionStage && productionStage !== "penerimaan_order") {
+        orderProductionStageMap[(o as any).id] = productionStage;
+        stageResultOrderIds.push((o as any).id);
       }
     }
 
@@ -136,21 +141,17 @@ export async function GET() {
       }
     > = {};
 
-    if (orderIds.length > 0) {
-      // Fetch stage_results for the production stages that triggered these approvals
+    if (stageResultOrderIds.length > 0) {
       const { data: results } = await admin
         .from("stage_results")
         .select(
-          `
-          id, order_id, stage, data, attempt_number, finished_at,
-          users!stage_results_user_id_fkey ( full_name, role:roles!users_role_id_fkey(name) )
-        `,
+          `id, order_id, stage, data, attempt_number, finished_at,
+           users!stage_results_user_id_fkey ( full_name, role:roles!users_role_id_fkey(name) )`,
         )
-        .in("order_id", orderIds)
+        .in("order_id", stageResultOrderIds)
         .not("finished_at", "is", null)
         .order("attempt_number", { ascending: false });
 
-      // Keep only the latest attempt per order that matches the production stage
       const seen = new Set<string>();
       for (const r of results ?? []) {
         const productionStage = orderProductionStageMap[r.order_id];
@@ -158,7 +159,6 @@ export async function GET() {
         if (seen.has(r.order_id)) continue;
         seen.add(r.order_id);
 
-        // Strip internal supervisor audit fields
         const {
           _sv_action: _a,
           _sv_notes: _n,
@@ -178,47 +178,96 @@ export async function GET() {
       }
     }
 
-    // ── 3. Shape response ─────────────────────────────────────────────────────
-
+    // ── 3. Shape response ──────────────────────────────────────────────────────
     const pending = (pendingOrders ?? [])
       .map((o: any) => {
-        const sr = stageResultMap[o.id];
         const productionStage =
           APPROVAL_TO_PRODUCTION_STAGE[o.current_stage] ?? o.current_stage;
         const isPenerimaanOrder = productionStage === "penerimaan_order";
+        const sr = stageResultMap[o.id] ?? null;
+
+        // work_order comes directly from the cs_order
+        const work_order = {
+          cs_order_id: o.id,
+          cs_order_number: o.order_number,
+          customer_name: o.customer_name,
+          customer_wa: o.customer_wa ?? null,
+          customer_email: o.customer_email ?? null,
+          ukuran_pria: o.ukuran_pria ?? null,
+          ukiran_pria: o.ukiran_pria ?? null,
+          jenis_cincin_pria: o.jenis_cincin_pria ?? null,
+          keterangan_pria: o.keterangan_pria ?? null,
+          ukuran_wanita: o.ukuran_wanita ?? null,
+          ukiran_wanita: o.ukiran_wanita ?? null,
+          jenis_cincin_wanita: o.jenis_cincin_wanita ?? null,
+          keterangan_wanita: o.keterangan_wanita ?? null,
+          font: o.font ?? null,
+          laser_position: o.laser_position ?? null,
+          acara: o.acara ?? null,
+          alat_ukur: o.alat_ukur ?? null,
+          harga: o.harga ?? null,
+          dp_amount: o.dp_amount ?? null,
+          deadline: o.deadline ?? null,
+          pengiriman: o.pengiriman ?? null,
+          alamat_pengiriman: o.alamat_pengiriman ?? null,
+          reference_image_pria_url: o.reference_image_pria_url ?? null,
+          reference_image_wanita_url: o.reference_image_wanita_url ?? null,
+        };
+
+        // For penerimaan_order: no stage_result; data = cs_order fields
+        let stageData: Record<string, unknown> | null = null;
+        if (isPenerimaanOrder) {
+          stageData = {
+            customer_name: o.customer_name,
+            customer_wa: o.customer_wa,
+            customer_email: o.customer_email,
+            deadline: o.deadline,
+            harga: o.harga,
+            dp_amount: o.dp_amount,
+            ukuran_pria: o.ukuran_pria,
+            ukiran_pria: o.ukiran_pria,
+            jenis_cincin_pria: o.jenis_cincin_pria,
+            keterangan_pria: o.keterangan_pria,
+            ukuran_wanita: o.ukuran_wanita,
+            ukiran_wanita: o.ukiran_wanita,
+            jenis_cincin_wanita: o.jenis_cincin_wanita,
+            keterangan_wanita: o.keterangan_wanita,
+            font: o.font,
+            laser_position: o.laser_position,
+            acara: o.acara,
+            pengiriman: o.pengiriman,
+            alamat_pengiriman: o.alamat_pengiriman,
+            reference_image_pria_url: o.reference_image_pria_url,
+            reference_image_wanita_url: o.reference_image_wanita_url,
+          };
+        } else if (sr) {
+          stageData = sr.data;
+        }
 
         return {
           order_id: o.id,
           order_number: o.order_number,
-          product_name: o.product_name,
-          customer_name: o.customers?.name ?? "—",
+          product_name: o.customer_name,
+          customer_name: o.customer_name,
           stage: o.current_stage,
           stage_label: STAGE_LABELS[o.current_stage] ?? o.current_stage,
-          stage_group: STAGE_GROUPS[o.current_stage] ?? "production",
+          stage_group: STAGE_GROUPS[o.current_stage] ?? "operational",
           production_stage: productionStage,
           waiting_since: o.updated_at,
-          // stage_result fields (may be null if no result found)
           stage_result_id: sr?.id ?? null,
           attempt_number: sr?.attempt_number ?? null,
-          submitted_at: sr?.finished_at ?? null,
+          submitted_at: isPenerimaanOrder
+            ? (o.tgl_order ?? o.updated_at)
+            : (sr?.finished_at ?? null),
           worker_name: isPenerimaanOrder
             ? (o.users?.full_name ?? "—")
             : (sr?.user_name ?? "—"),
           worker_role: isPenerimaanOrder
             ? "customer_service"
             : (sr?.user_role ?? "—"),
-          data: sr?.data ?? null,
+          data: stageData,
+          work_order,
         };
-      })
-      .filter((item: any) => {
-        // For non-penerimaan stages, only include if we found a stage_result
-        if (
-          item.production_stage !== "penerimaan_order" &&
-          !item.stage_result_id
-        ) {
-          return false;
-        }
-        return true;
       });
 
     return NextResponse.json({
@@ -228,9 +277,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("[GET /api/supervisor/pending] Error:", error);
-    return NextResponse.json(
-      { error: "Terjadi kesalahan server" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
   }
 }

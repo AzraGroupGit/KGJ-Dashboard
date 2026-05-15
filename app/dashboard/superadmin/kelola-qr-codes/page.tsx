@@ -21,6 +21,7 @@ interface Role {
   name: string;
   role_group: "management" | "operational" | "production";
   description: string | null;
+  allowed_stages: string[];
 }
 
 interface QRCode {
@@ -28,6 +29,7 @@ interface QRCode {
   role_id: string;
   role_name?: string;
   role_group?: string;
+  allowed_stages: string[];
   workstation_name: string;
   location: string | null;
   qr_token: string;
@@ -77,6 +79,28 @@ const ACTION_STYLES: Record<string, { label: string; color: string }> = {
   read: { label: "Baca", color: "bg-gray-50 text-gray-700" },
   delete: { label: "Hapus", color: "bg-red-50 text-red-700" },
   reject: { label: "Tolak", color: "bg-orange-50 text-orange-700" },
+};
+
+const STAGE_LABELS: Record<string, string> = {
+  penerimaan_order: "Penerimaan Order",
+  approval_penerimaan_order: "Approval Penerimaan Order",
+  racik_bahan: "Persiapan Bahan",
+  approval_racik_bahan: "Approval Persiapan Bahan",
+  lebur_bahan: "Lebur Bahan",
+  pembentukan_cincin: "Pembentukan Cincin",
+  cek_kadar: "Cek Kadar",
+  pemasangan_permata: "Micro Setting",
+  pemolesan: "Pemolesan Awal",
+  qc_1: "QC Awal",
+  approval_qc_1: "Approval QC Awal",
+  laser: "Laser Engraving",
+  finishing: "Finishing",
+  approval_produksi: "Approval Produksi",
+  qc_2: "QC Akhir",
+  approval_qc_2: "Approval QC Akhir",
+  konfirmasi: "Konfirmasi Customer Care",
+  packing: "Packing & Persiapan Kirim",
+  pengiriman: "Pengiriman",
 };
 
 type AlertState = {
@@ -742,6 +766,7 @@ export default function KelolaQRPage() {
                               getRoleGroupBadge={getRoleGroupBadge}
                               formatRelativeTime={formatRelativeTime}
                               isProcessing={isProcessing}
+                              stageLabels={STAGE_LABELS}
                             />
                           ))}
                         </div>
@@ -765,6 +790,7 @@ export default function KelolaQRPage() {
                               getRoleGroupBadge={getRoleGroupBadge}
                               formatRelativeTime={formatRelativeTime}
                               isProcessing={isProcessing}
+                              stageLabels={STAGE_LABELS}
                             />
                           ))}
                         </div>
@@ -881,6 +907,20 @@ export default function KelolaQRPage() {
                 );
               })}
             </select>
+            {generateForm.role_id && (() => {
+              const selected = roles.find((r) => r.id === generateForm.role_id);
+              const stages = selected?.allowed_stages ?? [];
+              if (stages.length === 0) return null;
+              return (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {stages.map((s) => (
+                    <span key={s} className="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                      {STAGE_LABELS[s] ?? s}
+                    </span>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           <Input
@@ -973,6 +1013,18 @@ export default function KelolaQRPage() {
                 <span className="text-gray-500">Grup Role</span>
                 {getRoleGroupBadge(selectedQR.role_group || "")}
               </div>
+              {selectedQR.allowed_stages && selectedQR.allowed_stages.length > 0 && (
+                <div className="py-2 px-3">
+                  <p className="text-gray-500 text-sm mb-2">Tahap yang Ditangani</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedQR.allowed_stages.map((s) => (
+                      <span key={s} className="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                        {STAGE_LABELS[s] ?? s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               {selectedQR.location && (
                 <div className="flex justify-between py-2 px-3">
                   <span className="text-gray-500">Lokasi</span>
@@ -1094,6 +1146,7 @@ interface QRCodeCardProps {
   getRoleGroupBadge: (group: string) => React.ReactNode;
   formatRelativeTime: (iso: string) => string;
   isProcessing: boolean;
+  stageLabels: Record<string, string>;
 }
 
 function QRCodeCard({
@@ -1105,6 +1158,7 @@ function QRCodeCard({
   getRoleGroupBadge,
   formatRelativeTime,
   isProcessing,
+  stageLabels,
 }: QRCodeCardProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
@@ -1153,6 +1207,18 @@ function QRCodeCard({
           <div className="flex items-center gap-2">
             {getRoleGroupBadge(qr.role_group || "")}
           </div>
+          {qr.allowed_stages && qr.allowed_stages.length > 0 && (
+            <div className="flex flex-wrap gap-1 pt-0.5">
+              {qr.allowed_stages.map((s) => (
+                <span
+                  key={s}
+                  className="inline-flex items-center px-1.5 py-0.5 text-[10px] rounded bg-slate-100 text-slate-600"
+                >
+                  {stageLabels[s] ?? s}
+                </span>
+              ))}
+            </div>
+          )}
           {qr.location && (
             <p className="text-xs text-gray-500 truncate flex items-center gap-1">
               <svg

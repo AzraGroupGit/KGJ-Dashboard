@@ -10,6 +10,7 @@ interface Role {
   name: string;
   role_group: string;
   description: string | null;
+  allowed_stages: string[] | null;
 }
 
 interface QRCode {
@@ -38,6 +39,7 @@ interface TransformedQRCode {
   role_id: string;
   role_name: string | undefined;
   role_group: string | undefined;
+  allowed_stages: string[];
   workstation_name: string;
   location: string | null;
   qr_token: string;
@@ -85,7 +87,8 @@ export async function GET(request: Request) {
           id,
           name,
           role_group,
-          description
+          description,
+          allowed_stages
         )
       `,
       )
@@ -118,6 +121,7 @@ export async function GET(request: Request) {
         role_id: qr.role_id,
         role_name: qr.roles?.name,
         role_group: qr.roles?.role_group,
+        allowed_stages: qr.roles?.allowed_stages ?? [],
         workstation_name: qr.workstation_name,
         location: qr.location,
         qr_token: qr.qr_token,
@@ -133,7 +137,6 @@ export async function GET(request: Request) {
         transformedData?.filter((d) => d.role_group === "operational") || [],
       production:
         transformedData?.filter((d) => d.role_group === "production") || [],
-      qc: transformedData?.filter((d) => d.role_group === "qc") || [],
     };
 
     return NextResponse.json({
