@@ -1038,7 +1038,6 @@ export default function SupervisorApprovalPage() {
       const u = json.data;
       const allowedStages: string[] = u.role?.allowed_stages ?? [];
       const canAccess =
-        u.role?.name === "superadmin" ||
         u.role?.role_group === "management" ||
         allowedStages.some((s: string) => s.startsWith("approval_"));
       if (!canAccess) {
@@ -1146,9 +1145,7 @@ export default function SupervisorApprovalPage() {
     { key: "operational", label: "Operasional", icon: Settings, count: operationalCount },
   ];
 
-  const tabs = supervisorGroup === "all"
-    ? allTabs
-    : allTabs.filter((t) => t.key === "all" || t.key === supervisorGroup);
+  const tabs = supervisorGroup === "all" ? allTabs : [];
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-slate-50">
@@ -1228,39 +1225,40 @@ export default function SupervisorApprovalPage() {
             </div>
           ) : (
             <div className="space-y-4 sm:space-y-5">
-              {/* Filter tabs - Horizontal scroll di mobile */}
-              <div className="border-b border-slate-200 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
-                <div className="flex items-center gap-1 min-w-max">
-                  {tabs.map((tab) => {
-                    const Icon = tab.icon;
-                    return (
-                      <button
-                        key={tab.key}
-                        onClick={() => setFilter(tab.key)}
-                        className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
-                          filter === tab.key
-                            ? "border-slate-800 text-slate-900"
-                            : "border-transparent text-slate-500 hover:text-slate-700"
-                        }`}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        <span>{tab.label}</span>
-                        <span
-                          className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+              {tabs.length > 0 && (
+                <div className="border-b border-slate-200 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
+                  <div className="flex items-center gap-1 min-w-max">
+                    {tabs.map((tab) => {
+                      const Icon = tab.icon;
+                      return (
+                        <button
+                          key={tab.key}
+                          onClick={() => setFilter(tab.key)}
+                          className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                             filter === tab.key
-                              ? "bg-slate-800 text-white"
-                              : tab.count > 0
-                                ? "bg-rose-100 text-rose-700"
-                                : "bg-slate-100 text-slate-500"
+                              ? "border-slate-800 text-slate-900"
+                              : "border-transparent text-slate-500 hover:text-slate-700"
                           }`}
                         >
-                          {tab.count}
-                        </span>
-                      </button>
-                    );
-                  })}
+                          <Icon className="h-4 w-4" />
+                          <span>{tab.label}</span>
+                          <span
+                            className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                              filter === tab.key
+                                ? "bg-slate-800 text-white"
+                                : tab.count > 0
+                                  ? "bg-slate-100 text-slate-700"
+                                  : "bg-slate-50 text-slate-400"
+                            }`}
+                          >
+                            {tab.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Cards */}
               {filteredItems.length === 0 ? (

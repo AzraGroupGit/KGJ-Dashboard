@@ -250,8 +250,10 @@ export function getDashboardPath(role: unknown): string | null {
  * Menerima role string (bisa AppRole atau WorkshopRole) dan path.
  */
 export function canAccessPath(role: string, path: string): boolean {
-  // Superadmin bisa akses semua (termasuk QR)
-  if (role === "superadmin") return true;
+  // Superadmin bisa akses semua KECUALI supervisor dashboard
+  if (role === "superadmin") {
+    return !path.startsWith(ROUTES.DASHBOARD_SUPERVISOR);
+  }
 
   // Supervisor roles — hanya akses dashboard supervisor
   if (

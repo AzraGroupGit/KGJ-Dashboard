@@ -910,7 +910,6 @@ export default function SupervisorBottleneckPage() {
       const allowedStages: string[] = u.role?.allowed_stages ?? [];
       const isSupervisor = ["production_supervisor", "operational_supervisor", "supervisor"].includes(u.role?.name);
       const canAccess =
-        u.role?.name === "superadmin" ||
         u.role?.role_group === "management" ||
         isSupervisor ||
         allowedStages.some((s: string) => s.startsWith("approval_"));

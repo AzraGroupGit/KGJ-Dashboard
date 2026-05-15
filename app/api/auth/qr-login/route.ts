@@ -60,8 +60,14 @@ export async function POST(request: Request) {
     const roleGroup = roleObj?.role_group;
 
     // QR login hanya untuk workshop + management (supervisor)
+    if (roleName === "superadmin") {
+      return NextResponse.json(
+        { error: "Akun Super Admin tidak dapat login melalui halaman workshop. Silakan gunakan halaman login dashboard." },
+        { status: 403 },
+      );
+    }
     const qrAllowedGroups = ["production", "operational", "management"];
-    if (roleName !== "superadmin" && !qrAllowedGroups.includes(roleGroup)) {
+    if (!qrAllowedGroups.includes(roleGroup)) {
       return NextResponse.json(
         {
           error:
