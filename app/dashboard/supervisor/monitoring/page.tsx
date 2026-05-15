@@ -896,7 +896,6 @@ export default function SupervisorMonitoringPage() {
       const u = json.data;
       const allowedStages: string[] = u.role?.allowed_stages ?? [];
       const canAccess =
-        u.role?.name === "superadmin" ||
         u.role?.role_group === "management" ||
         allowedStages.some((s: string) => s.startsWith("approval_"));
       if (!canAccess) {
