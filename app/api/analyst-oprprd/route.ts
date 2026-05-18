@@ -107,7 +107,7 @@ export async function GET(request: Request) {
         .lte("scanned_at", toISO),
 
       admin
-        .from("orders")
+        .from("cs_orders")
         .select("id, completed_at")
         .eq("status", "completed")
         .gte("completed_at", fromISO)

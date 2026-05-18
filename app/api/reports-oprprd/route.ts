@@ -126,7 +126,7 @@ export async function GET(request: Request) {
       const { data, error } = await admin
         .from("stage_results")
         .select(
-          "stage, started_at, finished_at, attempt_number, data, orders!stage_results_order_id_fkey(order_number, product_name), users!stage_results_user_id_fkey(full_name, role:roles!users_role_id_fkey(name))",
+          "stage, started_at, finished_at, attempt_number, data, cs_orders!stage_results_order_id_fkey(order_number, customer_name), users!stage_results_user_id_fkey(full_name, role:roles!users_role_id_fkey(name))",
         )
         .in("stage", [
           "racik_bahan",
@@ -170,7 +170,7 @@ export async function GET(request: Request) {
           i + 1,
           fmtDate(r.started_at),
           r.orders?.order_number ?? "-",
-          r.orders?.product_name ?? "-",
+          r.orders?.customer_name ?? "-",
           STAGE_LABELS[r.stage] ?? r.stage,
           r.users?.full_name ?? "-",
           (r.users?.role as any)?.name ?? "-",
@@ -209,7 +209,7 @@ export async function GET(request: Request) {
       const { data, error } = await admin
         .from("stage_results")
         .select(
-          "stage, started_at, finished_at, notes, data, orders!stage_results_order_id_fkey(order_number, product_name), users!stage_results_user_id_fkey(full_name)",
+          "stage, started_at, finished_at, notes, data, cs_orders!stage_results_order_id_fkey(order_number, customer_name), users!stage_results_user_id_fkey(full_name)",
         )
         .in("stage", ["qc_1", "qc_2", "qc_3"])
         .gte("started_at", fromISO)
@@ -228,7 +228,7 @@ export async function GET(request: Request) {
         i + 1,
         fmtDate(r.finished_at),
         r.orders?.order_number ?? "-",
-        r.orders?.product_name ?? "-",
+        r.orders?.customer_name ?? "-",
         STAGE_LABELS[r.stage] ?? r.stage,
         r.users?.full_name ?? "-",
         r.data?.overall_result ?? r.data?.result ?? "-",
@@ -406,7 +406,7 @@ export async function GET(request: Request) {
       admin
         .from("stage_results")
         .select(
-          "stage, started_at, finished_at, data, orders!stage_results_order_id_fkey(order_number), users!stage_results_user_id_fkey(full_name, role:roles!users_role_id_fkey(name))",
+          "stage, started_at, finished_at, data, cs_orders!stage_results_order_id_fkey(order_number), users!stage_results_user_id_fkey(full_name, role:roles!users_role_id_fkey(name))",
         )
         .in("stage", [
           "racik_bahan",
@@ -425,7 +425,7 @@ export async function GET(request: Request) {
       admin
         .from("stage_results")
         .select(
-          "stage, finished_at, data, notes, orders!stage_results_order_id_fkey(order_number), users!stage_results_user_id_fkey(full_name)",
+          "stage, finished_at, data, notes, cs_orders!stage_results_order_id_fkey(order_number), users!stage_results_user_id_fkey(full_name)",
         )
         .in("stage", ["qc_1", "qc_2", "qc_3"])
         .gte("started_at", fromISO)

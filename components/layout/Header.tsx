@@ -24,10 +24,12 @@ export default function Header({
   userEmail,
   role,
   logoutPath,
+  onMenuClick,
 }: {
   userEmail: string;
   role: string;
   logoutPath?: string;
+  onMenuClick?: () => void;
 }) {
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -252,24 +254,37 @@ export default function Header({
 
   return (
     <>
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 h-24">
-        <div className="h-full px-6">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 h-16 md:h-24">
+        <div className="h-full pl-14 pr-4 md:px-6">
           <div className="flex justify-between items-center h-full">
-            {/* Left: role + greeting */}
-            <div>
-              <h1 className="text-lg font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                {getRoleLabel()}
-              </h1>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">{greeting}</span>
-                {greeting && getDisplayName() && (
-                  <>
-                    <span className="text-xs text-gray-300">•</span>
-                    <span className="text-xs font-medium text-gray-700">
-                      {getDisplayName()}
-                    </span>
-                  </>
-                )}
+            {/* Left: hamburger + role + greeting */}
+            <div className="flex items-center gap-3">
+              {onMenuClick && (
+                <button
+                  onClick={onMenuClick}
+                  className="md:hidden h-10 w-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center shrink-0"
+                  aria-label="Buka menu"
+                >
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              )}
+              <div>
+                <h1 className="text-lg font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                  {getRoleLabel()}
+                </h1>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">{greeting}</span>
+                  {greeting && getDisplayName() && (
+                    <>
+                      <span className="text-xs text-gray-300">•</span>
+                      <span className="text-xs font-medium text-gray-700">
+                        {getDisplayName()}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -108,7 +108,7 @@ export async function GET(request: Request) {
 
       // OPRPRD: Active production orders
       admin
-        .from("orders")
+        .from("cs_orders")
         .select("id", { count: "exact" })
         .in("current_stage", [
           "racik_bahan",
@@ -120,16 +120,15 @@ export async function GET(request: Request) {
           "finishing",
           "laser",
           "qc_2",
-          "kelengkapan",
-          "qc_3",
           "packing",
+          "pengiriman",
         ])
         .not("status", "in", "(completed,cancelled)")
         .is("deleted_at", null),
 
       // OPRPRD: Completed orders in last 7 days with deadlines
       admin
-        .from("orders")
+        .from("cs_orders")
         .select("completed_at, deadline")
         .eq("status", "completed")
         .gte("completed_at", new Date(Date.now() - 7 * 86400000).toISOString())
@@ -137,14 +136,12 @@ export async function GET(request: Request) {
 
       // OPRPRD: Orders waiting approval (backlog)
       admin
-        .from("orders")
+        .from("cs_orders")
         .select("id", { count: "exact" })
         .in("current_stage", [
           "approval_penerimaan_order",
           "approval_qc_1",
           "approval_qc_2",
-          "approval_qc_3",
-          "approval_pelunasan",
         ])
         .is("deleted_at", null),
     ]);
@@ -166,7 +163,7 @@ export async function GET(request: Request) {
 
     // Total active orders as target
     const { count: totalActive } = await admin
-      .from("orders")
+      .from("cs_orders")
       .select("id", { count: "exact" })
       .not("status", "in", "(completed,cancelled)")
       .is("deleted_at", null);

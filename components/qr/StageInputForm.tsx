@@ -90,6 +90,7 @@ interface StageInputFormProps {
   permissions: { can_submit: boolean; can_edit: boolean; can_reject: boolean };
   initialData?: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
+  stageType?: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1732,12 +1733,21 @@ function initField(field: Field, initial: Record<string, unknown>): unknown {
   return v ?? "";
 }
 
+const SUBMIT_LABELS: Record<string, string> = {
+  quality_checklist: "Simpan Hasil QC",
+  select_action: "Konfirmasi",
+  delivery: "Simpan Pengiriman",
+  done: "Simpan & Lanjut",
+};
+
 export default function StageInputForm({
   fields,
   permissions,
   initialData = {},
   onSubmit,
+  stageType = "done",
 }: StageInputFormProps) {
+  const submitLabel = SUBMIT_LABELS[stageType] ?? "Simpan & Lanjut";
   const [formData, setFormData] = useState<Record<string, unknown>>(() => {
     const d: Record<string, unknown> = {};
     fields.forEach((f) => {
@@ -2162,7 +2172,7 @@ export default function StageInputForm({
                   Menyimpan...
                 </span>
               ) : (
-                "Simpan Data"
+                submitLabel
               )}
             </button>
           )}

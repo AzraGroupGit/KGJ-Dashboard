@@ -459,6 +459,8 @@ function AddressAutocomplete({
 const watermarkSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="520" height="240"><text x="260" y="120" dominant-baseline="middle" text-anchor="middle" font-family="Georgia,serif" font-size="26" letter-spacing="3" fill="rgba(150,110,30,0.10)" transform="rotate(-28 260 120)">PT Kotagede Jewellery</text></svg>`;
 const watermarkUrl = `url("data:image/svg+xml,${encodeURIComponent(watermarkSvg)}")`;
 
+const STORAGE_KEY = (t: string) => `order-form-draft-${t}`;
+
 export default function OrderFormPage() {
   const { token } = useParams<{ token: string }>();
   const [pageState, setPageState] = useState<PageState>("loading");
@@ -469,6 +471,21 @@ export default function OrderFormPage() {
   >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hargaDisplay, setHargaDisplay] = useState("");
+
+  const saveDraft = useCallback((data: OrderFormData) => {
+    try { localStorage.setItem(STORAGE_KEY(token), JSON.stringify(data)); } catch {}
+  }, [token]);
+
+  const loadDraft = useCallback((): OrderFormData | null => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY(token));
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }, [token]);
+
+  const clearDraft = useCallback(() => {
+    try { localStorage.removeItem(STORAGE_KEY(token)); } catch {}
+  }, [token]);
 
   useEffect(() => {
     const load = async () => {
@@ -487,6 +504,14 @@ export default function OrderFormPage() {
 
         if (data.form_status !== "pending") {
           setPageState("submitted");
+          return;
+        }
+
+        const saved = loadDraft();
+        if (saved) {
+          setFormData(saved);
+          if (saved.harga) setHargaDisplay(formatRupiah(saved.harga));
+          setPageState("ready");
           return;
         }
 
@@ -554,13 +579,17 @@ export default function OrderFormPage() {
       }
     };
     load();
-  }, [token]);
+  }, [token, loadDraft]);
 
   const setField = <K extends keyof OrderFormData>(
     key: K,
     val: OrderFormData[K],
   ) => {
-    setFormData((prev) => ({ ...prev, [key]: val }));
+    setFormData((prev) => {
+      const next = { ...prev, [key]: val };
+      saveDraft(next);
+      return next;
+    });
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
 
@@ -611,6 +640,7 @@ export default function OrderFormPage() {
         const body = await res.json();
         throw new Error(body.error || "Gagal menyimpan");
       }
+      clearDraft();
       setPageState("submitted");
     } catch (e) {
       alert(e instanceof Error ? e.message : "Terjadi kesalahan. Coba lagi.");
