@@ -262,7 +262,7 @@ export async function GET(request: Request) {
     if (order_number) {
       // First find order_id from order_number
       const { data: orderData } = await supabase
-        .from("orders")
+        .from("cs_orders")
         .select("id")
         .eq("order_number", order_number)
         .single();
@@ -413,7 +413,7 @@ export async function POST(request: Request) {
 
     // Verify order exists
     const { data: order, error: orderError } = await admin
-      .from("orders")
+      .from("cs_orders")
       .select("id, order_number, current_stage")
       .eq("id", order_id)
       .is("deleted_at", null)
