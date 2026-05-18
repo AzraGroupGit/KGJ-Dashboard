@@ -19,7 +19,6 @@ interface ScanEventWithRelations {
   orders: {
     id: string;
     order_number: string;
-    product_name: string;
     current_stage: string;
     status: string;
   } | null;
@@ -215,10 +214,9 @@ export async function GET(request: Request) {
         device_info,
         ip_address,
         scanned_at,
-        orders!inner (
+        cs_orders!inner (
           id,
           order_number,
-          product_name,
           current_stage,
           status
         ),
@@ -305,7 +303,6 @@ export async function GET(request: Request) {
         id: event.id,
         order_id: event.order_id,
         order_number: event.orders?.order_number,
-        product_name: event.orders?.product_name,
         current_order_stage: event.orders?.current_stage,
         order_status: event.orders?.status,
         user_id: event.user_id,

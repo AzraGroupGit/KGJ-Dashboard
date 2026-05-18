@@ -808,6 +808,7 @@ function PhaseForm({
         permissions={config.permissions as any}
         initialData={config.current_data}
         onSubmit={onSubmit}
+        stageType={config.stage_type}
       />
     </div>
   );

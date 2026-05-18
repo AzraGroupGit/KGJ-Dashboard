@@ -121,16 +121,16 @@ async function calculateAverageCycleTime(
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const { data, error } = await admin
-    .from("orders")
-    .select("order_date, completed_at")
-    .not("completed_at", "is", null)
+        .from("cs_orders")
+        .select("tgl_order, completed_at")
+        .not("completed_at", "is", null)
     .gte("completed_at", thirtyDaysAgo.toISOString())
     .is("deleted_at", null);
 
   if (error || !data || data.length === 0) return 0;
 
   const totalDays = data.reduce((sum: number, order: any) => {
-    const start = new Date(order.order_date);
+    const start = new Date(order.tgl_order);
     const end = new Date(order.completed_at);
     return sum + (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
   }, 0);
@@ -220,12 +220,12 @@ export async function GET(request: NextRequest) {
       recentActivitiesQuery,
     ] = await Promise.all([
       admin
-        .from("orders")
+        .from("cs_orders")
         .select("id", { count: "exact", head: true })
         .in("status", ["in_progress", "waiting_approval", "approved", "rework"])
         .is("deleted_at", null),
       admin
-        .from("orders")
+        .from("cs_orders")
         .select("id", { count: "exact", head: true })
         .in("status", ["in_progress", "waiting_approval", "rework"])
         .lte("deadline", todayDateStr)
@@ -233,23 +233,23 @@ export async function GET(request: NextRequest) {
       admin
         .from("stage_results")
         .select(
-          "order_id, data, stage, orders!stage_results_order_id_fkey(id, target_weight, target_karat, has_gemstone, gemstone_info, status)",
+          "order_id, data, stage, cs_orders!stage_results_order_id_fkey(id, status)",
         )
         .in("stage", ["racik_bahan", "pemasangan_permata", "finishing"])
         .order("started_at", { ascending: false }),
       admin
-        .from("orders")
+        .from("cs_orders")
         .select("id", { count: "exact", head: true })
         .gte("created_at", todayISO)
         .is("deleted_at", null),
       admin
-        .from("orders")
+        .from("cs_orders")
         .select("id", { count: "exact", head: true })
         .eq("status", "completed")
         .gte("completed_at", todayISO)
         .is("deleted_at", null),
       admin
-        .from("orders")
+        .from("cs_orders")
         .select("id", { count: "exact", head: true })
         .eq("status", "completed")
         .gte("completed_at", thirtyDaysAgoISO)
@@ -259,18 +259,18 @@ export async function GET(request: NextRequest) {
         .select("severity")
         .gte("created_at", thirtyDaysAgoISO),
       admin
-        .from("orders")
+        .from("cs_orders")
         .select("id", { count: "exact", head: true })
         .gte("created_at", startOfWeek.toISOString())
         .is("deleted_at", null),
       admin
-        .from("orders")
+        .from("cs_orders")
         .select("id", { count: "exact", head: true })
         .gte("created_at", startOfLastWeek.toISOString())
         .lt("created_at", startOfWeek.toISOString())
         .is("deleted_at", null),
       admin
-        .from("orders")
+        .from("cs_orders")
         .select("id, order_number, status, deadline, current_stage")
         .in("current_stage", [
           "approval_penerimaan_order",
@@ -306,26 +306,26 @@ export async function GET(request: NextRequest) {
       admin
         .from("stage_results")
         .select(
-          "id, data, started_at, finished_at, orders!stage_results_order_id_fkey(id, order_number, has_gemstone)",
+          "id, data, started_at, finished_at, cs_orders!stage_results_order_id_fkey(id, order_number)",
         )
         .eq("stage", "pemasangan_permata")
         .order("started_at", { ascending: false })
         .limit(100),
       admin
         .from("stage_results")
-        .select("data, orders!stage_results_order_id_fkey(target_weight)")
+        .select("data, cs_orders!stage_results_order_id_fkey(order_number)")
         .in("stage", ["racik_bahan", "lebur_bahan", "finishing"])
         .gte("started_at", thirtyDaysAgoISO)
         .not("finished_at", "is", null),
       admin
-        .from("orders")
+        .from("cs_orders")
         .select("current_stage")
         .in("status", ["in_progress", "waiting_approval", "approved", "rework"])
         .is("deleted_at", null),
       admin
         .from("scan_events")
         .select(
-          "id, action, stage, scanned_at, orders!scan_events_order_id_fkey(order_number), users!scan_events_user_id_fkey(full_name)",
+          "id, action, stage, scanned_at, cs_orders!scan_events_order_id_fkey(order_number), users!scan_events_user_id_fkey(full_name)",
         )
         .order("scanned_at", { ascending: false })
         .limit(30),
@@ -345,23 +345,6 @@ export async function GET(request: NextRequest) {
     (wipMaterialsQuery.data || []).forEach((record: any) => {
       if (processedOrders.has(record.order_id)) return;
       processedOrders.add(record.order_id);
-      const order = record.orders;
-      if (order) {
-        totalBeratEmas += order.target_weight || 0;
-        totalKarat += order.target_karat || 0;
-        karatCount++;
-        if (order.has_gemstone && order.gemstone_info) {
-          try {
-            const gemstones =
-              typeof order.gemstone_info === "string"
-                ? JSON.parse(order.gemstone_info)
-                : order.gemstone_info;
-            totalPermata += Array.isArray(gemstones) ? gemstones.length : 0;
-          } catch {
-            /* ignore */
-          }
-        }
-      }
     });
 
     const avgKarat = karatCount > 0 ? totalKarat / karatCount : 0;

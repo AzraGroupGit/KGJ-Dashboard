@@ -5,19 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 
 // ─── Type Definitions ─────────────────────────────────────────────────────────
 
-interface Customer {
-  id: string;
-  name: string;
-  phone: string | null;
-}
-
 interface OrderWithCustomer {
   id: string;
   order_number: string;
-  product_name: string;
   current_stage: string;
   status: string;
-  customers: Customer | null;
+  customer_name: string;
+  customer_wa: string | null;
 }
 
 interface Role {
@@ -124,17 +118,13 @@ export async function GET(
         device_info,
         ip_address,
         scanned_at,
-        orders!inner (
+        cs_orders!inner (
           id,
           order_number,
-          product_name,
           current_stage,
           status,
-          customers (
-            id,
-            name,
-            phone
-          )
+          customer_name,
+          customer_wa
         ),
         users!inner (
           id,
@@ -186,16 +176,10 @@ export async function GET(
       id: scanEvent.id,
       order_id: scanEvent.order_id,
       order_number: scanEvent.orders?.order_number,
-      product_name: scanEvent.orders?.product_name,
       current_order_stage: scanEvent.orders?.current_stage,
       order_status: scanEvent.orders?.status,
-      customer: scanEvent.orders?.customers
-        ? {
-            id: scanEvent.orders.customers.id,
-            name: scanEvent.orders.customers.name,
-            phone: scanEvent.orders.customers.phone,
-          }
-        : null,
+      customer_name: scanEvent.orders?.customer_name ?? null,
+      customer_wa: scanEvent.orders?.customer_wa ?? null,
       user_id: scanEvent.user_id,
       user_name: scanEvent.users?.full_name,
       user_email: scanEvent.users?.email,

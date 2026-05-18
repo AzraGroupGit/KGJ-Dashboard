@@ -4,8 +4,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { SUPERADMIN_ROUTES, CS_ROUTES, MARKETING_ROUTES, SUPERVISOR_ROUTES } from "@/lib/routes";
+import { useState, useEffect } from "react";
+import {
+  SUPERADMIN_ROUTES,
+  CS_ROUTES,
+  MARKETING_ROUTES,
+  SUPERVISOR_ROUTES,
+} from "@/lib/routes";
 
 // Tipe untuk menu item
 interface MenuItem {
@@ -107,7 +112,11 @@ const menuItems: Record<string, MenuItem[]> = {
   supervisor: [
     { name: "Monitoring", icon: "monitor", href: SUPERVISOR_ROUTES.MONITORING },
     { name: "Persetujuan", icon: "approval", href: SUPERVISOR_ROUTES.APPROVAL },
-    { name: "Kelola Akun Tim", icon: "users", href: SUPERVISOR_ROUTES.ACCOUNTS },
+    {
+      name: "Kelola Akun Tim",
+      icon: "users",
+      href: SUPERVISOR_ROUTES.ACCOUNTS,
+    },
   ],
 };
 
@@ -344,10 +353,15 @@ const iconMap = {
 export default function Sidebar({ role }: { role: string }) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsedMenus, setCollapsedMenus] = useState<CollapseState>({
-    BMS: false, // BMS default terbuka karena berisi menu utama
-    OPRPRD: true, // OPRPRD default tertutup
+    BMS: false,
+    OPRPRD: true,
   });
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   const items = menuItems[role as keyof typeof menuItems] || [];
 
@@ -510,20 +524,23 @@ export default function Sidebar({ role }: { role: string }) {
   };
 
   return (
-    <aside
-      className={`bg-white border-r border-gray-200 min-h-screen transition-all duration-300 ${
-        isCollapsed ? "w-20" : "w-64"
-      } relative`}
-    >
+    <>
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile hamburger */}
       <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-24 -translate-y-1/2 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-200 z-40"
-        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        onClick={() => setMobileOpen(true)}
+        className="fixed top-3 left-3 z-50 md:hidden h-10 w-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center shadow-md"
+        aria-label="Buka menu"
       >
         <svg
-          className={`w-3 h-3 text-gray-600 transition-transform duration-300 ${
-            isCollapsed ? "rotate-180" : ""
-          }`}
+          className="w-5 h-5 text-gray-600"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -532,23 +549,31 @@ export default function Sidebar({ role }: { role: string }) {
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+            d="M4 6h16M4 12h16M4 18h16"
           />
         </svg>
       </button>
 
-      {/* Logo Section */}
-      <div
-        className={`h-24 flex items-center border-b border-gray-200 ${
-          isCollapsed ? "px-4 justify-center" : "px-6"
-        }`}
+      <aside
+        className={`
+          fixed top-0 left-0 z-50 h-full bg-white flex flex-col
+          transform transition-transform duration-300 ease-in-out
+          md:sticky md:top-0 md:z-40 md:translate-x-0 md:flex-shrink-0
+          ${isCollapsed ? "md:w-20" : "md:w-64"}
+          w-72
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
+          border-r border-gray-200 shadow-xl md:shadow-none
+        `}
       >
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div
-            className={`bg-gradient-to-br ${getRoleBadgeColor()} rounded-xl flex items-center justify-center shadow-lg w-10 h-10 flex-shrink-0`}
+        {/* Mobile close */}
+        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 md:hidden">
+          <span className="text-sm font-bold text-gray-800">Menu</span>
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="p-2 -mr-2 rounded-lg hover:bg-gray-100"
           >
             <svg
-              className="w-5 h-5 text-white"
+              className="w-5 h-5 text-gray-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -557,64 +582,111 @@ export default function Sidebar({ role }: { role: string }) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                d="M6 18L18 6M6 6l12 12"
               />
             </svg>
-          </div>
-          {!isCollapsed && (
-            <div className="min-w-0">
-              <h2 className="text-base font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent whitespace-nowrap">
-                Operational
-              </h2>
-              <p className="text-sm font-semibold text-gray-600 whitespace-nowrap">
-                Dashboard
-              </p>
-            </div>
-          )}
+          </button>
         </div>
-      </div>
 
-      {/* Navigation */}
-      <nav className="mt-6 px-3">
-        {items.map((item, index) => renderMenuItem(item, index))}
-      </nav>
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="hidden md:flex absolute -right-3 top-24 -translate-y-1/2 w-6 h-6 bg-white border border-gray-200 rounded-full items-center justify-center shadow-md hover:shadow-lg transition-all duration-200 z-40"
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <svg
+            className={`w-3 h-3 text-gray-600 transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+            />
+          </svg>
+        </button>
 
-      {/* Bottom Section */}
-      <div
-        className={`absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 ${
-          isCollapsed ? "text-center" : ""
-        }`}
-      >
+        {/* Logo Section */}
         <div
-          className={`flex items-center ${
-            isCollapsed ? "justify-center" : "gap-3"
+          className={`h-24 flex items-center border-b border-gray-200 ${
+            isCollapsed ? "px-4 justify-center" : "px-6"
           }`}
         >
-          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <svg
-              className="w-4 h-4 text-gray-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="flex items-center gap-3 overflow-hidden">
+            <div
+              className={`bg-gradient-to-br ${getRoleBadgeColor()} rounded-xl flex items-center justify-center shadow-lg w-10 h-10 flex-shrink-0`}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-          {!isCollapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-500">Need help?</p>
-              <p className="text-xs font-medium text-gray-700">
-                Support Center
-              </p>
+              <svg
+                className="w-5 h-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
             </div>
-          )}
+            {!isCollapsed && (
+              <div className="min-w-0">
+                <h2 className="text-base font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent whitespace-nowrap">
+                  Operational
+                </h2>
+                <p className="text-sm font-semibold text-gray-600 whitespace-nowrap">
+                  Dashboard
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </aside>
+
+        {/* Navigation */}
+        <nav className="mt-6 px-3">
+          {items.map((item, index) => renderMenuItem(item, index))}
+        </nav>
+
+        {/* Bottom Section */}
+        <div
+          className={`absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 ${
+            isCollapsed ? "text-center" : ""
+          }`}
+        >
+          <div
+            className={`flex items-center ${
+              isCollapsed ? "justify-center" : "gap-3"
+            }`}
+          >
+            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg
+                className="w-4 h-4 text-gray-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-500">Need help?</p>
+                <p className="text-xs font-medium text-gray-700">
+                  Support Center
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </aside>
+    </>
   );
 }
