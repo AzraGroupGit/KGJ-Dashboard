@@ -162,7 +162,7 @@ const s = StyleSheet.create({
 
   // ── Spec column items ──
   specBlock: {
-    marginBottom: 6,
+    marginBottom: 8,
     paddingBottom: 5,
     borderBottomWidth: 0.5,
     borderBottomColor: "#e5e7eb",
@@ -178,7 +178,7 @@ const s = StyleSheet.create({
   },
   specLine: {
     flexDirection: "row",
-    marginBottom: 1,
+    marginBottom: 2,
   },
   specKey: {
     fontSize: 7.5,
@@ -190,6 +190,11 @@ const s = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     color: "#111827",
     flex: 1,
+  },
+  specValInline: {
+    fontSize: 7.5,
+    fontFamily: "Helvetica-Bold",
+    color: "#111827",
   },
   specBlankVal: {
     flex: 1,
@@ -223,6 +228,12 @@ const s = StyleSheet.create({
     borderRadius: 2,
     padding: 4,
     marginTop: 4,
+  },
+  alamatText: {
+    fontSize: 7,
+    color: "#374151",
+    marginTop: 3,
+    lineHeight: 1.4,
   },
   hargaLabel: {
     fontSize: 7,
@@ -377,7 +388,7 @@ export function OrderFormPDF({ order }: { order: CsOrder }) {
             <Text style={s.infoLabel}>Order ID</Text>
             <Text style={s.infoBoldValue}>{order.order_number}</Text>
             <Text style={s.infoLabel}>Kategori</Text>
-            <View style={s.infoBlank} />
+            <Text style={s.infoBoldValue}>{(order.kategori ?? "—").toUpperCase()}</Text>
           </View>
           {/* Col 2: Tukang + Nama */}
           <View style={s.infoCellBordered}>
@@ -401,6 +412,26 @@ export function OrderFormPDF({ order }: { order: CsOrder }) {
             <View style={s.infoBlank} />
             <Text style={s.infoLabel}>Deadline</Text>
             <Text style={s.infoBoldValue}>{fmtDate(order.deadline)}</Text>
+          </View>
+        </View>
+
+        {/* ── Info row 2: Acara, Tgl Acara, Alat Ukur, Laser Position ── */}
+        <View style={s.infoRow}>
+          <View style={s.infoCell}>
+            <Text style={s.infoLabel}>Acara</Text>
+            <Text style={s.infoValue}>{order.acara || "—"}</Text>
+          </View>
+          <View style={s.infoCellBordered}>
+            <Text style={s.infoLabel}>Tgl Acara</Text>
+            <Text style={s.infoValue}>{fmtDate(order.tgl_acara)}</Text>
+          </View>
+          <View style={s.infoCellBordered}>
+            <Text style={s.infoLabel}>Alat Ukur</Text>
+            <Text style={s.infoValue}>{order.alat_ukur || "—"}</Text>
+          </View>
+          <View style={s.infoCellLast}>
+            <Text style={s.infoLabel}>Laser Position</Text>
+            <Text style={s.infoValue}>{order.laser_position ? (order.laser_position === "dalam_luar" ? "Dalam & Luar" : order.laser_position) : "—"}</Text>
           </View>
         </View>
 
@@ -489,6 +520,15 @@ export function OrderFormPDF({ order }: { order: CsOrder }) {
             </View>
 
             <View style={s.specBlock}>
+              <Text style={s.specBlockTitle}>Fitur Cincin</Text>
+              <Text style={s.specValInline}>
+                {order.jenis_cincin_features && order.jenis_cincin_features.length > 0
+                  ? order.jenis_cincin_features.join(", ")
+                  : "—"}
+              </Text>
+            </View>
+
+            <View style={s.specBlock}>
               <Text style={s.specBlockTitle}>Estimasi Gramasi</Text>
               <View style={s.specLine}>
                 <Text style={s.specKey}>Pria :</Text>
@@ -517,6 +557,21 @@ export function OrderFormPDF({ order }: { order: CsOrder }) {
                 <Text style={s.specSingleLabel}>Box : </Text>
                 <Text style={s.specSingleValue}>{order.box || "—"}</Text>
               </View>
+            </View>
+
+            <View style={s.specBlock}>
+              <Text style={s.specBlockTitle}>Pengiriman</Text>
+              <Text style={s.specValInline}>{order.pengiriman || "—"}</Text>
+              {order.alamat_pengiriman ? (
+                <Text style={s.alamatText}>
+                  {order.alamat_pengiriman}
+                  {order.kelurahan ? `, ${order.kelurahan}` : ""}
+                  {order.kecamatan ? `, ${order.kecamatan}` : ""}
+                  {order.kabupaten_kota ? `, ${order.kabupaten_kota}` : ""}
+                  {order.provinsi ? `, ${order.provinsi}` : ""}
+                  {order.kodepos ? ` ${order.kodepos}` : ""}
+                </Text>
+              ) : null}
             </View>
 
             <View style={s.specBlock}>

@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notifySupervisors, getSupervisorRoleForApproval, notifyCsForOrder } from "@/lib/notifications";
 
 // ── Stage sequence ─────────────────────────────────────────────────────────────
 
@@ -296,6 +297,15 @@ export async function POST(request: Request) {
           transitioned_at: now,
         });
 
+        // Notify production supervisor about rework
+        notifySupervisors(
+          "production_supervisor",
+          "Rework — Cek Kadar",
+          `Order ${order.order_number} gagal cek kadar, dikembalikan ke Lebur Bahan.`,
+          "warning",
+          `/workshop/input?order_id=${orderId}`,
+        );
+
         return NextResponse.json({
           success: true,
           rework: true,
@@ -385,6 +395,15 @@ export async function POST(request: Request) {
           transitioned_at: now,
         });
 
+        // Notify production supervisor about rework
+        notifySupervisors(
+          "production_supervisor",
+          "Rework — Konfirmasi Customer",
+          `Order ${order.order_number} tidak disetujui customer care, dikembalikan ke QC Akhir.`,
+          "warning",
+          `/workshop/input?order_id=${orderId}`,
+        );
+
         return NextResponse.json({
           success: true,
           rework: true,
@@ -460,6 +479,17 @@ export async function POST(request: Request) {
       const approvalStage = APPROVAL_GATE_MAP[stage];
       if (approvalStage) {
         await advanceOrder(admin, orderId, stage, approvalStage, userId, true);
+        // Notify the right supervisor
+        const supRole = getSupervisorRoleForApproval(approvalStage);
+        if (supRole) {
+          notifySupervisors(
+            supRole,
+            "Menunggu Persetujuan",
+            `Order ${order.order_number} selesai tahap ${stage} dan menunggu approval.`,
+            "info",
+            `/dashboard/supervisor/approval`,
+          );
+        }
       }
 
       return NextResponse.json({
@@ -515,6 +545,14 @@ export async function POST(request: Request) {
           false,
           "Packing selesai — siap kirim",
         );
+
+      notifySupervisors(
+        "operational_supervisor",
+        "Siap Dikirim",
+        `Order ${order.order_number} sudah di-packing dan siap dikirim.`,
+        "info",
+        `/workshop/input`,
+      );
 
       return NextResponse.json({
         success: true,
@@ -583,6 +621,8 @@ export async function POST(request: Request) {
           transitioned_at: now,
         });
 
+        notifyCsForOrder(orderId);
+
         return NextResponse.json({
           success: true,
           message: "Pengiriman berhasil. Order selesai.",
@@ -631,6 +671,19 @@ export async function POST(request: Request) {
         userId,
         isWaiting,
       );
+    }
+
+    if (isWaiting && approvalStage) {
+      const supRole = getSupervisorRoleForApproval(approvalStage);
+      if (supRole) {
+        notifySupervisors(
+          supRole,
+          "Menunggu Persetujuan",
+          `Order ${order.order_number} selesai tahap ${stage} dan menunggu approval.`,
+          "info",
+          `/dashboard/supervisor/approval`,
+        );
+      }
     }
 
     return NextResponse.json({

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireCsOrAdmin } from "../route";
+import { notifySupervisors } from "@/lib/notifications";
 
 // ── Allowed update fields ──────────────────────────────────────────────────
 
@@ -104,6 +105,14 @@ export async function PUT(
         reason: "CS mengirim order untuk approval penerimaan",
         transitioned_at: patch.updated_at,
       });
+
+      notifySupervisors(
+        "operational_supervisor",
+        "Order Baru — Menunggu Approval",
+        `Order ${data.order_number} dari CS menunggu persetujuan penerimaan.`,
+        "info",
+        `/dashboard/supervisor/approval`,
+      );
     }
 
     return NextResponse.json({ data });
