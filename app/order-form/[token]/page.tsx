@@ -5,22 +5,23 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { countWorkingDays, getRecommendedKategori, KATEGORI_THRESHOLDS } from "@/lib/working-days";
+import AddressAutocomplete from "@/components/order/AddressAutocomplete";
 
 interface OrderFormData {
   tglChat: string;
   tglOrder: string;
   tglAcara: string;
+  kategori: string;
   acara: string;
-  kebutuhanAcara: string;
   deadline: string;
   orderVia: string;
-  orderViaChannel: string;
   sumber: string;
   sumberMedia: string;
   dariArtis: string;
-  kgjInstagramAccount: string;
-  kgjInstagramAccountCustom: string;
+  dariArtisDetail: string;
   harga: string;
+  dpPercent: string;
   dp: string;
   namaLengkap: string;
   alamatPengiriman: string;
@@ -41,10 +42,12 @@ interface OrderFormData {
   laserPosition: string;
   jenisCincinPria: string;
   jenisCincinWanita: string;
+  jenisCincinFeatures: string[];
   keteranganPria: string[];
   keteranganWanita: string[];
   pengiriman: string;
   box: string;
+  transferKeBank: string;
 }
 
 interface OrderInfo {
@@ -55,6 +58,7 @@ interface OrderInfo {
   deadline: string | null;
   acara: string | null;
   kebutuhan_acara: string | null;
+  kategori: string | null;
   order_via: string | null;
   order_via_channel: string | null;
   sumber_media: string | null;
@@ -62,6 +66,7 @@ interface OrderInfo {
   kgj_instagram_account: string | null;
   kgj_instagram_account_custom: string | null;
   dari_artis: boolean | null;
+  dari_artis_detail: string | null;
   harga: number | null;
   dp_amount: number | null;
   customer_wa: string | null;
@@ -81,11 +86,13 @@ interface OrderInfo {
   ukuran_wanita: string | null;
   ukiran_wanita: string | null;
   jenis_cincin_wanita: string | null;
+  jenis_cincin_features: string[];
   keterangan_wanita: string[];
   font: string | null;
   laser_position: string | null;
   pengiriman: string | null;
   box: string | null;
+  transfer_ke_bank: string | null;
 }
 
 type PageState = "loading" | "not_found" | "ready" | "submitted" | "error";
@@ -94,17 +101,16 @@ const emptyFormData = (): OrderFormData => ({
   tglChat: "",
   tglOrder: "",
   tglAcara: "",
+  kategori: "",
   acara: "",
-  kebutuhanAcara: "",
   deadline: "",
   orderVia: "",
-  orderViaChannel: "",
   sumber: "",
   sumberMedia: "",
   dariArtis: "",
-  kgjInstagramAccount: "",
-  kgjInstagramAccountCustom: "",
+  dariArtisDetail: "",
   harga: "",
+  dpPercent: "80",
   dp: "",
   namaLengkap: "",
   alamatPengiriman: "",
@@ -125,10 +131,12 @@ const emptyFormData = (): OrderFormData => ({
   laserPosition: "",
   jenisCincinPria: "",
   jenisCincinWanita: "",
-  keteranganPria: ["", "", ""],
-  keteranganWanita: ["", "", ""],
+  jenisCincinFeatures: [],
+  keteranganPria: [""],
+  keteranganWanita: [""],
   pengiriman: "",
   box: "",
+  transferKeBank: "",
 });
 
 function formatRupiah(raw: string): string {
@@ -140,6 +148,45 @@ function formatRupiah(raw: string): string {
 function parseRupiah(display: string): string {
   return display.replace(/\./g, "");
 }
+
+const LABELS: Record<string, string> = {
+  instagram: "Instagram",
+  google: "Google",
+  tiktok: "TikTok",
+  marketplace: "Marketplace",
+  recommendation: "Recommendation",
+  ots: "OTS",
+};
+
+const SUB_SOURCES: Record<string, { value: string; label: string }[]> = {
+  instagram: [
+    { value: "sponsored_ads", label: "Sponsored Instagram/Ads" },
+    { value: "brand_search", label: "Instagram Brand/Non-Brand Search" },
+    { value: "posts", label: "Instagram Posts (Followed/Not Followed)" },
+  ],
+  google: [
+    { value: "maps", label: "Google Maps" },
+    { value: "search", label: "Google Search" },
+    { value: "website", label: "Website" },
+    { value: "youtube", label: "YouTube" },
+  ],
+  marketplace: [
+    { value: "shopee", label: "Shopee" },
+    { value: "tokopedia", label: "Tokopedia" },
+  ],
+  recommendation: [
+    { value: "friends", label: "Friends" },
+    { value: "family", label: "Family" },
+    { value: "others", label: "Others" },
+  ],
+  ots: [
+    { value: "billboards", label: "Billboards" },
+    { value: "banners", label: "Banners" },
+    { value: "neon_signs", label: "Neon Signs" },
+    { value: "posters", label: "Posters" },
+    { value: "flags", label: "Flags" },
+  ],
+};
 
 const GOLD = "#C8A951";
 
@@ -173,287 +220,6 @@ function SectionDivider({ title }: { title: string }) {
   );
 }
 
-// ── LocationIQ address autocomplete ───────────────────────────────────────
-
-interface LocationIQSuggestion {
-  place_id: string;
-  display_name: string;
-  address: {
-    house_number?: string;
-    road?: string;
-    pedestrian?: string;
-    neighbourhood?: string;
-    quarter?: string;
-    suburb?: string;
-    village?: string;
-    hamlet?: string;
-    city_district?: string;
-    district?: string;
-    city?: string;
-    town?: string;
-    county?: string;
-    municipality?: string;
-    state?: string;
-    postcode?: string;
-  };
-}
-
-interface ParsedAddress {
-  alamatPengiriman: string;
-  kelurahan: string;
-  kecamatan: string;
-  kabupatenKota: string;
-  provinsi: string;
-  kodepos: string;
-}
-
-function parseLocationIQ(s: LocationIQSuggestion): ParsedAddress {
-  const a = s.address;
-  const road = a.road || a.pedestrian || "";
-  const alamatPengiriman = [a.house_number, road].filter(Boolean).join(" ");
-  return {
-    alamatPengiriman,
-    kelurahan:
-      a.neighbourhood || a.quarter || a.suburb || a.village || a.hamlet || "",
-    kecamatan: a.city_district || a.district || "",
-    kabupatenKota: a.city || a.town || a.county || a.municipality || "",
-    provinsi: a.state || "",
-    kodepos: a.postcode || "",
-  };
-}
-
-const LOCATIONIQ_KEY = process.env.NEXT_PUBLIC_LOCATIONIQ_API_KEY;
-
-function AddressAutocomplete({
-  onSelect,
-}: {
-  onSelect: (parsed: ParsedAddress, displayName: string) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<LocationIQSuggestion[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState("");
-  const containerRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  useEffect(() => {
-    if (query.length < 4) {
-      setSuggestions([]);
-      setIsOpen(false);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      if (abortRef.current) abortRef.current.abort();
-      abortRef.current = new AbortController();
-      setIsLoading(true);
-      try {
-        const url = `https://us1.locationiq.com/v1/autocomplete?key=${LOCATIONIQ_KEY}&q=${encodeURIComponent(query)}&countrycodes=id&addressdetails=1&limit=7&dedupe=1&format=json`;
-        const res = await fetch(url, { signal: abortRef.current.signal });
-        if (!res.ok) throw new Error("LocationIQ error");
-        const data: LocationIQSuggestion[] = await res.json();
-        setSuggestions(Array.isArray(data) ? data : []);
-        setIsOpen(true);
-      } catch (e: unknown) {
-        if (e instanceof Error && e.name !== "AbortError") setSuggestions([]);
-      } finally {
-        setIsLoading(false);
-      }
-    }, 450);
-    return () => clearTimeout(timer);
-  }, [query]);
-
-  const handleSelect = useCallback(
-    (s: LocationIQSuggestion) => {
-      const parsed = parseLocationIQ(s);
-      setSelected(s.display_name);
-      setQuery("");
-      setSuggestions([]);
-      setIsOpen(false);
-      onSelect(parsed, s.display_name);
-    },
-    [onSelect],
-  );
-
-  const handleClear = () => {
-    setSelected("");
-    setQuery("");
-    setSuggestions([]);
-    setIsOpen(false);
-  };
-
-  return (
-    <div ref={containerRef} className="relative">
-      {selected ? (
-        <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-300 rounded-xl p-3">
-          <svg
-            className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-          <p className="text-sm text-emerald-800 flex-1 leading-snug">
-            {selected}
-          </p>
-          <button
-            onClick={handleClear}
-            className="text-emerald-500 hover:text-emerald-700 flex-shrink-0 ml-1"
-            title="Cari ulang"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-      ) : (
-        <div className="relative">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            {isLoading ? (
-              <div
-                className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
-                style={{
-                  borderColor: `${GOLD} transparent transparent transparent`,
-                }}
-              />
-            ) : (
-              <svg
-                className="w-4 h-4 text-zinc-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            )}
-          </div>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ketik nama jalan, area, atau kota..."
-            className="w-full pl-10 pr-4 py-3 border-2 rounded-xl text-sm text-gray-800 bg-white placeholder-zinc-400 outline-none transition-colors"
-            style={{ borderColor: `${GOLD}60` }}
-            onFocus={(e) => {
-              e.target.style.borderColor = GOLD;
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = `${GOLD}60`;
-            }}
-            autoComplete="off"
-          />
-          {query && (
-            <button
-              onClick={() => {
-                setQuery("");
-                setSuggestions([]);
-                setIsOpen(false);
-              }}
-              className="absolute inset-y-0 right-3 flex items-center text-zinc-400 hover:text-zinc-600"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          )}
-        </div>
-      )}
-
-      {isOpen && suggestions.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-zinc-200 rounded-xl shadow-xl overflow-hidden">
-          {suggestions.map((s) => (
-            <button
-              key={s.place_id}
-              type="button"
-              onClick={() => handleSelect(s)}
-              className="w-full text-left px-4 py-3 hover:bg-zinc-50 border-b border-zinc-100 last:border-0 transition-colors"
-            >
-              <div className="flex items-start gap-2">
-                <svg
-                  className="w-4 h-4 flex-shrink-0 mt-0.5"
-                  style={{ color: GOLD }}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-                <span className="text-sm text-zinc-700 leading-snug">
-                  {s.display_name}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {isOpen &&
-        suggestions.length === 0 &&
-        !isLoading &&
-        query.length >= 4 && (
-          <div className="absolute z-50 mt-1 w-full bg-white border border-zinc-200 rounded-xl shadow-xl px-4 py-3 text-sm text-zinc-500">
-            Alamat tidak ditemukan. Coba kata kunci yang lebih spesifik.
-          </div>
-        )}
-    </div>
-  );
-}
-
 // ── Watermark background ───────────────────────────────────────────────────
 
 const watermarkSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="520" height="240"><text x="260" y="120" dominant-baseline="middle" text-anchor="middle" font-family="Georgia,serif" font-size="26" letter-spacing="3" fill="rgba(150,110,30,0.10)" transform="rotate(-28 260 120)">PT Kotagede Jewellery</text></svg>`;
@@ -471,20 +237,38 @@ export default function OrderFormPage() {
   >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hargaDisplay, setHargaDisplay] = useState("");
+  const [workingDays, setWorkingDays] = useState<number | null>(null);
 
-  const saveDraft = useCallback((data: OrderFormData) => {
-    try { localStorage.setItem(STORAGE_KEY(token), JSON.stringify(data)); } catch {}
-  }, [token]);
+  const saveDraft = useCallback(
+    (data: OrderFormData) => {
+      try {
+        localStorage.setItem(STORAGE_KEY(token), JSON.stringify(data));
+      } catch {}
+    },
+    [token],
+  );
 
   const loadDraft = useCallback((): OrderFormData | null => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY(token));
-      return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed.jenisCincinFeatures)) parsed.jenisCincinFeatures = [];
+      if (!Array.isArray(parsed.keteranganPria)) parsed.keteranganPria = [""];
+      if (!Array.isArray(parsed.keteranganWanita)) parsed.keteranganWanita = [""];
+      if (typeof parsed.dariArtisDetail !== "string") parsed.dariArtisDetail = "";
+      delete parsed.kgjInstagramAccount;
+      delete parsed.kgjInstagramAccountCustom;
+      return parsed as OrderFormData;
+    } catch {
+      return null;
+    }
   }, [token]);
 
   const clearDraft = useCallback(() => {
-    try { localStorage.removeItem(STORAGE_KEY(token)); } catch {}
+    try {
+      localStorage.removeItem(STORAGE_KEY(token));
+    } catch {}
   }, [token]);
 
   useEffect(() => {
@@ -520,27 +304,20 @@ export default function OrderFormPage() {
           ...emptyFormData(),
           tglAcara: data.tgl_acara ?? "",
           deadline: data.deadline ?? "",
-          acara: data.acara ?? "",
-          kebutuhanAcara: data.kebutuhan_acara ?? "",
+          kategori: data.kategori ?? "",
+          acara: data.acara ?? data.kebutuhan_acara ?? "",
           orderVia: data.order_via ?? "",
-          orderViaChannel: data.order_via_channel
-            ? data.order_via_channel.charAt(0).toUpperCase() +
-              data.order_via_channel.slice(1)
-            : "",
-          sumberMedia: data.sumber_media
-            ? data.sumber_media.charAt(0).toUpperCase() +
-              data.sumber_media.slice(1)
-            : "",
+          sumberMedia: data.sumber_media ? LABELS[data.sumber_media] ?? data.sumber_media : "",
           sumber: data.sumber_detail ?? "",
-          kgjInstagramAccount: data.kgj_instagram_account ?? "",
-          kgjInstagramAccountCustom: data.kgj_instagram_account_custom ?? "",
           dariArtis:
             data.dari_artis === true
               ? "Iya"
               : data.dari_artis === false
                 ? "Tidak"
                 : "",
+          dariArtisDetail: data.dari_artis_detail ?? "",
           harga: rawHarga,
+          dpPercent: "80",
           dp: rawHarga
             ? Math.round(parseInt(rawHarga, 10) * 0.8).toString()
             : String(data.dp_amount ?? ""),
@@ -558,19 +335,21 @@ export default function OrderFormPage() {
           ukuranPria: data.ukuran_pria ?? "",
           ukiranPria: data.ukiran_pria ?? "",
           jenisCincinPria: data.jenis_cincin_pria ?? "",
-          keteranganPria: data.keterangan_pria?.length
-            ? data.keterangan_pria
-            : ["", "", ""],
           ukuranWanita: data.ukuran_wanita ?? "",
           ukiranWanita: data.ukiran_wanita ?? "",
           jenisCincinWanita: data.jenis_cincin_wanita ?? "",
+          jenisCincinFeatures: data.jenis_cincin_features ?? [],
+          keteranganPria: data.keterangan_pria?.length
+            ? data.keterangan_pria
+            : [""],
           keteranganWanita: data.keterangan_wanita?.length
             ? data.keterangan_wanita
-            : ["", "", ""],
+            : [""],
           font: data.font ?? "",
           laserPosition: data.laser_position ?? "",
           pengiriman: data.pengiriman ?? "",
           box: data.box ?? "",
+          transferKeBank: data.transfer_ke_bank ?? "",
         });
         if (rawHarga) setHargaDisplay(formatRupiah(rawHarga));
         setPageState("ready");
@@ -580,6 +359,24 @@ export default function OrderFormPage() {
     };
     load();
   }, [token, loadDraft]);
+
+  useEffect(() => {
+    if (formData.tglAcara && formData.deadline) {
+      const days = countWorkingDays(formData.deadline, formData.tglAcara);
+      setWorkingDays(days);
+      const recommended = getRecommendedKategori(days);
+      if (formData.kategori) {
+        const t = KATEGORI_THRESHOLDS.find((k) => k.value === formData.kategori);
+        if (t && days < t.minDays) {
+          setField("kategori", recommended ?? "");
+        }
+      } else if (recommended) {
+        setField("kategori", recommended);
+      }
+    } else {
+      setWorkingDays(null);
+    }
+  }, [formData.tglAcara, formData.deadline]);
 
   const setField = <K extends keyof OrderFormData>(
     key: K,
@@ -596,8 +393,23 @@ export default function OrderFormPage() {
   const handleHargaChange = (val: string) => {
     const raw = val.replace(/[^\d]/g, "");
     setHargaDisplay(formatRupiah(raw));
+    const pct = parseInt(formData.dpPercent || "80", 10);
     setField("harga", raw);
-    setField("dp", raw ? Math.round(parseInt(raw, 10) * 0.8).toString() : "");
+    setField(
+      "dp",
+      raw ? Math.round((parseInt(raw, 10) * pct) / 100).toString() : "",
+    );
+  };
+
+  const handleDpPercentChange = (pct: string) => {
+    setField("dpPercent", pct);
+    const p = parseInt(pct, 10);
+    setField(
+      "dp",
+      formData.harga
+        ? Math.round((parseInt(formData.harga, 10) * p) / 100).toString()
+        : "",
+    );
   };
 
   const setKetPria = (i: number, val: string) => {
@@ -606,10 +418,28 @@ export default function OrderFormPage() {
     setField("keteranganPria", arr);
   };
 
+  const addKetPria = () => {
+    setField("keteranganPria", [...formData.keteranganPria, ""]);
+  };
+
+  const removeKetPria = (i: number) => {
+    const arr = formData.keteranganPria.filter((_, idx) => idx !== i);
+    setField("keteranganPria", arr.length ? arr : [""]);
+  };
+
   const setKetWanita = (i: number, val: string) => {
     const arr = [...formData.keteranganWanita];
     arr[i] = val;
     setField("keteranganWanita", arr);
+  };
+
+  const addKetWanita = () => {
+    setField("keteranganWanita", [...formData.keteranganWanita, ""]);
+  };
+
+  const removeKetWanita = (i: number) => {
+    const arr = formData.keteranganWanita.filter((_, idx) => idx !== i);
+    setField("keteranganWanita", arr.length ? arr : [""]);
   };
 
   const validate = (): boolean => {
@@ -895,36 +725,41 @@ export default function OrderFormPage() {
                 </div>
               </div>
               <div>
+                <label className={labelCls}>Kategori</label>
+                <select
+                  value={formData.kategori}
+                  onChange={(e) => setField("kategori", e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="">Pilih kategori</option>
+                  {KATEGORI_THRESHOLDS.map((k) => (
+                    <option key={k.value} value={k.value} disabled={workingDays !== null && workingDays < k.minDays}>
+                      {k.label}{workingDays !== null && workingDays < k.minDays ? ` (butuh ${k.minDays} hari)` : ""}
+                    </option>
+                  ))}
+                </select>
+                {workingDays !== null && (
+                  <p className={`text-xs mt-1 ${workingDays < 3 ? "text-red-500 font-medium" : "text-zinc-400"}`}>
+                    {workingDays < 3
+                      ? `Hanya ${workingDays} hari kerja tersedia — tidak cukup untuk paket manapun`
+                      : `${workingDays} hari kerja tersedia`}
+                  </p>
+                )}
+              </div>
+              <div>
                 <label className={labelCls}>Acara</label>
                 <select
                   value={formData.acara}
                   onChange={(e) => setField("acara", e.target.value)}
                   className={inputCls}
                 >
-                  <option value="">Pilih jenis acara</option>
-                  {["Lamaran", "Nikah", "Anniversary", "Kado", "Lain-lain"].map(
-                    (v) => (
-                      <option key={v} value={v}>
-                        {v}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>Kebutuhan Acara</label>
-                <select
-                  value={formData.kebutuhanAcara}
-                  onChange={(e) => setField("kebutuhanAcara", e.target.value)}
-                  className={inputCls}
-                >
-                  <option value="">Pilih kebutuhan acara</option>
+                  <option value="">Pilih acara</option>
                   {[
+                    "Lamaran/Tunangan",
                     "Pernikahan",
-                    "Tunangan/Lamaran",
                     "Anniversary",
-                    "Daily",
-                    "Other",
+                    "Kado",
+                    "Lain-lain",
                   ].map((v) => (
                     <option key={v} value={v}>
                       {v}
@@ -934,152 +769,82 @@ export default function OrderFormPage() {
               </div>
               <div>
                 <label className={labelCls}>Order Via</label>
-                <input
-                  type="text"
+                <select
                   value={formData.orderVia}
                   onChange={(e) => setField("orderVia", e.target.value)}
-                  placeholder="WhatsApp / Tokopedia / Instagram / dll"
                   className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Order Cincin Via</label>
-                <div className="flex gap-4 mt-1">
-                  {["Online", "Offline"].map((v) => (
-                    <label
-                      key={v}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        name="orderViaChannel"
-                        value={v}
-                        checked={formData.orderViaChannel === v}
-                        onChange={() => setField("orderViaChannel", v)}
-                        className="w-4 h-4"
-                        style={{ accentColor: GOLD }}
-                      />
-                      <span className="text-sm text-zinc-700">{v}</span>
-                    </label>
-                  ))}
-                </div>
+                >
+                  <option value="">Pilih cara order</option>
+                  <option value="Offline">Offline</option>
+                  <option value="Online+Offline">Online + Offline</option>
+                  <option value="Online">Online</option>
+                  <option value="Marketplace">Marketplace</option>
+                </select>
               </div>
 
               {/* Sumber block */}
               <div className="space-y-4 bg-zinc-50 border border-zinc-200 rounded-xl p-4">
                 <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                  Tau Kotagede Jewellery darimana Kak?
+                  Dari mana Anda mengetahui tentang Kotagede Jewelry?
                 </p>
                 <div>
-                  <label className={labelCls}>
-                    Tahu Kotagede Jewellery dari
-                  </label>
-                  <div className="flex gap-4 mt-1">
-                    {["Instagram", "Other"].map((v) => (
-                      <label
-                        key={v}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <input
-                          type="radio"
-                          name="sumberMedia"
-                          value={v}
-                          checked={formData.sumberMedia === v}
-                          onChange={() => setField("sumberMedia", v)}
-                          className="w-4 h-4"
-                          style={{ accentColor: GOLD }}
-                        />
-                        <span className="text-sm text-zinc-700">{v}</span>
-                      </label>
-                    ))}
-                  </div>
+                  <label className={labelCls}>Sumber informasi</label>
+                  <select
+                    value={formData.sumberMedia}
+                    onChange={(e) => {
+                      setField("sumberMedia", e.target.value);
+                      setField("sumber", "");
+                    }}
+                    className={inputCls}
+                  >
+                    <option value="">Pilih sumber</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="Google">Google</option>
+                    <option value="TikTok">TikTok</option>
+                    <option value="Marketplace">Marketplace</option>
+                    <option value="Recommendation">Recommendation</option>
+                    <option value="OTS">On The Spot (OTS)</option>
+                  </select>
                 </div>
 
-                {formData.sumberMedia === "Other" && (
+                {formData.sumberMedia && (
                   <div>
                     <label className={labelCls}>
-                      Keterangan sumber lainnya
+                      {formData.sumberMedia === "TikTok" ? "" : "Detail"}
                     </label>
-                    <input
-                      type="text"
-                      value={formData.sumber}
-                      onChange={(e) => setField("sumber", e.target.value)}
-                      placeholder="Contoh: Google, Rekomendasi teman, dll"
-                      className={inputCls}
-                    />
-                  </div>
-                )}
-
-                {formData.sumberMedia === "Instagram" && (
-                  <div className="space-y-2">
-                    <label className={labelCls}>
-                      Akun Instagram KGJ mana yang Anda tahu / hubungi?{" "}
-                      <span className="text-zinc-400 text-xs font-normal">
-                        (pilih salah satu)
-                      </span>
-                    </label>
-                    <div className="grid grid-cols-1 gap-1.5">
-                      {[
-                        "@kotagede_jewellery",
-                        "@kotagede_jewellery.semarang",
-                        "@kotagede_jewellery.surabaya",
-                        "@kotagede_jewellery.bandung",
-                        "@katalog.kotagedejewellery",
-                        "@ready.kotagedejewellery",
-                        "@kotagedejewellery.signature",
-                        "@littleringsbykotagedejewellery",
-                      ].map((acc) => (
-                        <label
-                          key={acc}
-                          className="flex items-center gap-3 cursor-pointer px-2 py-1.5 rounded-lg hover:bg-zinc-100 transition-colors"
-                        >
-                          <input
-                            type="radio"
-                            name="kgjInstagramAccount"
-                            value={acc}
-                            checked={formData.kgjInstagramAccount === acc}
-                            onChange={() =>
-                              setField("kgjInstagramAccount", acc)
-                            }
-                            className="w-4 h-4 flex-shrink-0"
-                            style={{ accentColor: GOLD }}
-                          />
-                          <span className="text-sm text-zinc-700 font-mono">
-                            {acc}
-                          </span>
-                        </label>
-                      ))}
-                      <label className="flex items-center gap-3 cursor-pointer px-2 py-1.5 rounded-lg hover:bg-zinc-100 transition-colors">
-                        <input
-                          type="radio"
-                          name="kgjInstagramAccount"
-                          value="other"
-                          checked={formData.kgjInstagramAccount === "other"}
-                          onChange={() =>
-                            setField("kgjInstagramAccount", "other")
-                          }
-                          className="w-4 h-4 flex-shrink-0"
-                          style={{ accentColor: GOLD }}
-                        />
-                        <span className="text-sm text-zinc-700">
-                          Yang lainnya
-                        </span>
-                      </label>
-                      {formData.kgjInstagramAccount === "other" && (
-                        <input
-                          type="text"
-                          value={formData.kgjInstagramAccountCustom}
-                          onChange={(e) =>
-                            setField(
-                              "kgjInstagramAccountCustom",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="Tulis akun Instagram lainnya..."
-                          className={`${inputCls} ml-7`}
-                        />
-                      )}
-                    </div>
+                    {formData.sumberMedia === "TikTok" ? (
+                      <p className="text-sm text-zinc-500">TikTok</p>
+                    ) : (
+                      (() => {
+                        const REC_OPTS = ["friends", "family", "others"];
+                        const isRecCustom = formData.sumberMedia === "Recommendation" && formData.sumber && !REC_OPTS.includes(formData.sumber);
+                        return (
+                          <>
+                            <select
+                              value={isRecCustom ? "others" : formData.sumber}
+                              onChange={(e) => setField("sumber", e.target.value)}
+                              className={inputCls}
+                            >
+                              <option value="">Pilih detail</option>
+                              {(SUB_SOURCES[formData.sumberMedia.toLowerCase()] || []).map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                            {formData.sumberMedia === "Recommendation" && (formData.sumber === "others" || isRecCustom) && (
+                              <input
+                                type="text"
+                                value={isRecCustom ? formData.sumber : ""}
+                                onChange={(e) => setField("sumber", e.target.value)}
+                                placeholder="Tulis siapa yang merekomendasikan..."
+                                className={`${inputCls} mt-2`}
+                              />
+                            )}
+                          </>
+                        );
+                      })()
+                    )}
                   </div>
                 )}
 
@@ -1098,7 +863,10 @@ export default function OrderFormPage() {
                           name="dariArtis"
                           value={v}
                           checked={formData.dariArtis === v}
-                          onChange={() => setField("dariArtis", v)}
+                          onChange={() => {
+                            setField("dariArtis", v);
+                            if (v !== "Iya") setField("dariArtisDetail", "");
+                          }}
                           className="w-4 h-4"
                           style={{ accentColor: GOLD }}
                         />
@@ -1106,6 +874,15 @@ export default function OrderFormPage() {
                       </label>
                     ))}
                   </div>
+                  {formData.dariArtis === "Iya" && (
+                    <input
+                      type="text"
+                      value={formData.dariArtisDetail}
+                      onChange={(e) => setField("dariArtisDetail", e.target.value)}
+                      placeholder="Tulis nama artis / selebgram..."
+                      className={`${inputCls} mt-2`}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -1139,7 +916,26 @@ export default function OrderFormPage() {
                 )}
               </div>
               <div>
-                <label className={labelCls}>DP 80%</label>
+                <label className={labelCls}>DP</label>
+                <div className="flex gap-3 mb-2">
+                  {["33", "50", "80"].map((pct) => (
+                    <label
+                      key={pct}
+                      className="flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        name="dpPercent"
+                        value={pct}
+                        checked={formData.dpPercent === pct}
+                        onChange={() => handleDpPercentChange(pct)}
+                        className="w-4 h-4"
+                        style={{ accentColor: GOLD }}
+                      />
+                      <span className="text-sm text-zinc-700">{pct}%</span>
+                    </label>
+                  ))}
+                </div>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-3 flex items-center text-zinc-500 text-sm pointer-events-none">
                     Rp
@@ -1160,9 +956,6 @@ export default function OrderFormPage() {
                     Rp {formatRupiah(formData.dp)}
                   </p>
                 )}
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  Otomatis 80% dari harga
-                </p>
               </div>
             </div>
 
@@ -1439,7 +1232,7 @@ export default function OrderFormPage() {
             {/* ── Jenis Cincin ─────────────────────────────────────────── */}
             <SectionDivider title="Jenis Cincin" />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 space-y-2">
               <div>
                 <label className={labelCls}>Cincin Pria</label>
                 <input
@@ -1464,6 +1257,45 @@ export default function OrderFormPage() {
               </div>
             </div>
 
+            {/* ── Fitur Cincin ─────────────────────────────────────────── */}
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-zinc-700">
+                Fitur Cincin
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: "Laser Batik", label: "Laser Batik" },
+                  { value: "Micro Finishing", label: "Micro Finishing" },
+                  { value: "3D Design", label: "3D Design" },
+                  { value: "Special Model", label: "Special Model" },
+                ].map((feat) => (
+                  <label
+                    key={feat.value}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      value={feat.value}
+                      checked={formData.jenisCincinFeatures.includes(
+                        feat.value,
+                      )}
+                      onChange={(e) => {
+                        const arr = e.target.checked
+                          ? [...formData.jenisCincinFeatures, feat.value]
+                          : formData.jenisCincinFeatures.filter(
+                              (f) => f !== feat.value,
+                            );
+                        setField("jenisCincinFeatures", arr);
+                      }}
+                      className="w-4 h-4"
+                      style={{ accentColor: GOLD }}
+                    />
+                    <span className="text-sm text-zinc-700">{feat.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             {/* ── Keterangan ───────────────────────────────────────────── */}
             <SectionDivider title="Keterangan" />
 
@@ -1475,9 +1307,6 @@ export default function OrderFormPage() {
                 <div className="space-y-2">
                   {formData.keteranganPria.map((k, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <span className="text-zinc-300 text-sm font-medium w-5 flex-shrink-0">
-                        —
-                      </span>
                       <input
                         type="text"
                         value={k}
@@ -1485,8 +1314,50 @@ export default function OrderFormPage() {
                         placeholder={`Detail ${i + 1}`}
                         className={inputCls}
                       />
+                      {formData.keteranganPria.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeKetPria(i)}
+                          className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   ))}
+                  <button
+                    type="button"
+                    onClick={addKetPria}
+                    className="flex items-center gap-1.5 text-sm font-medium mt-1 transition-colors"
+                    style={{ color: GOLD }}
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    Tambah detail
+                  </button>
                 </div>
               </div>
               <div>
@@ -1496,9 +1367,6 @@ export default function OrderFormPage() {
                 <div className="space-y-2">
                   {formData.keteranganWanita.map((k, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <span className="text-zinc-300 text-sm font-medium w-5 flex-shrink-0">
-                        —
-                      </span>
                       <input
                         type="text"
                         value={k}
@@ -1506,8 +1374,50 @@ export default function OrderFormPage() {
                         placeholder={`Detail ${i + 1}`}
                         className={inputCls}
                       />
+                      {formData.keteranganWanita.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeKetWanita(i)}
+                          className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   ))}
+                  <button
+                    type="button"
+                    onClick={addKetWanita}
+                    className="flex items-center gap-1.5 text-sm font-medium mt-1 transition-colors"
+                    style={{ color: GOLD }}
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    Tambah detail
+                  </button>
                 </div>
               </div>
             </div>
@@ -1536,6 +1446,50 @@ export default function OrderFormPage() {
                   className={inputCls}
                 />
               </div>
+            </div>
+
+            {/* ── Transfer ke Bank ──────────────────────────────────────── */}
+            <SectionDivider title="Pembayaran" />
+
+            <div>
+              <label className={labelCls}>Transfer ke Bank?</label>
+              <select
+                value={
+                  ["BCA", "Mandiri", "BRI", "BNI"].includes(
+                    formData.transferKeBank,
+                  )
+                    ? formData.transferKeBank
+                    : formData.transferKeBank
+                      ? "Lainnya"
+                      : ""
+                }
+                onChange={(e) => setField("transferKeBank", e.target.value)}
+                className={inputCls}
+              >
+                <option value="">Pilih bank</option>
+                <option value="BCA">BCA</option>
+                <option value="Mandiri">Mandiri</option>
+                <option value="BRI">BRI</option>
+                <option value="BNI">BNI</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
+              {(formData.transferKeBank === "Lainnya" ||
+                (formData.transferKeBank &&
+                  !["BCA", "Mandiri", "BRI", "BNI"].includes(
+                    formData.transferKeBank,
+                  ))) && (
+                <input
+                  type="text"
+                  value={
+                    formData.transferKeBank === "Lainnya"
+                      ? ""
+                      : formData.transferKeBank
+                  }
+                  onChange={(e) => setField("transferKeBank", e.target.value)}
+                  placeholder="Tulis nama bank..."
+                  className={`${inputCls} mt-2`}
+                />
+              )}
             </div>
 
             {/* ── Submit ───────────────────────────────────────────────── */}

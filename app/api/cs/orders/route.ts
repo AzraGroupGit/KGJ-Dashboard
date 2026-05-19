@@ -129,11 +129,13 @@ export async function POST(request: Request) {
       .single();
 
     const order_number = await generateOrderNumber(db);
+    const form_token = crypto.randomUUID();
 
     const { data, error } = await db
       .from("cs_orders")
       .insert({
         order_number,
+        form_token,
         customer_name: customer_name.trim(),
         tgl_chat,
         tgl_order: new Date().toISOString().split("T")[0],

@@ -51,6 +51,10 @@ interface WorkOrder {
   customer_email: string | null;
   acara: string | null;
   kebutuhan_acara: string | null;
+  kategori: string | null;
+  transfer_ke_bank: string | null;
+  jenis_cincin_features: string[] | null;
+  dari_artis_detail: string | null;
   alat_ukur: string | null;
   harga: number | null;
   dp_amount: number | null;
@@ -220,21 +224,21 @@ function PhaseLoading() {
 function PhaseOrderList({
   user,
   theme,
+  search,
   onSelect,
   onLogout,
 }: {
   user: UserProfile;
   theme: Theme;
+  search: string;
   onSelect: (order: OrderInfo) => Promise<void>;
   onLogout: () => void;
 }) {
   const [orders, setOrders] = useState<OrderInfo[]>([]);
-  const [search, setSearch] = useState("");
   const [isFetching, setIsFetching] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectingId, setSelectingId] = useState<string | null>(null);
   const [selectError, setSelectError] = useState<string | null>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
 
   const roleStages = (
     user.role.allowed_stages.length > 0
@@ -245,7 +249,6 @@ function PhaseOrderList({
   const roleLabel =
     roleStages.map((s) => STAGE_LABELS[s] ?? s).join(", ") || user.role.name;
 
-  // Only show orders that are at this worker's stage(s); exclude terminal/approval-pending states.
   const displayOrders = orders.filter(
     (o) =>
       (roleStages.length === 0 || roleStages.includes(o.current_stage)) &&
@@ -270,12 +273,10 @@ function PhaseOrderList({
     }
   }, []);
 
-  // Initial load
   useEffect(() => {
     fetchOrders("");
   }, [fetchOrders]);
 
-  // Debounced search
   useEffect(() => {
     const t = setTimeout(() => fetchOrders(search), 350);
     return () => clearTimeout(t);
@@ -309,79 +310,14 @@ function PhaseOrderList({
 
   return (
     <div className="w-full max-w-[420px]">
-      <BrandHeader subtitle="Workshop Input" />
-
       {/* User badge */}
-      <div className={`mb-4 rounded-xl border px-4 py-3 ${theme.card}`}>
-        <p
-          className={`text-[10px] font-medium uppercase tracking-wider ${theme.label}`}
-        >
-          Masuk sebagai
-        </p>
-        <p className="mt-1 text-[15px] font-semibold text-stone-800">
-          {user.full_name}
-        </p>
-        <div className="mt-1.5 flex items-center justify-between">
-          <span
-            className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${theme.badge}`}
-          >
-            {roleLabel}
-          </span>
-          <button
-            onClick={onLogout}
-            className="text-[11px] text-stone-400 hover:text-red-500 transition-colors"
-          >
-            Keluar
-          </button>
-        </div>
-      </div>
 
-      {/* Search bar */}
-      <div className="relative mb-3">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-300 pointer-events-none"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path strokeLinecap="round" d="M21 21l-4.35-4.35" />
-        </svg>
-        <input
-          ref={searchRef}
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cari nomor order atau nama produk..."
-          className={`w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-10 pr-4 text-[14px] text-stone-700 placeholder:text-stone-300 focus:outline-none focus:ring-2 transition-all ${theme.ring}`}
-        />
-        {search && (
-          <button
-            onClick={() => setSearch("")}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-300 hover:text-stone-500"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              className="h-4 w-4"
-            >
-              <path strokeLinecap="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        )}
-      </div>
-
-      {/* Error from select */}
       {selectError && (
         <div className="mb-3 rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-[12px] text-red-600">
           {selectError}
         </div>
       )}
 
-      {/* Order list */}
       <div className="rounded-2xl border border-stone-200/80 bg-white/90 backdrop-blur-sm shadow-sm overflow-hidden">
         {isFetching ? (
           <div className="flex flex-col items-center justify-center gap-3 py-14">
@@ -598,6 +534,16 @@ function WorkOrderCard({ wo, theme }: { wo: WorkOrder; theme: Theme }) {
           <Row label="Acara" value={wo.acara} />
           <Row label="Kebutuhan" value={wo.kebutuhan_acara} />
         </div>
+      )}
+
+      {wo.kategori && <Row label="Kategori" value={wo.kategori} />}
+
+      {wo.jenis_cincin_features?.length ? (
+        <Row label="Fitur" value={wo.jenis_cincin_features.join(", ")} />
+      ) : null}
+
+      {wo.transfer_ke_bank && (
+        <Row label="Transfer" value={wo.transfer_ke_bank} />
       )}
 
       {/* Ring specs — Pria */}
@@ -864,6 +810,479 @@ function PhaseSuccess({
   );
 }
 
+// ── Worker History Section ────────────────────────────────────────────────────
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function WorkerHistorySection({
+  history,
+  search,
+  expanded,
+  onToggle,
+}: {
+  history: any[];
+  search: string;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const [detail, setDetail] = useState<any | null>(null);
+  const [orderDetail, setOrderDetail] = useState<any | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  const q = search.toLowerCase();
+  const filtered = q
+    ? history.filter(
+        (h) =>
+          h.order_number.toLowerCase().includes(q) ||
+          h.stage_label.toLowerCase().includes(q),
+      )
+    : history;
+
+  const display = expanded ? filtered : filtered.slice(0, 5);
+
+  if (history.length === 0) return null;
+
+  return (
+    <>
+      <div className="border border-stone-200 rounded-xl overflow-hidden bg-white">
+        <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
+          <p className="text-[13px] font-semibold text-stone-700">
+            Riwayat Pekerjaan Saya ({history.length})
+          </p>
+        </div>
+
+        <div className="divide-y divide-stone-50">
+          {display.length === 0 ? (
+            <div className="px-4 py-6 text-center text-[12px] text-stone-400">
+              Tidak ada hasil pencarian
+            </div>
+          ) : (
+            display.map((h: any) => (
+              <button
+                key={h.id}
+                onClick={async () => {
+                  setDetail(h);
+                  setOrderDetail(null);
+                  setLoadingDetail(true);
+                  try {
+                    const res = await fetch(
+                      `/api/order-detail?order_id=${h.order_id}`,
+                    );
+                    if (res.ok) {
+                      const json = await res.json();
+                      setOrderDetail(json.data?.order ?? null);
+                    }
+                  } catch {
+                  } finally {
+                    setLoadingDetail(false);
+                  }
+                }}
+                className="w-full text-left px-4 py-2.5 flex items-center justify-between hover:bg-stone-50 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-medium text-stone-700 truncate">
+                    {h.order_number}
+                  </p>
+                  <p className="text-[11px] text-stone-400">{h.stage_label}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                  <p className="text-[11px] text-stone-400">
+                    {formatDate(h.finished_at)}
+                  </p>
+                  <svg
+                    className="w-3.5 h-3.5 text-stone-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+
+        {filtered.length > 5 && (
+          <button
+            onClick={onToggle}
+            className="w-full px-4 py-2.5 text-[12px] font-medium text-stone-500 hover:text-stone-700 hover:bg-stone-50 transition-colors border-t border-stone-100"
+          >
+            {expanded
+              ? "Tampilkan lebih sedikit"
+              : `Lihat semua (${filtered.length})`}
+          </button>
+        )}
+      </div>
+
+      {/* Detail popup */}
+      {detail && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/30 z-40"
+            onClick={() => {
+              setDetail(null);
+              setOrderDetail(null);
+            }}
+          />
+          <div className="fixed inset-x-4 top-[5%] bottom-[5%] z-50 bg-white rounded-2xl shadow-2xl overflow-y-auto max-w-md mx-auto">
+            <div className="sticky top-0 bg-white border-b border-stone-100 px-5 py-3.5 flex items-center justify-between z-10">
+              <p className="text-[14px] font-semibold text-stone-800">
+                #{detail.order_number}
+              </p>
+              <button
+                onClick={() => {
+                  setDetail(null);
+                  setOrderDetail(null);
+                }}
+                className="text-stone-400 hover:text-stone-600"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {loadingDetail ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="h-6 w-6 rounded-full border-2 border-stone-200 border-t-amber-500 animate-spin" />
+              </div>
+            ) : orderDetail ? (
+              <div className="px-5 py-4 space-y-4 text-[13px]">
+                {/* Customer */}
+                <div>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-1">
+                    Customer
+                  </p>
+                  <p className="font-semibold text-stone-800">
+                    {orderDetail.customer_name}
+                  </p>
+                </div>
+
+                {/* Stage info */}
+                <div>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-1">
+                    Tahap dikerjakan
+                  </p>
+                  <p className="font-medium text-stone-700">
+                    {detail.stage_label}
+                  </p>
+                  <p className="text-stone-400 text-[12px]">
+                    {formatDate(detail.finished_at)}
+                  </p>
+                </div>
+
+                {/* Dates & Kategori */}
+                <div className="grid grid-cols-2 gap-3">
+                  {orderDetail.tgl_order && (
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                        Tgl Order
+                      </p>
+                      <p className="text-stone-700">
+                        {formatDate(orderDetail.tgl_order)}
+                      </p>
+                    </div>
+                  )}
+                  {orderDetail.tgl_acara && (
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                        Tgl Acara
+                      </p>
+                      <p className="text-stone-700">
+                        {formatDate(orderDetail.tgl_acara)}
+                      </p>
+                    </div>
+                  )}
+                  {orderDetail.deadline && (
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                        Deadline
+                      </p>
+                      <p className="text-stone-700">
+                        {formatDate(orderDetail.deadline)}
+                      </p>
+                    </div>
+                  )}
+                  {orderDetail.kategori && (
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                        Kategori
+                      </p>
+                      <p className="text-stone-700 capitalize">
+                        {orderDetail.kategori}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Acara + Order Via */}
+                <div className="grid grid-cols-2 gap-3">
+                  {orderDetail.acara && (
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                        Acara
+                      </p>
+                      <p className="text-stone-700">{orderDetail.acara}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Harga */}
+                {(orderDetail.harga || orderDetail.dp_amount) && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {orderDetail.harga && (
+                      <div>
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                          Harga
+                        </p>
+                        <p className="text-stone-700">
+                          Rp {Number(orderDetail.harga).toLocaleString("id-ID")}
+                        </p>
+                      </div>
+                    )}
+                    {orderDetail.dp_amount && (
+                      <div>
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                          DP
+                        </p>
+                        <p className="text-stone-700">
+                          Rp{" "}
+                          {Number(orderDetail.dp_amount).toLocaleString(
+                            "id-ID",
+                          )}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Fitur Cincin */}
+                {orderDetail.jenis_cincin_features?.length ? (
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                      Fitur Cincin
+                    </p>
+                    <p className="text-stone-700">
+                      {orderDetail.jenis_cincin_features.join(", ")}
+                    </p>
+                  </div>
+                ) : null}
+
+                {/* Ring specs */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-stone-50 rounded-xl px-3 py-2.5">
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-1">
+                      Pria
+                    </p>
+                    {orderDetail.ukuran_pria && (
+                      <p className="text-stone-700">
+                        Ukuran: {orderDetail.ukuran_pria}
+                      </p>
+                    )}
+                    {orderDetail.jenis_cincin_pria && (
+                      <p className="text-stone-700">
+                        Jenis: {orderDetail.jenis_cincin_pria}
+                      </p>
+                    )}
+                    {orderDetail.ukiran_pria && (
+                      <p className="text-stone-700">
+                        Ukiran: {orderDetail.ukiran_pria}
+                      </p>
+                    )}
+                    {orderDetail.keterangan_pria?.length ? (
+                      <p className="text-stone-500 text-[12px] mt-1">
+                        {orderDetail.keterangan_pria.filter(Boolean).join(", ")}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="bg-stone-50 rounded-xl px-3 py-2.5">
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-1">
+                      Wanita
+                    </p>
+                    {orderDetail.ukuran_wanita && (
+                      <p className="text-stone-700">
+                        Ukuran: {orderDetail.ukuran_wanita}
+                      </p>
+                    )}
+                    {orderDetail.jenis_cincin_wanita && (
+                      <p className="text-stone-700">
+                        Jenis: {orderDetail.jenis_cincin_wanita}
+                      </p>
+                    )}
+                    {orderDetail.ukiran_wanita && (
+                      <p className="text-stone-700">
+                        Ukiran: {orderDetail.ukiran_wanita}
+                      </p>
+                    )}
+                    {orderDetail.keterangan_wanita?.length ? (
+                      <p className="text-stone-500 text-[12px] mt-1">
+                        {orderDetail.keterangan_wanita
+                          .filter(Boolean)
+                          .join(", ")}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Laser */}
+                {orderDetail.font && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                        Font
+                      </p>
+                      <p className="text-stone-700">{orderDetail.font}</p>
+                    </div>
+                    {orderDetail.laser_position && (
+                      <div>
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                          Posisi Laser
+                        </p>
+                        <p className="text-stone-700">
+                          {orderDetail.laser_position.replace(/_/g, " ")}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Notes from worker */}
+                {detail.notes && (
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                      Catatan
+                    </p>
+                    <p className="text-stone-600 bg-stone-50 rounded-lg px-3 py-2">
+                      {detail.notes}
+                    </p>
+                  </div>
+                )}
+
+                {/* Submitted data summary */}
+                {detail.data && Object.keys(detail.data).length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-1">
+                      Data dikirim
+                    </p>
+                    <div className="bg-stone-50 rounded-xl px-3 py-2.5 space-y-1.5">
+                      {Object.entries(detail.data).map(([key, value]) => {
+                        const displayVal = Array.isArray(value)
+                          ? (value as any[])
+                              .map((v: any) =>
+                                typeof v === "object"
+                                  ? JSON.stringify(v)
+                                  : String(v),
+                              )
+                              .join(", ")
+                          : typeof value === "object"
+                            ? JSON.stringify(value)
+                            : String(value ?? "—");
+                        return (
+                          <div key={key} className="flex justify-between gap-2">
+                            <span className="text-stone-400 capitalize">
+                              {key.replace(/_/g, " ")}
+                            </span>
+                            <span className="text-stone-700 text-right max-w-[60%] truncate">
+                              {displayVal}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pengiriman */}
+                <div className="grid grid-cols-2 gap-3">
+                  {orderDetail.pengiriman && (
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                        Pengiriman
+                      </p>
+                      <p className="text-stone-700">{orderDetail.pengiriman}</p>
+                    </div>
+                  )}
+                  {orderDetail.box && (
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                        Box
+                      </p>
+                      <p className="text-stone-700">{orderDetail.box}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Alamat */}
+                {orderDetail.alamat_pengiriman && (
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                      Alamat Pengiriman
+                    </p>
+                    <p className="text-stone-600">
+                      {orderDetail.alamat_pengiriman}
+                    </p>
+                    <div className="text-[12px] text-stone-400 mt-0.5">
+                      {[
+                        orderDetail.kelurahan,
+                        orderDetail.kecamatan,
+                        orderDetail.kabupaten_kota,
+                        orderDetail.provinsi,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                      {orderDetail.kodepos ? ` - ${orderDetail.kodepos}` : ""}
+                    </div>
+                  </div>
+                )}
+
+                {/* Dari Artis */}
+                {orderDetail.dari_artis_detail && (
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
+                      Dari Artis
+                    </p>
+                    <p className="text-stone-700">
+                      {orderDetail.dari_artis_detail}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-16">
+                <p className="text-[13px] text-stone-400">
+                  Gagal memuat detail
+                </p>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 function WorkshopInputContent() {
@@ -873,6 +1292,39 @@ function WorkshopInputContent() {
   const [order, setOrder] = useState<OrderInfo | null>(null);
   const [config, setConfig] = useState<FormConfig | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [workerHistory, setWorkerHistory] = useState<any[]>([]);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [listSearch, setListSearch] = useState("");
+  const [listTab, setListTab] = useState<"orders" | "history">("orders");
+
+  // Load worker history on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/workshop/history?limit=200");
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json.success) {
+          setWorkerHistory(json.data);
+          setHistoryTotal(json.total);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  // Refresh history after a successful submission
+  const refreshHistory = useCallback(async () => {
+    try {
+      const res = await fetch("/api/workshop/history?limit=200");
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json.success) {
+        setWorkerHistory(json.data);
+        setHistoryTotal(json.total);
+      }
+    } catch {}
+  }, []);
 
   // Load user profile on mount
   useEffect(() => {
@@ -953,9 +1405,10 @@ function WorkshopInputContent() {
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error ?? "Gagal menyimpan data");
+      refreshHistory();
       setPhase("success");
     },
-    [order, config],
+    [order, config, refreshHistory],
   );
 
   const handleLogout = useCallback(async () => {
@@ -1004,26 +1457,136 @@ function WorkshopInputContent() {
   if (phase === "loading") return <PhaseLoading />;
 
   if (phase === "list" && user) {
+    const roleStages = (
+      user.role.allowed_stages.length > 0
+        ? user.role.allowed_stages
+        : (ROLE_STAGE_MAP[user.role.name] ?? [])
+    ).filter((s) => s !== "penerimaan_order" && !s.startsWith("approval_"));
+
+    const roleLabel =
+      roleStages.map((s) => STAGE_LABELS[s] ?? s).join(", ") || user.role.name;
+
     return (
-      <PhaseOrderList
-        user={user}
-        theme={theme}
-        onSelect={handleSelect}
-        onLogout={handleLogout}
-      />
+      <div className="w-full max-w-[420px]">
+        <BrandHeader subtitle="Workshop Input" />
+
+        <div className={`mb-4 rounded-xl border px-4 py-3 ${theme.card}`}>
+          <p
+            className={`text-[10px] font-medium uppercase tracking-wider ${theme.label}`}
+          >
+            Masuk sebagai
+          </p>
+          <p className="mt-1 text-[15px] font-semibold text-stone-800">
+            {user.full_name}
+          </p>
+          <div className="mt-1.5 flex items-center justify-between">
+            <span
+              className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${theme.badge}`}
+            >
+              {roleLabel}
+            </span>
+            <button
+              onClick={handleLogout}
+              className="text-[11px] text-stone-400 hover:text-red-500 transition-colors"
+            >
+              Keluar
+            </button>
+          </div>
+        </div>
+
+        {/* Search bar */}
+        <div className="relative mb-3">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-300 pointer-events-none"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path strokeLinecap="round" d="M21 21l-4.35-4.35" />
+          </svg>
+          <input
+            type="text"
+            value={listSearch}
+            onChange={(e) => setListSearch(e.target.value)}
+            placeholder="Cari No. Order atau tahap..."
+            className={`w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-10 pr-4 text-[14px] text-stone-700 placeholder:text-stone-300 focus:outline-none focus:ring-2 transition-all ${theme.ring}`}
+          />
+          {listSearch && (
+            <button
+              onClick={() => setListSearch("")}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-300 hover:text-stone-500"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                className="h-4 w-4"
+              >
+                <path strokeLinecap="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <div className="flex mb-3 border-b border-stone-200">
+          <button
+            onClick={() => setListTab("orders")}
+            className={`flex-1 pb-2.5 text-[13px] font-medium text-center transition-colors border-b-2 ${
+              listTab === "orders"
+                ? "border-amber-500 text-stone-800"
+                : "border-transparent text-stone-400 hover:text-stone-600"
+            }`}
+          >
+            Order Berjalan
+          </button>
+          <button
+            onClick={() => setListTab("history")}
+            className={`flex-1 pb-2.5 text-[13px] font-medium text-center transition-colors border-b-2 ${
+              listTab === "history"
+                ? "border-amber-500 text-stone-800"
+                : "border-transparent text-stone-400 hover:text-stone-600"
+            }`}
+          >
+            Riwayat Pekerjaan ({workerHistory.length})
+          </button>
+        </div>
+
+        {listTab === "orders" ? (
+          <PhaseOrderList
+            user={user}
+            theme={theme}
+            search={listSearch}
+            onSelect={handleSelect}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <WorkerHistorySection
+            history={workerHistory}
+            search={listSearch}
+            expanded={historyExpanded}
+            onToggle={() => setHistoryExpanded((p) => !p)}
+          />
+        )}
+      </div>
     );
   }
 
   if (phase === "form" && user && order && config) {
     return (
-      <PhaseForm
-        user={user}
-        order={order}
-        config={config}
-        theme={theme}
-        onSubmit={handleSubmit}
-        onBack={handleBackToList}
-      />
+      <>
+        <PhaseForm
+          user={user}
+          order={order}
+          config={config}
+          theme={theme}
+          onSubmit={handleSubmit}
+          onBack={handleBackToList}
+        />
+      </>
     );
   }
 

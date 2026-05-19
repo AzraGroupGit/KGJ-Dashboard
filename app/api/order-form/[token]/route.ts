@@ -14,13 +14,14 @@ const PUBLIC_SELECT = [
   "deadline",
   "acara",
   "kebutuhan_acara",
+  "kategori",
   "order_via",
-  "order_via_channel",
   "sumber_media",
   "sumber_detail",
   "kgj_instagram_account",
   "kgj_instagram_account_custom",
   "dari_artis",
+  "dari_artis_detail",
   "harga",
   "dp_amount",
   "customer_name",
@@ -41,11 +42,13 @@ const PUBLIC_SELECT = [
   "ukuran_wanita",
   "ukiran_wanita",
   "jenis_cincin_wanita",
+  "jenis_cincin_features",
   "keterangan_wanita",
   "font",
   "laser_position",
   "pengiriman",
   "box",
+  "transfer_ke_bank",
   "submitted_at",
   "created_at",
 ].join(", ");
@@ -135,15 +138,13 @@ export async function PUT(
       tgl_acara: body.tglAcara ?? null,
       deadline: body.deadline ?? null,
       acara: body.acara ?? null,
-      kebutuhan_acara: body.kebutuhanAcara ?? null,
+      kategori: strOrNull(body.kategori),
 
       order_via: body.orderVia ?? null,
-      order_via_channel: normalizeChannel(body.orderViaChannel),
       sumber_media: normalizeSumber(body.sumberMedia),
       sumber_detail: body.sumber ?? null,
-      kgj_instagram_account: body.kgjInstagramAccount ?? null,
-      kgj_instagram_account_custom: body.kgjInstagramAccountCustom ?? null,
       dari_artis: normalizeDariArtis(body.dariArtis),
+      dari_artis_detail: strOrNull(body.dariArtisDetail),
 
       harga: toInt(body.harga),
       dp_amount: toInt(body.dp),
@@ -169,6 +170,7 @@ export async function PUT(
       ukuran_wanita: strOrNull(body.ukuranWanita),
       ukiran_wanita: strOrNull(body.ukiranWanita),
       jenis_cincin_wanita: strOrNull(body.jenisCincinWanita),
+      jenis_cincin_features: filterArr(body.jenisCincinFeatures),
       keterangan_wanita: filterArr(body.keteranganWanita),
 
       font: strOrNull(body.font),
@@ -176,6 +178,7 @@ export async function PUT(
 
       pengiriman: strOrNull(body.pengiriman),
       box: strOrNull(body.box),
+      transfer_ke_bank: strOrNull(body.transferKeBank),
     };
 
     const { data, error } = await db
@@ -220,16 +223,18 @@ function filterArr(v: unknown): string[] {
   return (v as unknown[]).map(String).filter(Boolean);
 }
 
-function normalizeChannel(v: unknown): "online" | "offline" | null {
-  if (v === "Online" || v === "online") return "online";
-  if (v === "Offline" || v === "offline") return "offline";
-  return null;
-}
+const SOURCE_MAP: Record<string, string> = {
+  Instagram: "instagram",
+  Google: "google",
+  TikTok: "tiktok",
+  Marketplace: "marketplace",
+  Recommendation: "recommendation",
+  OTS: "ots",
+};
 
-function normalizeSumber(v: unknown): "instagram" | "other" | null {
-  if (v === "Instagram" || v === "instagram") return "instagram";
-  if (v === "Other" || v === "other") return "other";
-  return null;
+function normalizeSumber(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  return SOURCE_MAP[v] || v.toLowerCase() || null;
 }
 
 function normalizeDariArtis(v: unknown): boolean | null {

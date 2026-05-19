@@ -30,7 +30,7 @@ export async function GET(request: Request) {
          ukuran_pria, ukiran_pria, jenis_cincin_pria, keterangan_pria,
          ukuran_wanita, ukiran_wanita, jenis_cincin_wanita, keterangan_wanita,
          font, laser_position, harga, dp_amount,
-         order_via, order_via_channel, sumber_media,
+         order_via, sumber_media, kategori, transfer_ke_bank, jenis_cincin_features, dari_artis_detail,
          pengiriman, box, alamat_pengiriman, kelurahan, kecamatan, kabupaten_kota, provinsi, kodepos,
          reference_image_pria_url, reference_image_wanita_url,
          current_stage, status, form_status,
@@ -47,7 +47,8 @@ export async function GET(request: Request) {
     // ── 2. Stage history ───────────────────────────────────────────────────────
     const { data: transitions, error: transErr } = await admin
       .from("order_stage_transitions")
-      .select("from_stage, to_stage, reason, transitioned_at")
+      .select(`from_stage, to_stage, reason, transitioned_at,
+        users!ost_transitioned_by_fkey ( full_name )`)
       .eq("order_id", orderId)
       .order("transitioned_at", { ascending: true });
     if (transErr) console.error("[OrderDetail] transitions error:", transErr);
@@ -119,6 +120,10 @@ export async function GET(request: Request) {
           dp_amount: csOrder.dp_amount ?? null,
           order_via: csOrder.order_via ?? null,
           sumber_media: csOrder.sumber_media ?? null,
+          kategori: csOrder.kategori ?? null,
+          transfer_ke_bank: csOrder.transfer_ke_bank ?? null,
+          jenis_cincin_features: csOrder.jenis_cincin_features ?? null,
+          dari_artis_detail: csOrder.dari_artis_detail ?? null,
           pengiriman: csOrder.pengiriman ?? null,
           box: csOrder.box ?? null,
           alamat_pengiriman: csOrder.alamat_pengiriman ?? null,
