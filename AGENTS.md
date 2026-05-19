@@ -103,6 +103,18 @@ ALTER TABLE data_deletion_logs DROP CONSTRAINT data_deletion_logs_order_id_fkey,
   ADD CONSTRAINT data_deletion_logs_order_id_fkey FOREIGN KEY (order_id) REFERENCES cs_orders(id);
 
 NOTIFY pgrst, 'reload schema';
+
+## New column migration (order form additions)
+
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS transfer_ke_bank text;
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS kategori text;
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS jenis_cincin_features text[];
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS dari_artis_detail text;
+
+## Enum migration (sumber_media expanded — was enum, now text)
+
+ALTER TABLE cs_orders ALTER COLUMN sumber_media DROP DEFAULT;
+ALTER TABLE cs_orders ALTER COLUMN sumber_media TYPE text USING sumber_media::text;
 <!-- END:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 

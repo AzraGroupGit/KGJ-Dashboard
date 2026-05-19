@@ -345,6 +345,7 @@ export async function GET(request: Request) {
          acara, kebutuhan_acara, alat_ukur,
          ukuran_pria, ukiran_pria, jenis_cincin_pria, keterangan_pria, reference_image_pria_url,
          ukuran_wanita, ukiran_wanita, jenis_cincin_wanita, keterangan_wanita, reference_image_wanita_url,
+         kategori, transfer_ke_bank, jenis_cincin_features, dari_artis_detail,
          font, laser_position, box, pengiriman, alamat_pengiriman,
          harga, dp_amount`,
       )
@@ -383,6 +384,10 @@ export async function GET(request: Request) {
       customer_email: order.customer_email ?? null,
       acara: order.acara ?? null,
       kebutuhan_acara: order.kebutuhan_acara ?? null,
+      kategori: order.kategori ?? null,
+      transfer_ke_bank: order.transfer_ke_bank ?? null,
+      jenis_cincin_features: order.jenis_cincin_features ?? null,
+      dari_artis_detail: order.dari_artis_detail ?? null,
       alat_ukur: order.alat_ukur ?? null,
       harga: order.harga ?? null,
       dp_amount: order.dp_amount ?? null,

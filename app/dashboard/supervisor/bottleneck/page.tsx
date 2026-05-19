@@ -168,12 +168,6 @@ function formatHours(hours: number | null): string {
   return `${Math.round(hours * 10) / 10}j`;
 }
 
-function getStageColor(stageGroup: string): string {
-  return stageGroup === "production"
-    ? "bg-amber-100 text-amber-800 border-amber-200"
-    : "bg-blue-100 text-blue-800 border-blue-200";
-}
-
 function getStatusInfo(avgHours: number | null): {
   label: string;
   className: string;
@@ -908,7 +902,11 @@ export default function SupervisorBottleneckPage() {
       const json = await res.json();
       const u = json.data;
       const allowedStages: string[] = u.role?.allowed_stages ?? [];
-      const isSupervisor = ["production_supervisor", "operational_supervisor", "supervisor"].includes(u.role?.name);
+      const isSupervisor = [
+        "production_supervisor",
+        "operational_supervisor",
+        "supervisor",
+      ].includes(u.role?.name);
       const canAccess =
         u.role?.role_group === "management" ||
         isSupervisor ||

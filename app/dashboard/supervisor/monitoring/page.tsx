@@ -80,6 +80,10 @@ interface OrderDetail {
     dp_amount: number | null;
     order_via: string | null;
     sumber_media: string | null;
+    kategori: string | null;
+    transfer_ke_bank: string | null;
+    jenis_cincin_features: string[] | null;
+    dari_artis_detail: string | null;
     pengiriman: string | null;
     box: string | null;
     alamat_pengiriman: string | null;
@@ -635,6 +639,38 @@ function OrderDetailPopup({
                           <span className="text-slate-400">Acara</span>
                           <p className="font-medium text-slate-700">
                             {o.acara}
+                          </p>
+                        </div>
+                      )}
+                      {o.kategori && (
+                        <div className="bg-slate-50 rounded p-2">
+                          <span className="text-slate-400">Kategori</span>
+                          <p className="font-medium text-slate-700 text-[10px] uppercase tracking-wider">
+                            {o.kategori}
+                          </p>
+                        </div>
+                      )}
+                      {o.jenis_cincin_features?.length ? (
+                        <div className="bg-slate-50 rounded p-2">
+                          <span className="text-slate-400">Fitur Cincin</span>
+                          <p className="font-medium text-slate-700">
+                            {o.jenis_cincin_features.join(", ")}
+                          </p>
+                        </div>
+                      ) : null}
+                      {o.transfer_ke_bank && (
+                        <div className="bg-slate-50 rounded p-2">
+                          <span className="text-slate-400">Transfer ke Bank</span>
+                          <p className="font-medium text-slate-700">
+                            {o.transfer_ke_bank}
+                          </p>
+                        </div>
+                      )}
+                      {o.dari_artis_detail && (
+                        <div className="bg-slate-50 rounded p-2">
+                          <span className="text-slate-400">Dari Artis</span>
+                          <p className="font-medium text-slate-700">
+                            {o.dari_artis_detail}
                           </p>
                         </div>
                       )}

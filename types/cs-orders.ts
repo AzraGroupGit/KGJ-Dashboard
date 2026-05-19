@@ -22,14 +22,16 @@ export interface CsOrder {
   deadline: string | null;
   acara: string | null;
   kebutuhan_acara: string | null;
+  kategori: string | null;
 
   order_via: string | null;
   order_via_channel: "online" | "offline" | null;
-  sumber_media: "instagram" | "other" | null;
+  sumber_media: string | null;
   sumber_detail: string | null;
   kgj_instagram_account: string | null;
   kgj_instagram_account_custom: string | null;
   dari_artis: boolean | null;
+  dari_artis_detail: string | null;
 
   harga: number | null;
   dp_amount: number | null;
@@ -55,6 +57,7 @@ export interface CsOrder {
   ukuran_wanita: string | null;
   ukiran_wanita: string | null;
   jenis_cincin_wanita: string | null;
+  jenis_cincin_features: string[];
   keterangan_wanita: string[];
 
   font: string | null;
@@ -62,6 +65,7 @@ export interface CsOrder {
 
   pengiriman: string | null;
   box: string | null;
+  transfer_ke_bank: string | null;
 
   reference_image_pria_url: string | null;
   reference_image_wanita_url: string | null;
