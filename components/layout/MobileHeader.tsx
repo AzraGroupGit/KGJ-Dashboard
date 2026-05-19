@@ -79,12 +79,39 @@ export default function Header({
             : "Selamat malam",
     );
 
-    // Initial fetch
     fetchNotifications();
 
-    // Poll for new notifications
-    const timer = setInterval(fetchNotifications, POLL_INTERVAL);
-    return () => clearInterval(timer);
+    let channel: any = null;
+    let timer: NodeJS.Timeout;
+
+    (async () => {
+      try {
+        const meRes = await fetch("/api/me");
+        if (!meRes.ok) return;
+        const meJson = await meRes.json();
+        const userId = meJson.data?.id;
+        if (!userId) return;
+
+        const { default: Pusher } = await import("pusher-js");
+        const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+          cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+          authEndpoint: "/api/pusher/auth",
+        });
+
+        channel = pusher.subscribe(`private-user-${userId}`);
+        channel.bind("new-notification", (data: any) => {
+          setNotifications((prev) => [data, ...prev]);
+          setUnreadCount((prev) => prev + 1);
+        });
+      } catch {
+        timer = setInterval(fetchNotifications, POLL_INTERVAL);
+      }
+    })();
+
+    return () => {
+      if (channel) channel.unsubscribe();
+      if (timer) clearInterval(timer);
+    };
   }, [fetchNotifications]);
 
   // ─── Click outside to close dropdowns ────────────────────────────────────

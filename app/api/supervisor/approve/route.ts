@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendNotification } from "@/lib/notifications";
 
 const PRODUCTION_TO_APPROVAL_STAGE: Record<string, string> = {
   penerimaan_order: "approval_penerimaan_order",
@@ -223,7 +224,40 @@ export async function POST(request: Request) {
       });
     }
 
-    // ── 3. Tag stage_result with supervisor action ─────────────────────────────
+    // ── 3. Notify worker ────────────────────────────────────────────────────────
+    const workerId = stage_result_id
+      ? (await admin.from("stage_results").select("user_id").eq("id", stage_result_id).single()).data
+          ?.user_id
+      : null;
+
+    if (workerId) {
+      const { data: workerOrder } = await admin
+        .from("cs_orders")
+        .select("order_number")
+        .eq("id", order_id)
+        .single();
+
+      const orderNum = workerOrder?.order_number ?? "—";
+      if (action === "approve") {
+        sendNotification({
+          userId: workerId,
+          title: "Disetujui",
+          message: `Order ${orderNum} — tahap ${productionStage} telah disetujui. Lanjut ke tahap berikutnya.`,
+          type: "success",
+          link: `/workshop/input`,
+        });
+      } else {
+        sendNotification({
+          userId: workerId,
+          title: "Ditolak — Rework",
+          message: `Order ${orderNum} — tahap ${productionStage} ditolak. ${remarks ? `Alasan: ${remarks}` : "Harap perbaiki dan submit ulang."}`,
+          type: "error",
+          link: `/workshop/input`,
+        });
+      }
+    }
+
+    // ── 4. Tag stage_result with supervisor action ─────────────────────────────
     if (stage_result_id) {
       const { data: sr } = await admin
         .from("stage_results")
@@ -245,7 +279,7 @@ export async function POST(request: Request) {
         .eq("id", stage_result_id);
     }
 
-    // ── 4. Activity log ────────────────────────────────────────────────────────
+    // ── 5. Activity log ────────────────────────────────────────────────────────
     await admin.from("activity_logs").insert({
       user_id: authUser.id,
       action: action === "approve" ? "APPROVE_STAGE" : "REJECT_STAGE",

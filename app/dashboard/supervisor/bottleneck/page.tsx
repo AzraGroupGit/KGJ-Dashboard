@@ -23,8 +23,12 @@ interface BottleneckItem {
   order_id: string;
   order_number: string;
   product_name: string;
+  customer_name: string | null;
   hours_waiting: number | null;
   status: string;
+  last_worker: string | null;
+  approval_decision: string | null;
+  approved_by: string | null;
 }
 
 interface StageBottleneck {
@@ -356,46 +360,73 @@ function BottleneckTableRow({
       {isExpanded && hasBottlenecks && (
         <tr className="bg-slate-50/50">
           <td colSpan={6} className="px-4 py-3">
-            <div className="space-y-1.5">
+            <div className="overflow-x-auto">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
-                Order Terlambat di Tahap Ini
+                Detail Order di Tahap Ini
               </p>
-              {stage.bottlenecks.map((item, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    onOrderClick(item.order_id, item.order_number);
-                  }}
-                  className="flex items-center gap-3 text-xs bg-white rounded-md border border-slate-100 px-3 py-2 hover:border-slate-300 hover:bg-slate-50 transition-colors w-full text-left cursor-pointer"
-                >
-                  <span className="font-mono text-slate-500 w-32 shrink-0">
-                    {item.order_number}
-                  </span>
-                  <span className="text-slate-600 truncate flex-1">
-                    {item.product_name}
-                  </span>
-                  <span
-                    className={`shrink-0 font-semibold ${
-                      (item.hours_waiting || 0) > 48
-                        ? "text-rose-600"
-                        : (item.hours_waiting || 0) > 24
-                          ? "text-amber-600"
-                          : "text-slate-500"
-                    }`}
-                  >
-                    {formatHours(item.hours_waiting)}
-                  </span>
-                  <span
-                    className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                      item.status === "waiting_approval"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {item.status === "waiting_approval" ? "Menunggu" : "Proses"}
-                  </span>
-                </button>
-              ))}
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 text-[10px] uppercase tracking-wide text-slate-400">
+                    <th className="px-2 py-1.5 text-left font-semibold">Order</th>
+                    <th className="px-2 py-1.5 text-left font-semibold">Customer</th>
+                    <th className="px-2 py-1.5 text-center font-semibold">Waktu</th>
+                    <th className="px-2 py-1.5 text-center font-semibold">Pekerja</th>
+                    <th className="px-2 py-1.5 text-center font-semibold">Approval</th>
+                    <th className="px-2 py-1.5 text-center font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stage.bottlenecks.map((item, idx) => (
+                    <tr
+                      key={idx}
+                      onClick={() => onOrderClick(item.order_id, item.order_number)}
+                      className="border-b border-slate-100 cursor-pointer hover:bg-white transition-colors"
+                    >
+                      <td className="px-2 py-2 font-mono text-slate-600">
+                        {item.order_number}
+                      </td>
+                      <td className="px-2 py-2 text-slate-700 truncate max-w-[140px]">
+                        {item.customer_name || item.product_name || "—"}
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <span className={`font-semibold ${
+                          (item.hours_waiting || 0) > 48
+                            ? "text-rose-600"
+                            : (item.hours_waiting || 0) > 24
+                              ? "text-amber-600"
+                              : "text-slate-500"
+                        }`}>
+                          {formatHours(item.hours_waiting)}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-center text-slate-600">
+                        {item.last_worker || "—"}
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        {item.approval_decision ? (
+                          <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                            item.approval_decision === "approved"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-rose-100 text-rose-700"
+                          }`}>
+                            {item.approval_decision === "approved" ? "Disetujui" : "Ditolak"}
+                            {item.approved_by && ` (${item.approved_by})`}
+                          </span>
+                        ) : item.status === "waiting_approval" ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                            Menunggu
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <StatusBadge status={item.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </td>
         </tr>
@@ -410,6 +441,20 @@ function BottleneckTableRow({
         </tr>
       )}
     </>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; bg: string; text: string }> = {
+    rework: { label: "Rework", bg: "bg-rose-100", text: "text-rose-700" },
+    waiting_approval: { label: "Menunggu", bg: "bg-amber-100", text: "text-amber-700" },
+    proses: { label: "Proses", bg: "bg-blue-100", text: "text-blue-700" },
+  };
+  const s = map[status] || { label: status, bg: "bg-slate-100", text: "text-slate-600" };
+  return (
+    <span className={`inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium ${s.bg} ${s.text}`}>
+      {s.label}
+    </span>
   );
 }
 
@@ -891,6 +936,8 @@ export default function SupervisorBottleneckPage() {
   const [detailOrderNumber, setDetailOrderNumber] = useState<string>("");
   const [supervisorGroup, setSupervisorGroup] =
     useState<SupervisorGroup>("all");
+  const [filterGroup, setFilterGroup] =
+    useState<SupervisorGroup>("all");
 
   useEffect(() => {
     (async () => {
@@ -918,10 +965,13 @@ export default function SupervisorBottleneckPage() {
       setUserEmail(u.username || u.full_name || "");
       if (u.role?.name === "production_supervisor") {
         setSupervisorGroup("production");
+        setFilterGroup("production");
       } else if (u.role?.name === "operational_supervisor") {
         setSupervisorGroup("operational");
+        setFilterGroup("operational");
       } else {
         setSupervisorGroup("all");
+        setFilterGroup("all");
       }
     })();
   }, [router]);
@@ -961,22 +1011,26 @@ export default function SupervisorBottleneckPage() {
     });
   };
 
+  const filteredBn = data?.bottlenecks.filter((b) =>
+    filterGroup === "all" ? true : b.stage_group === filterGroup
+  ) || [];
+
   const criticalCount =
-    data?.bottlenecks.filter((b) => (b.avg_hours || 0) > 24).length || 0;
+    filteredBn.filter((b) => (b.avg_hours || 0) > 24).length || 0;
   const slowCount =
-    data?.bottlenecks.filter(
+    filteredBn.filter(
       (b) => (b.avg_hours || 0) > 8 && (b.avg_hours || 0) <= 24,
     ).length || 0;
   const prodCount =
-    data?.bottlenecks
+    filteredBn
       .filter((b) => b.stage_group === "production")
       .reduce((s, b) => s + b.order_count, 0) || 0;
   const opCount =
-    data?.bottlenecks
+    filteredBn
       .filter((b) => b.stage_group === "operational")
       .reduce((s, b) => s + b.order_count, 0) || 0;
   const waitingCount =
-    data?.bottlenecks.reduce((s, b) => s + (b.waiting_orders || 0), 0) || 0;
+    filteredBn.reduce((s, b) => s + (b.waiting_orders || 0), 0) || 0;
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-slate-50">
@@ -1058,7 +1112,7 @@ export default function SupervisorBottleneckPage() {
               <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-6">
                 <StatCard
                   label="Total Order"
-                  value={data.summary.total_orders}
+                  value={filteredBn.reduce((s, b) => s + b.order_count, 0)}
                   icon={Layers}
                   tone="slate"
                 />
@@ -1098,25 +1152,29 @@ export default function SupervisorBottleneckPage() {
               </div>
 
               {/* Summary alert */}
-              {data.summary.slowest_stage &&
-                (data.summary.slowest_stage.avg_hours || 0) > 8 && (
+              {(() => {
+                const slowest = filteredBn.reduce(
+                  (a, b) => ((a.avg_hours ?? 0) > (b.avg_hours ?? 0) ? a : b),
+                  filteredBn[0]
+                );
+                return slowest && (slowest.avg_hours || 0) > 8 ? (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
                     <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-amber-800">
                         Tahap dengan waktu tunggu terlama:{" "}
-                        {STAGE_LABELS[data.summary.slowest_stage.stage] ||
-                          data.summary.slowest_stage.stage_label}
+                        {STAGE_LABELS[slowest.stage] || slowest.stage_label}
                       </p>
                       <p className="text-xs text-amber-600 mt-0.5">
                         Rata-rata{" "}
-                        {formatHours(data.summary.slowest_stage.avg_hours)} per
-                        order — {data.summary.slowest_stage.order_count} order
+                        {formatHours(slowest.avg_hours)} per
+                        order — {slowest.order_count} order
                         menunggu
                       </p>
                     </div>
                   </div>
-                )}
+                ) : null;
+              })()}
 
               {/* Main table */}
               <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
@@ -1124,12 +1182,24 @@ export default function SupervisorBottleneckPage() {
                   <h3 className="text-sm font-semibold text-slate-900">
                     Detail Per Tahap
                   </h3>
-                  <span className="text-xs text-slate-400">
-                    Klik baris untuk detail order
-                  </span>
+                  <div className="flex items-center gap-1">
+                    {(["all", "production", "operational"] as const).map((g) => (
+                      <button
+                        key={g}
+                        onClick={() => setFilterGroup(g)}
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                          filterGroup === g
+                            ? "bg-slate-800 text-white"
+                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        }`}
+                      >
+                        {g === "all" ? "Semua" : g === "production" ? "Produksi" : "Operasional"}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {data.bottlenecks.length === 0 ? (
+                {filteredBn.length === 0 ? (
                   <div className="py-16 text-center">
                     <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-300" />
                     <p className="text-sm font-medium text-slate-500">
@@ -1163,7 +1233,7 @@ export default function SupervisorBottleneckPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {data.bottlenecks.map((stage) => (
+                        {filteredBn.map((stage) => (
                           <BottleneckTableRow
                             key={stage.stage}
                             stage={stage}
