@@ -1,6 +1,6 @@
 // app/api/bottleneck/route.ts
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -87,7 +87,7 @@ interface StageBottleneck {
   }[];
 }
 
-export async function GET() {
+export async function GET(request?: NextRequest) {
   try {
     const supabase = await createClient();
     const admin = createAdminClient();
@@ -117,15 +117,27 @@ export async function GET() {
     if (!canAccess)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+    const url = request?.url ? new URL(request.url) : null;
+    const fromParam = url?.searchParams.get("from");
+    const toParam = url?.searchParams.get("to");
+
     const now = new Date();
 
-    const { data: orders, error: ordersError } = await admin
+    let query = admin
       .from("cs_orders")
-      .select("id, order_number, customer_name, current_stage, status, updated_at")
+      .select("id, order_number, customer_name, current_stage, status, updated_at, deadline")
       .not("status", "in", "(completed,cancelled)")
       .in("current_stage", ACTIVE_STAGES as unknown as string[])
-      .is("deleted_at", null)
-      .order("updated_at", { ascending: true });
+      .is("deleted_at", null);
+
+    if (fromParam) {
+      query = query.gte("created_at", new Date(fromParam).toISOString());
+    }
+    if (toParam) {
+      query = query.lte("created_at", new Date(toParam + "T23:59:59").toISOString());
+    }
+
+    const { data: orders, error: ordersError } = await query.order("updated_at", { ascending: true });
 
     if (ordersError)
       return NextResponse.json({ error: "Gagal mengambil data" }, { status: 500 });
@@ -194,6 +206,8 @@ export async function GET() {
           customer_name: o.customer_name ?? null,
           hours_waiting: Math.round(hours * 10) / 10,
           status: o.status,
+          current_stage: o.current_stage,
+          deadline: o.deadline ?? null,
           last_worker: latest?.users?.full_name ?? null,
           last_submission: latest?.finished_at ?? null,
           approval_decision: approval?.decision ?? null,

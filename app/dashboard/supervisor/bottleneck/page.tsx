@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,8 @@ interface BottleneckItem {
   customer_name: string | null;
   hours_waiting: number | null;
   status: string;
+  current_stage: string;
+  deadline: string | null;
   last_worker: string | null;
   approval_decision: string | null;
   approved_by: string | null;
@@ -370,6 +373,7 @@ function BottleneckTableRow({
                     <th className="px-2 py-1.5 text-left font-semibold">Order</th>
                     <th className="px-2 py-1.5 text-left font-semibold">Customer</th>
                     <th className="px-2 py-1.5 text-center font-semibold">Waktu</th>
+                    <th className="px-2 py-1.5 text-center font-semibold">Deadline</th>
                     <th className="px-2 py-1.5 text-center font-semibold">Pekerja</th>
                     <th className="px-2 py-1.5 text-center font-semibold">Approval</th>
                     <th className="px-2 py-1.5 text-center font-semibold">Status</th>
@@ -398,6 +402,26 @@ function BottleneckTableRow({
                         }`}>
                           {formatHours(item.hours_waiting)}
                         </span>
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        {item.deadline ? (
+                          <div>
+                            <span className="text-slate-600">
+                              {new Date(item.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                            </span>
+                            {(() => {
+                              const s = getStageDeadlineStatus(item.deadline as string, stage.stage);
+                              if (!s) return null;
+                              return (
+                                <p className={`text-[10px] ${s.isOverdue ? "text-rose-500 font-medium" : "text-emerald-500"}`}>
+                                  {s.isOverdue ? `⚠ ${Math.abs(s.daysRemaining)}h` : `H-${Math.max(s.daysRemaining, 1)}`}
+                                </p>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
                       </td>
                       <td className="px-2 py-2 text-center text-slate-600">
                         {item.last_worker || "—"}

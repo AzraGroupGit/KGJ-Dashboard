@@ -61,8 +61,9 @@ export default function Home() {
           height: 100vh;
           overflow: hidden;
           position: relative;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
         }
 
         .grid-lines {
@@ -86,23 +87,18 @@ export default function Home() {
           50% { transform: translateY(-24px); }
         }
 
-        .panel-divider {
-          position: absolute; top: 8%; bottom: 8%; left: 50%; width: 0.5px;
-          background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.07) 30%, rgba(255,255,255,0.07) 70%, transparent);
-          z-index: 3;
-        }
-
-        /* LEFT PANEL */
+        /* LEFT PANEL — centered */
         .left-panel {
-          display: flex; flex-direction: column; justify-content: center;
-          padding: 48px 52px; position: relative; z-index: 2;
+          display: flex; flex-direction: column; justify-content: center; align-items: center;
+          padding: 48px 52px; position: relative; z-index: 2; text-align: center;
+          max-width: 640px; margin: 0 auto; flex: 1;
         }
 
         .brand-chip {
           display: inline-flex; align-items: center; gap: 8px;
           background: rgba(79,142,247,0.1); border: 0.5px solid rgba(79,142,247,0.25);
           border-radius: 100px; padding: 5px 14px 5px 8px;
-          margin-bottom: 28px; width: fit-content;
+          margin-bottom: 28px;
           animation: fadeUp 0.5s ease both;
         }
         .brand-chip-dot {
@@ -129,12 +125,12 @@ export default function Home() {
         .sub {
           font-size: 15px; font-weight: 300;
           color: rgba(200,210,240,0.55); line-height: 1.65;
-          max-width: 380px; margin-bottom: 36px;
+          max-width: 440px; margin-bottom: 36px;
           animation: fadeUp 0.5s 0.2s ease both;
         }
 
         .cta-group {
-          display: flex; align-items: center; gap: 14px;
+          display: flex; align-items: center; justify-content: center; gap: 14px;
           animation: fadeUp 0.5s 0.3s ease both;
         }
 
@@ -166,7 +162,7 @@ export default function Home() {
         }
 
         .stats-row {
-          display: flex; gap: 28px; margin-top: 44px;
+          display: flex; justify-content: center; gap: 28px; margin-top: 44px;
           animation: fadeUp 0.5s 0.4s ease both;
         }
         .stat-num {
@@ -176,72 +172,11 @@ export default function Home() {
         .stat-label { font-size: 12px; color: rgba(200,210,240,0.38); font-weight: 400; margin-top: 2px; letter-spacing: 0.02em; }
         .stat-div { width: 0.5px; background: rgba(255,255,255,0.07); align-self: stretch; }
 
-        /* RIGHT PANEL */
-        .right-panel {
-          display: flex; flex-direction: column; justify-content: center;
-          padding: 48px 48px 48px 40px; position: relative; z-index: 2; gap: 12px;
-        }
-
-        .panel-label {
-          font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase;
-          color: rgba(200,210,240,0.38); margin-bottom: 4px;
-          animation: fadeRight 0.5s 0.05s ease both;
-        }
-
-        .role-card {
-          background: rgba(255,255,255,0.035);
-          border: 0.5px solid rgba(255,255,255,0.07);
-          border-radius: 14px; padding: 18px 22px;
-          display: flex; align-items: flex-start; gap: 16px;
-          cursor: pointer; transition: all 0.25s ease; text-decoration: none;
-        }
-        .role-card:nth-child(2) { animation: fadeRight 0.5s 0.15s ease both; }
-        .role-card:nth-child(3) { animation: fadeRight 0.5s 0.25s ease both; }
-        .role-card:nth-child(4) { animation: fadeRight 0.5s 0.35s ease both; }
-        .role-card:hover {
-          background: rgba(255,255,255,0.065);
-          border-color: rgba(79,142,247,0.3);
-          transform: translateX(-4px);
-        }
-
-        .role-icon {
-          width: 40px; height: 40px; border-radius: 10px;
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
-        }
-        .icon-admin { background: rgba(240,201,107,0.12); border: 0.5px solid rgba(240,201,107,0.2); }
-        .icon-cs    { background: rgba(79,142,247,0.12);  border: 0.5px solid rgba(79,142,247,0.2); }
-        .icon-mkt   { background: rgba(130,200,130,0.10); border: 0.5px solid rgba(130,200,130,0.2); }
-
-        .role-icon svg {
-          width: 20px;
-          height: 20px;
-          stroke-width: 1.8;
-        }
-        .icon-admin svg { stroke: #f0c96b; }
-        .icon-cs svg { stroke: #4f8ef7; }
-        .icon-mkt svg { stroke: #82c882; }
-
-        .role-content { flex: 1; }
-        .role-title { font-size: 14px; font-weight: 500; color: #f0f4ff; margin-bottom: 3px; }
-        .role-desc { font-size: 12.5px; color: rgba(200,210,240,0.55); line-height: 1.5; font-weight: 300; }
-        .role-features { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-        .feat-tag {
-          font-size: 11px; padding: 3px 10px; border-radius: 100px;
-          background: rgba(255,255,255,0.05); border: 0.5px solid rgba(255,255,255,0.08);
-          color: rgba(200,210,240,0.55); font-weight: 400;
-        }
-        .role-arrow {
-          color: rgba(200,210,240,0.3); font-size: 18px;
-          flex-shrink: 0; align-self: center; transition: all 0.2s;
-        }
-        .role-card:hover .role-arrow { transform: translateX(4px); color: #4f8ef7; }
-
         /* BOTTOM BAR */
         .bottom-bar {
-          position: absolute; bottom: 0; left: 0; right: 0; z-index: 4;
+          position: relative; z-index: 4; width: 100%;
           border-top: 0.5px solid rgba(255,255,255,0.06);
-          display: flex; align-items: center; justify-content: space-between;
+          display: flex; align-items: center; justify-content: center;
           padding: 12px 52px;
           background: rgba(15,22,35,0.6); backdrop-filter: blur(10px);
         }
@@ -271,73 +206,11 @@ export default function Home() {
         <div className="orb orb-2" />
         <div className="orb orb-3" />
 
-        {/* Decorative SVG */}
-        <svg
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            pointerEvents: "none",
-            zIndex: 0,
-          }}
-          viewBox="0 0 1200 800"
-          preserveAspectRatio="xMidYMid slice"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <circle
-            cx="900"
-            cy="120"
-            r="180"
-            fill="none"
-            stroke="rgba(79,142,247,0.06)"
-            strokeWidth="1"
-          />
-          <circle
-            cx="900"
-            cy="120"
-            r="280"
-            fill="none"
-            stroke="rgba(79,142,247,0.04)"
-            strokeWidth="1"
-          />
-          <circle
-            cx="900"
-            cy="120"
-            r="380"
-            fill="none"
-            stroke="rgba(79,142,247,0.025)"
-            strokeWidth="1"
-          />
-          <line
-            x1="600"
-            y1="0"
-            x2="600"
-            y2="800"
-            stroke="rgba(79,142,247,0.05)"
-            strokeWidth="0.5"
-          />
-          <polygon
-            points="120,680 240,460 360,600 200,720"
-            fill="none"
-            stroke="rgba(240,201,107,0.06)"
-            strokeWidth="1"
-          />
-          <polygon
-            points="50,400 170,280 250,380 130,500"
-            fill="none"
-            stroke="rgba(79,142,247,0.05)"
-            strokeWidth="0.5"
-          />
-        </svg>
-
-        <div className="panel-divider" />
-
         {/* ───── LEFT PANEL ───── */}
         <div className="left-panel">
           <div className="brand-chip">
             <div className="brand-chip-dot" />
-            <span>Sistem Aktif · 6 Cabang</span>
+            <span>Sistem Aktif</span>
           </div>
 
           <h1 className="headline">
@@ -349,8 +222,8 @@ export default function Home() {
           </h1>
 
           <p className="sub">
-            Platform terpadu untuk tim CS, Marketing, dan Leadership — data
-            real-time, satu tampilan, keputusan lebih cepat.
+            Platform terpadu untuk tim CS, Marketing, Operasional, Produksi dan
+            Leadership — data real-time, satu tampilan, keputusan lebih cepat.
           </p>
 
           <div className="cta-group">
@@ -371,9 +244,6 @@ export default function Home() {
               </svg>
               Masuk ke Dashboard
             </Link>
-            <Link href="/login" className="btn-ghost">
-              Login akun lama ↗
-            </Link>
           </div>
 
           <div className="stats-row">
@@ -383,13 +253,13 @@ export default function Home() {
             </div>
             <div className="stat-div" />
             <div>
-              <div className="stat-num">3</div>
-              <div className="stat-label">Role Pengguna</div>
+              <div className="stat-num">5</div>
+              <div className="stat-label">Role Utama</div>
             </div>
             <div className="stat-div" />
             <div>
               <div className="stat-num">12+</div>
-              <div className="stat-label">Metrik Utama</div>
+              <div className="stat-label">Sub Role</div>
             </div>
             <div className="stat-div" />
             <div>
@@ -404,205 +274,9 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ───── RIGHT PANEL ───── */}
-        <div className="right-panel">
-          <div className="panel-label">Pilih role Anda</div>
-
-          <Link href="/login?role=admin" className="role-card">
-            <div className="role-icon icon-admin">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M12 15L12 18"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M8 11L8 14"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M16 11L16 14"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M4 20L7 20"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M17 20L20 20"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                />
-                <rect
-                  x="3"
-                  y="8"
-                  width="18"
-                  height="12"
-                  rx="2"
-                  stroke="currentColor"
-                />
-                <path
-                  d="M7 5L7 8"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M12 3L12 8"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M17 5L17 8"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                />
-                <circle cx="7" cy="5" r="1.5" stroke="currentColor" />
-                <circle cx="12" cy="3" r="1.5" stroke="currentColor" />
-                <circle cx="17" cy="5" r="1.5" stroke="currentColor" />
-              </svg>
-            </div>
-            <div className="role-content">
-              <div className="role-title">Super Admin</div>
-              <div className="role-desc">
-                Akses penuh ke seluruh data, laporan lintas cabang, dan
-                manajemen akun pengguna.
-              </div>
-              <div className="role-features">
-                <span className="feat-tag">Dashboard komprehensif</span>
-                <span className="feat-tag">Manajemen user</span>
-                <span className="feat-tag">Laporan real-time</span>
-              </div>
-            </div>
-            <div className="role-arrow">→</div>
-          </Link>
-
-          <Link href="/login?role=cs" className="role-card">
-            <div className="role-icon icon-cs">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M3 10C3 7.79086 4.79086 6 7 6H17C19.2091 6 21 7.79086 21 10V14C21 16.2091 19.2091 18 17 18H7C4.79086 18 3 16.2091 3 14V10Z"
-                  stroke="currentColor"
-                />
-                <circle
-                  cx="8"
-                  cy="12"
-                  r="2"
-                  fill="currentColor"
-                  fillOpacity="0.2"
-                  stroke="currentColor"
-                />
-                <circle
-                  cx="16"
-                  cy="12"
-                  r="2"
-                  fill="currentColor"
-                  fillOpacity="0.2"
-                  stroke="currentColor"
-                />
-                <path
-                  d="M8 12L10 13.5L8 15"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M16 12L14 13.5L16 15"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-            <div className="role-content">
-              <div className="role-title">Customer Service</div>
-              <div className="role-desc">
-                Kelola data lead dan closing per cabang dengan antarmuka yang
-                intuitif dan cepat.
-              </div>
-              <div className="role-features">
-                <span className="feat-tag">Input per cabang</span>
-                <span className="feat-tag">Tracking performa</span>
-                <span className="feat-tag">Update instan</span>
-              </div>
-            </div>
-            <div className="role-arrow">→</div>
-          </Link>
-
-          <Link href="/login?role=marketing" className="role-card">
-            <div className="role-icon icon-mkt">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <rect
-                  x="3"
-                  y="15"
-                  width="4"
-                  height="6"
-                  rx="1"
-                  stroke="currentColor"
-                />
-                <rect
-                  x="10"
-                  y="9"
-                  width="4"
-                  height="12"
-                  rx="1"
-                  stroke="currentColor"
-                />
-                <rect
-                  x="17"
-                  y="5"
-                  width="4"
-                  height="16"
-                  rx="1"
-                  stroke="currentColor"
-                />
-                <path
-                  d="M3 15L10 9"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeDasharray="2 2"
-                />
-                <path
-                  d="M14 9L17 5"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeDasharray="2 2"
-                />
-              </svg>
-            </div>
-            <div className="role-content">
-              <div className="role-title">Marketing</div>
-              <div className="role-desc">
-                Analisis channel, kalkulasi ROI, dan optimalkan strategi
-                berdasarkan data aktual.
-              </div>
-              <div className="role-features">
-                <span className="feat-tag">Analisis channel</span>
-                <span className="feat-tag">Kalkulasi ROI</span>
-                <span className="feat-tag">Optimasi budget</span>
-              </div>
-            </div>
-            <div className="role-arrow">→</div>
-          </Link>
-        </div>
-
         {/* ───── BOTTOM BAR ───── */}
         <div className="bottom-bar">
-          <div className="bottom-info">
+          <div className="bottom-info px-4">
             © 2025 Operational Dashboard · Trial Version
           </div>
           <div className="status-wrap">

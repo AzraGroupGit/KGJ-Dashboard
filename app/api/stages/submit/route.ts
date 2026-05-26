@@ -13,10 +13,10 @@ const STAGE_SEQUENCE = [
   "racik_bahan",
   "approval_racik_bahan",
   "lebur_bahan",
-  "cek_kadar",
   "pembentukan_cincin",
   "pemasangan_permata",
   "pemolesan",
+  "cek_kadar",
   "qc_1",
   "approval_qc_1",
   "laser",
@@ -567,8 +567,8 @@ export async function POST(request: Request) {
 
     // ── pengiriman: mark delivered → selesai ──────────────────────────────────
     if (stage === "pengiriman") {
-      const isDelivered = data.is_delivered === "delivered";
-      const isFailed = data.is_delivered === "failed";
+      const isDelivered = data.is_delivered === "sampai_store";
+      const isFailed = data.is_delivered === "gagal";
 
       await admin.from("stage_results").insert({
         order_id: orderId,

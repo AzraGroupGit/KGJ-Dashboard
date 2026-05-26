@@ -113,6 +113,7 @@ export const MARKETING_ROUTES = {
 export const WORKSHOP_ROUTES = {
   LOGIN: "/workshop/login",
   INPUT: "/workshop/input",
+  SETTINGS_PIN: "/workshop/settings/pin",
 } as const;
 
 export const SUPERVISOR_ROUTES = {
@@ -120,6 +121,8 @@ export const SUPERVISOR_ROUTES = {
   MONITORING: "/dashboard/supervisor/monitoring",
   APPROVAL: "/dashboard/supervisor/approval",
   ACCOUNTS: "/dashboard/supervisor/accounts",
+  SLOT_MANAGEMENT: "/dashboard/supervisor/slot-management",
+  QR_CODES: "/dashboard/supervisor/qr-codes",
 } as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -130,7 +133,7 @@ export const SUPERVISOR_ROUTES = {
  * Path yang hanya boleh diakses oleh user yang sudah login.
  * Middleware akan redirect ke /login atau /workshop/login kalau user tidak authenticated.
  */
-const PROTECTED_PREFIXES = ["/dashboard", "/workshop/input"] as const;
+const PROTECTED_PREFIXES = ["/dashboard", "/workshop/input", "/workshop/settings"] as const;
 
 /**
  * Path yang hanya boleh diakses oleh user yang BELUM login.
@@ -266,11 +269,10 @@ export function canAccessPath(role: string, path: string): boolean {
     );
   }
 
-  // Workshop roles — hanya bisa akses /qr/*
+  // Workshop roles — bisa akses semua halaman workshop
   if (isWorkshopRole(role)) {
     return (
-      path.startsWith(ROUTES.QR_LOGIN) ||
-      path.startsWith(ROUTES.QR_INPUT) ||
+      path.startsWith("/workshop/") ||
       path.startsWith("/api/") // izinkan API call
     );
   }

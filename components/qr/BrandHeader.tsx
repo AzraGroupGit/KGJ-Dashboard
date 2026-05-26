@@ -2,11 +2,12 @@
 
 interface BrandHeaderProps {
   subtitle?: string;
+  className?: string;
 }
 
-export default function BrandHeader({ subtitle }: BrandHeaderProps) {
+export default function BrandHeader({ subtitle, className = "mb-8" }: BrandHeaderProps) {
   return (
-    <div className="mb-8 text-center">
+    <div className={`text-center ${className}`}>
       {/* Icon mark */}
       <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-stone-900 shadow-lg shadow-stone-900/10">
         <svg

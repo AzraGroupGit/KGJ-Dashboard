@@ -1,6 +1,6 @@
 // app/api/supervisor/route.ts — monitoring dashboard data
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -98,7 +98,7 @@ async function verifySupervisor(userId: string) {
   return null;
 }
 
-export async function GET() {
+export async function GET(request?: NextRequest) {
   try {
     const supabase = await createClient();
     const {
@@ -137,6 +137,13 @@ export async function GET() {
     const todayStart = new Date(now);
     todayStart.setHours(0, 0, 0, 0);
 
+    const url = request?.url ? new URL(request.url) : null;
+    const fromParam = url?.searchParams.get("from");
+    const toParam = url?.searchParams.get("to");
+
+    const fromISO = fromParam ? new Date(fromParam).toISOString() : todayStart.toISOString();
+    const toISO = toParam ? new Date(toParam + "T23:59:59").toISOString() : now.toISOString();
+
     const [ordersResult, completedResult, submissionsTodayResult] = await Promise.allSettled([
       admin
         .from("cs_orders")
@@ -155,13 +162,16 @@ export async function GET() {
         )
         .eq("status", "completed")
         .is("deleted_at", null)
+        .gte("completed_at", fromISO)
+        .lte("completed_at", toISO)
         .order("completed_at", { ascending: false })
         .limit(50),
 
       admin
         .from("stage_results")
         .select("id", { count: "exact" })
-        .gte("finished_at", todayStart.toISOString())
+        .gte("finished_at", fromISO)
+        .lte("finished_at", toISO)
         .not("finished_at", "is", null)
         .limit(1),
     ]);
