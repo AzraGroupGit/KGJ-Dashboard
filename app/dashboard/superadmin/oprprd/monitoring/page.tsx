@@ -25,6 +25,7 @@ import {
   Microscope,
   RefreshCw,
   ScanLine,
+  Search,
   Sparkles,
   Target,
   Truck,
@@ -33,6 +34,7 @@ import {
   XCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -181,6 +183,8 @@ interface BottleneckItem {
   approval_decision: string | null;
   approved_by: string | null;
   approved_at: string | null;
+  deadline: string | null;
+  current_stage: string;
 }
 
 interface StageBottleneck {
@@ -701,6 +705,15 @@ function OrderDetailPopup({
                       >
                         {formatDate(o.deadline)}
                       </p>
+                      {o.deadline && (() => {
+                        const dl = getStageDeadlineStatus(o.deadline, o.current_stage);
+                        if (!dl) return null;
+                        return (
+                          <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${dl.isOverdue ? "bg-rose-50 text-rose-700 ring-rose-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200"}`}>
+                            {dl.isOverdue ? `⚠ ${Math.abs(dl.daysRemaining)}h` : `✔ H-${Math.max(dl.daysRemaining, 1)}`}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                 </>
@@ -855,6 +868,15 @@ export default function MonitoringPage() {
   const [opData, setOpData] = useState<OperasionalData | null>(null);
   const [bnData, setBnData] = useState<BottleneckData | null>(null);
   const [completedOrders, setCompletedOrders] = useState<Array<{ id: string; order_number: string; customer_name: string; completed_at: string }>>([]);
+  const [reworkData, setReworkData] = useState<{
+    reworkCount: number;
+    totalOrders: number;
+    reworkRate: number;
+    majorCount: number;
+    minorCount: number;
+    topStageRework: Array<{ flow: string; count: number }>;
+    recentRework: Array<{ order_id: string; from_stage: string; to_stage: string; reason: string; severity: string; logged_at: string }>;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -865,6 +887,9 @@ export default function MonitoringPage() {
   >("all");
   const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
   const [detailOrderNumber, setDetailOrderNumber] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     const cu = getClientUser();
@@ -879,11 +904,16 @@ export default function MonitoringPage() {
     try {
       if (isManualRefresh) setRefreshing(true);
       setError(null);
-      const [pRes, oRes, bRes, sRes] = await Promise.allSettled([
-        fetch("/api/production"),
-        fetch("/api/operational"),
-        fetch("/api/bottleneck"),
-        fetch("/api/supervisor"),
+      const qp = new URLSearchParams();
+      if (dateFrom) qp.set("from", dateFrom);
+      if (dateTo) qp.set("to", dateTo);
+      const qs = qp.toString();
+      const [pRes, oRes, bRes, sRes, rwRes] = await Promise.allSettled([
+        fetch(`/api/production${qs ? `?${qs}` : ""}`),
+        fetch(`/api/operational${qs ? `?${qs}` : ""}`),
+        fetch(`/api/bottleneck${qs ? `?${qs}` : ""}`),
+        fetch(`/api/supervisor${qs ? `?${qs}` : ""}`),
+        fetch(`/api/rework-overview${qs ? `?${qs}` : ""}`),
       ]);
       if (pRes.status === "fulfilled" && pRes.value.ok) {
         const j = await pRes.value.json();
@@ -901,6 +931,10 @@ export default function MonitoringPage() {
         const j = await sRes.value.json();
         setCompletedOrders(j.data?.completedOrders ?? []);
       }
+      if (rwRes.status === "fulfilled" && rwRes.value.ok) {
+        const j = await rwRes.value.json();
+        setReworkData(j.data);
+      }
       setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
@@ -908,13 +942,41 @@ export default function MonitoringPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [dateFrom, dateTo]);
 
+  // Pusher real-time + polling fallback
   useEffect(() => {
     fetchData();
-    const iv = setInterval(() => fetchData(false), 30_000);
-    return () => clearInterval(iv);
-  }, [fetchData]);
+    const userId = clientUser?.id;
+    let channel: any = null;
+    let pollTimer: ReturnType<typeof setInterval>;
+
+    async function initPusher() {
+      if (!userId) return;
+      try {
+        const { default: Pusher } = await import("pusher-js");
+        const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+          cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+          authEndpoint: "/api/pusher/auth",
+        });
+        channel = pusher.subscribe(`private-user-${userId}`);
+        channel.bind("new-notification", () => fetchData(false));
+      } catch {
+        // Pusher not available — polling fallback below will handle
+        console.warn("[monitoring] Pusher unavailable, using polling");
+      }
+    }
+
+    initPusher();
+
+    // Fallback: poll every 60s (Pusher handles instant updates)
+    pollTimer = setInterval(() => fetchData(false), 60_000);
+
+    return () => {
+      if (channel) channel.unsubscribe();
+      clearInterval(pollTimer);
+    };
+  }, [fetchData, clientUser?.id]);
 
   // Derived summary metrics
   const activeExperts =
@@ -944,9 +1006,17 @@ export default function MonitoringPage() {
     0;
   const filteredBn =
     bnFilter === "completed" ? [] :
-    bnData?.bottlenecks.filter((b) =>
-      bnFilter === "all" ? true : b.stage_group === bnFilter,
-    ) ?? [];
+    bnData?.bottlenecks
+      .filter((b) => bnFilter === "all" ? true : b.stage_group === bnFilter)
+      .map((b) => ({
+        ...b,
+        orders: !searchQuery ? b.orders : b.orders.filter(
+          (o) =>
+            o.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (o.customer_name ?? "").toLowerCase().includes(searchQuery.toLowerCase())
+        ),
+      }))
+      .filter((b) => searchQuery ? b.orders.length > 0 : true) ?? [];
   const prodBnCount =
     bnData?.bottlenecks.filter((b) => b.stage_group === "production").length ??
     0;
@@ -984,7 +1054,32 @@ export default function MonitoringPage() {
                 Pantau operasional & produksi secara terpadu
               </p>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari order / customer..."
+                  className="w-52 rounded-md border border-slate-200 bg-white px-3 py-1.5 pl-8 text-xs text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
+                />
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              </div>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-36 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
+                title="Dari tanggal"
+              />
+              <span className="text-xs text-slate-400">—</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-36 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
+                title="Sampai tanggal"
+              />
               {lastUpdated && (
                 <span className="text-xs text-slate-400 tabular-nums">
                   {lastUpdated.toLocaleTimeString("id-ID")}
@@ -1048,14 +1143,15 @@ export default function MonitoringPage() {
                   prodBnCount={prodBnCount}
                   opBnCount={opBnCount}
                   completedOrders={completedOrders}
+                  reworkData={reworkData}
                   onOrderClick={(orderId, orderNumber) => {
                     setDetailOrderId(orderId);
                     setDetailOrderNumber(orderNumber);
                   }}
                 />
               )}
-              {activeTab === "produksi" && <ProduksiTab data={prodData} />}
-              {activeTab === "operasional" && <OperasionalTab data={opData} />}
+              {activeTab === "produksi" && <ProduksiTab data={prodData} searchQuery={searchQuery} />}
+              {activeTab === "operasional" && <OperasionalTab data={opData} searchQuery={searchQuery} />}
             </>
           )}
         </main>
@@ -1088,6 +1184,7 @@ function OverviewTab({
   prodBnCount,
   opBnCount,
   completedOrders,
+  reworkData,
   onOrderClick,
 }: {
   prodData: ProduksiData | null;
@@ -1104,6 +1201,15 @@ function OverviewTab({
   prodBnCount: number;
   opBnCount: number;
   completedOrders: Array<{ id: string; order_number: string; customer_name: string; completed_at: string }>;
+  reworkData: {
+    reworkCount: number;
+    totalOrders: number;
+    reworkRate: number;
+    majorCount: number;
+    minorCount: number;
+    topStageRework: Array<{ flow: string; count: number }>;
+    recentRework: Array<{ order_id: string; from_stage: string; to_stage: string; reason: string; severity: string; logged_at: string }>;
+  } | null;
   onOrderClick: (orderId: string, orderNumber: string) => void;
 }) {
   return (
@@ -1161,6 +1267,86 @@ function OverviewTab({
           sub="semua"
         />
       </div>
+
+      {/* ── Rework Overview ── */}
+      {reworkData && (
+        <section className="rounded-lg border border-slate-200 bg-white">
+          <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+            <div className="flex items-center gap-2">
+              <FlaskConical className="h-4 w-4 text-rose-500" />
+              <h2 className="text-sm font-semibold text-slate-900">
+                Rework
+              </h2>
+              <span className="text-xs text-slate-500">
+                {reworkData.reworkCount} dari {reworkData.totalOrders} order
+              </span>
+            </div>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${
+                reworkData.reworkRate > 20
+                  ? "bg-rose-50 text-rose-700 ring-rose-200"
+                  : reworkData.reworkRate > 10
+                    ? "bg-amber-50 text-amber-700 ring-amber-200"
+                    : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+              }`}
+            >
+              {reworkData.reworkRate}% rework rate
+            </span>
+          </header>
+          <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
+            <div className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                Total Rework
+              </p>
+              <p className="mt-0.5 text-lg font-bold text-slate-900">
+                {reworkData.reworkCount}
+              </p>
+            </div>
+            <div className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                Major
+              </p>
+              <p className="mt-0.5 text-lg font-bold text-rose-600">
+                {reworkData.majorCount}
+              </p>
+            </div>
+            <div className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                Minor
+              </p>
+              <p className="mt-0.5 text-lg font-bold text-amber-600">
+                {reworkData.minorCount}
+              </p>
+            </div>
+            <div className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                Rework Rate
+              </p>
+              <p className="mt-0.5 text-lg font-bold text-slate-900">
+                {reworkData.reworkRate}%
+              </p>
+            </div>
+          </div>
+          {reworkData.topStageRework.length > 0 && (
+            <div className="border-t border-slate-100 px-5 py-3">
+              <p className="mb-2 text-[10px] uppercase tracking-wide text-slate-500">
+                Top Rework Flow
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {reworkData.topStageRework.map((item, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-medium text-rose-700 ring-1 ring-inset ring-rose-200"
+                  >
+                    {item.flow}
+                    <span className="ml-0.5 font-bold">{item.count}x</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── Bottleneck Table ── */}
       <section className="rounded-lg border border-slate-200 bg-white">
@@ -1535,11 +1721,36 @@ function OverviewTab({
 
 // ── Produksi Tab ──────────────────────────────────────────────────────────────
 
-function ProduksiTab({ data }: { data: ProduksiData | null }) {
+function ProduksiTab({ data, searchQuery }: { data: ProduksiData | null; searchQuery: string }) {
   if (!data) return <EmptyState text="Data produksi tidak tersedia" />;
 
+  const q = searchQuery.toLowerCase().trim();
+
+  const filteredExperts = !q
+    ? data.experts
+    : data.experts.filter(
+        (e) =>
+          e.fullName.toLowerCase().includes(q) ||
+          e.roleName.toLowerCase().includes(q) ||
+          (e.activeOrder?.orderNumber ?? "").toLowerCase().includes(q),
+      );
+
+  const filteredMicro = !q
+    ? data.microSetting
+    : data.microSetting.filter(
+        (m) =>
+          m.order_number.toLowerCase().includes(q) ||
+          (m.staff_name ?? "").toLowerCase().includes(q),
+      );
+
+  const filteredYield = !q
+    ? data.yieldData
+    : data.yieldData.filter((r) =>
+        r.order_number.toLowerCase().includes(q),
+      );
+
   const activeExperts = data.experts.filter((e) => e.activeOrder).length;
-  const yieldRows = data.yieldData.filter(
+  const yieldRows = filteredYield.filter(
     (r) => r.actual && r.target && r.target > 0,
   );
   const avgYield = yieldRows.length
@@ -1578,13 +1789,13 @@ function ProduksiTab({ data }: { data: ProduksiData | null }) {
             aktif
           </span>
         </header>
-        {data.experts.length === 0 ? (
+        {filteredExperts.length === 0 ? (
           <div className="p-10 text-center text-sm text-slate-400">
-            Belum ada data tukang aktif
+            {q ? "Tidak ditemukan" : "Belum ada data tukang aktif"}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 p-5 md:grid-cols-2 lg:grid-cols-3">
-            {data.experts.map((e) => (
+            {filteredExperts.map((e) => (
               <ExpertCard key={e.userId} expert={e} />
             ))}
           </div>
@@ -1603,7 +1814,7 @@ function ProduksiTab({ data }: { data: ProduksiData | null }) {
               </h2>
             </div>
             <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700 ring-1 ring-inset ring-violet-200">
-              {data.microSetting.length} order
+              {filteredMicro.length} order
             </span>
           </header>
           <div className="overflow-x-auto">
@@ -1628,17 +1839,17 @@ function ProduksiTab({ data }: { data: ProduksiData | null }) {
                 </tr>
               </thead>
               <tbody>
-                {data.microSetting.length === 0 ? (
+                {filteredMicro.length === 0 ? (
                   <tr>
                     <td
                       colSpan={5}
                       className="py-10 text-center text-sm text-slate-400"
                     >
-                      Tidak ada order micro setting
+                      {q ? "Tidak ditemukan" : "Tidak ada order micro setting"}
                     </td>
                   </tr>
                 ) : (
-                  data.microSetting.slice(0, 10).map((order) => (
+                  filteredMicro.slice(0, 10).map((order) => (
                     <tr
                       key={order.order_id}
                       className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors"
@@ -1702,10 +1913,10 @@ function ProduksiTab({ data }: { data: ProduksiData | null }) {
             </div>
             <span className="text-xs text-slate-500">7 hari terakhir</span>
           </header>
-          {data.yieldData.length === 0 ? (
+          {filteredYield.length === 0 ? (
             <div className="p-10 text-center">
               <BarChart3 className="mx-auto mb-3 h-10 w-10 text-slate-200" />
-              <p className="text-sm text-slate-400">Belum ada data yield</p>
+              <p className="text-sm text-slate-400">{q ? "Tidak ditemukan" : "Belum ada data yield"}</p>
             </div>
           ) : (
             <div className="p-5">
@@ -1756,7 +1967,7 @@ function ProduksiTab({ data }: { data: ProduksiData | null }) {
                 ))}
               </div>
               <div className="space-y-2.5">
-                {data.yieldData.slice(0, 7).map((item, idx) => {
+                {filteredYield.slice(0, 7).map((item, idx) => {
                   const pct =
                     item.actual && item.target && item.target > 0
                       ? (item.actual / item.target) * 100
@@ -1811,8 +2022,43 @@ function ProduksiTab({ data }: { data: ProduksiData | null }) {
 
 // ── Operasional Tab ───────────────────────────────────────────────────────────
 
-function OperasionalTab({ data }: { data: OperasionalData | null }) {
+function OperasionalTab({ data, searchQuery }: { data: OperasionalData | null; searchQuery: string }) {
   if (!data) return <EmptyState text="Data operasional tidak tersedia" />;
+
+  const q = searchQuery.toLowerCase().trim();
+
+  const filteredKonfirmasi = !q
+    ? data.afterSales.konfirmasi
+    : data.afterSales.konfirmasi.filter(
+        (o) =>
+          o.order_number.toLowerCase().includes(q) ||
+          (o.customer_name ?? "").toLowerCase().includes(q),
+      );
+
+  const filteredPelunasan = !q
+    ? data.afterSales.pelunasan
+    : data.afterSales.pelunasan.filter(
+        (o) =>
+          o.order_number.toLowerCase().includes(q) ||
+          (o.customer_name ?? "").toLowerCase().includes(q),
+      );
+
+  const filteredDelivery = !q
+    ? data.afterSales.delivery
+    : data.afterSales.delivery.filter(
+        (o) =>
+          o.order_number.toLowerCase().includes(q) ||
+          (o.customer_name ?? "").toLowerCase().includes(q),
+      );
+
+  const filteredAdminTasks = !q
+    ? data.adminTasks
+    : data.adminTasks.filter(
+        (t) =>
+          t.order_number.toLowerCase().includes(q) ||
+          t.stage.toLowerCase().includes(q) ||
+          (t.executed_by ?? "").toLowerCase().includes(q),
+      );
 
   return (
     <div className="space-y-5">
@@ -1833,10 +2079,10 @@ function OperasionalTab({ data }: { data: OperasionalData | null }) {
           <KanbanCol
             icon={<Camera className="h-4 w-4 text-sky-600" />}
             title="Menunggu Konfirmasi"
-            count={data.afterSales.konfirmasi.length}
+            count={filteredKonfirmasi.length}
             accent="sky"
           >
-            {data.afterSales.konfirmasi.map((order) => {
+            {filteredKonfirmasi.map((order) => {
               const sla = getSLA(order.hours_elapsed);
               return (
                 <article
@@ -1876,10 +2122,10 @@ function OperasionalTab({ data }: { data: OperasionalData | null }) {
           <KanbanCol
             icon={<DollarSign className="h-4 w-4 text-amber-600" />}
             title="Menunggu Pelunasan"
-            count={data.afterSales.pelunasan.length}
+            count={filteredPelunasan.length}
             accent="amber"
           >
-            {data.afterSales.pelunasan.map((order) => (
+            {filteredPelunasan.map((order) => (
               <article
                 key={order.order_number}
                 className="rounded-md border border-slate-200 bg-white p-3 transition hover:border-slate-300"
@@ -1922,10 +2168,10 @@ function OperasionalTab({ data }: { data: OperasionalData | null }) {
           <KanbanCol
             icon={<Truck className="h-4 w-4 text-emerald-600" />}
             title="Menunggu Pickup / Kirim"
-            count={data.afterSales.delivery.length}
+            count={filteredDelivery.length}
             accent="emerald"
           >
-            {data.afterSales.delivery.map((order) => (
+            {filteredDelivery.map((order) => (
               <article
                 key={order.order_number}
                 className="rounded-md border border-slate-200 bg-white p-3 transition hover:border-slate-300"
@@ -1977,7 +2223,7 @@ function OperasionalTab({ data }: { data: OperasionalData | null }) {
               </h2>
             </div>
             <span className="text-xs text-slate-500">
-              {data.adminTasks.length} tugas
+              {filteredAdminTasks.length} tugas
             </span>
           </header>
           <div className="overflow-x-auto">
@@ -1999,17 +2245,17 @@ function OperasionalTab({ data }: { data: OperasionalData | null }) {
                 </tr>
               </thead>
               <tbody>
-                {data.adminTasks.length === 0 ? (
+                {filteredAdminTasks.length === 0 ? (
                   <tr>
                     <td
                       colSpan={4}
                       className="py-10 text-center text-sm text-slate-400"
                     >
-                      Tidak ada tugas aktif
+                      {q ? "Tidak ditemukan" : "Tidak ada tugas aktif"}
                     </td>
                   </tr>
                 ) : (
-                  data.adminTasks.slice(0, 10).map((task, idx) => (
+                  filteredAdminTasks.slice(0, 10).map((task, idx) => (
                     <tr
                       key={`${task.order_id}-${idx}`}
                       className={`border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors ${task.is_delayed ? "bg-rose-50/30" : ""}`}
@@ -2059,9 +2305,9 @@ function OperasionalTab({ data }: { data: OperasionalData | null }) {
               </tbody>
             </table>
           </div>
-          {data.adminTasks.length > 10 && (
+          {filteredAdminTasks.length > 10 && (
             <div className="border-t border-slate-100 px-5 py-2.5 text-center text-xs text-slate-400">
-              +{data.adminTasks.length - 10} tugas lainnya
+              +{filteredAdminTasks.length - 10} tugas lainnya
             </div>
           )}
         </section>
@@ -2617,6 +2863,7 @@ function BnRow({
                     <th className="px-3 py-2 text-left font-medium">Customer</th>
                     <th className="px-3 py-2 text-center font-medium">Waktu</th>
                     <th className="px-3 py-2 text-left font-medium">Pekerja</th>
+                    <th className="px-3 py-2 text-center font-medium">Deadline</th>
                     <th className="px-3 py-2 text-center font-medium">Approval</th>
                     <th className="px-3 py-2 text-right font-medium">Status</th>
                   </tr>
@@ -2639,6 +2886,17 @@ function BnRow({
                       </td>
                       <td className="px-3 py-2.5 text-slate-600">
                         {item.last_worker || "—"}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        {item.deadline ? (() => {
+                          const dl = getStageDeadlineStatus(item.deadline, item.current_stage);
+                          if (!dl) return <span className="text-slate-400">—</span>;
+                          return (
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${dl.isOverdue ? "bg-rose-50 text-rose-700 ring-rose-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200"}`}>
+                              {dl.isOverdue ? `⚠ ${Math.abs(dl.daysRemaining)}h` : `✔ H-${Math.max(dl.daysRemaining, 1)}`}
+                            </span>
+                          );
+                        })() : "—"}
                       </td>
                       <td className="px-3 py-2.5 text-center">
                         {item.approval_decision === "approved" ? (

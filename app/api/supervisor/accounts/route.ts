@@ -44,6 +44,7 @@ function mapAccount(u: any) {
     created_at: u.created_at,
     role_id: u.role_id,
     role: (u.role as any) ?? null,
+    pin_hash: u.pin_hash ?? null,
   };
 }
 
@@ -71,7 +72,7 @@ export async function GET() {
       admin
         .from("users")
         .select(
-          `id, full_name, username, email, phone, status, last_login, created_at, role_id,
+          `id, full_name, username, email, phone, status, last_login, created_at, role_id, pin_hash,
            role:roles!users_role_id_fkey(id, name, role_group, description)`,
         )
         .is("deleted_at", null)

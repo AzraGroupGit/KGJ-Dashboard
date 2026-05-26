@@ -104,17 +104,76 @@ ALTER TABLE data_deletion_logs DROP CONSTRAINT data_deletion_logs_order_id_fkey,
 
 NOTIFY pgrst, 'reload schema';
 
-## New column migration (order form additions)
+## New column migrations
 
 ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS transfer_ke_bank text;
 ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS kategori text;
 ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS jenis_cincin_features text[];
 ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS dari_artis_detail text;
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS gramasi_pria numeric;
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS gramasi_wanita numeric;
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS ukiran_cincin_pria text;
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS ukiran_cincin_wanita text;
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS model_bentuk_pria jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS microsetting_pria jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS detail_laser_pria jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS detail_finishing_pria jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS model_bentuk_wanita jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS microsetting_wanita jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS detail_laser_wanita jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE cs_orders ADD COLUMN IF NOT EXISTS detail_finishing_wanita jsonb DEFAULT '[]'::jsonb;
 
 ## Enum migration (sumber_media expanded — was enum, now text)
 
 ALTER TABLE cs_orders ALTER COLUMN sumber_media DROP DEFAULT;
 ALTER TABLE cs_orders ALTER COLUMN sumber_media TYPE text USING sumber_media::text;
+
+## Slot Management migration
+
+CREATE TABLE IF NOT EXISTS slot_categories (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  key text NOT NULL UNIQUE,
+  label text NOT NULL,
+  lead_time_min integer NOT NULL,
+  lead_time_max integer,
+  max_slots integer NOT NULL DEFAULT 10,
+  is_active boolean DEFAULT true,
+  sort_order integer DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS slot_overrides (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  category_id uuid NOT NULL REFERENCES slot_categories(id),
+  date date NOT NULL,
+  added_by uuid NOT NULL REFERENCES users(id),
+  note text,
+  created_at timestamptz DEFAULT now()
+);
+
+INSERT INTO slot_categories (key, label, lead_time_min, lead_time_max, max_slots, sort_order) VALUES
+  ('reguler', 'Reguler', 25, 30, 10, 1),
+  ('cepat', 'Cepat', 14, 14, 4, 2),
+  ('kilat', 'Kilat', 7, 7, 2, 3),
+  ('kilat_laser_batik', 'Kilat Laser Batik', 10, 10, 2, 4),
+  ('vvip', 'VVIP', 3, 3, 1, 5),
+  ('revisi', 'Revisi', 14, 14, 2, 6),
+  ('marketplace', 'Marketplace', 14, 14, 4, 7)
+ON CONFLICT (key) DO UPDATE SET
+  label = EXCLUDED.label,
+  lead_time_min = EXCLUDED.lead_time_min,
+  lead_time_max = EXCLUDED.lead_time_max,
+  max_slots = EXCLUDED.max_slots,
+  sort_order = EXCLUDED.sort_order;
+
+NOTIFY pgrst, 'reload schema';
+
+## PIN migration for workshop workers
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS pin_hash text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS pin_attempts integer DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS pin_locked_until timestamptz;
 <!-- END:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 

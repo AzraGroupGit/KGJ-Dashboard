@@ -34,6 +34,7 @@ const STAGE_ORDER = [
 const PRODUCTION_ROLES = [
   "jewelry_expert_lebur_bahan",
   "jewelry_expert_pembentukan_awal",
+  "jewelry_expert_poles",
   "jewelry_expert_finishing",
   "micro_setting",
   "laser",
@@ -89,7 +90,6 @@ interface DailyStatsResponse {
   produksi: {
     experts: { total: number; aktif: number; totalOrders: number };
     microSetting: { total: number; inProgress: number; waiting: number };
-    yield: { rataYield: number; totalTarget: number; totalActual: number };
   };
   recentActivities: Array<{
     id: string;
@@ -215,7 +215,7 @@ export async function GET(request: NextRequest) {
       qcStatsQuery,
       expertUsersQuery,
       microSettingQuery,
-      yieldStatsQuery,
+      adminTasksQuery,
       stageDistributionQuery,
       recentActivitiesQuery,
     ] = await Promise.all([
@@ -313,10 +313,9 @@ export async function GET(request: NextRequest) {
         .limit(100),
       admin
         .from("stage_results")
-        .select("data, cs_orders!stage_results_order_id_fkey(order_number)")
-        .in("stage", ["racik_bahan", "lebur_bahan", "finishing"])
-        .gte("started_at", thirtyDaysAgoISO)
-        .not("finished_at", "is", null),
+        .select("id, stage, started_at, finished_at")
+        .in("stage", ["pelunasan", "kelengkapan", "packing", "pengiriman"])
+        .limit(200),
       admin
         .from("cs_orders")
         .select("current_stage")
@@ -410,6 +409,7 @@ export async function GET(request: NextRequest) {
     // ============================================================
     const laserData = laserStatsQuery.data || [];
     const antrianLaser = laserData.filter((l: any) => !l.finished_at).length;
+    const mesinAktifLaser = laserData.filter((l: any) => l.finished_at).length;
 
     // ============================================================
     // QC
@@ -465,24 +465,15 @@ export async function GET(request: NextRequest) {
     }).length;
 
     // ============================================================
-    // Yield
+    // Admin Tasks
     // ============================================================
-    let totalYield = 0,
-      yieldCount = 0,
-      sumTarget = 0,
-      sumActual = 0;
-    (yieldStatsQuery.data || []).forEach((record: any) => {
-      const d = record.data;
-      const order = record.orders;
-      const target = order?.target_weight;
-      if (d?.actual_weight && target) {
-        totalYield += (d.actual_weight / target) * 100;
-        yieldCount++;
-        sumTarget += target;
-        sumActual += d.actual_weight;
-      }
-    });
-    const rataYield = yieldCount > 0 ? totalYield / yieldCount : 0;
+    const adminTasksRaw = adminTasksQuery.data || [];
+    const adminTotal = adminTasksRaw.length;
+    const adminActive = adminTasksRaw.filter((t: any) => !t.finished_at).length;
+    const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+    const adminDelayed = adminTasksRaw.filter(
+      (t: any) => !t.finished_at && new Date(t.started_at) < fourHoursAgo,
+    ).length;
 
     // ============================================================
     // Stage Distribution
@@ -601,16 +592,16 @@ export async function GET(request: NextRequest) {
           urgentCount,
         },
         adminTasks: {
-          total: totalKonfirmasi + totalPelunasan,
-          delayed: 0,
-          active: totalKonfirmasi,
+          total: adminTotal,
+          delayed: adminDelayed,
+          active: adminActive,
         },
         racik: {
           rataShrinkage: Math.round(rataShrinkage * 100) / 100,
           targetShrinkage: 5.0,
           totalBerat: Math.round(totalRacikBerat * 100) / 100,
         },
-        laser: { antrian: antrianLaser, mesinAktif: 3 },
+        laser: { antrian: antrianLaser, mesinAktif: mesinAktifLaser },
         qc: {
           passRateAvg: Math.round(passRateAvg * 10) / 10,
           totalChecks: qcData.length,
@@ -627,11 +618,6 @@ export async function GET(request: NextRequest) {
           total: microSettingTotal,
           inProgress: microInProgress,
           waiting: microSettingTotal - microInProgress,
-        },
-        yield: {
-          rataYield: Math.round(rataYield * 10) / 10,
-          totalTarget: Math.round(sumTarget * 100) / 100,
-          totalActual: Math.round(sumActual * 100) / 100,
         },
       },
       recentActivities,

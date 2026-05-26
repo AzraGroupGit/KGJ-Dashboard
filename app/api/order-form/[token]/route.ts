@@ -3,6 +3,7 @@
 
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendNotification } from "@/lib/notifications";
 
 const PUBLIC_SELECT = [
   "order_number",
@@ -35,15 +36,25 @@ const PUBLIC_SELECT = [
   "provinsi",
   "kodepos",
   "alat_ukur",
+  "gramasi_pria",
+  "gramasi_wanita",
   "ukuran_pria",
+  "ukiran_cincin_pria",
+  "ukiran_cincin_wanita",
   "ukiran_pria",
   "jenis_cincin_pria",
-  "keterangan_pria",
+  "model_bentuk_pria",
+  "microsetting_pria",
+  "detail_laser_pria",
+  "detail_finishing_pria",
   "ukuran_wanita",
   "ukiran_wanita",
   "jenis_cincin_wanita",
   "jenis_cincin_features",
-  "keterangan_wanita",
+  "model_bentuk_wanita",
+  "microsetting_wanita",
+  "detail_laser_wanita",
+  "detail_finishing_wanita",
   "font",
   "laser_position",
   "pengiriman",
@@ -110,7 +121,7 @@ export async function PUT(
 
     const { data: existing, error: fetchErr } = await db
       .from("cs_orders")
-      .select("form_token, form_status")
+      .select("form_token, form_status, created_by")
       .eq("form_token", token)
       .is("deleted_at", null)
       .single();
@@ -163,15 +174,25 @@ export async function PUT(
       kodepos: strOrNull(body.kodepos),
 
       alat_ukur: strOrNull(body.alatUkur),
+      gramasi_pria: toFloat(body.gramasiPria),
+      gramasi_wanita: toFloat(body.gramasiWanita),
       ukuran_pria: strOrNull(body.ukuranPria),
+      ukiran_cincin_pria: strOrNull(body.ukiranCincinPria),
+      ukiran_cincin_wanita: strOrNull(body.ukiranCincinWanita),
       ukiran_pria: strOrNull(body.ukiranPria),
       jenis_cincin_pria: strOrNull(body.jenisCincinPria),
-      keterangan_pria: filterArr(body.keteranganPria),
+      model_bentuk_pria: filterArr(body.modelBentukPria),
+      microsetting_pria: filterArr(body.microsettingPria),
+      detail_laser_pria: filterArr(body.detailLaserPria),
+      detail_finishing_pria: filterArr(body.detailFinishingPria),
       ukuran_wanita: strOrNull(body.ukuranWanita),
       ukiran_wanita: strOrNull(body.ukiranWanita),
       jenis_cincin_wanita: strOrNull(body.jenisCincinWanita),
       jenis_cincin_features: filterArr(body.jenisCincinFeatures),
-      keterangan_wanita: filterArr(body.keteranganWanita),
+      model_bentuk_wanita: filterArr(body.modelBentukWanita),
+      microsetting_wanita: filterArr(body.microsettingWanita),
+      detail_laser_wanita: filterArr(body.detailLaserWanita),
+      detail_finishing_wanita: filterArr(body.detailFinishingWanita),
 
       font: strOrNull(body.font),
       laser_position: normalizeLaser(body.laserPosition),
@@ -196,6 +217,18 @@ export async function PUT(
       );
     }
 
+    const customerName = strOrNull(body.namaLengkap) || "Pelanggan";
+    const orderNum = (data as any)?.order_number ?? "—";
+    if (existing.created_by) {
+      sendNotification({
+        userId: existing.created_by,
+        title: "Form Order Baru",
+        message: `${customerName} telah mengisi form order ${orderNum}. Silakan review.`,
+        type: "info",
+        link: "/dashboard/cs/input-order",
+      });
+    }
+
     return NextResponse.json({ data });
   } catch (err) {
     console.error("[PUT /api/order-form/[token]] unexpected:", err);
@@ -216,6 +249,11 @@ function strOrNull(v: unknown): string | null {
 function toInt(v: unknown): number | null {
   const n = parseInt(String(v ?? ""), 10);
   return isNaN(n) ? null : n;
+}
+
+function toFloat(v: unknown): number | null {
+  const n = parseFloat(String(v ?? "").replace(",", "."));
+  return isNaN(n) || n <= 0 ? null : n;
 }
 
 function filterArr(v: unknown): string[] {

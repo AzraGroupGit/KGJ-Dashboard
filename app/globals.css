@@ -1,5 +1,53 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Faradisa Script";
+  src: url("/fonts/FaradisaScript.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Kingsman Demo";
+  src: url("/fonts/KingsmanDemo.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Alex Brush";
+  src: url("/fonts/AlexBrush.tff") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Brush Script";
+  src: url("/fonts/BrushScript.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Pristina";
+  src: url("/fonts/Pristina.TFF") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Palatino Linotype";
+  src: url("/fonts/PalatinoLinotype.tff") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gabriola";
+  src: url("/fonts/Gabriola.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Constantia";
+  src: url("/fonts/Constantia.ttf") format("truetype");
+  font-display: swap;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

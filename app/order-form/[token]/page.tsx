@@ -5,8 +5,18 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { countWorkingDays, getRecommendedKategori, KATEGORI_THRESHOLDS } from "@/lib/working-days";
+import {
+  countWorkingDays,
+  getRecommendedKategori,
+  KATEGORI_THRESHOLDS,
+  addWorkingDays,
+} from "@/lib/working-days";
+import { checkSlotAvailability, type SlotCheckResult } from "@/lib/slot-check";
 import AddressAutocomplete from "@/components/order/AddressAutocomplete";
+import FontPicker from "@/components/order/FontPicker";
+import MaterialSelect from "@/components/order/MaterialSelect";
+import EngravingSelect from "@/components/order/EngravingSelect";
+import AddsOnAccordion from "@/components/order/AddsOnAccordion";
 
 interface OrderFormData {
   tglChat: string;
@@ -38,13 +48,23 @@ interface OrderFormData {
   alatUkur: string;
   ukiranPria: string;
   ukiranWanita: string;
+  ukiranCincinPria: string;
+  ukiranCincinWanita: string;
   font: string;
   laserPosition: string;
   jenisCincinPria: string;
   jenisCincinWanita: string;
+  gramasiPria: string;
+  gramasiWanita: string;
   jenisCincinFeatures: string[];
-  keteranganPria: string[];
-  keteranganWanita: string[];
+  modelBentukPria: string[];
+  microsettingPria: string[];
+  detailLaserPria: string[];
+  detailFinishingPria: string[];
+  modelBentukWanita: string[];
+  microsettingWanita: string[];
+  detailLaserWanita: string[];
+  detailFinishingWanita: string[];
   pengiriman: string;
   box: string;
   transferKeBank: string;
@@ -82,12 +102,10 @@ interface OrderInfo {
   ukuran_pria: string | null;
   ukiran_pria: string | null;
   jenis_cincin_pria: string | null;
-  keterangan_pria: string[];
   ukuran_wanita: string | null;
   ukiran_wanita: string | null;
   jenis_cincin_wanita: string | null;
   jenis_cincin_features: string[];
-  keterangan_wanita: string[];
   font: string | null;
   laser_position: string | null;
   pengiriman: string | null;
@@ -127,13 +145,23 @@ const emptyFormData = (): OrderFormData => ({
   alatUkur: "",
   ukiranPria: "",
   ukiranWanita: "",
+  ukiranCincinPria: "",
+  ukiranCincinWanita: "",
   font: "",
   laserPosition: "",
   jenisCincinPria: "",
   jenisCincinWanita: "",
+  gramasiPria: "",
+  gramasiWanita: "",
   jenisCincinFeatures: [],
-  keteranganPria: [""],
-  keteranganWanita: [""],
+  modelBentukPria: [""],
+  microsettingPria: [""],
+  detailLaserPria: [""],
+  detailFinishingPria: [""],
+  modelBentukWanita: [""],
+  microsettingWanita: [""],
+  detailLaserWanita: [""],
+  detailFinishingWanita: [""],
   pengiriman: "",
   box: "",
   transferKeBank: "",
@@ -238,6 +266,8 @@ export default function OrderFormPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hargaDisplay, setHargaDisplay] = useState("");
   const [workingDays, setWorkingDays] = useState<number | null>(null);
+  const [slotInfo, setSlotInfo] = useState<SlotCheckResult | null>(null);
+  const [slotLoading, setSlotLoading] = useState(false);
 
   const saveDraft = useCallback(
     (data: OrderFormData) => {
@@ -253,10 +283,24 @@ export default function OrderFormPage() {
       const raw = localStorage.getItem(STORAGE_KEY(token));
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed.jenisCincinFeatures)) parsed.jenisCincinFeatures = [];
-      if (!Array.isArray(parsed.keteranganPria)) parsed.keteranganPria = [""];
-      if (!Array.isArray(parsed.keteranganWanita)) parsed.keteranganWanita = [""];
-      if (typeof parsed.dariArtisDetail !== "string") parsed.dariArtisDetail = "";
+      if (!Array.isArray(parsed.jenisCincinFeatures))
+        parsed.jenisCincinFeatures = [];
+      if (!Array.isArray(parsed.modelBentukPria)) parsed.modelBentukPria = [""];
+      if (!Array.isArray(parsed.microsettingPria))
+        parsed.microsettingPria = [""];
+      if (!Array.isArray(parsed.detailLaserPria)) parsed.detailLaserPria = [""];
+      if (!Array.isArray(parsed.detailFinishingPria))
+        parsed.detailFinishingPria = [""];
+      if (!Array.isArray(parsed.modelBentukWanita))
+        parsed.modelBentukWanita = [""];
+      if (!Array.isArray(parsed.microsettingWanita))
+        parsed.microsettingWanita = [""];
+      if (!Array.isArray(parsed.detailLaserWanita))
+        parsed.detailLaserWanita = [""];
+      if (!Array.isArray(parsed.detailFinishingWanita))
+        parsed.detailFinishingWanita = [""];
+      if (typeof parsed.dariArtisDetail !== "string")
+        parsed.dariArtisDetail = "";
       delete parsed.kgjInstagramAccount;
       delete parsed.kgjInstagramAccountCustom;
       return parsed as OrderFormData;
@@ -307,7 +351,9 @@ export default function OrderFormPage() {
           kategori: data.kategori ?? "",
           acara: data.acara ?? data.kebutuhan_acara ?? "",
           orderVia: data.order_via ?? "",
-          sumberMedia: data.sumber_media ? LABELS[data.sumber_media] ?? data.sumber_media : "",
+          sumberMedia: data.sumber_media
+            ? (LABELS[data.sumber_media] ?? data.sumber_media)
+            : "",
           sumber: data.sumber_detail ?? "",
           dariArtis:
             data.dari_artis === true
@@ -317,10 +363,11 @@ export default function OrderFormPage() {
                 : "",
           dariArtisDetail: data.dari_artis_detail ?? "",
           harga: rawHarga,
-          dpPercent: "80",
-          dp: rawHarga
-            ? Math.round(parseInt(rawHarga, 10) * 0.8).toString()
-            : String(data.dp_amount ?? ""),
+          dpPercent:
+            data.harga && data.dp_amount
+              ? String(Math.round((data.dp_amount / data.harga) * 100))
+              : "80",
+          dp: data.dp_amount != null ? data.dp_amount.toString() : "",
           namaLengkap: data.customer_name ?? "",
           noWA: data.customer_wa ?? "",
           email: data.customer_email ?? "",
@@ -334,16 +381,38 @@ export default function OrderFormPage() {
           alatUkur: data.alat_ukur ?? "",
           ukuranPria: data.ukuran_pria ?? "",
           ukiranPria: data.ukiran_pria ?? "",
+          ukiranCincinPria: data.ukiran_cincin_pria ?? "",
           jenisCincinPria: data.jenis_cincin_pria ?? "",
+          gramasiPria: data.gramasi_pria ? String(data.gramasi_pria) : "",
           ukuranWanita: data.ukuran_wanita ?? "",
+          ukiranCincinWanita: data.ukiran_cincin_wanita ?? "",
+          gramasiWanita: data.gramasi_wanita ? String(data.gramasi_wanita) : "",
           ukiranWanita: data.ukiran_wanita ?? "",
           jenisCincinWanita: data.jenis_cincin_wanita ?? "",
           jenisCincinFeatures: data.jenis_cincin_features ?? [],
-          keteranganPria: data.keterangan_pria?.length
-            ? data.keterangan_pria
+          modelBentukPria: data.model_bentuk_pria?.length
+            ? data.model_bentuk_pria
             : [""],
-          keteranganWanita: data.keterangan_wanita?.length
-            ? data.keterangan_wanita
+          microsettingPria: data.microsetting_pria?.length
+            ? data.microsetting_pria
+            : [""],
+          detailLaserPria: data.detail_laser_pria?.length
+            ? data.detail_laser_pria
+            : [""],
+          detailFinishingPria: data.detail_finishing_pria?.length
+            ? data.detail_finishing_pria
+            : [""],
+          modelBentukWanita: data.model_bentuk_wanita?.length
+            ? data.model_bentuk_wanita
+            : [""],
+          microsettingWanita: data.microsetting_wanita?.length
+            ? data.microsetting_wanita
+            : [""],
+          detailLaserWanita: data.detail_laser_wanita?.length
+            ? data.detail_laser_wanita
+            : [""],
+          detailFinishingWanita: data.detail_finishing_wanita?.length
+            ? data.detail_finishing_wanita
             : [""],
           font: data.font ?? "",
           laserPosition: data.laser_position ?? "",
@@ -366,7 +435,9 @@ export default function OrderFormPage() {
       setWorkingDays(days);
       const recommended = getRecommendedKategori(days);
       if (formData.kategori) {
-        const t = KATEGORI_THRESHOLDS.find((k) => k.value === formData.kategori);
+        const t = KATEGORI_THRESHOLDS.find(
+          (k) => k.value === formData.kategori,
+        );
         if (t && days < t.minDays) {
           setField("kategori", recommended ?? "");
         }
@@ -377,6 +448,30 @@ export default function OrderFormPage() {
       setWorkingDays(null);
     }
   }, [formData.tglAcara, formData.deadline]);
+
+  useEffect(() => {
+    if (formData.kategori && formData.tglOrder) {
+      const threshold = KATEGORI_THRESHOLDS.find((k) => k.value === formData.kategori);
+      if (threshold) {
+        const suggestedDeadline = addWorkingDays(formData.tglOrder, threshold.minDays);
+        if (!formData.deadline) {
+          setField("deadline", suggestedDeadline);
+        }
+      }
+    }
+  }, [formData.kategori]);
+
+  useEffect(() => {
+    if (formData.kategori && formData.deadline) {
+      setSlotLoading(true);
+      checkSlotAvailability(formData.kategori, formData.deadline).then((result) => {
+        setSlotInfo(result);
+        setSlotLoading(false);
+      });
+    } else {
+      setSlotInfo(null);
+    }
+  }, [formData.kategori, formData.deadline]);
 
   const setField = <K extends keyof OrderFormData>(
     key: K,
@@ -412,34 +507,31 @@ export default function OrderFormPage() {
     );
   };
 
-  const setKetPria = (i: number, val: string) => {
-    const arr = [...formData.keteranganPria];
+  // ── Detail handlers ──────────────────────────────────────────────
+  const detailFields = [
+    "modelBentukPria",
+    "microsettingPria",
+    "detailLaserPria",
+    "detailFinishingPria",
+    "modelBentukWanita",
+    "microsettingWanita",
+    "detailLaserWanita",
+    "detailFinishingWanita",
+  ] as const;
+  type DetailField = (typeof detailFields)[number];
+
+  const addDetailRow = (field: DetailField) => {
+    const arr = [...(formData[field] as string[]), ""];
+    setField(field, arr);
+  };
+  const removeDetailRow = (field: DetailField, i: number) => {
+    const arr = (formData[field] as string[]).filter((_, idx) => idx !== i);
+    setField(field, arr.length ? arr : [""]);
+  };
+  const setDetailRow = (field: DetailField, i: number, val: string) => {
+    const arr = [...(formData[field] as string[])];
     arr[i] = val;
-    setField("keteranganPria", arr);
-  };
-
-  const addKetPria = () => {
-    setField("keteranganPria", [...formData.keteranganPria, ""]);
-  };
-
-  const removeKetPria = (i: number) => {
-    const arr = formData.keteranganPria.filter((_, idx) => idx !== i);
-    setField("keteranganPria", arr.length ? arr : [""]);
-  };
-
-  const setKetWanita = (i: number, val: string) => {
-    const arr = [...formData.keteranganWanita];
-    arr[i] = val;
-    setField("keteranganWanita", arr);
-  };
-
-  const addKetWanita = () => {
-    setField("keteranganWanita", [...formData.keteranganWanita, ""]);
-  };
-
-  const removeKetWanita = (i: number) => {
-    const arr = formData.keteranganWanita.filter((_, idx) => idx !== i);
-    setField("keteranganWanita", arr.length ? arr : [""]);
+    setField(field, arr);
   };
 
   const validate = (): boolean => {
@@ -733,16 +825,39 @@ export default function OrderFormPage() {
                 >
                   <option value="">Pilih kategori</option>
                   {KATEGORI_THRESHOLDS.map((k) => (
-                    <option key={k.value} value={k.value} disabled={workingDays !== null && workingDays < k.minDays}>
-                      {k.label}{workingDays !== null && workingDays < k.minDays ? ` (butuh ${k.minDays} hari)` : ""}
+                    <option
+                      key={k.value}
+                      value={k.value}
+                      disabled={workingDays !== null && workingDays < k.minDays}
+                    >
+                      {k.label}
+                      {workingDays !== null && workingDays < k.minDays
+                        ? ` (butuh ${k.minDays} hari)`
+                        : ""}
                     </option>
                   ))}
                 </select>
                 {workingDays !== null && (
-                  <p className={`text-xs mt-1 ${workingDays < 3 ? "text-red-500 font-medium" : "text-zinc-400"}`}>
+                  <p
+                    className={`text-xs mt-1 ${workingDays < 3 ? "text-red-500 font-medium" : "text-zinc-400"}`}
+                  >
                     {workingDays < 3
                       ? `Hanya ${workingDays} hari kerja tersedia — tidak cukup untuk paket manapun`
                       : `${workingDays} hari kerja tersedia`}
+                  </p>
+                )}
+                {slotLoading && (
+                  <p className="text-xs text-zinc-400 mt-1">Memeriksa slot...</p>
+                )}
+                {slotInfo && slotInfo.is_full && (
+                  <p className="text-xs text-amber-600 font-medium mt-1 flex items-center gap-1">
+                    <span>⚠</span>
+                    <span>Slot {slotInfo.label} untuk tanggal {new Date(slotInfo.deadline).toLocaleDateString("id-ID")} penuh ({slotInfo.used}/{slotInfo.total_slots} terpakai)</span>
+                  </p>
+                )}
+                {slotInfo && !slotInfo.is_full && slotInfo.total_slots > 0 && (
+                  <p className="text-xs text-emerald-600 mt-1">
+                    Slot tersedia: {slotInfo.available} dari {slotInfo.total_slots}
                   </p>
                 )}
               </div>
@@ -817,30 +932,42 @@ export default function OrderFormPage() {
                     ) : (
                       (() => {
                         const REC_OPTS = ["friends", "family", "others"];
-                        const isRecCustom = formData.sumberMedia === "Recommendation" && formData.sumber && !REC_OPTS.includes(formData.sumber);
+                        const isRecCustom =
+                          formData.sumberMedia === "Recommendation" &&
+                          formData.sumber &&
+                          !REC_OPTS.includes(formData.sumber);
                         return (
                           <>
                             <select
                               value={isRecCustom ? "others" : formData.sumber}
-                              onChange={(e) => setField("sumber", e.target.value)}
+                              onChange={(e) =>
+                                setField("sumber", e.target.value)
+                              }
                               className={inputCls}
                             >
                               <option value="">Pilih detail</option>
-                              {(SUB_SOURCES[formData.sumberMedia.toLowerCase()] || []).map((opt) => (
+                              {(
+                                SUB_SOURCES[
+                                  formData.sumberMedia.toLowerCase()
+                                ] || []
+                              ).map((opt) => (
                                 <option key={opt.value} value={opt.value}>
                                   {opt.label}
                                 </option>
                               ))}
                             </select>
-                            {formData.sumberMedia === "Recommendation" && (formData.sumber === "others" || isRecCustom) && (
-                              <input
-                                type="text"
-                                value={isRecCustom ? formData.sumber : ""}
-                                onChange={(e) => setField("sumber", e.target.value)}
-                                placeholder="Tulis siapa yang merekomendasikan..."
-                                className={`${inputCls} mt-2`}
-                              />
-                            )}
+                            {formData.sumberMedia === "Recommendation" &&
+                              (formData.sumber === "others" || isRecCustom) && (
+                                <input
+                                  type="text"
+                                  value={isRecCustom ? formData.sumber : ""}
+                                  onChange={(e) =>
+                                    setField("sumber", e.target.value)
+                                  }
+                                  placeholder="Tulis siapa yang merekomendasikan..."
+                                  className={`${inputCls} mt-2`}
+                                />
+                              )}
                           </>
                         );
                       })()
@@ -878,7 +1005,9 @@ export default function OrderFormPage() {
                     <input
                       type="text"
                       value={formData.dariArtisDetail}
-                      onChange={(e) => setField("dariArtisDetail", e.target.value)}
+                      onChange={(e) =>
+                        setField("dariArtisDetail", e.target.value)
+                      }
                       placeholder="Tulis nama artis / selebgram..."
                       className={`${inputCls} mt-2`}
                     />
@@ -1122,13 +1251,38 @@ export default function OrderFormPage() {
             <div className="space-y-4">
               <div>
                 <label className={labelCls}>Alat Ukur</label>
-                <input
-                  type="text"
-                  value={formData.alatUkur}
-                  onChange={(e) => setField("alatUkur", e.target.value)}
-                  placeholder="Contoh: cincin referensi, mandrel, dll"
-                  className={inputCls}
-                />
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="alatUkur"
+                      value="Dari Store"
+                      checked={formData.alatUkur === "Dari Store"}
+                      onChange={() => setField("alatUkur", "Dari Store")}
+                      className="w-4 h-4"
+                      style={{ accentColor: GOLD }}
+                    />
+                    <span className="text-sm text-zinc-700">Dari Store</span>
+                  </label>
+                  {formData.alatUkur === "Dari Store" && (
+                    <p className="text-xs text-emerald-600 ml-6">✓ Tercover garansi re-size selama 1 bulan</p>
+                  )}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="alatUkur"
+                      value="Luar Store"
+                      checked={formData.alatUkur === "Luar Store"}
+                      onChange={() => setField("alatUkur", "Luar Store")}
+                      className="w-4 h-4"
+                      style={{ accentColor: GOLD }}
+                    />
+                    <span className="text-sm text-zinc-700">Luar Store</span>
+                  </label>
+                  {formData.alatUkur === "Luar Store" && (
+                    <p className="text-xs text-rose-500 ml-6">✗ Tidak tercover garansi re-size</p>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -1204,222 +1358,257 @@ export default function OrderFormPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className={labelCls}>Font</label>
-                  <input
-                    type="text"
-                    value={formData.font}
-                    onChange={(e) => setField("font", e.target.value)}
-                    placeholder="Script, Block, Arial, dll"
-                    className={inputCls}
+                  <label className={labelCls}>Ukiran Cincin Pria</label>
+                  <EngravingSelect
+                    value={formData.ukiranCincinPria}
+                    onChange={(v) => setField("ukiranCincinPria", v)}
+                    placeholder="Pilih jenis ukiran"
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>Laser nama di</label>
-                  <select
-                    value={formData.laserPosition}
-                    onChange={(e) => setField("laserPosition", e.target.value)}
-                    className={inputCls}
-                  >
-                    <option value="">Pilih posisi</option>
-                    <option value="dalam">Dalam cincin</option>
-                    <option value="luar">Luar cincin</option>
-                    <option value="dalam_luar">Dalam &amp; luar</option>
-                  </select>
+                  <label className={labelCls}>Ukiran Cincin Wanita</label>
+                  <EngravingSelect
+                    value={formData.ukiranCincinWanita}
+                    onChange={(v) => setField("ukiranCincinWanita", v)}
+                    placeholder="Pilih jenis ukiran"
+                  />
                 </div>
+              </div>
+              <div>
+                <label className={labelCls}>Font</label>
+                <FontPicker
+                  value={formData.font}
+                  onChange={(v) => setField("font", v)}
+                />
+              </div>
+              <div className="mt-3">
+                <label className={labelCls}>Laser nama di</label>
+                <select
+                  value={formData.laserPosition}
+                  onChange={(e) => setField("laserPosition", e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="">Pilih posisi</option>
+                  <option value="dalam">Dalam cincin</option>
+                  <option value="luar">Luar cincin</option>
+                  <option value="dalam_luar">Dalam &amp; luar</option>
+                </select>
               </div>
             </div>
 
             {/* ── Jenis Cincin ─────────────────────────────────────────── */}
             <SectionDivider title="Jenis Cincin" />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>Cincin Pria</label>
-                <input
-                  type="text"
+                <MaterialSelect
                   value={formData.jenisCincinPria}
-                  onChange={(e) => setField("jenisCincinPria", e.target.value)}
-                  placeholder="Contoh: Polos, Berlian"
-                  className={inputCls}
+                  onChange={(v) => setField("jenisCincinPria", v)}
+                  placeholder="Pilih bahan pria"
                 />
               </div>
               <div>
                 <label className={labelCls}>Cincin Wanita</label>
-                <input
-                  type="text"
+                <MaterialSelect
                   value={formData.jenisCincinWanita}
-                  onChange={(e) =>
-                    setField("jenisCincinWanita", e.target.value)
-                  }
-                  placeholder="Contoh: Polos, Permata"
+                  onChange={(v) => setField("jenisCincinWanita", v)}
+                  placeholder="Pilih bahan wanita"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+              <div>
+                <label className={labelCls}>Gramasi Pria (gram)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.gramasiPria}
+                  onChange={(e) => setField("gramasiPria", e.target.value)}
+                  placeholder="0.00"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Gramasi Wanita (gram)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.gramasiWanita}
+                  onChange={(e) => setField("gramasiWanita", e.target.value)}
+                  placeholder="0.00"
                   className={inputCls}
                 />
               </div>
             </div>
 
-            {/* ── Fitur Cincin ─────────────────────────────────────────── */}
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-zinc-700">
-                Fitur Cincin
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { value: "Laser Batik", label: "Laser Batik" },
-                  { value: "Micro Finishing", label: "Micro Finishing" },
-                  { value: "3D Design", label: "3D Design" },
-                  { value: "Special Model", label: "Special Model" },
-                ].map((feat) => (
-                  <label
-                    key={feat.value}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      value={feat.value}
-                      checked={formData.jenisCincinFeatures.includes(
-                        feat.value,
-                      )}
-                      onChange={(e) => {
-                        const arr = e.target.checked
-                          ? [...formData.jenisCincinFeatures, feat.value]
-                          : formData.jenisCincinFeatures.filter(
-                              (f) => f !== feat.value,
-                            );
-                        setField("jenisCincinFeatures", arr);
-                      }}
-                      className="w-4 h-4"
-                      style={{ accentColor: GOLD }}
-                    />
-                    <span className="text-sm text-zinc-700">{feat.label}</span>
-                  </label>
-                ))}
-              </div>
+            {/* ── Adds-On ──────────────────────────────────────────────── */}
+            <SectionDivider title="Adds-On" />
+
+            <div className="space-y-3">
+              <AddsOnAccordion
+                label="Laser"
+                prefix="laser_"
+                selected={formData.jenisCincinFeatures}
+                onChange={(arr) => setField("jenisCincinFeatures", arr)}
+                items={[
+                  { key: "laser_batik", label: "Batik" },
+                  { key: "laser_motif", label: "Motif" },
+                  { key: "laser_sidik_jari", label: "Sidik Jari" },
+                  { key: "laser_simbol", label: "Simbol" },
+                  { key: "laser_nama", label: "Laser Nama" },
+                ]}
+              />
+              <AddsOnAccordion
+                label="Micro Setting"
+                prefix="micro_setting_"
+                selected={formData.jenisCincinFeatures}
+                onChange={(arr) => setField("jenisCincinFeatures", arr)}
+                items={[
+                  {
+                    key: "micro_setting_micro_finishing_biasa",
+                    label: "Micro Finishing Biasa",
+                  },
+                  {
+                    key: "micro_setting_black_finishing",
+                    label: "Black Finishing",
+                  },
+                ]}
+              />
+              <AddsOnAccordion
+                label="Permata"
+                prefix="permata_"
+                selected={formData.jenisCincinFeatures}
+                onChange={(arr) => setField("jenisCincinFeatures", arr)}
+                items={[
+                  { key: "permata_berlian_gia", label: "Berlian GIA" },
+                  { key: "permata_rubby", label: "Rubby" },
+                  { key: "permata_berlian_natural", label: "Berlian Natural" },
+                  { key: "permata_blue_shapire", label: "Blue Shapire" },
+                  {
+                    key: "permata_berlian_labground_diamond",
+                    label: "Berlian Labground Diamond",
+                  },
+                  { key: "permata_moisanet", label: "Moisanet" },
+                ]}
+              />
+              <label className="flex items-center gap-2 cursor-pointer px-3 py-2.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={formData.jenisCincinFeatures.includes("3d_design")}
+                  onChange={(e) => {
+                    const arr = e.target.checked
+                      ? [...formData.jenisCincinFeatures, "3d_design"]
+                      : formData.jenisCincinFeatures.filter(
+                          (f) => f !== "3d_design",
+                        );
+                    setField("jenisCincinFeatures", arr);
+                  }}
+                  className="w-4 h-4"
+                  style={{ accentColor: GOLD }}
+                />
+                <span className="text-sm font-semibold text-zinc-700">
+                  3D Design
+                </span>
+              </label>
             </div>
 
-            {/* ── Keterangan ───────────────────────────────────────────── */}
-            <SectionDivider title="Keterangan" />
+            {/* ── Detail ───────────────────────────────────────── */}
+            <SectionDivider title="Detail" />
 
-            <div className="space-y-5">
-              <div>
-                <p className="text-sm font-semibold text-zinc-700 mb-3">
-                  Cincin Pria
-                </p>
-                <div className="space-y-2">
-                  {formData.keteranganPria.map((k, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={k}
-                        onChange={(e) => setKetPria(i, e.target.value)}
-                        placeholder={`Detail ${i + 1}`}
-                        className={inputCls}
-                      />
-                      {formData.keteranganPria.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeKetPria(i)}
-                          className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {(
+                [
+                  {
+                    label: "Model/Bentuk",
+                    fields: ["modelBentukPria", "modelBentukWanita"] as const,
+                  },
+                  {
+                    label: "Microsetting",
+                    fields: ["microsettingPria", "microsettingWanita"] as const,
+                  },
+                  {
+                    label: "Laser",
+                    fields: ["detailLaserPria", "detailLaserWanita"] as const,
+                  },
+                  {
+                    label: "Finishing",
+                    fields: [
+                      "detailFinishingPria",
+                      "detailFinishingWanita",
+                    ] as const,
+                  },
+                ] as const
+              ).map((cfg) => (
+                <div key={cfg.label} className="space-y-1">
+                  <p className="text-sm font-semibold text-zinc-700 mb-2">
+                    {cfg.label}
+                  </p>
+                  <div className="space-y-2">
+                    {["Pria", "Wanita"].map((gender, gi) => {
+                      const field = cfg.fields[gi];
+                      const arr = formData[field] as string[];
+                      return (
+                        <div key={gender}>
+                          <p className="text-xs text-zinc-500 mb-1">{gender}</p>
+                          {arr.map((val, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-2 mb-1"
+                            >
+                              <input
+                                type="text"
+                                value={val}
+                                onChange={(e) =>
+                                  setDetailRow(field, i, e.target.value)
+                                }
+                                className={inputCls}
+                              />
+                              {arr.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeDetailRow(field, i)}
+                                  className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                >
+                                  <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                    className="w-4 h-4"
+                                  >
+                                    <path d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => addDetailRow(field)}
+                            className="flex items-center gap-1 text-xs font-medium mt-0.5 transition-colors"
+                            style={{ color: GOLD }}
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
                               strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addKetPria}
-                    className="flex items-center gap-1.5 text-sm font-medium mt-1 transition-colors"
-                    style={{ color: GOLD }}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                    Tambah detail
-                  </button>
+                              className="w-3.5 h-3.5"
+                            >
+                              <path d="M12 4v16m8-8H4" />
+                            </svg>
+                            Tambah
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-zinc-700 mb-3">
-                  Cincin Wanita
-                </p>
-                <div className="space-y-2">
-                  {formData.keteranganWanita.map((k, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={k}
-                        onChange={(e) => setKetWanita(i, e.target.value)}
-                        placeholder={`Detail ${i + 1}`}
-                        className={inputCls}
-                      />
-                      {formData.keteranganWanita.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeKetWanita(i)}
-                          className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addKetWanita}
-                    className="flex items-center gap-1.5 text-sm font-medium mt-1 transition-colors"
-                    style={{ color: GOLD }}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                    Tambah detail
-                  </button>
-                </div>
-              </div>
+              ))}
             </div>
 
             {/* ── Pengiriman & Box ─────────────────────────────────────── */}
@@ -1428,68 +1617,50 @@ export default function OrderFormPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>Pengiriman</label>
-                <input
-                  type="text"
+                <select
                   value={formData.pengiriman}
                   onChange={(e) => setField("pengiriman", e.target.value)}
-                  placeholder="JNE, J&T, Ambil sendiri"
                   className={inputCls}
-                />
+                >
+                  <option value="">Pilih pengiriman</option>
+                  <option value="Alamat Customer">Alamat Customer</option>
+                  <option value="Store Yogyakarta">Store Yogyakarta</option>
+                  <option value="Store Solo">Store Solo</option>
+                  <option value="Store Semarang">Store Semarang</option>
+                  <option value="Store Surabaya">Store Surabaya</option>
+                  <option value="Store Bandung">Store Bandung</option>
+                </select>
               </div>
               <div>
-                <label className={labelCls}>Box</label>
-                <input
-                  type="text"
+                <label className={labelCls}>Kemasan</label>
+                <select
                   value={formData.box}
                   onChange={(e) => setField("box", e.target.value)}
-                  placeholder="Standar, Premium"
                   className={inputCls}
-                />
+                >
+                  <option value="">Pilih kemasan</option>
+                  <option value="Standart">Standart</option>
+                  <option value="Premium">Premium</option>
+                  <option value="Exclusive">Exclusive</option>
+                </select>
               </div>
             </div>
 
-            {/* ── Transfer ke Bank ──────────────────────────────────────── */}
+            {/* ── Pembayaran ────────────────────────────────────────────── */}
             <SectionDivider title="Pembayaran" />
 
             <div>
-              <label className={labelCls}>Transfer ke Bank?</label>
+              <label className={labelCls}>Metode Pembayaran</label>
               <select
-                value={
-                  ["BCA", "Mandiri", "BRI", "BNI"].includes(
-                    formData.transferKeBank,
-                  )
-                    ? formData.transferKeBank
-                    : formData.transferKeBank
-                      ? "Lainnya"
-                      : ""
-                }
+                value={formData.transferKeBank}
                 onChange={(e) => setField("transferKeBank", e.target.value)}
                 className={inputCls}
               >
-                <option value="">Pilih bank</option>
-                <option value="BCA">BCA</option>
-                <option value="Mandiri">Mandiri</option>
-                <option value="BRI">BRI</option>
-                <option value="BNI">BNI</option>
-                <option value="Lainnya">Lainnya</option>
+                <option value="">Pilih metode</option>
+                <option value="Pembayaran Ke PT">Pembayaran Ke PT</option>
+                <option value="Pembayaran non PT">Pembayaran non PT</option>
+                <option value="Cash">Cash</option>
               </select>
-              {(formData.transferKeBank === "Lainnya" ||
-                (formData.transferKeBank &&
-                  !["BCA", "Mandiri", "BRI", "BNI"].includes(
-                    formData.transferKeBank,
-                  ))) && (
-                <input
-                  type="text"
-                  value={
-                    formData.transferKeBank === "Lainnya"
-                      ? ""
-                      : formData.transferKeBank
-                  }
-                  onChange={(e) => setField("transferKeBank", e.target.value)}
-                  placeholder="Tulis nama bank..."
-                  className={`${inputCls} mt-2`}
-                />
-              )}
             </div>
 
             {/* ── Submit ───────────────────────────────────────────────── */}

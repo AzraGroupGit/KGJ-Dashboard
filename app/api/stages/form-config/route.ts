@@ -12,14 +12,16 @@ type FieldType =
   | "select"
   | "textarea"
   | "boolean"
-  | "quality_checklist";
+  | "quality_checklist"
+  | "date";
 
 export type StageType =
   | "done"
   | "select_action"
   | "quality_checklist"
   | "packing"
-  | "delivery";
+  | "delivery"
+  | "date";
 
 interface FieldConfig {
   name: string;
@@ -85,13 +87,19 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
     stageType: "select_action",
     fields: [
       {
-        name: "craftsman_type",
-        label: "Pengerjaan Oleh",
+        name: "tukang",
+        label: "Tukang",
         type: "select",
         required: true,
         options: [
-          { value: "internal", label: "Tukang Internal" },
-          { value: "external", label: "Tukang Eksternal" },
+          { value: "Tukang Pembentukan Cincin Internal 1", label: "Tukang Pembentukan Cincin Internal 1" },
+          { value: "Tukang Pembentukan Cincin Internal 2", label: "Tukang Pembentukan Cincin Internal 2" },
+          { value: "Tukang Pembentukan Cincin Internal 3", label: "Tukang Pembentukan Cincin Internal 3" },
+          { value: "Tukang Pembentukan Cincin Internal 4", label: "Tukang Pembentukan Cincin Internal 4" },
+          { value: "Tukang Pembentukan Cincin Eksternal 1", label: "Tukang Pembentukan Cincin Eksternal 1" },
+          { value: "Tukang Pembentukan Cincin Eksternal 2", label: "Tukang Pembentukan Cincin Eksternal 2" },
+          { value: "Tukang Pembentukan Cincin Eksternal 3", label: "Tukang Pembentukan Cincin Eksternal 3" },
+          { value: "Tukang Pembentukan Cincin Eksternal 4", label: "Tukang Pembentukan Cincin Eksternal 4" },
         ],
       },
       NOTES,
@@ -100,8 +108,26 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
 
   pemasangan_permata: {
     label: "Micro Setting",
-    stageType: "done",
-    fields: [NOTES],
+    stageType: "select_action",
+    fields: [
+      {
+        name: "tukang",
+        label: "Tukang",
+        type: "select",
+        required: true,
+        options: [
+          { value: "Micro Setting Internal 1", label: "Micro Setting Internal 1" },
+          { value: "Micro Setting Internal 2", label: "Micro Setting Internal 2" },
+          { value: "Micro Setting Internal 3", label: "Micro Setting Internal 3" },
+          { value: "Micro Setting Internal 4", label: "Micro Setting Internal 4" },
+          { value: "Micro Setting Eksternal 1", label: "Micro Setting Eksternal 1" },
+          { value: "Micro Setting Eksternal 2", label: "Micro Setting Eksternal 2" },
+          { value: "Micro Setting Eksternal 3", label: "Micro Setting Eksternal 3" },
+          { value: "Micro Setting Eksternal 4", label: "Micro Setting Eksternal 4" },
+        ],
+      },
+      NOTES,
+    ],
   },
 
   pemolesan: {
@@ -128,6 +154,8 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
             label: "Permukaan bersih, tidak ada cacat",
           },
           { key: "solder_rapi", label: "Sambungan / patri rapi dan kuat" },
+          { key: "pemasangan_permata", label: "Pemasangan permata sesuai atau belum?" },
+          { key: "cek_kadar", label: "Cek kadar sudah sesuai atau belum?" },
         ],
       },
       { ...NOTES, placeholder: "Temuan QC, catatan perbaikan..." },
@@ -136,8 +164,26 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
 
   laser: {
     label: "Laser Engraving",
-    stageType: "done",
-    fields: [NOTES],
+    stageType: "select_action",
+    fields: [
+      {
+        name: "tukang",
+        label: "Tukang",
+        type: "select",
+        required: true,
+        options: [
+          { value: "Laser Internal 1", label: "Laser Internal 1" },
+          { value: "Laser Internal 2", label: "Laser Internal 2" },
+          { value: "Laser Internal 3", label: "Laser Internal 3" },
+          { value: "Laser Internal 4", label: "Laser Internal 4" },
+          { value: "Laser Eksternal 1", label: "Laser Eksternal 1" },
+          { value: "Laser Eksternal 2", label: "Laser Eksternal 2" },
+          { value: "Laser Eksternal 3", label: "Laser Eksternal 3" },
+          { value: "Laser Eksternal 4", label: "Laser Eksternal 4" },
+        ],
+      },
+      NOTES,
+    ],
   },
 
   finishing: {
@@ -170,6 +216,7 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
           },
           { key: "bentuk_final_sesuai", label: "Bentuk final sesuai order" },
           { key: "produk_bersih", label: "Produk bersih, siap serah terima" },
+          { key: "sertifikasi_berlian", label: "Sudah sertifikasi berlian?" },
         ],
       },
       { ...NOTES, placeholder: "Temuan QC akhir..." },
@@ -192,6 +239,13 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
             label: "Tidak Disetujui — Kembali ke QC Akhir",
           },
         ],
+      },
+      {
+        name: "tanggal_packing",
+        label: "Tanggal Packing",
+        type: "date",
+        required: false,
+        placeholder: "Pilih tanggal packing",
       },
       { ...NOTES, placeholder: "Catatan konfirmasi customer care..." },
     ],
@@ -225,9 +279,9 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
         type: "select",
         required: true,
         options: [
-          { value: "delivered", label: "Sudah Sampai ke Pelanggan — Selesai" },
-          { value: "dispatched", label: "Dalam Perjalanan" },
-          { value: "failed", label: "Gagal Dikirim" },
+          { value: "sampai_expedisi", label: "Pengiriman sudah sampai di Expedisi" },
+          { value: "sampai_store", label: "Pengiriman sudah sampai di Store" },
+          { value: "gagal", label: "Pengiriman Gagal" },
         ],
       },
       { ...NOTES, placeholder: "Catatan pengiriman..." },
@@ -342,9 +396,11 @@ export async function GET(request: Request) {
       .select(
         `id, order_number, current_stage, status, deadline,
          customer_name, customer_wa, customer_email, customer_instagram,
-         acara, kebutuhan_acara, alat_ukur,
-         ukuran_pria, ukiran_pria, jenis_cincin_pria, keterangan_pria, reference_image_pria_url,
-         ukuran_wanita, ukiran_wanita, jenis_cincin_wanita, keterangan_wanita, reference_image_wanita_url,
+         acara, kebutuhan_acara, alat_ukur, gramasi_pria, gramasi_wanita, ukiran_cincin_pria, ukiran_cincin_wanita,
+         ukuran_pria, ukiran_pria, jenis_cincin_pria, reference_image_pria_url,
+         model_bentuk_pria, microsetting_pria, detail_laser_pria, detail_finishing_pria,
+         ukuran_wanita, ukiran_wanita, jenis_cincin_wanita, reference_image_wanita_url,
+         model_bentuk_wanita, microsetting_wanita, detail_laser_wanita, detail_finishing_wanita,
          kategori, transfer_ke_bank, jenis_cincin_features, dari_artis_detail,
          font, laser_position, box, pengiriman, alamat_pengiriman,
          harga, dp_amount`,
@@ -389,6 +445,10 @@ export async function GET(request: Request) {
       jenis_cincin_features: order.jenis_cincin_features ?? null,
       dari_artis_detail: order.dari_artis_detail ?? null,
       alat_ukur: order.alat_ukur ?? null,
+      gramasi_pria: order.gramasi_pria ?? null,
+      gramasi_wanita: order.gramasi_wanita ?? null,
+      ukiran_cincin_pria: order.ukiran_cincin_pria ?? null,
+      ukiran_cincin_wanita: order.ukiran_cincin_wanita ?? null,
       harga: order.harga ?? null,
       dp_amount: order.dp_amount ?? null,
       pengiriman: order.pengiriman ?? null,
@@ -400,14 +460,20 @@ export async function GET(request: Request) {
         ukuran: order.ukuran_pria ?? null,
         ukiran: order.ukiran_pria ?? null,
         jenis_cincin: order.jenis_cincin_pria ?? null,
-        keterangan: order.keterangan_pria ?? null,
+        model_bentuk: order.model_bentuk_pria ?? null,
+        microsetting: order.microsetting_pria ?? null,
+        detail_laser: order.detail_laser_pria ?? null,
+        detail_finishing: order.detail_finishing_pria ?? null,
         reference_image_url: order.reference_image_pria_url ?? null,
       },
       wanita: {
         ukuran: order.ukuran_wanita ?? null,
         ukiran: order.ukiran_wanita ?? null,
         jenis_cincin: order.jenis_cincin_wanita ?? null,
-        keterangan: order.keterangan_wanita ?? null,
+        model_bentuk: order.model_bentuk_wanita ?? null,
+        microsetting: order.microsetting_wanita ?? null,
+        detail_laser: order.detail_laser_wanita ?? null,
+        detail_finishing: order.detail_finishing_wanita ?? null,
         reference_image_url: order.reference_image_wanita_url ?? null,
       },
     };

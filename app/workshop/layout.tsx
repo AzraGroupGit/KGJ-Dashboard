@@ -19,12 +19,12 @@ export default function WorkshopLayout({ children }: { children: React.ReactNode
       />
 
       {/* Main content */}
-      <main className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 py-12">
+      <main className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 py-4 sm:py-6">
         {children}
       </main>
 
       {/* Footer branding */}
-      <footer className="relative z-10 pb-6 text-center">
+      <footer className="relative z-10 pb-3 text-center">
         <p className="text-[11px] uppercase tracking-[0.2em] text-stone-300">
           Workshop Management System
         </p>

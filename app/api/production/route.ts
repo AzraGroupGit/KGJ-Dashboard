@@ -1,6 +1,6 @@
 // app/api/production/route.ts
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -30,7 +30,7 @@ const EXPERT_STAGES = [
   "finishing",
 ] as const;
 
-export async function GET() {
+export async function GET(request?: NextRequest) {
   try {
     const supabase = await createClient();
     const admin = createAdminClient();
@@ -61,6 +61,11 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Parse date params from query
+    const url = request?.url ? new URL(request.url) : null;
+    const fromParam = url?.searchParams.get("from");
+    const toParam = url?.searchParams.get("to");
+
     // Helper tanggal
     const now = new Date();
     const todayStart = new Date(now);
@@ -69,11 +74,12 @@ export async function GET() {
 
     const sevenDaysAgo = new Date(now);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+    const sevenDaysAgoISO = fromParam ? new Date(fromParam).toISOString() : sevenDaysAgo.toISOString();
 
     const thirtyDaysAgo = new Date(now);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
+    const thirtyDaysAgoISO = fromParam ? new Date(fromParam).toISOString() : thirtyDaysAgo.toISOString();
+    const toDateISO = toParam ? new Date(toParam + "T23:59:59").toISOString() : now.toISOString();
 
     // ========== 1. DAFTAR EXPERT USERS ==========
     const { data: expertUsers, error: expertUsersError } = await admin

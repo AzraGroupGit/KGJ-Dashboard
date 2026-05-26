@@ -40,10 +40,13 @@ export function countWorkingDays(start: string, end: string): number {
 }
 
 export const KATEGORI_THRESHOLDS = [
-  { value: "reguler", label: "Reguler 25 hari kerja", minDays: 25 },
+  { value: "reguler", label: "Reguler 25-30 hari kerja", minDays: 25 },
   { value: "cepat", label: "Cepat 14 hari kerja", minDays: 14 },
   { value: "kilat", label: "Kilat 7 hari kerja", minDays: 7 },
+  { value: "kilat_laser_batik", label: "Kilat Laser Batik 10 hari kerja", minDays: 10 },
   { value: "vvip", label: "VVIP 3 hari kerja", minDays: 3 },
+  { value: "revisi", label: "Revisi 14 hari kerja", minDays: 14 },
+  { value: "marketplace", label: "Marketplace 14 hari kerja", minDays: 14 },
 ] as const;
 
 export function getRecommendedKategori(workingDays: number): string | null {
@@ -51,6 +54,21 @@ export function getRecommendedKategori(workingDays: number): string | null {
     if (workingDays >= k.minDays) return k.value;
   }
   return null;
+}
+
+export function addWorkingDays(start: string, workingDays: number): string {
+  const date = new Date(start);
+  let count = 0;
+  while (count < workingDays) {
+    date.setDate(date.getDate() + 1);
+    const day = date.getDay();
+    const holidays = getIndonesianHolidays(date.getFullYear());
+    const dateStr = date.toISOString().split("T")[0];
+    if (day !== 0 && day !== 6 && !holidays.includes(dateStr)) {
+      count++;
+    }
+  }
+  return date.toISOString().split("T")[0];
 }
 
 export function getWorkingDaysMessage(workingDays: number): string | null {

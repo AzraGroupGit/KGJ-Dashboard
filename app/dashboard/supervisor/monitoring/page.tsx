@@ -8,16 +8,20 @@ import Link from "next/link";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
 import {
-  Activity,
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Hammer,
+  TrendingUp,
+  BarChart3,
   RefreshCw,
+  Activity,
+  Hammer,
   Settings,
   ShieldCheck,
   Users,
 } from "lucide-react";
+import { formatAddsOnList } from "@/lib/adds-on";
+import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -652,9 +656,9 @@ function OrderDetailPopup({
                       )}
                       {o.jenis_cincin_features?.length ? (
                         <div className="bg-slate-50 rounded p-2">
-                          <span className="text-slate-400">Fitur Cincin</span>
+                          <span className="text-slate-400">Adds-On</span>
                           <p className="font-medium text-slate-700">
-                            {o.jenis_cincin_features.join(", ")}
+                            {formatAddsOnList(o.jenis_cincin_features)}
                           </p>
                         </div>
                       ) : null}
@@ -1273,6 +1277,15 @@ export default function SupervisorMonitoringPage() {
                                 {dl.urgent && <AlertTriangle className="inline h-3 w-3 mr-0.5 -mt-0.5" />}
                                 {dl.label}
                               </span>
+                              {order.deadline && (() => {
+                                const s = getStageDeadlineStatus(order.deadline as string, order.current_stage);
+                                if (!s) return null;
+                                return (
+                                  <span className={`text-[10px] ${s.isOverdue ? "text-rose-500 font-medium" : "text-emerald-500"}`}>
+                                    {s.isOverdue ? `⚠ ${Math.abs(s.daysRemaining)}h` : `H-${Math.max(s.daysRemaining, 1)}`}
+                                  </span>
+                                );
+                              })()}
                             </div>
                           </div>
                         </button>
@@ -1431,6 +1444,15 @@ export default function SupervisorMonitoringPage() {
                                     {dl.urgent && <AlertTriangle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />}
                                     {dl.label}
                                   </span>
+                                  {order.deadline && (() => {
+                                    const s = getStageDeadlineStatus(order.deadline as string, order.current_stage);
+                                    if (!s) return null;
+                                    return (
+                                      <p className={`text-[11px] mt-0.5 ${s.isOverdue ? "text-rose-500 font-medium" : "text-emerald-500"}`}>
+                                        {s.isOverdue ? `⚠ Terlambat ${Math.abs(s.daysRemaining)} hari` : `Target: H-${Math.max(s.daysRemaining, 1)}`}
+                                      </p>
+                                    );
+                                  })()}
                                 </td>
                               </tr>
                             );

@@ -49,16 +49,27 @@ export interface CsOrder {
 
   alat_ukur: string | null;
 
+  gramasi_pria: number | null;
+  gramasi_wanita: number | null;
+
   ukuran_pria: string | null;
   ukiran_pria: string | null;
+  ukiran_cincin_pria: string | null;
+  ukiran_cincin_wanita: string | null;
   jenis_cincin_pria: string | null;
-  keterangan_pria: string[];
+  model_bentuk_pria: string[];
+  microsetting_pria: string[];
+  detail_laser_pria: string[];
+  detail_finishing_pria: string[];
 
   ukuran_wanita: string | null;
   ukiran_wanita: string | null;
   jenis_cincin_wanita: string | null;
   jenis_cincin_features: string[];
-  keterangan_wanita: string[];
+  model_bentuk_wanita: string[];
+  microsetting_wanita: string[];
+  detail_laser_wanita: string[];
+  detail_finishing_wanita: string[];
 
   font: string | null;
   laser_position: "dalam" | "luar" | "dalam_luar" | null;
@@ -66,6 +77,7 @@ export interface CsOrder {
   pengiriman: string | null;
   box: string | null;
   transfer_ke_bank: string | null;
+  keterangan_tambahan: string | null;
 
   reference_image_pria_url: string | null;
   reference_image_wanita_url: string | null;

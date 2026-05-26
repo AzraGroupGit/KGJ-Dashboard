@@ -45,12 +45,14 @@ interface Account {
   role_id: string | null;
   role: Role | null;
   branch_name?: string | null;
+  pin_hash: string | null;
 }
 
 type ModalType =
   | "create"
   | "edit"
   | "password"
+  | "pin"
   | "deactivate"
   | "delete"
   | null;
@@ -171,6 +173,27 @@ function StatusBadge({ status }: { status: "active" | "inactive" }) {
         }`}
       />
       {status === "active" ? "Aktif" : "Nonaktif"}
+    </span>
+  );
+}
+
+function PinBadge({ pinHash }: { pinHash: string | null }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+        pinHash
+          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+          : "bg-stone-100 text-stone-400 ring-1 ring-stone-200"
+      }`}
+    >
+      {pinHash ? (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-3 w-3">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>
+      ) : (
+        <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
+      )}
+      {pinHash ? "PIN Aktif" : "Belum"}
     </span>
   );
 }
@@ -758,7 +781,143 @@ function PasswordModal({ account, onClose }: PasswordModalProps) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// DEACTIVATE MODAL
+// PIN MODAL
+// ════════════════════════════════════════════════════════════════════════════
+
+interface PinModalProps {
+  account: Account;
+  onClose: () => void;
+  onUpdated: (id: string, changes: Partial<Account>) => void;
+}
+
+function PinModal({ account, onClose, onUpdated }: PinModalProps) {
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const pinError =
+    confirmPin && pin !== confirmPin ? "PIN tidak cocok" : null;
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pin !== confirmPin) {
+      setError("PIN tidak cocok");
+      return;
+    }
+    if (pin.length !== 6) {
+      setError("PIN harus 6 digit");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/supervisor/accounts/${account.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal mengatur PIN");
+      onUpdated(account.id, { pin_hash: pin });
+      setSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <ModalShell
+      title={account.pin_hash ? "Ubah PIN" : "Atur PIN"}
+      subtitle={account.full_name}
+      icon={<Key className="h-5 w-5 text-stone-600" />}
+      onClose={onClose}
+    >
+      {success ? (
+        <div className="space-y-4">
+          <div className="rounded-xl bg-emerald-50 p-4 text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+              <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+            </div>
+            <p className="text-sm font-medium text-emerald-800">
+              PIN berhasil {account.pin_hash ? "diubah" : "diatur"}
+            </p>
+            <p className="mt-1 text-xs text-emerald-600">
+              Informasikan PIN kepada {account.full_name}.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-full rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 transition-colors"
+          >
+            Tutup
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="space-y-4">
+          {error && (
+            <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-200 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-stone-700">
+              PIN Baru (6 digit angka)
+            </label>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="••••••"
+              className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm text-stone-800 text-center text-lg tracking-[0.3em] placeholder:text-stone-400 focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-200 transition"
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-stone-700">
+              Konfirmasi PIN
+            </label>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              value={confirmPin}
+              onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="••••••"
+              className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm text-stone-800 text-center text-lg tracking-[0.3em] placeholder:text-stone-400 focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-200 transition"
+              required
+            />
+            {pinError && <p className="mt-1 text-xs text-red-600">{pinError}</p>}
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !pin || !confirmPin || !!pinError}
+              className="flex-1 rounded-lg bg-stone-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-stone-900 disabled:opacity-60 transition-colors"
+            >
+              {loading ? "Menyimpan..." : account.pin_hash ? "Ubah PIN" : "Atur PIN"}
+            </button>
+          </div>
+        </form>
+      )}
+    </ModalShell>
+  );
+}
 // ════════════════════════════════════════════════════════════════════════════
 
 interface DeactivateModalProps {
@@ -1335,6 +1494,7 @@ export default function SupervisorAccountsPage() {
                         "Nama / Username",
                         "Role",
                         "Status",
+                        "PIN",
                         "Login Terakhir",
                         "Dibuat",
                         "Aksi",
@@ -1388,6 +1548,9 @@ export default function SupervisorAccountsPage() {
                         <td className="px-4 py-3">
                           <StatusBadge status={account.status} />
                         </td>
+                        <td className="px-4 py-3">
+                          <PinBadge pinHash={account.pin_hash} />
+                        </td>
                         <td className="px-4 py-3 text-xs text-stone-500">
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3 text-stone-400" />
@@ -1420,6 +1583,17 @@ export default function SupervisorAccountsPage() {
                               className="rounded-lg p-1.5 text-stone-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                             >
                               <Key className="h-4 w-4" />
+                            </button>
+                            {/* PIN */}
+                            <button
+                              onClick={() => {
+                                setSelectedAccount(account);
+                                setModal("pin");
+                              }}
+                              title={account.pin_hash ? "Ubah PIN" : "Atur PIN"}
+                              className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition-colors"
+                            >
+                              <span className="text-[10px] font-bold leading-none">PIN</span>
                             </button>
                             {/* Deactivate/Activate */}
                             <button
@@ -1493,6 +1667,9 @@ export default function SupervisorAccountsPage() {
                             </span>
                           </div>
                         )}
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <PinBadge pinHash={account.pin_hash} />
+                        </div>
                         <div className="mt-1.5 flex items-center gap-3 text-xs text-stone-400">
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
@@ -1522,6 +1699,17 @@ export default function SupervisorAccountsPage() {
                       >
                         <Key className="h-3 w-3" />
                         Reset PW
+                      </button>
+                      {/* PIN button */}
+                      <button
+                        onClick={() => {
+                          setSelectedAccount(account);
+                          setModal("pin");
+                        }}
+                        className="flex-1 rounded-lg border border-stone-200 py-2.5 text-xs font-medium text-stone-600 hover:bg-stone-50 active:bg-stone-100 transition-colors flex items-center justify-center gap-1"
+                      >
+                        <span className="text-[10px] font-bold">PIN</span>
+                        {account.pin_hash ? " Ubah" : " Atur"}
                       </button>
                       <button
                         onClick={() => {
@@ -1582,6 +1770,13 @@ export default function SupervisorAccountsPage() {
       )}
       {modal === "password" && selectedAccount && (
         <PasswordModal account={selectedAccount} onClose={closeModal} />
+      )}
+      {modal === "pin" && selectedAccount && (
+        <PinModal
+          account={selectedAccount}
+          onClose={closeModal}
+          onUpdated={handleUpdated}
+        />
       )}
       {modal === "deactivate" && selectedAccount && (
         <DeactivateModal

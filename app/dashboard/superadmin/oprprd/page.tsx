@@ -32,10 +32,17 @@ import {
   Trophy,
   Truck,
   Users,
-  Wallet,
   XCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
 
 // ============================================================
 // Config
@@ -114,11 +121,7 @@ interface DashboardData {
       inProgress: number;
       waiting: number;
     };
-    yield: {
-      rataYield: number;
-      totalTarget: number;
-      totalActual: number;
-    };
+
   };
   recentActivities: Array<{
     id: string;
@@ -344,24 +347,63 @@ export default function OwnerDashboardPage() {
                   }
                 />
 
-                <KpiCard
-                  label="Nilai Barang WIP"
-                  value={formatRupiah(data.kpi.nilaiBarangWIP.estimasiRupiah)}
-                  icon={Wallet}
-                  accent="violet"
-                  subtitle={
-                    <span className="inline-flex items-center gap-3">
-                      <span className="inline-flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                        {data.kpi.nilaiBarangWIP.beratEmas.toFixed(0)}g emas
+                {/* Chart Card — Stage Distribution (replaces Nilai Barang WIP) */}
+                <div className="rounded-lg border border-slate-200 bg-white p-4 col-span-1">
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Distribusi per Stage
+                    </p>
+                    {data.stageDistribution.length > 0 && (
+                      <span className="text-xs text-slate-400">
+                        {data.stageDistribution.reduce((a, b) => a + b.count, 0)} order
                       </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Gem className="h-3 w-3 text-violet-400" />
-                        {data.kpi.nilaiBarangWIP.jumlahPermata} permata
-                      </span>
-                    </span>
-                  }
-                />
+                    )}
+                  </div>
+                  <div className="h-[120px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={data.stageDistribution
+                          .sort((a, b) => b.count - a.count)
+                          .slice(0, 8)}
+                        margin={{ top: 0, right: 0, bottom: 0, left: -12 }}
+                      >
+                        <XAxis
+                          dataKey="stage"
+                          tickFormatter={(s) => STAGE_LABELS[s] ?? s}
+                          tick={{ fontSize: 9, fill: "#94a3b8" }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          allowDecimals={false}
+                          tick={{ fontSize: 9, fill: "#94a3b8" }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <Tooltip
+                          formatter={(value) => [value, "Order"]}
+                          labelFormatter={(s) => STAGE_LABELS[s as string] ?? s}
+                          contentStyle={{
+                            fontSize: 11,
+                            borderRadius: 6,
+                            border: "1px solid #e2e8f0",
+                          }}
+                        />
+                        <Bar
+                          dataKey="count"
+                          fill="#6366f1"
+                          radius={[3, 3, 0, 0]}
+                          maxBarSize={32}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {data.stageDistribution.length > 8 && (
+                    <p className="mt-2 text-center text-[10px] text-slate-400">
+                      +{data.stageDistribution.length - 8} stage lainnya
+                    </p>
+                  )}
+                </div>
 
                 <KpiCard
                   label="Rata-rata Cycle Time"
@@ -441,7 +483,7 @@ export default function OwnerDashboardPage() {
                   </dl>
                 </SectionCard>
 
-                <SectionCard icon={Briefcase} title="After Sales">
+                <SectionCard icon={Briefcase} title="Operasional">
                   <div className="space-y-1.5">
                     <LinkRow
                       href={LINK_OPERASIONAL}
@@ -473,6 +515,88 @@ export default function OwnerDashboardPage() {
                         </p>
                       </div>
                     )}
+
+                    <div className="mt-3 border-t border-slate-100 pt-3">
+                      <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                        Admin & QC
+                      </p>
+                      <div className="mb-2 flex items-center justify-between rounded-md px-2 py-1.5">
+                        <span className="flex items-center gap-2 text-sm text-slate-600">
+                          <ClipboardList className="h-3.5 w-3.5 text-slate-400" />
+                          Tugas admin
+                        </span>
+                        <span className="text-sm font-semibold tabular-nums text-slate-900">
+                          {data.operasional.adminTasks.total}
+                        </span>
+                      </div>
+                      <div className="mb-2 flex items-center gap-3 px-2">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                          {data.operasional.adminTasks.active} aktif
+                        </span>
+                        {data.operasional.adminTasks.delayed > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700 ring-1 ring-inset ring-rose-200">
+                            {data.operasional.adminTasks.delayed} terlambat
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between rounded-md px-2 py-1.5">
+                        <span className="flex items-center gap-2 text-sm text-slate-600">
+                          <ShieldCheck className="h-3.5 w-3.5 text-slate-400" />
+                          QC pass rate
+                        </span>
+                        <span
+                          className={`text-sm font-semibold ${
+                            data.operasional.qc.passRateAvg >= 80
+                              ? "text-emerald-600"
+                              : data.operasional.qc.passRateAvg >= 60
+                                ? "text-amber-600"
+                                : "text-rose-600"
+                          }`}
+                        >
+                          {data.operasional.qc.passRateAvg.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 border-t border-slate-100 pt-3">
+                      <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                        Racik & Laser
+                      </p>
+                      <div className="flex items-center justify-between rounded-md px-2 py-1.5">
+                        <span className="flex items-center gap-2 text-sm text-slate-600">
+                          <BarChart3 className="h-3.5 w-3.5 text-slate-400" />
+                          Shrinkage
+                        </span>
+                        <span
+                          className={`text-sm font-semibold ${
+                            data.operasional.racik.rataShrinkage <=
+                            data.operasional.racik.targetShrinkage
+                              ? "text-emerald-600"
+                              : "text-rose-600"
+                          }`}
+                        >
+                          {data.operasional.racik.rataShrinkage.toFixed(2)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-md px-2 py-1.5">
+                        <span className="flex items-center gap-2 text-sm text-slate-600">
+                          <ScanLine className="h-3.5 w-3.5 text-slate-400" />
+                          Laser antrian
+                        </span>
+                        <span className="text-sm font-semibold tabular-nums text-slate-900">
+                          {data.operasional.laser.antrian}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-md px-2 py-1.5">
+                        <span className="flex items-center gap-2 text-sm text-slate-600">
+                          <ScanLine className="h-3.5 w-3.5 text-slate-400" />
+                          Mesin aktif
+                        </span>
+                        <span className="text-sm font-semibold tabular-nums text-slate-900">
+                          {data.operasional.laser.mesinAktif}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </SectionCard>
 
@@ -492,23 +616,6 @@ export default function OwnerDashboardPage() {
                       value={data.produksi.microSetting.total}
                       iconTone="violet"
                     />
-                    <div className="flex items-center justify-between rounded-md px-2 py-1.5">
-                      <span className="flex items-center gap-2 text-sm text-slate-600">
-                        <BarChart3 className="h-3.5 w-3.5 text-slate-400" />
-                        Yield material
-                      </span>
-                      <span
-                        className={`text-sm font-semibold ${
-                          data.produksi.yield.rataYield >= 95
-                            ? "text-emerald-600"
-                            : data.produksi.yield.rataYield >= 90
-                              ? "text-amber-600"
-                              : "text-rose-600"
-                        }`}
-                      >
-                        {data.produksi.yield.rataYield.toFixed(1)}%
-                      </span>
-                    </div>
                     <div className="mt-2 border-t border-slate-100 pt-2">
                       <div className="flex items-center justify-between text-xs text-slate-500">
                         <span>Order dikerjakan hari ini</span>

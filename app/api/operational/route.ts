@@ -1,10 +1,10 @@
 // app/api/operational/route.ts
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function GET() {
+export async function GET(request?: NextRequest) {
   try {
     const supabase = await createClient();
     const admin = createAdminClient();
@@ -32,13 +32,18 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const url = request?.url ? new URL(request.url) : null;
+    const fromParam = url?.searchParams.get("from");
+    const toParam = url?.searchParams.get("to");
+
     const now = new Date();
     const threeDaysAgo = new Date(now);
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
     const sevenDaysAgo = new Date(now);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const threeDaysAgoISO = threeDaysAgo.toISOString();
-    const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+    const threeDaysAgoISO = fromParam ? new Date(fromParam).toISOString() : threeDaysAgo.toISOString();
+    const sevenDaysAgoISO = fromParam ? new Date(fromParam).toISOString() : sevenDaysAgo.toISOString();
+    const toDateISO = toParam ? new Date(toParam + "T23:59:59").toISOString() : now.toISOString();
 
     // ========== FETCH ALL SECTIONS IN PARALLEL ==========
     const [

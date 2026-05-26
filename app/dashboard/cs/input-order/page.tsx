@@ -17,8 +17,14 @@ import {
   countWorkingDays,
   getRecommendedKategori,
   KATEGORI_THRESHOLDS,
+  addWorkingDays,
 } from "@/lib/working-days";
+import { checkSlotAvailability, type SlotCheckResult } from "@/lib/slot-check";
 import AddressAutocomplete from "@/components/order/AddressAutocomplete";
+import FontPicker from "@/components/order/FontPicker";
+import MaterialSelect from "@/components/order/MaterialSelect";
+import EngravingSelect from "@/components/order/EngravingSelect";
+import AddsOnAccordion from "@/components/order/AddsOnAccordion";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -52,16 +58,27 @@ interface OrderFormData {
   alatUkur: string;
   ukiranPria: string;
   ukiranWanita: string;
+  ukiranCincinPria: string;
+  ukiranCincinWanita: string;
   font: string;
   laserPosition: string;
   jenisCincinPria: string;
   jenisCincinWanita: string;
+  gramasiPria: string;
+  gramasiWanita: string;
   jenisCincinFeatures: string[];
-  keteranganPria: string[];
-  keteranganWanita: string[];
+  modelBentukPria: string[];
+  microsettingPria: string[];
+  detailLaserPria: string[];
+  detailFinishingPria: string[];
+  modelBentukWanita: string[];
+  microsettingWanita: string[];
+  detailLaserWanita: string[];
+  detailFinishingWanita: string[];
   pengiriman: string;
   box: string;
   transferKeBank: string;
+  keteranganTambahan: string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -98,16 +115,27 @@ const emptyFormData = (): OrderFormData => ({
   alatUkur: "",
   ukiranPria: "",
   ukiranWanita: "",
+  ukiranCincinPria: "",
+  ukiranCincinWanita: "",
   font: "",
   laserPosition: "",
   jenisCincinPria: "",
   jenisCincinWanita: "",
+  gramasiPria: "",
+  gramasiWanita: "",
   jenisCincinFeatures: [],
-  keteranganPria: [""],
-  keteranganWanita: [""],
+  modelBentukPria: [""],
+  microsettingPria: [""],
+  detailLaserPria: [""],
+  detailFinishingPria: [""],
+  modelBentukWanita: [""],
+  microsettingWanita: [""],
+  detailLaserWanita: [""],
+  detailFinishingWanita: [""],
   pengiriman: "",
   box: "",
   transferKeBank: "",
+  keteranganTambahan: "",
 });
 
 const LABELS: Record<string, string> = {
@@ -185,7 +213,10 @@ function csOrderToFormData(o: CsOrder): OrderFormData {
       o.dari_artis === true ? "Iya" : o.dari_artis === false ? "Tidak" : "",
     dariArtisDetail: o.dari_artis_detail ?? "",
     harga: o.harga != null ? o.harga.toString() : "",
-    dpPercent: "80",
+    dpPercent:
+      o.harga && o.dp_amount
+        ? String(Math.round((o.dp_amount / o.harga) * 100))
+        : "80",
     dp: o.dp_amount != null ? o.dp_amount.toString() : "",
     namaLengkap: o.customer_name,
     alamatPengiriman: o.alamat_pengiriman ?? "",
@@ -202,16 +233,37 @@ function csOrderToFormData(o: CsOrder): OrderFormData {
     alatUkur: o.alat_ukur ?? "",
     ukiranPria: o.ukiran_pria ?? "",
     ukiranWanita: o.ukiran_wanita ?? "",
+    ukiranCincinPria: o.ukiran_cincin_pria ?? "",
+    ukiranCincinWanita: o.ukiran_cincin_wanita ?? "",
     font: o.font ?? "",
     laserPosition: o.laser_position ?? "",
     jenisCincinPria: o.jenis_cincin_pria ?? "",
     jenisCincinWanita: o.jenis_cincin_wanita ?? "",
+    gramasiPria: o.gramasi_pria ? String(o.gramasi_pria) : "",
+    gramasiWanita: o.gramasi_wanita ? String(o.gramasi_wanita) : "",
     jenisCincinFeatures: o.jenis_cincin_features ?? [],
-    keteranganPria: o.keterangan_pria?.length ? o.keterangan_pria : [""],
-    keteranganWanita: o.keterangan_wanita?.length ? o.keterangan_wanita : [""],
+    modelBentukPria: o.model_bentuk_pria?.length ? o.model_bentuk_pria : [""],
+    microsettingPria: o.microsetting_pria?.length ? o.microsetting_pria : [""],
+    detailLaserPria: o.detail_laser_pria?.length ? o.detail_laser_pria : [""],
+    detailFinishingPria: o.detail_finishing_pria?.length
+      ? o.detail_finishing_pria
+      : [""],
+    modelBentukWanita: o.model_bentuk_wanita?.length
+      ? o.model_bentuk_wanita
+      : [""],
+    microsettingWanita: o.microsetting_wanita?.length
+      ? o.microsetting_wanita
+      : [""],
+    detailLaserWanita: o.detail_laser_wanita?.length
+      ? o.detail_laser_wanita
+      : [""],
+    detailFinishingWanita: o.detail_finishing_wanita?.length
+      ? o.detail_finishing_wanita
+      : [""],
     pengiriman: o.pengiriman ?? "",
     box: o.box ?? "",
     transferKeBank: o.transfer_ke_bank ?? "",
+    keteranganTambahan: o.keterangan_tambahan ?? "",
   };
 }
 
@@ -244,19 +296,26 @@ function formDataToPatch(f: OrderFormData) {
     alat_ukur: f.alatUkur || null,
     ukuran_pria: f.ukuranPria || null,
     ukiran_pria: f.ukiranPria || null,
+    ukiran_cincin_pria: f.ukiranCincinPria || null,
+    ukiran_cincin_wanita: f.ukiranCincinWanita || null,
     jenis_cincin_pria: f.jenisCincinPria || null,
-    keterangan_pria: f.keteranganPria.filter(Boolean),
-    ukuran_wanita: f.ukuranWanita || null,
-    ukiran_wanita: f.ukuranWanita || null,
-    jenis_cincin_wanita: f.jenisCincinWanita || null,
-    jenis_cincin_features: f.jenisCincinFeatures,
-    keterangan_wanita: f.keteranganWanita.filter(Boolean),
+    gramasi_pria: f.gramasiPria ? parseFloat(f.gramasiPria) : null,
+    gramasi_wanita: f.gramasiWanita ? parseFloat(f.gramasiWanita) : null,
+    model_bentuk_pria: f.modelBentukPria.filter(Boolean),
+    microsetting_pria: f.microsettingPria.filter(Boolean),
+    detail_laser_pria: f.detailLaserPria.filter(Boolean),
+    detail_finishing_pria: f.detailFinishingPria.filter(Boolean),
+    model_bentuk_wanita: f.modelBentukWanita.filter(Boolean),
+    microsetting_wanita: f.microsettingWanita.filter(Boolean),
+    detail_laser_wanita: f.detailLaserWanita.filter(Boolean),
+    detail_finishing_wanita: f.detailFinishingWanita.filter(Boolean),
     font: f.font || null,
     laser_position:
       (f.laserPosition as "dalam" | "luar" | "dalam_luar") || null,
     pengiriman: f.pengiriman || null,
     box: f.box || null,
     transfer_ke_bank: f.transferKeBank || null,
+    keterangan_tambahan: f.keteranganTambahan || null,
   };
 }
 
@@ -418,36 +477,6 @@ export default function InputOrderPage() {
     value: OrderFormData[K],
   ) => setFormData((prev) => ({ ...prev, [key]: value }));
 
-  const setKetPria = (index: number, value: string) => {
-    const arr = [...formData.keteranganPria];
-    arr[index] = value;
-    setField("keteranganPria", arr);
-  };
-
-  const addKetPria = () => {
-    setField("keteranganPria", [...formData.keteranganPria, ""]);
-  };
-
-  const removeKetPria = (index: number) => {
-    const arr = formData.keteranganPria.filter((_, i) => i !== index);
-    setField("keteranganPria", arr.length ? arr : [""]);
-  };
-
-  const setKetWanita = (index: number, value: string) => {
-    const arr = [...formData.keteranganWanita];
-    arr[index] = value;
-    setField("keteranganWanita", arr);
-  };
-
-  const addKetWanita = () => {
-    setField("keteranganWanita", [...formData.keteranganWanita, ""]);
-  };
-
-  const removeKetWanita = (index: number) => {
-    const arr = formData.keteranganWanita.filter((_, i) => i !== index);
-    setField("keteranganWanita", arr.length ? arr : [""]);
-  };
-
   const handleHargaChange = (raw: string) => {
     const pct = parseInt(formData.dpPercent || "80", 10);
     setField("harga", raw);
@@ -493,7 +522,10 @@ export default function InputOrderPage() {
     setIsSaving(true);
     try {
       const patch: Record<string, unknown> = formDataToPatch(formData);
-      if (selectedOrder.form_status === "pending" || selectedOrder.form_status === "submitted") {
+      if (
+        selectedOrder.form_status === "pending" ||
+        selectedOrder.form_status === "submitted"
+      ) {
         patch.form_status = "reviewed";
         patch.reviewed_at = new Date().toISOString();
       }
@@ -1202,12 +1234,6 @@ export default function InputOrderPage() {
           onChangeField={setField}
           workingDays={workingDays}
           onChangeHarga={handleHargaChange}
-          onChangeKetPria={setKetPria}
-          onAddKetPria={addKetPria}
-          onRemoveKetPria={removeKetPria}
-          onChangeKetWanita={setKetWanita}
-          onAddKetWanita={addKetWanita}
-          onRemoveKetWanita={removeKetWanita}
           orderNumber={selectedOrder?.order_number ?? ""}
         />
       </Modal>
@@ -1466,12 +1492,6 @@ interface FormFieldsProps {
   ) => void;
   workingDays: number | null;
   onChangeHarga: (raw: string) => void;
-  onChangeKetPria: (index: number, value: string) => void;
-  onAddKetPria: () => void;
-  onRemoveKetPria: (index: number) => void;
-  onChangeKetWanita: (index: number, value: string) => void;
-  onAddKetWanita: () => void;
-  onRemoveKetWanita: (index: number) => void;
 }
 
 function SectionHeader({ title }: { title: string }) {
@@ -1516,12 +1536,6 @@ function OrderFormFields({
   onChangeField,
   workingDays,
   onChangeHarga,
-  onChangeKetPria,
-  onAddKetPria,
-  onRemoveKetPria,
-  onChangeKetWanita,
-  onAddKetWanita,
-  onRemoveKetWanita,
 }: FormFieldsProps) {
   const [hargaDisplay, setHargaDisplay] = useState(() =>
     formatRupiah(data.harga),
@@ -1530,6 +1544,46 @@ function OrderFormFields({
   useEffect(() => {
     setHargaDisplay(formatRupiah(data.harga));
   }, [data.harga]);
+
+  const [slotInfo, setSlotInfo] = useState<SlotCheckResult | null>(null);
+  const [slotLoading, setSlotLoading] = useState(false);
+
+  useEffect(() => {
+    if (data.kategori && data.tglOrder) {
+      const threshold = KATEGORI_THRESHOLDS.find((k) => k.value === data.kategori);
+      if (threshold) {
+        const suggestedDeadline = addWorkingDays(data.tglOrder, threshold.minDays);
+        if (!data.deadline) {
+          onChangeField("deadline" as keyof OrderFormData, suggestedDeadline as any);
+        }
+      }
+    }
+  }, [data.kategori]);
+
+  useEffect(() => {
+    if (data.kategori && data.deadline) {
+      setSlotLoading(true);
+      checkSlotAvailability(data.kategori, data.deadline).then((result) => {
+        setSlotInfo(result);
+        setSlotLoading(false);
+      });
+    } else {
+      setSlotInfo(null);
+    }
+  }, [data.kategori, data.deadline]);
+
+  const detailField = (prefix: string, gender: "Pria" | "Wanita") =>
+    `${prefix}${gender}` as keyof OrderFormData;
+
+  const addDetailRow = (field: keyof OrderFormData) => {
+    const arr = [...(data[field] as string[])];
+    arr.push("");
+    onChangeField(field, arr as any);
+  };
+  const removeDetailRow = (field: keyof OrderFormData, i: number) => {
+    const arr = (data[field] as string[]).filter((_, idx) => idx !== i);
+    onChangeField(field, (arr.length ? arr : [""]) as any);
+  };
 
   const handleHargaInput = (val: string) => {
     const raw = val.replace(/[^\d]/g, "");
@@ -1618,6 +1672,20 @@ function OrderFormFields({
               {workingDays < 3
                 ? `Hanya ${workingDays} hari kerja tersedia — tidak cukup untuk paket manapun`
                 : `${workingDays} hari kerja tersedia`}
+            </p>
+          )}
+          {slotLoading && (
+            <p className="text-xs text-gray-400 mt-1">Memeriksa slot...</p>
+          )}
+          {slotInfo && slotInfo.is_full && (
+            <p className="text-xs text-amber-600 font-medium mt-1 flex items-center gap-1">
+              <span>⚠</span>
+              <span>Slot {slotInfo.label} untuk {new Date(slotInfo.deadline).toLocaleDateString("id-ID")} penuh ({slotInfo.used}/{slotInfo.total_slots} terpakai)</span>
+            </p>
+          )}
+          {slotInfo && !slotInfo.is_full && slotInfo.total_slots > 0 && (
+            <p className="text-xs text-emerald-600 mt-1">
+              Slot tersedia: {slotInfo.available} dari {slotInfo.total_slots}
             </p>
           )}
         </FieldRow>
@@ -1965,14 +2033,38 @@ function OrderFormFields({
 
       <div className="space-y-3">
         <FieldRow label="Alat Ukur">
-          <input
-            type="text"
-            value={data.alatUkur}
-            onChange={(e) => onChangeField("alatUkur", e.target.value)}
-            placeholder="Contoh: cincin referensi, mandrel, dll"
-            className={inputCls(disabled)}
-            disabled={disabled}
-          />
+          <div className="space-y-2">
+            <label className={`flex items-center gap-2 ${disabled ? "cursor-default" : "cursor-pointer"}`}>
+              <input
+                type="radio"
+                name="alatUkur"
+                value="Dari Store"
+                checked={data.alatUkur === "Dari Store"}
+                onChange={() => onChangeField("alatUkur", "Dari Store")}
+                disabled={disabled}
+                className="w-4 h-4 accent-indigo-600"
+              />
+              <span className="text-sm text-gray-700">Dari Store</span>
+            </label>
+            {data.alatUkur === "Dari Store" && (
+              <p className="text-xs text-emerald-600 ml-6">✓ Tercover garansi re-size selama 1 bulan</p>
+            )}
+            <label className={`flex items-center gap-2 ${disabled ? "cursor-default" : "cursor-pointer"}`}>
+              <input
+                type="radio"
+                name="alatUkur"
+                value="Luar Store"
+                checked={data.alatUkur === "Luar Store"}
+                onChange={() => onChangeField("alatUkur", "Luar Store")}
+                disabled={disabled}
+                className="w-4 h-4 accent-indigo-600"
+              />
+              <span className="text-sm text-gray-700">Luar Store</span>
+            </label>
+            {data.alatUkur === "Luar Store" && (
+              <p className="text-xs text-rose-500 ml-6">✗ Tidak tercover garansi re-size</p>
+            )}
+          </div>
         </FieldRow>
         <FieldRow label="Ukuran Pria">
           <input
@@ -2035,14 +2127,34 @@ function OrderFormFields({
             {data.ukiranWanita.length}/15 karakter
           </p>
         </FieldRow>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              Ukiran Cincin Pria
+            </label>
+            <EngravingSelect
+              value={data.ukiranCincinPria}
+              onChange={(v) => onChangeField("ukiranCincinPria", v)}
+              disabled={disabled}
+              placeholder="Pilih jenis ukiran"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              Ukiran Cincin Wanita
+            </label>
+            <EngravingSelect
+              value={data.ukiranCincinWanita}
+              onChange={(v) => onChangeField("ukiranCincinWanita", v)}
+              disabled={disabled}
+              placeholder="Pilih jenis ukiran"
+            />
+          </div>
+        </div>
         <FieldRow label="Font">
-          <input
-            type="text"
+          <FontPicker
             value={data.font}
-            onChange={(e) => onChangeField("font", e.target.value)}
-            placeholder="Contoh: Script, Block, Arial"
-            className={inputCls(disabled)}
-            disabled={disabled}
+            onChange={(v) => onChangeField("font", v)}
           />
         </FieldRow>
         <FieldRow label="Posisi Laser">
@@ -2064,256 +2176,285 @@ function OrderFormFields({
 
       <div className="space-y-3">
         <FieldRow label="Jenis Cincin Pria">
-          <input
-            type="text"
+          <MaterialSelect
             value={data.jenisCincinPria}
-            onChange={(e) => onChangeField("jenisCincinPria", e.target.value)}
-            placeholder="Contoh: Polos, Berlian, Permata"
-            className={inputCls(disabled)}
+            onChange={(v) => onChangeField("jenisCincinPria", v)}
             disabled={disabled}
           />
         </FieldRow>
         <FieldRow label="Jenis Cincin Wanita">
-          <input
-            type="text"
+          <MaterialSelect
             value={data.jenisCincinWanita}
-            onChange={(e) => onChangeField("jenisCincinWanita", e.target.value)}
-            placeholder="Contoh: Polos, Berlian, Permata"
-            className={inputCls(disabled)}
+            onChange={(v) => onChangeField("jenisCincinWanita", v)}
             disabled={disabled}
           />
         </FieldRow>
       </div>
 
-      <SectionHeader title="Fitur Cincin" />
-
-      <div className="space-y-2">
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            { value: "Laser Batik", label: "Laser Batik" },
-            { value: "Micro Finishing", label: "Micro Finishing" },
-            { value: "3D Design", label: "3D Design" },
-            { value: "Special Model", label: "Special Model" },
-          ].map((feat) => (
-            <label
-              key={feat.value}
-              className={`flex items-center gap-2 ${disabled ? "cursor-default" : "cursor-pointer"}`}
-            >
-              <input
-                type="checkbox"
-                value={feat.value}
-                checked={data.jenisCincinFeatures.includes(feat.value)}
-                onChange={() => {
-                  if (disabled) return;
-                  const arr = data.jenisCincinFeatures.includes(feat.value)
-                    ? data.jenisCincinFeatures.filter(
-                        (f: string) => f !== feat.value,
-                      )
-                    : [...data.jenisCincinFeatures, feat.value];
-                  onChangeField("jenisCincinFeatures", arr);
-                }}
-                disabled={disabled}
-                className="w-4 h-4 accent-indigo-600"
-              />
-              <span className="text-sm text-gray-700">{feat.label}</span>
-            </label>
-          ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">
+            Gramasi Pria (gram)
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={data.gramasiPria}
+            onChange={(e) => onChangeField("gramasiPria", e.target.value)}
+            placeholder="0.00"
+            className={inputCls(disabled)}
+            disabled={disabled}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">
+            Gramasi Wanita (gram)
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={data.gramasiWanita}
+            onChange={(e) => onChangeField("gramasiWanita", e.target.value)}
+            placeholder="0.00"
+            className={inputCls(disabled)}
+            disabled={disabled}
+          />
         </div>
       </div>
 
-      <SectionHeader title="Keterangan" />
+      <SectionHeader title="Adds-On" />
 
-      <div className="space-y-5">
-        <div>
-          <p className="text-sm font-semibold text-gray-700 mb-2">
-            Cincin Pria
-          </p>
-          <div className="space-y-2">
-            {data.keteranganPria.map((k, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={k}
-                  onChange={(e) => onChangeKetPria(i, e.target.value)}
-                  placeholder={`Detail ${i + 1}`}
-                  className={inputCls(disabled)}
-                  disabled={disabled}
-                />
-                {data.keteranganPria.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => onRemoveKetPria(i)}
-                    disabled={disabled}
-                    className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-30"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+      <div className="space-y-3">
+        <AddsOnAccordion
+          label="Laser"
+          prefix="laser_"
+          selected={data.jenisCincinFeatures}
+          onChange={(arr) => onChangeField("jenisCincinFeatures", arr)}
+          disabled={disabled}
+          items={[
+            { key: "laser_batik", label: "Batik" },
+            { key: "laser_motif", label: "Motif" },
+            { key: "laser_sidik_jari", label: "Sidik Jari" },
+            { key: "laser_simbol", label: "Simbol" },
+            { key: "laser_nama", label: "Laser Nama" },
+          ]}
+        />
+        <AddsOnAccordion
+          label="Micro Setting"
+          prefix="micro_setting_"
+          selected={data.jenisCincinFeatures}
+          onChange={(arr) => onChangeField("jenisCincinFeatures", arr)}
+          disabled={disabled}
+          items={[
+            {
+              key: "micro_setting_micro_finishing_biasa",
+              label: "Micro Finishing Biasa",
+            },
+            { key: "micro_setting_black_finishing", label: "Black Finishing" },
+          ]}
+        />
+        <AddsOnAccordion
+          label="Permata"
+          prefix="permata_"
+          selected={data.jenisCincinFeatures}
+          onChange={(arr) => onChangeField("jenisCincinFeatures", arr)}
+          disabled={disabled}
+          items={[
+            { key: "permata_berlian_gia", label: "Berlian GIA" },
+            { key: "permata_berlian_natural", label: "Berlian Natural" },
+            {
+              key: "permata_berlian_labground_diamond",
+              label: "Berlian Labground Diamond",
+            },
+            { key: "permata_blue_shapire", label: "Blue Shapire" },
+            { key: "permata_rubby", label: "Rubby" },
+            { key: "permata_moisanet", label: "Moisanet" },
+          ]}
+        />
+        <label
+          className={`flex items-center gap-2 px-3 py-2.5 border border-slate-200 rounded-lg transition-colors ${disabled ? "cursor-default" : "cursor-pointer hover:bg-slate-50"}`}
+        >
+          <input
+            type="checkbox"
+            checked={data.jenisCincinFeatures.includes("3d_design")}
+            onChange={() => {
+              if (disabled) return;
+              const arr = data.jenisCincinFeatures.includes("3d_design")
+                ? data.jenisCincinFeatures.filter(
+                    (f: string) => f !== "3d_design",
+                  )
+                : [...data.jenisCincinFeatures, "3d_design"];
+              onChangeField("jenisCincinFeatures", arr);
+            }}
+            disabled={disabled}
+            className="w-4 h-4 accent-indigo-600"
+          />
+          <span className="text-sm font-semibold text-gray-700">3D Design</span>
+        </label>
+      </div>
+
+      <SectionHeader title="Detail" />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {[
+          {
+            label: "Model/Bentuk",
+            fieldPria: "modelBentukPria" as const,
+            fieldWanita: "modelBentukWanita" as const,
+          },
+          {
+            label: "Microsetting",
+            fieldPria: "microsettingPria" as const,
+            fieldWanita: "microsettingWanita" as const,
+          },
+          {
+            label: "Laser",
+            fieldPria: "detailLaserPria" as const,
+            fieldWanita: "detailLaserWanita" as const,
+          },
+          {
+            label: "Finishing",
+            fieldPria: "detailFinishingPria" as const,
+            fieldWanita: "detailFinishingWanita" as const,
+          },
+        ].map((cfg) => (
+          <div key={cfg.label} className="space-y-1">
+            <p className="text-sm font-semibold text-gray-700 mb-2">
+              {cfg.label}
+            </p>
+            <div className="space-y-2">
+              {[
+                { gender: "Pria", field: cfg.fieldPria },
+                { gender: "Wanita", field: cfg.fieldWanita },
+              ].map(({ gender, field }) => {
+                const arr = data[field] as string[];
+                return (
+                  <div key={gender}>
+                    <p className="text-xs text-gray-500 mb-1">{gender}</p>
+                    {arr.map((val: string, i: number) => (
+                      <div key={i} className="flex items-center gap-2 mb-1">
+                        <input
+                          type="text"
+                          value={val}
+                          onChange={(e) => {
+                            const copy = [...arr];
+                            copy[i] = e.target.value;
+                            onChangeField(field, copy as any);
+                          }}
+                          className={inputCls(disabled)}
+                          disabled={disabled}
+                        />
+                        {arr.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeDetailRow(field, i)}
+                            disabled={disabled}
+                            className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-30"
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                              className="w-4 h-4"
+                            >
+                              <path d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => addDetailRow(field)}
+                      disabled={disabled}
+                      className="flex items-center gap-1 text-xs font-medium mt-0.5 text-indigo-600 hover:text-indigo-800 transition-colors disabled:opacity-30"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
                         strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={onAddKetPria}
-              disabled={disabled}
-              className="flex items-center gap-1.5 text-sm font-medium mt-1 text-indigo-600 hover:text-indigo-800 transition-colors disabled:opacity-30"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              Tambah detail
-            </button>
+                        className="w-3.5 h-3.5"
+                      >
+                        <path d="M12 4v16m8-8H4" />
+                      </svg>
+                      Tambah
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-700 mb-2">
-            Cincin Wanita
-          </p>
-          <div className="space-y-2">
-            {data.keteranganWanita.map((k, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={k}
-                  onChange={(e) => onChangeKetWanita(i, e.target.value)}
-                  placeholder={`Detail ${i + 1}`}
-                  className={inputCls(disabled)}
-                  disabled={disabled}
-                />
-                {data.keteranganWanita.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => onRemoveKetWanita(i)}
-                    disabled={disabled}
-                    className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-30"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={onAddKetWanita}
-              disabled={disabled}
-              className="flex items-center gap-1.5 text-sm font-medium mt-1 text-indigo-600 hover:text-indigo-800 transition-colors disabled:opacity-30"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              Tambah detail
-            </button>
-          </div>
-        </div>
+        ))}
       </div>
 
       <SectionHeader title="Pengiriman & Kemasan" />
 
       <div className="space-y-3">
         <FieldRow label="Pengiriman">
-          <input
-            type="text"
+          <select
             value={data.pengiriman}
             onChange={(e) => onChangeField("pengiriman", e.target.value)}
-            placeholder="Contoh: JNE, J&T, Ambil sendiri"
             className={inputCls(disabled)}
             disabled={disabled}
-          />
+          >
+            <option value="">Pilih pengiriman</option>
+            <option value="Alamat Customer">Alamat Customer</option>
+            <option value="Store Yogyakarta">Store Yogyakarta</option>
+            <option value="Store Solo">Store Solo</option>
+            <option value="Store Semarang">Store Semarang</option>
+            <option value="Store Surabaya">Store Surabaya</option>
+            <option value="Store Bandung">Store Bandung</option>
+          </select>
         </FieldRow>
-        <FieldRow label="Box">
-          <input
-            type="text"
+        <FieldRow label="Kemasan">
+          <select
             value={data.box}
             onChange={(e) => onChangeField("box", e.target.value)}
-            placeholder="Contoh: Box standar, Box premium"
             className={inputCls(disabled)}
             disabled={disabled}
-          />
+          >
+            <option value="">Pilih kemasan</option>
+            <option value="Standart">Standart</option>
+            <option value="Premium">Premium</option>
+            <option value="Exclusive">Exclusive</option>
+          </select>
         </FieldRow>
       </div>
 
       <SectionHeader title="Pembayaran" />
 
       <div className="space-y-3">
-        <FieldRow label="Transfer ke Bank?">
+        <FieldRow label="Metode Pembayaran">
           <select
-            value={
-              ["BCA", "Mandiri", "BRI", "BNI"].includes(data.transferKeBank)
-                ? data.transferKeBank
-                : data.transferKeBank
-                  ? "Lainnya"
-                  : ""
-            }
+            value={data.transferKeBank}
             onChange={(e) => onChangeField("transferKeBank", e.target.value)}
             className={inputCls(disabled)}
             disabled={disabled}
           >
-            <option value="">Pilih bank</option>
-            <option value="BCA">BCA</option>
-            <option value="Mandiri">Mandiri</option>
-            <option value="BRI">BRI</option>
-            <option value="BNI">BNI</option>
-            <option value="Lainnya">Lainnya</option>
+            <option value="">Pilih metode</option>
+            <option value="Pembayaran Ke PT">Pembayaran Ke PT</option>
+            <option value="Pembayaran non PT">Pembayaran non PT</option>
+            <option value="Cash">Cash</option>
           </select>
-          {(data.transferKeBank === "Lainnya" ||
-            (data.transferKeBank &&
-              !["BCA", "Mandiri", "BRI", "BNI"].includes(
-                data.transferKeBank,
-              ))) && (
-            <input
-              type="text"
-              value={
-                data.transferKeBank === "Lainnya" ? "" : data.transferKeBank
-              }
-              onChange={(e) => onChangeField("transferKeBank", e.target.value)}
-              placeholder="Tulis nama bank..."
-              className={`${inputCls(disabled)} mt-2`}
-              disabled={disabled}
-            />
-          )}
+        </FieldRow>
+      </div>
+
+      <SectionHeader title="Keterangan Tambahan" />
+
+      <div className="space-y-3">
+        <FieldRow label="Keterangan Tambahan (internal CS)">
+          <textarea
+            value={data.keteranganTambahan}
+            onChange={(e) => onChangeField("keteranganTambahan", e.target.value)}
+            className={inputCls(disabled)}
+            disabled={disabled}
+            rows={3}
+            placeholder="Contoh: DIKIRIM PROSES CEPAT / TANPA HARGA / GIFT RELASI PAK JOKO"
+          />
         </FieldRow>
       </div>
     </div>
