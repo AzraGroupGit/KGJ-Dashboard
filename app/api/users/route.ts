@@ -534,7 +534,7 @@ export async function POST(request: Request) {
           request.headers.get("x-real-ip"),
         user_agent: request.headers.get("user-agent"),
       });
-    } catch {}
+    } catch (e) { console.warn("[POST /api/users] activity_log failed:", e); }
 
     return NextResponse.json(
       { data: mapUserResponse(updated) },

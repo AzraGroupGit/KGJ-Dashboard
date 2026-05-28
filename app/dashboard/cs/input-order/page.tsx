@@ -26,6 +26,12 @@ import MaterialSelect from "@/components/order/MaterialSelect";
 import EngravingSelect from "@/components/order/EngravingSelect";
 import AddsOnAccordion from "@/components/order/AddsOnAccordion";
 
+// ── Draft ────────────────────────────────────────────────────────────────────
+const DRAFT_PREFIX = "order-draft-";
+const DRAFT_INTERVAL = 5000;
+
+function draftKey(orderId: string) { return `${DRAFT_PREFIX}${orderId}`; }
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface OrderFormData {
@@ -351,6 +357,8 @@ export default function InputOrderPage() {
   const [selectedOrder, setSelectedOrder] = useState<CsOrder | null>(null);
   const [formData, setFormData] = useState<OrderFormData>(emptyFormData());
   const [isViewOnly, setIsViewOnly] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
 
   // delete
   const [orderToDelete, setOrderToDelete] = useState<CsOrder | null>(null);
@@ -466,9 +474,12 @@ export default function InputOrderPage() {
   // ── Handlers: Edit / View ──────────────────────────────────────────────────
 
   const openForm = (order: CsOrder, viewOnly = false) => {
+    localStorage.removeItem(draftKey(order.id));
     setSelectedOrder(order);
     setFormData(csOrderToFormData(order));
     setIsViewOnly(viewOnly);
+    setDraftRestored(false);
+    setDraftSavedAt(null);
     setShowFormModal(true);
   };
 
@@ -517,6 +528,37 @@ export default function InputOrderPage() {
     }
   }, [formData.tglAcara, formData.deadline]);
 
+  // ── Draft auto-save ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!showFormModal || !selectedOrder || isViewOnly) return;
+    const key = draftKey(selectedOrder.id);
+    const id = setInterval(() => {
+      localStorage.setItem(key, JSON.stringify(formData));
+      setDraftSavedAt(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }));
+    }, DRAFT_INTERVAL);
+    return () => clearInterval(id);
+  }, [showFormModal, selectedOrder, isViewOnly, formData]);
+
+  useEffect(() => {
+    if (!showFormModal || !selectedOrder || draftRestored) return;
+    if (selectedOrder.form_status !== "pending") return;
+    const raw = localStorage.getItem(draftKey(selectedOrder.id));
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as OrderFormData;
+        setFormData(parsed);
+        setDraftRestored(true);
+      } catch { /* ignore corrupted draft */ }
+    }
+  }, [showFormModal, selectedOrder, draftRestored]);
+
+  const clearDraft = () => {
+    if (!selectedOrder) return;
+    localStorage.removeItem(draftKey(selectedOrder.id));
+    setDraftRestored(false);
+    setDraftSavedAt(null);
+  };
+
   const handleSaveForm = async () => {
     if (!selectedOrder) return;
     setIsSaving(true);
@@ -537,6 +579,7 @@ export default function InputOrderPage() {
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Gagal menyimpan");
       await loadOrders();
+      clearDraft();
       setShowFormModal(false);
       showAlert("success", "Data order berhasil disimpan");
     } catch (e) {
@@ -1228,6 +1271,22 @@ export default function InputOrderPage() {
           </div>
         </div>
 
+        {!isViewOnly && draftSavedAt && (
+          <div className="mb-4 flex items-center justify-between rounded-lg border border-sky-200 bg-sky-50 px-4 py-2.5">
+            <div className="flex items-center gap-2 text-xs text-sky-700">
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Draft tersimpan otomatis pukul {draftSavedAt}
+            </div>
+            <button
+              onClick={clearDraft}
+              className="rounded px-2 py-1 text-[11px] font-medium text-sky-600 hover:bg-sky-100 transition-colors"
+            >
+              Hapus draft
+            </button>
+          </div>
+        )}
         <OrderFormFields
           data={formData}
           disabled={isViewOnly || isSaving}

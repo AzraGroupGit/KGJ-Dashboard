@@ -1388,7 +1388,7 @@ function WorkshopInputContent() {
           setWorkerHistory(json.data);
           setHistoryTotal(json.total);
         }
-      } catch {}
+      } catch (e) { console.warn("[workshop/input] load history failed:", e); }
     })();
   }, []);
 
@@ -1402,7 +1402,7 @@ function WorkshopInputContent() {
         setWorkerHistory(json.data);
         setHistoryTotal(json.total);
       }
-    } catch {}
+    } catch (e) { console.warn("[workshop/input] refresh history failed:", e); }
   }, []);
 
   // Load user profile on mount

@@ -279,7 +279,7 @@ export async function PUT(
         entity_id: id,
         new_data: updatePayload,
       });
-    } catch {}
+    } catch (e) { console.warn("[PUT /api/users/:id] activity_log failed:", e); }
 
     return NextResponse.json({
       data: updated ? mapUserResponse(updated) : null,
@@ -361,7 +361,7 @@ export async function PATCH(
         entity_id: id,
         new_data: { status: newStatus },
       });
-    } catch {}
+    } catch (e) { console.warn("[PATCH /api/users/:id] activity_log failed:", e); }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -431,7 +431,7 @@ export async function DELETE(
         entity_type: "users",
         entity_id: id,
       });
-    } catch {}
+    } catch (e) { console.warn("[DELETE /api/users/:id] activity_log failed:", e); }
 
     return NextResponse.json({ success: true });
   } catch (error) {

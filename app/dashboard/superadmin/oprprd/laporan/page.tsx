@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import {
   AlertTriangle,
@@ -144,6 +145,7 @@ function periodLabel(period: string): string {
 export default function LaporanPage() {
   const router = useRouter();
   const [clientUser, setClientUser] = useState<ClientUser | null>(null);
+  const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<string>(currentPeriod());
   const [downloading, setDownloading] = useState<ReportType | null>(null);
   const [lastDownloaded, setLastDownloaded] = useState<ReportType | null>(null);
@@ -156,6 +158,7 @@ export default function LaporanPage() {
       return;
     }
     setClientUser(cu);
+    setLoading(false);
   }, [router]);
 
   async function handleDownload(type: ReportType) {
@@ -197,6 +200,20 @@ export default function LaporanPage() {
     } finally {
       setDownloading(null);
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-slate-50">
+        <Sidebar role="superadmin" />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header userEmail="" role="superadmin" />
+          <main className="flex-1 overflow-y-auto p-6">
+            <Loading variant="skeleton" text="Memuat laporan..." />
+          </main>
+        </div>
+      </div>
+    );
   }
 
   return (

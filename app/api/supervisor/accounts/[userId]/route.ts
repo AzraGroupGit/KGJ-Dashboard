@@ -141,7 +141,7 @@ export async function PATCH(
         entity_id: userId,
         new_data: { ...updatePayload, password_changed: !!password },
       });
-    } catch {}
+    } catch (e) { console.warn("[PATCH /api/supervisor/accounts/:userId] activity_log failed:", e); }
 
     return NextResponse.json({ success: true });
   } catch (err) {
@@ -204,7 +204,7 @@ export async function DELETE(
         entity_type: "users",
         entity_id: userId,
       });
-    } catch {}
+    } catch (e) { console.warn("[DELETE /api/supervisor/accounts/:userId] activity_log failed:", e); }
 
     return NextResponse.json({ success: true });
   } catch (err) {

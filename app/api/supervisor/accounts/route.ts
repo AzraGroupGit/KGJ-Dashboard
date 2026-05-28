@@ -252,7 +252,7 @@ export async function POST(request: Request) {
         ip_address: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip"),
         user_agent: request.headers.get("user-agent"),
       });
-    } catch {}
+    } catch (e) { console.warn("[POST /api/supervisor/accounts] activity_log failed:", e); }
 
     return NextResponse.json({ success: true, account: mapAccount(newUser) }, { status: 201 });
   } catch (err) {
