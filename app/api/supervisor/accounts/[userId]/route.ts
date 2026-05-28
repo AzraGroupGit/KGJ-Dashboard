@@ -3,7 +3,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import bcrypt from "bcrypt";
 
 async function verifySupervisorScope(userId: string) {
   const admin = createAdminClient();
@@ -79,7 +78,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { full_name, role_id, status, password, pin } = body;
+    const { full_name, role_id, status, password } = body;
 
     const admin = createAdminClient();
     const updatePayload: Record<string, unknown> = {};
@@ -119,21 +118,6 @@ export async function PATCH(
       if (pwErr) {
         console.error("[PATCH supervisor/accounts/:userId] pw error:", pwErr.message);
         return NextResponse.json({ error: "Gagal mengubah password" }, { status: 500 });
-      }
-    }
-
-    if (pin) {
-      if (typeof pin !== "string" || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
-        return NextResponse.json({ error: "PIN harus berupa 6 digit angka" }, { status: 400 });
-      }
-      const pinHash = await bcrypt.hash(pin, 10);
-      updatePayload.pin_hash = pinHash;
-      updatePayload.pin_attempts = 0;
-      updatePayload.pin_locked_until = null;
-
-      const { error: authPinErr } = await admin.auth.admin.updateUserById(userId, { password: pin });
-      if (authPinErr) {
-        console.error("[PATCH] PIN auth sync error:", authPinErr.message);
       }
     }
 

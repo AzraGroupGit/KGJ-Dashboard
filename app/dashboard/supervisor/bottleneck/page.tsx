@@ -17,6 +17,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
+import StageTimeline from "@/components/orders/StageTimeline";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -110,6 +111,13 @@ interface OrderDetail {
     decision: string;
     remarks: string | null;
     decided_at: string;
+    users: { full_name: string } | null;
+  }>;
+  scanEvents: Array<{
+    id: string;
+    stage: string;
+    action: string;
+    scanned_at: string;
     users: { full_name: string } | null;
   }>;
 }
@@ -804,89 +812,13 @@ function OrderDetailPopup({
 
               {/* ── STAGES TAB ── */}
               {tab === "stages" && (
-                <>
-                  {detail.transitions.length > 0 && (
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-3">
-                        Riwayat Perpindahan Tahap
-                      </p>
-                      <div className="space-y-0">
-                        {detail.transitions.map((t, i) => (
-                          <div key={i} className="flex gap-3">
-                            <div className="flex flex-col items-center">
-                              <div
-                                className={`h-2.5 w-2.5 rounded-full border-2 ${
-                                  i === detail.transitions.length - 1
-                                    ? "bg-slate-800 border-slate-800"
-                                    : "bg-white border-slate-300"
-                                }`}
-                              />
-                              {i < detail.transitions.length - 1 && (
-                                <div className="w-px flex-1 bg-slate-200 my-0.5" />
-                              )}
-                            </div>
-                            <div className="pb-3 flex-1 min-w-0">
-                              <p className="text-xs font-medium text-slate-700">
-                                {STAGE_LABELS_DETAIL[t.to_stage] ?? t.to_stage}
-                              </p>
-                              <p className="text-[11px] text-slate-400">
-                                {formatDateTime(t.transitioned_at)}
-                              </p>
-                              {t.reason && (
-                                <p className="text-[11px] text-slate-500 mt-0.5">
-                                  {t.reason}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {detail.stageResults.length > 0 && (
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2 mt-2">
-                        Submission Terakhir
-                      </p>
-                      <div className="space-y-2">
-                        {detail.stageResults.map((sr) => (
-                          <div
-                            key={sr.id}
-                            className="rounded-lg border border-slate-200 p-2.5 text-xs"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-slate-700">
-                                {STAGE_LABELS_DETAIL[sr.stage] ?? sr.stage}
-                              </span>
-                              {sr.attempt_number > 1 && (
-                                <span className="text-[10px] bg-rose-100 text-rose-700 rounded px-1.5 py-0.5">
-                                  Percobaan {sr.attempt_number}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-slate-400 mt-0.5">
-                              {sr.users?.full_name || "—"} ·{" "}
-                              {formatDateTime(sr.finished_at)}
-                            </p>
-                            {sr.notes && (
-                              <p className="text-slate-500 mt-1 italic">
-                                "{sr.notes}"
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {detail.transitions.length === 0 &&
-                    detail.stageResults.length === 0 && (
-                      <p className="text-sm text-slate-400 text-center py-8">
-                        Belum ada riwayat tahap
-                      </p>
-                    )}
-                </>
+                <StageTimeline
+                  transitions={detail.transitions}
+                  stageResults={detail.stageResults}
+                  scanEvents={detail.scanEvents}
+                  approvals={detail.approvals}
+                  currentStage={detail.order.current_stage}
+                />
               )}
 
               {/* ── APPROVALS TAB ── */}
