@@ -9,6 +9,8 @@ import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
+import CycleTimeTab from "@/components/analytics/CycleTimeTab";
+import WorkerProductivityTab from "@/components/analytics/WorkerProductivityTab";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -21,6 +23,8 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+
+type TabId = "overview" | "cycle-time" | "worker-productivity";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -148,6 +152,13 @@ export default function AnalisisPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<string>(currentPeriod());
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
+
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "overview", label: "Overview" },
+    { id: "cycle-time", label: "Cycle Time" },
+    { id: "worker-productivity", label: "Worker Productivity" },
+  ];
 
   useEffect(() => {
     const cu = getClientUser();
@@ -234,8 +245,31 @@ export default function AnalisisPage() {
             </div>
           </div>
 
+          {/* ── Tab bar ── */}
+          <div className="mb-6 border-b border-slate-200">
+            <nav className="flex gap-6">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`pb-2 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === tab.id
+                      ? "border-slate-900 text-slate-900"
+                      : "border-transparent text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
           {/* ── Content ── */}
-          {loading ? (
+          {activeTab === "cycle-time" ? (
+            <CycleTimeTab />
+          ) : activeTab === "worker-productivity" ? (
+            <WorkerProductivityTab />
+          ) : loading ? (
             <Loading variant="skeleton" text="Memuat data analisis..." />
           ) : error ? (
             <ErrorState error={error} onRetry={() => fetchData(period, true)} />

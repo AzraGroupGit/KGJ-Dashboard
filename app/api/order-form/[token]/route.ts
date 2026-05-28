@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendNotification } from "@/lib/notifications";
 
 const PUBLIC_SELECT = [
+  "id",
   "order_number",
   "form_token",
   "form_status",
@@ -93,7 +94,39 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ data });
+    const orderId = (data as any).id;
+
+    const [stageResultsRes, transitionsRes, deliveriesRes] =
+      await Promise.allSettled([
+        db.from("stage_results").select(
+          `id, stage, attempt_number, data, notes, started_at, finished_at,
+           users!stage_results_user_id_fkey ( full_name )`,
+        ).eq("order_id", orderId).not("finished_at", "is", null)
+          .order("finished_at", { ascending: false }).limit(20),
+        db.from("order_stage_transitions").select(
+          `from_stage, to_stage, reason, transitioned_at,
+           users!ost_transitioned_by_fkey ( full_name )`,
+        ).eq("order_id", orderId).order("transitioned_at", { ascending: true }),
+        db.from("deliveries").select(
+          `id, delivery_method, status, courier_name, tracking_number,
+           recipient_name, recipient_phone, delivery_address,
+           dispatched_at, delivered_at, notes`,
+        ).eq("order_id", orderId).order("created_at", { ascending: false }),
+      ]);
+
+    const stageResults =
+      stageResultsRes.status === "fulfilled" ? stageResultsRes.value.data || [] : [];
+    const transitions =
+      transitionsRes.status === "fulfilled" ? transitionsRes.value.data || [] : [];
+    const deliveries =
+      deliveriesRes.status === "fulfilled" ? deliveriesRes.value.data || [] : [];
+
+    return NextResponse.json({
+      data,
+      stageResults,
+      transitions,
+      deliveries,
+    });
   } catch (err) {
     console.error("[GET /api/order-form/[token]] unexpected:", err);
     return NextResponse.json(

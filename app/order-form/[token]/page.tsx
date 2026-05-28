@@ -17,6 +17,7 @@ import FontPicker from "@/components/order/FontPicker";
 import MaterialSelect from "@/components/order/MaterialSelect";
 import EngravingSelect from "@/components/order/EngravingSelect";
 import AddsOnAccordion from "@/components/order/AddsOnAccordion";
+import CustomerTimeline from "@/components/orders/CustomerTimeline";
 
 interface OrderFormData {
   tglChat: string;
@@ -268,6 +269,10 @@ export default function OrderFormPage() {
   const [workingDays, setWorkingDays] = useState<number | null>(null);
   const [slotInfo, setSlotInfo] = useState<SlotCheckResult | null>(null);
   const [slotLoading, setSlotLoading] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [stageResults, setStageResults] = useState<Array<Record<string, unknown>>>([]);
+  const [transitions, setTransitions] = useState<Array<Record<string, unknown>>>([]);
+  const [deliveries, setDeliveries] = useState<Array<Record<string, unknown>>>([]);
 
   const saveDraft = useCallback(
     (data: OrderFormData) => {
@@ -327,8 +332,12 @@ export default function OrderFormPage() {
           setPageState("error");
           return;
         }
-        const { data } = await res.json();
+        const json = await res.json();
+        const { data } = json;
         setOrderInfo(data);
+        if (json.stageResults) setStageResults(json.stageResults);
+        if (json.transitions) setTransitions(json.transitions);
+        if (json.deliveries) setDeliveries(json.deliveries);
 
         if (data.form_status !== "pending") {
           setPageState("submitted");
@@ -661,48 +670,81 @@ export default function OrderFormPage() {
   }
 
   if (pageState === "submitted") {
+    const currentStage =
+      transitions.length > 0
+        ? transitions[transitions.length - 1].to_stage as string
+        : null;
+
     return (
       <Shell>
-        <div
-          className="bg-white rounded-2xl shadow-2xl p-8 text-center"
-          style={{ boxShadow: `0 0 40px rgba(200,169,81,0.12)` }}
-        >
-          <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5 border-2 border-emerald-200">
-            <svg
-              className="w-10 h-10 text-emerald-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-zinc-900 mb-2">
-            Terima Kasih!
-          </h2>
-          <p className="text-zinc-600 mb-1 text-sm">
-            Formulir order Anda sudah berhasil dikirim.
-          </p>
-          <p className="text-zinc-400 text-xs">
-            Tim CS <strong>PT. Kotagede Jewellery</strong> akan segera
-            menghubungi Anda untuk konfirmasi.
-          </p>
+        <div className="space-y-3">
           <div
-            className="mt-6 rounded-xl p-4 text-left border"
-            style={{ backgroundColor: `${GOLD}10`, borderColor: `${GOLD}40` }}
+            className="bg-white rounded-2xl shadow-2xl p-8 text-center"
+            style={{ boxShadow: `0 0 40px rgba(200,169,81,0.12)` }}
           >
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">
-              No. Order Anda
+            <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5 border-2 border-emerald-200">
+              <svg
+                className="w-10 h-10 text-emerald-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-zinc-900 mb-2">
+              Terima Kasih!
+            </h2>
+            <p className="text-zinc-600 mb-1 text-sm">
+              Formulir order Anda sudah berhasil dikirim.
             </p>
-            <p className="font-mono font-bold text-xl" style={{ color: GOLD }}>
-              {orderInfo?.order_number}
+            <p className="text-zinc-400 text-xs">
+              Tim CS <strong>PT. Kotagede Jewellery</strong> akan segera
+              menghubungi Anda untuk konfirmasi.
             </p>
+            <div
+              className="mt-6 rounded-xl p-4 text-left border"
+              style={{ backgroundColor: `${GOLD}10`, borderColor: `${GOLD}40` }}
+            >
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">
+                No. Order Anda
+              </p>
+              <p className="font-mono font-bold text-xl" style={{ color: GOLD }}>
+                {orderInfo?.order_number}
+              </p>
+            </div>
           </div>
+
+          <button
+            onClick={() => setShowTimeline(!showTimeline)}
+            className="w-full rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-zinc-800 shadow-lg hover:bg-zinc-50 transition-all flex items-center justify-center gap-2"
+            style={{ boxShadow: `0 4px 20px rgba(200,169,81,0.12)` }}
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            {showTimeline ? "Sembunyikan Status" : "Lacak Status Pesanan"}
+          </button>
+
+          {showTimeline && (
+            <div className="bg-white rounded-2xl shadow-2xl p-8">
+              <CustomerTimeline
+                currentStage={currentStage}
+                status={orderInfo?.form_status ?? "submitted"}
+                stageResults={stageResults as any}
+                transitions={transitions as any}
+                deliveries={deliveries as any}
+                deadline={orderInfo?.deadline ?? null}
+                referenceImagePria={null}
+                referenceImageWanita={null}
+              />
+            </div>
+          )}
         </div>
       </Shell>
     );

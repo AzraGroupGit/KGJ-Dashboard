@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
 import StageTimeline from "@/components/orders/StageTimeline";
+import BottleneckHeatmap from "@/components/analytics/BottleneckHeatmap";
+import EstimatedCompletion from "@/components/analytics/EstimatedCompletion";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -807,6 +809,14 @@ function OrderDetailPopup({
                       </p>
                     </div>
                   </div>
+
+                  {/* Estimated completion */}
+                  {o.current_stage && (
+                    <EstimatedCompletion
+                      currentStage={o.current_stage}
+                      deadline={o.deadline}
+                    />
+                  )}
                 </>
               )}
 
@@ -894,6 +904,7 @@ export default function SupervisorBottleneckPage() {
     useState<SupervisorGroup>("all");
   const [filterGroup, setFilterGroup] =
     useState<SupervisorGroup>("all");
+  const [showHeatmap, setShowHeatmap] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -1131,6 +1142,26 @@ export default function SupervisorBottleneckPage() {
                   </div>
                 ) : null;
               })()}
+
+              {/* Heatmap toggle */}
+              <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+                <button
+                  onClick={() => setShowHeatmap(!showHeatmap)}
+                  className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
+                >
+                  <span>Heatmap Kepadatan Order (90 hari)</span>
+                  <ChevronDown
+                    className={`h-4 w-4 text-slate-400 transition-transform ${
+                      showHeatmap ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {showHeatmap && (
+                  <div className="border-t border-slate-100 p-5">
+                    <BottleneckHeatmap />
+                  </div>
+                )}
+              </div>
 
               {/* Main table */}
               <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
