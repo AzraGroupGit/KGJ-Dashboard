@@ -81,7 +81,19 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: false });
     if (delErr) console.error("[OrderDetail] deliveries error:", delErr);
 
-    // ── 5. Approvals history ──────────────────────────────────────────────────
+    // ── 5. Scan events ────────────────────────────────────────────────────────
+    const { data: scanEvents, error: scanErr } = await admin
+      .from("scan_events")
+      .select(
+        `id, stage, action, scanned_at,
+         users!scan_events_user_id_fkey ( full_name )`,
+      )
+      .eq("order_id", orderId)
+      .order("scanned_at", { ascending: true })
+      .limit(50);
+    if (scanErr) console.error("[OrderDetail] scan_events error:", scanErr);
+
+    // ── 6. Approvals history ──────────────────────────────────────────────────
     const { data: approvals, error: apprErr } = await admin
       .from("approvals")
       .select(
@@ -157,6 +169,7 @@ export async function GET(request: Request) {
         transitions: transitions || [],
         stageResults: stageResults || [],
         deliveries: deliveries || [],
+        scanEvents: scanEvents || [],
         approvals: approvals || [],
       },
     });

@@ -39,7 +39,7 @@ export async function GET(
       .from("users")
       .select(
         `
-        id, email, full_name, username, phone,
+        id, email, full_name, username, phone, pin_hash,
         branch_id, role_id, status, last_login,
         created_at, updated_at,
         role:roles!users_role_id_fkey (
@@ -259,7 +259,7 @@ export async function PUT(
       .from("users")
       .select(
         `
-        id, email, full_name, username, phone,
+        id, email, full_name, username, phone, pin_hash,
         branch_id, role_id, status, last_login,
         created_at, updated_at,
         role:roles!users_role_id_fkey (
@@ -313,7 +313,7 @@ export async function PATCH(
     const body = await request.json();
     const { status, is_active } = body;
 
-    // Tentukan status final dari dua bentuk input
+    // ── Status toggle ──
     let newStatus: "active" | "inactive" | null = null;
 
     if (status === "active" || status === "inactive") {

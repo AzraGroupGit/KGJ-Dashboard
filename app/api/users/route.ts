@@ -112,6 +112,9 @@ export function mapUserResponse(dbUser: any) {
     is_active: dbUser.status === "active",
     last_login: dbUser.last_login,
     last_login_at: dbUser.last_login,
+
+    // PIN (for OPRPRD workers)
+    pin_hash: dbUser.pin_hash,
   };
 }
 
@@ -154,7 +157,7 @@ export async function GET(request: Request) {
       .from("users")
       .select(
         `
-        id, email, full_name, username, phone,
+        id, email, full_name, username, phone, pin_hash,
         branch_id, role_id, status, last_login,
         created_at, updated_at,
         role:roles!users_role_id_fkey (
@@ -494,7 +497,7 @@ export async function POST(request: Request) {
       )
       .select(
         `
-    id, email, full_name, username, phone,
+    id, email, full_name, username, phone, pin_hash,
     branch_id, role_id, status, last_login,
     created_at, updated_at,
     role:roles!users_role_id_fkey (
