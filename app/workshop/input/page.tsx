@@ -29,6 +29,7 @@ interface OrderInfo {
   current_stage: string;
   status: string;
   deadline: string | null;
+  tgl_order: string | null;
   updated_at: string | null;
   customer_name: string | null;
 }
@@ -715,8 +716,8 @@ function WorkOrderCard({ wo, theme }: { wo: WorkOrder; theme: Theme }) {
 
 // ── Phase: Form ───────────────────────────────────────────────────────────────
 
-function StageDeadlineBadge({ deadline, stage }: { deadline: string; stage: string }) {
-  const status = getStageDeadlineStatus(deadline, stage);
+function StageDeadlineBadge({ tglOrder, deadline, stage }: { tglOrder?: string | null; deadline: string; stage: string }) {
+  const status = getStageDeadlineStatus(tglOrder, deadline, stage);
   if (!status) return null;
   return (
     <p className={`text-[12px] ${status.isOverdue ? "text-red-600 font-medium" : "text-emerald-600"}`}>
@@ -810,7 +811,7 @@ function PhaseForm({
             </p>
           )}
           {order.deadline && config.stage && (
-            <StageDeadlineBadge deadline={order.deadline} stage={config.stage} />
+            <StageDeadlineBadge tglOrder={order.tgl_order} deadline={order.deadline} stage={config.stage} />
           )}
         </div>
       </div>

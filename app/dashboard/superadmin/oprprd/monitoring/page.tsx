@@ -185,6 +185,7 @@ interface BottleneckItem {
   approved_by: string | null;
   approved_at: string | null;
   deadline: string | null;
+  tgl_order: string | null;
   current_stage: string;
 }
 
@@ -714,7 +715,7 @@ function OrderDetailPopup({
                         {formatDate(o.deadline)}
                       </p>
                       {o.deadline && (() => {
-                        const dl = getStageDeadlineStatus(o.deadline, o.current_stage);
+                        const dl = getStageDeadlineStatus(o.tgl_order, o.deadline, o.current_stage);
                         if (!dl) return null;
                         return (
                           <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${dl.isOverdue ? "bg-rose-50 text-rose-700 ring-rose-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200"}`}>
@@ -2821,7 +2822,7 @@ function BnRow({
                       </td>
                       <td className="px-3 py-2.5 text-center">
                         {item.deadline ? (() => {
-                          const dl = getStageDeadlineStatus(item.deadline, item.current_stage);
+                          const dl = getStageDeadlineStatus(item.tgl_order, item.deadline, item.current_stage);
                           if (!dl) return <span className="text-slate-400">—</span>;
                           return (
                             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${dl.isOverdue ? "bg-rose-50 text-rose-700 ring-rose-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200"}`}>

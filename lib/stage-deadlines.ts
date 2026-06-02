@@ -1,4 +1,4 @@
-import { getIndonesianHolidays } from "@/lib/working-days";
+import { countWorkingDays, getIndonesianHolidays } from "@/lib/working-days";
 
 export const STAGE_H_DAYS: Record<string, { label: string; hDays: number }> = {
   racik_bahan: { label: "Racik & Lebur", hDays: 15 },
@@ -16,6 +16,8 @@ export const STAGE_H_DAYS: Record<string, { label: string; hDays: number }> = {
   pengiriman: { label: "Packing & Pengiriman", hDays: 1 },
 };
 
+const MAX_BASELINE_H_DAYS = 15;
+
 function subtractWorkingDays(endDate: string, workingDays: number): string {
   const date = new Date(endDate);
   let count = 0;
@@ -31,10 +33,23 @@ function subtractWorkingDays(endDate: string, workingDays: number): string {
   return date.toISOString().split("T")[0];
 }
 
-export function getStageDeadline(deadline: string, stage: string): string | null {
+function getScaleFactor(tglOrder: string | null | undefined, deadline: string): number {
+  if (!tglOrder) return 1;
+  const totalWD = countWorkingDays(tglOrder, deadline);
+  if (totalWD <= 0) return 1;
+  return Math.min(1, totalWD / MAX_BASELINE_H_DAYS);
+}
+
+export function getStageDeadline(
+  tglOrder: string | null | undefined,
+  deadline: string,
+  stage: string,
+): string | null {
   const rule = STAGE_H_DAYS[stage];
   if (!rule) return null;
-  return subtractWorkingDays(deadline, rule.hDays);
+  const scale = getScaleFactor(tglOrder, deadline);
+  const scaledHDays = Math.round(rule.hDays * scale);
+  return subtractWorkingDays(deadline, scaledHDays);
 }
 
 export interface StageDeadlineStatus {
@@ -44,11 +59,17 @@ export interface StageDeadlineStatus {
   label: string;
 }
 
-export function getStageDeadlineStatus(deadline: string, stage: string): StageDeadlineStatus | null {
+export function getStageDeadlineStatus(
+  tglOrder: string | null | undefined,
+  deadline: string,
+  stage: string,
+): StageDeadlineStatus | null {
   const rule = STAGE_H_DAYS[stage];
   if (!rule) return null;
 
-  const targetDate = subtractWorkingDays(deadline, rule.hDays);
+  const scale = getScaleFactor(tglOrder, deadline);
+  const scaledHDays = Math.round(rule.hDays * scale);
+  const targetDate = subtractWorkingDays(deadline, scaledHDays);
   const target = new Date(targetDate);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
