@@ -98,6 +98,7 @@ export const CS_ROUTES = {
   DASHBOARD: "/dashboard/cs",
   INPUT_LEADS: "/dashboard/cs/input-leads",
   INPUT_ORDER: "/dashboard/cs/input-order",
+  PELANGGAN: "/dashboard/cs/pelanggan",
 } as const;
 
 export const MARKETING_ROUTES = {

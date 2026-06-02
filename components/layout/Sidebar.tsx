@@ -99,6 +99,7 @@ const menuItems: Record<string, MenuItem[]> = {
     { name: "Dashboard", icon: "dashboard", href: CS_ROUTES.DASHBOARD },
     { name: "Input Leads", icon: "input", href: CS_ROUTES.INPUT_LEADS },
     { name: "Input Order", icon: "order", href: CS_ROUTES.INPUT_ORDER },
+    { name: "Pelanggan", icon: "users", href: CS_ROUTES.PELANGGAN },
   ],
   marketing: [
     { name: "Dashboard", icon: "dashboard", href: MARKETING_ROUTES.DASHBOARD },

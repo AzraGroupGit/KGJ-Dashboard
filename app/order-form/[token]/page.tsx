@@ -353,8 +353,10 @@ export default function OrderFormPage() {
         }
 
         const rawHarga = String(data.harga ?? "");
+        const today = new Date().toISOString().split("T")[0];
         setFormData({
           ...emptyFormData(),
+          tglOrder: data.tgl_order || today,
           tglAcara: data.tgl_acara ?? "",
           deadline: data.deadline ?? "",
           kategori: data.kategori ?? "",
@@ -439,8 +441,8 @@ export default function OrderFormPage() {
   }, [token, loadDraft]);
 
   useEffect(() => {
-    if (formData.tglAcara && formData.deadline) {
-      const days = countWorkingDays(formData.deadline, formData.tglAcara);
+    if (formData.tglOrder && formData.deadline) {
+      const days = countWorkingDays(formData.tglOrder, formData.deadline);
       setWorkingDays(days);
       const recommended = getRecommendedKategori(days);
       if (formData.kategori) {
@@ -456,7 +458,7 @@ export default function OrderFormPage() {
     } else {
       setWorkingDays(null);
     }
-  }, [formData.tglAcara, formData.deadline]);
+  }, [formData.tglOrder, formData.deadline]);
 
   useEffect(() => {
     if (formData.kategori && formData.tglOrder) {

@@ -509,8 +509,8 @@ export default function InputOrderPage() {
   };
 
   useEffect(() => {
-    if (formData.tglAcara && formData.deadline) {
-      const days = countWorkingDays(formData.deadline, formData.tglAcara);
+    if (formData.tglOrder && formData.deadline) {
+      const days = countWorkingDays(formData.tglOrder, formData.deadline);
       setWorkingDays(days);
       const recommended = getRecommendedKategori(days);
       if (formData.kategori) {
@@ -526,7 +526,7 @@ export default function InputOrderPage() {
     } else {
       setWorkingDays(null);
     }
-  }, [formData.tglAcara, formData.deadline]);
+  }, [formData.tglOrder, formData.deadline]);
 
   // ── Draft auto-save ──────────────────────────────────────────────────────
   useEffect(() => {
