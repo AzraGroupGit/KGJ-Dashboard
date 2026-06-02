@@ -1,21 +1,12 @@
+import Holidays from "date-holidays";
+
+const indonesiaHolidays = new Holidays("ID");
+
 export function getIndonesianHolidays(year: number): string[] {
-  return [
-    `${year}-01-01`,
-    `${year}-01-27`,
-    `${year}-03-01`,
-    `${year}-03-31`,
-    `${year}-04-01`,
-    `${year}-04-18`,
-    `${year}-05-01`,
-    `${year}-05-12`,
-    `${year}-05-26`,
-    `${year}-06-01`,
-    `${year}-06-15`,
-    `${year}-08-17`,
-    `${year}-09-16`,
-    `${year}-12-25`,
-    `${year}-12-26`,
-  ];
+  return indonesiaHolidays
+    .getHolidays(year)
+    .filter((h) => h.type === "public")
+    .map((h) => h.date.split(" ")[0]);
 }
 
 export function countWorkingDays(start: string, end: string): number {

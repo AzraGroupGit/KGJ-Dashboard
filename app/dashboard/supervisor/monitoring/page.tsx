@@ -34,6 +34,7 @@ interface OrderRow {
   stage_label: string;
   stage_group: "production" | "operational" | "other";
   deadline: string | null;
+  tgl_order: string | null;
   last_worker: string | null;
   last_submission_at: string | null;
   hours_at_stage: number | null;
@@ -1210,7 +1211,7 @@ export default function SupervisorMonitoringPage() {
                                 {dl.label}
                               </span>
                               {order.deadline && (() => {
-                                const s = getStageDeadlineStatus(order.deadline as string, order.current_stage);
+                                const s = getStageDeadlineStatus(order.tgl_order, order.deadline as string, order.current_stage);
                                 if (!s) return null;
                                 return (
                                   <span className={`text-[10px] ${s.isOverdue ? "text-rose-500 font-medium" : "text-emerald-500"}`}>
@@ -1377,7 +1378,7 @@ export default function SupervisorMonitoringPage() {
                                     {dl.label}
                                   </span>
                                   {order.deadline && (() => {
-                                    const s = getStageDeadlineStatus(order.deadline as string, order.current_stage);
+                                    const s = getStageDeadlineStatus(order.tgl_order, order.deadline as string, order.current_stage);
                                     if (!s) return null;
                                     return (
                                       <p className={`text-[11px] mt-0.5 ${s.isOverdue ? "text-rose-500 font-medium" : "text-emerald-500"}`}>

@@ -32,6 +32,7 @@ interface BottleneckItem {
   status: string;
   current_stage: string;
   deadline: string | null;
+  tgl_order: string | null;
   last_worker: string | null;
   approval_decision: string | null;
   approved_by: string | null;
@@ -420,7 +421,7 @@ function BottleneckTableRow({
                               {new Date(item.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
                             </span>
                             {(() => {
-                              const s = getStageDeadlineStatus(item.deadline as string, stage.stage);
+                              const s = getStageDeadlineStatus(item.tgl_order, item.deadline as string, stage.stage);
                               if (!s) return null;
                               return (
                                 <p className={`text-[10px] ${s.isOverdue ? "text-rose-500 font-medium" : "text-emerald-500"}`}>
