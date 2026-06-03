@@ -202,6 +202,8 @@ export async function POST(request: Request) {
         full_name: full_name.trim(),
         role_id,
         username: normalizedUsername,
+        // Save original password so PIN login can restore it after session creation
+        workshop_password: password,
       },
     });
 

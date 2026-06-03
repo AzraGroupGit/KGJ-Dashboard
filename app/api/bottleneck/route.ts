@@ -225,10 +225,6 @@ export async function GET(request?: NextRequest) {
           : null;
       const longestHours = hoursValues.length > 0 ? Math.max(...hoursValues) : null;
 
-      const topBottlenecks = [...ordersWithHours]
-        .sort((a: any, b: any) => b.hours_waiting - a.hours_waiting)
-        .slice(0, 3);
-
       const sortedOrders = [...ordersWithHours].sort((a: any, b: any) => b.hours_waiting - a.hours_waiting);
       return {
         stage,
@@ -239,7 +235,7 @@ export async function GET(request?: NextRequest) {
         in_progress_orders: inProgressOrders.length,
         avg_hours: avgHours ? Math.round(avgHours * 10) / 10 : null,
         longest_hours: longestHours ? Math.round(longestHours * 10) / 10 : null,
-        bottlenecks: topBottlenecks,
+        bottlenecks: sortedOrders,
         orders: sortedOrders,
       };
     }).filter((b) => b.order_count > 0);

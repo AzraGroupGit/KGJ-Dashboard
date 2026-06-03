@@ -455,6 +455,9 @@ export async function POST(request: Request) {
           full_name: full_name.trim(),
           role_id: finalRoleId,
           ...(normalizedUsername ? { username: normalizedUsername } : {}),
+          // Save original password for workshop workers so PIN login can
+          // restore it after session creation — preserves manual login
+          ...(isOprprdMode ? { workshop_password: password } : {}),
         },
       });
 

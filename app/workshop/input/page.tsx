@@ -716,11 +716,21 @@ function WorkOrderCard({ wo, theme }: { wo: WorkOrder; theme: Theme }) {
 
 // ── Phase: Form ───────────────────────────────────────────────────────────────
 
-function StageDeadlineBadge({ tglOrder, deadline, stage }: { tglOrder?: string | null; deadline: string; stage: string }) {
+function StageDeadlineBadge({
+  tglOrder,
+  deadline,
+  stage,
+}: {
+  tglOrder?: string | null;
+  deadline: string;
+  stage: string;
+}) {
   const status = getStageDeadlineStatus(tglOrder, deadline, stage);
   if (!status) return null;
   return (
-    <p className={`text-[12px] ${status.isOverdue ? "text-red-600 font-medium" : "text-emerald-600"}`}>
+    <p
+      className={`text-[12px] ${status.isOverdue ? "text-red-600 font-medium" : "text-emerald-600"}`}
+    >
       {status.isOverdue
         ? `⚠ Terlambat ${Math.abs(status.daysRemaining)} hari`
         : `Tahap ${status.label}: H-${Math.max(status.daysRemaining, 1)}`}
@@ -811,7 +821,11 @@ function PhaseForm({
             </p>
           )}
           {order.deadline && config.stage && (
-            <StageDeadlineBadge tglOrder={order.tgl_order} deadline={order.deadline} stage={config.stage} />
+            <StageDeadlineBadge
+              tglOrder={order.tgl_order}
+              deadline={order.deadline}
+              stage={config.stage}
+            />
           )}
         </div>
       </div>
@@ -1140,52 +1154,86 @@ function WorkerHistorySection({
                     </p>
                     <div className="space-y-0.5 text-[13px]">
                       {orderDetail.gramasi_pria && (
-                        <p className="text-stone-700">Gramasi: {orderDetail.gramasi_pria} g</p>
+                        <p className="text-stone-700">
+                          Gramasi: {orderDetail.gramasi_pria} g
+                        </p>
                       )}
                       {orderDetail.ukuran_pria && (
-                        <p className="text-stone-700">Ukuran: {orderDetail.ukuran_pria}</p>
+                        <p className="text-stone-700">
+                          Ukuran: {orderDetail.ukuran_pria}
+                        </p>
                       )}
                       {orderDetail.jenis_cincin_pria && (
-                        <p className="text-stone-700">Jenis: {orderDetail.jenis_cincin_pria}</p>
+                        <p className="text-stone-700">
+                          Jenis: {orderDetail.jenis_cincin_pria}
+                        </p>
                       )}
                       {orderDetail.ukiran_pria && (
-                        <p className="text-stone-700">Ukiran nama: {orderDetail.ukiran_pria}</p>
+                        <p className="text-stone-700">
+                          Ukiran nama: {orderDetail.ukiran_pria}
+                        </p>
                       )}
                       {orderDetail.ukiran_cincin_pria && (
-                        <p className="text-stone-700">Ukiran cincin: {orderDetail.ukiran_cincin_pria}</p>
+                        <p className="text-stone-700">
+                          Ukiran cincin: {orderDetail.ukiran_cincin_pria}
+                        </p>
                       )}
                     </div>
                     <div className="mt-2 grid grid-cols-2 gap-1.5">
                       {orderDetail.model_bentuk_pria?.length ? (
                         <div className="rounded-lg border border-orange-200 bg-orange-50/70 p-1.5">
-                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">Model / Bentuk</p>
-                          {orderDetail.model_bentuk_pria.map((v: string, i: number) => (
-                            <p key={i} className="text-[11px] text-stone-700">{v}</p>
-                          ))}
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">
+                            Model / Bentuk
+                          </p>
+                          {orderDetail.model_bentuk_pria.map(
+                            (v: string, i: number) => (
+                              <p key={i} className="text-[11px] text-stone-700">
+                                {v}
+                              </p>
+                            ),
+                          )}
                         </div>
                       ) : null}
                       {orderDetail.microsetting_pria?.length ? (
                         <div className="rounded-lg border border-yellow-200 bg-yellow-50/70 p-1.5">
-                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">Microsetting</p>
-                          {orderDetail.microsetting_pria.map((v: string, i: number) => (
-                            <p key={i} className="text-[11px] text-stone-700">{v}</p>
-                          ))}
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">
+                            Microsetting
+                          </p>
+                          {orderDetail.microsetting_pria.map(
+                            (v: string, i: number) => (
+                              <p key={i} className="text-[11px] text-stone-700">
+                                {v}
+                              </p>
+                            ),
+                          )}
                         </div>
                       ) : null}
                       {orderDetail.detail_laser_pria?.length ? (
                         <div className="rounded-lg border border-green-200 bg-green-50/70 p-1.5">
-                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">Laser</p>
-                          {orderDetail.detail_laser_pria.map((v: string, i: number) => (
-                            <p key={i} className="text-[11px] text-stone-700">{v}</p>
-                          ))}
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">
+                            Laser
+                          </p>
+                          {orderDetail.detail_laser_pria.map(
+                            (v: string, i: number) => (
+                              <p key={i} className="text-[11px] text-stone-700">
+                                {v}
+                              </p>
+                            ),
+                          )}
                         </div>
                       ) : null}
                       {orderDetail.detail_finishing_pria?.length ? (
                         <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-1.5">
-                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">Finishing</p>
-                          {orderDetail.detail_finishing_pria.map((v: string, i: number) => (
-                            <p key={i} className="text-[11px] text-stone-700">{v}</p>
-                          ))}
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">
+                            Finishing
+                          </p>
+                          {orderDetail.detail_finishing_pria.map(
+                            (v: string, i: number) => (
+                              <p key={i} className="text-[11px] text-stone-700">
+                                {v}
+                              </p>
+                            ),
+                          )}
                         </div>
                       ) : null}
                     </div>
@@ -1196,52 +1244,86 @@ function WorkerHistorySection({
                     </p>
                     <div className="space-y-0.5 text-[13px]">
                       {orderDetail.gramasi_wanita && (
-                        <p className="text-stone-700">Gramasi: {orderDetail.gramasi_wanita} g</p>
+                        <p className="text-stone-700">
+                          Gramasi: {orderDetail.gramasi_wanita} g
+                        </p>
                       )}
                       {orderDetail.ukuran_wanita && (
-                        <p className="text-stone-700">Ukuran: {orderDetail.ukuran_wanita}</p>
+                        <p className="text-stone-700">
+                          Ukuran: {orderDetail.ukuran_wanita}
+                        </p>
                       )}
                       {orderDetail.jenis_cincin_wanita && (
-                        <p className="text-stone-700">Jenis: {orderDetail.jenis_cincin_wanita}</p>
+                        <p className="text-stone-700">
+                          Jenis: {orderDetail.jenis_cincin_wanita}
+                        </p>
                       )}
                       {orderDetail.ukiran_wanita && (
-                        <p className="text-stone-700">Ukiran nama: {orderDetail.ukiran_wanita}</p>
+                        <p className="text-stone-700">
+                          Ukiran nama: {orderDetail.ukiran_wanita}
+                        </p>
                       )}
                       {orderDetail.ukiran_cincin_wanita && (
-                        <p className="text-stone-700">Ukiran cincin: {orderDetail.ukiran_cincin_wanita}</p>
+                        <p className="text-stone-700">
+                          Ukiran cincin: {orderDetail.ukiran_cincin_wanita}
+                        </p>
                       )}
                     </div>
                     <div className="mt-2 grid grid-cols-2 gap-1.5">
                       {orderDetail.model_bentuk_wanita?.length ? (
                         <div className="rounded-lg border border-orange-200 bg-orange-50/70 p-1.5">
-                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">Model / Bentuk</p>
-                          {orderDetail.model_bentuk_wanita.map((v: string, i: number) => (
-                            <p key={i} className="text-[11px] text-stone-700">{v}</p>
-                          ))}
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">
+                            Model / Bentuk
+                          </p>
+                          {orderDetail.model_bentuk_wanita.map(
+                            (v: string, i: number) => (
+                              <p key={i} className="text-[11px] text-stone-700">
+                                {v}
+                              </p>
+                            ),
+                          )}
                         </div>
                       ) : null}
                       {orderDetail.microsetting_wanita?.length ? (
                         <div className="rounded-lg border border-yellow-200 bg-yellow-50/70 p-1.5">
-                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">Microsetting</p>
-                          {orderDetail.microsetting_wanita.map((v: string, i: number) => (
-                            <p key={i} className="text-[11px] text-stone-700">{v}</p>
-                          ))}
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">
+                            Microsetting
+                          </p>
+                          {orderDetail.microsetting_wanita.map(
+                            (v: string, i: number) => (
+                              <p key={i} className="text-[11px] text-stone-700">
+                                {v}
+                              </p>
+                            ),
+                          )}
                         </div>
                       ) : null}
                       {orderDetail.detail_laser_wanita?.length ? (
                         <div className="rounded-lg border border-green-200 bg-green-50/70 p-1.5">
-                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">Laser</p>
-                          {orderDetail.detail_laser_wanita.map((v: string, i: number) => (
-                            <p key={i} className="text-[11px] text-stone-700">{v}</p>
-                          ))}
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">
+                            Laser
+                          </p>
+                          {orderDetail.detail_laser_wanita.map(
+                            (v: string, i: number) => (
+                              <p key={i} className="text-[11px] text-stone-700">
+                                {v}
+                              </p>
+                            ),
+                          )}
                         </div>
                       ) : null}
                       {orderDetail.detail_finishing_wanita?.length ? (
                         <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-1.5">
-                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">Finishing</p>
-                          {orderDetail.detail_finishing_wanita.map((v: string, i: number) => (
-                            <p key={i} className="text-[11px] text-stone-700">{v}</p>
-                          ))}
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">
+                            Finishing
+                          </p>
+                          {orderDetail.detail_finishing_wanita.map(
+                            (v: string, i: number) => (
+                              <p key={i} className="text-[11px] text-stone-700">
+                                {v}
+                              </p>
+                            ),
+                          )}
                         </div>
                       ) : null}
                     </div>
@@ -1389,7 +1471,9 @@ function WorkshopInputContent() {
           setWorkerHistory(json.data);
           setHistoryTotal(json.total);
         }
-      } catch (e) { console.warn("[workshop/input] load history failed:", e); }
+      } catch (e) {
+        console.warn("[workshop/input] load history failed:", e);
+      }
     })();
   }, []);
 
@@ -1403,7 +1487,9 @@ function WorkshopInputContent() {
         setWorkerHistory(json.data);
         setHistoryTotal(json.total);
       }
-    } catch (e) { console.warn("[workshop/input] refresh history failed:", e); }
+    } catch (e) {
+      console.warn("[workshop/input] refresh history failed:", e);
+    }
   }, []);
 
   // Load user profile on mount
@@ -1552,13 +1638,34 @@ function WorkshopInputContent() {
 
         <div className={`mb-4 rounded-xl border px-4 py-3 ${theme.card}`}>
           <p
-            className={`text-[10px] font-medium uppercase tracking-wider ${theme.label}`}
+            className={`text-[10px] mb-4 font-medium uppercase tracking-wider ${theme.label}`}
           >
             Masuk sebagai
           </p>
-          <p className="mt-1 text-[15px] font-semibold text-stone-800">
-            {user.full_name}
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-[15px] font-semibold text-stone-800">
+              {user.full_name}
+            </p>
+            <button
+              onClick={() => router.push("/workshop/settings/pin")}
+              className="text-[11px] text-stone-400 hover:text-stone-600 transition-colors flex items-center gap-1"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                className="h-3 w-3"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"
+                />
+              </svg>
+              Pengaturan PIN
+            </button>
+          </div>
           <div className="mt-1.5 flex items-center justify-between">
             <span
               className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${theme.badge}`}
@@ -1570,17 +1677,6 @@ function WorkshopInputContent() {
               className="text-[11px] text-stone-400 hover:text-red-500 transition-colors"
             >
               Keluar
-            </button>
-          </div>
-          <div className="mt-2 flex items-center justify-between">
-            <button
-              onClick={() => router.push("/workshop/settings/pin")}
-              className="text-[11px] text-stone-400 hover:text-stone-600 transition-colors flex items-center gap-1"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-3 w-3">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
-              </svg>
-              Pengaturan PIN
             </button>
           </div>
         </div>
@@ -1625,7 +1721,9 @@ function WorkshopInputContent() {
             </div>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as "newest" | "deadline")}
+              onChange={(e) =>
+                setSortBy(e.target.value as "newest" | "deadline")
+              }
               className={`rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-[13px] text-stone-600 focus:outline-none focus:ring-2 transition-all ${theme.ring}`}
             >
               <option value="deadline">Deadline ⬆</option>

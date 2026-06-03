@@ -114,7 +114,13 @@ export async function PATCH(
       if (typeof password !== "string" || password.length < 6) {
         return NextResponse.json({ error: "Password minimal 6 karakter" }, { status: 400 });
       }
-      const { error: pwErr } = await admin.auth.admin.updateUserById(userId, { password });
+      // Read existing metadata so we don't overwrite other fields
+      const { data: existingAuth } = await admin.auth.admin.getUserById(userId);
+      const existingMeta = existingAuth?.user?.user_metadata ?? {};
+      const { error: pwErr } = await admin.auth.admin.updateUserById(userId, {
+        password,
+        user_metadata: { ...existingMeta, workshop_password: password },
+      });
       if (pwErr) {
         console.error("[PATCH supervisor/accounts/:userId] pw error:", pwErr.message);
         return NextResponse.json({ error: "Gagal mengubah password" }, { status: 500 });
