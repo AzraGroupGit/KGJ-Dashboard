@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 import BrandHeader from "@/components/qr/BrandHeader";
 import LoginForm from "@/components/qr/LoginForm";
 import WorkerSelect from "@/components/qr/WorkerSelect";
@@ -114,7 +115,6 @@ function Numpad({
 }
 
 function WorkshopLoginContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const redirectTo = searchParams.get("redirect") || "/workshop/input";
@@ -145,8 +145,7 @@ function WorkshopLoginContent() {
       const SUPERVISOR_ROLE_NAMES = ["operational_supervisor", "production_supervisor"];
       if (SUPERVISOR_ROLE_NAMES.includes(roleName) || roleGroup === "management") {
         const path = getDashboardPath(roleName) || "/dashboard/supervisor/monitoring";
-        router.push(path);
-        router.refresh();
+        window.location.href = path;
         return;
       }
 
@@ -155,10 +154,34 @@ function WorkshopLoginContent() {
       if (stage) params.set("stage", stage);
       if (qrToken) params.set("qr_token", qrToken);
       const targetUrl = `${redirectTo}?${params.toString()}`;
-      router.push(targetUrl);
-      router.refresh();
+      window.location.href = targetUrl;
     },
-    [router, redirectTo, orderId, stage, qrToken],
+    [redirectTo, orderId, stage, qrToken],
+  );
+
+  // ── Client-side Supabase client for cookie-based session ─────────
+
+  const browserSupabase = useRef<ReturnType<typeof createBrowserClient> | null>(null);
+  const getBrowserClient = useCallback(() => {
+    if (!browserSupabase.current) {
+      browserSupabase.current = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      );
+    }
+    return browserSupabase.current;
+  }, []);
+
+  const signInAndRedirect = useCallback(
+    async (email: string, password: string, roleName: string, roleGroup: string) => {
+      const sb = getBrowserClient();
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) {
+        throw new Error(error.message);
+      }
+      doRedirect(roleName, roleGroup);
+    },
+    [getBrowserClient, doRedirect],
   );
 
   // ── Manual login handler (username + password) ──────────────────
@@ -250,8 +273,13 @@ function WorkshopLoginContent() {
           throw new Error(data.error || "Login gagal");
         }
 
-        // Successful PIN login — redirect
-        doRedirect(data.user?.role ?? "", data.user?.roleDetail?.role_group ?? "");
+        // Sign in client-side (sets cookies via @supabase/ssr browser client)
+        await signInAndRedirect(
+          data.email,
+          data.workshopPassword,
+          data.user?.role ?? "",
+          data.user?.roleDetail?.role_group ?? "",
+        );
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Terjadi kesalahan, coba lagi",
@@ -260,7 +288,7 @@ function WorkshopLoginContent() {
         setIsLoading(false);
       }
     },
-    [selectedWorker, qrToken, doRedirect],
+    [selectedWorker, qrToken, signInAndRedirect],
   );
 
   // ── PIN setup handler (single API call with setup_pin) ──────────
@@ -289,8 +317,13 @@ function WorkshopLoginContent() {
           throw new Error(data.error || "Gagal menyimpan PIN");
         }
 
-        // Success — redirect
-        doRedirect(data.user?.role ?? "", data.user?.roleDetail?.role_group ?? "");
+        // Sign in client-side (sets cookies via @supabase/ssr browser client)
+        await signInAndRedirect(
+          data.email,
+          data.workshopPassword,
+          data.user?.role ?? "",
+          data.user?.roleDetail?.role_group ?? "",
+        );
       } catch (err) {
         setSetupError(
           err instanceof Error ? err.message : "Terjadi kesalahan, coba lagi",
@@ -299,7 +332,7 @@ function WorkshopLoginContent() {
         setSetupSubmitting(false);
       }
     },
-    [selectedWorker, qrToken, doRedirect],
+    [selectedWorker, qrToken, signInAndRedirect],
   );
 
   // ── Step transitions ───────────────────────────────────────────
@@ -358,9 +391,12 @@ function WorkshopLoginContent() {
     setSetupPin((prev) => prev.slice(0, -1));
   }, []);
 
+  // Guard ref to prevent double-submit from finally block re-triggering
+  const setupSubmittingRef = useRef(false);
+
   // Auto-advance setup when PIN is full
   useEffect(() => {
-    if (setupSubmitting || setupPin.length !== PIN_LENGTH) return;
+    if (setupSubmitting || setupSubmittingRef.current || setupPin.length !== PIN_LENGTH) return;
 
     if (setupPhase === "enter") {
       setupNewPinRef.current = setupPin;
@@ -376,7 +412,12 @@ function WorkshopLoginContent() {
         setSetupPhase("enter");
         return;
       }
-      submitPinSetup(setupPin);
+      setupSubmittingRef.current = true;
+      const pin = setupPin;
+      setSetupPin("");
+      submitPinSetup(pin).finally(() => {
+        setupSubmittingRef.current = false;
+      });
     }
   }, [setupPin, setupPhase, setupSubmitting, submitPinSetup]);
 

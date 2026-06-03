@@ -44,9 +44,11 @@ interface ScanEvent {
   order_id: string;
   order_number: string;
   user_name: string;
-  workstation_name: string;
-  action: "open" | "submit" | "edit" | "read" | "delete" | "reject";
+  stage_label: string;
+  action: string;
+  action_label: string;
   scanned_at: string;
+  scanned_at_formatted: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -331,6 +333,24 @@ export default function KelolaQRPage() {
     setScansToday(json.total ?? 0);
   }, []);
 
+  const fetchScanEvents = useCallback(async () => {
+    const res = await fetch("/api/scan-events?limit=100");
+    if (!res.ok) return;
+    const json = await res.json();
+    const mapped = (json.data ?? []).map((e: any) => ({
+      id: e.id,
+      order_id: e.order_id,
+      order_number: e.order_number ?? "—",
+      user_name: e.user_name ?? "—",
+      stage_label: e.stage_label ?? "—",
+      action: e.action,
+      action_label: e.action_label ?? "—",
+      scanned_at: e.scanned_at,
+      scanned_at_formatted: e.scanned_at_formatted,
+    }));
+    setScanEvents(mapped);
+  }, []);
+
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
@@ -339,6 +359,12 @@ export default function KelolaQRPage() {
     };
     load();
   }, [fetchQRCodes, fetchRoles, fetchScansToday]);
+
+  useEffect(() => {
+    if (activeTab === "scan-logs") {
+      fetchScanEvents();
+    }
+  }, [activeTab, fetchScanEvents]);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
@@ -843,7 +869,7 @@ export default function KelolaQRPage() {
                             </td>
                             <td className="px-5 py-3.5">
                               <span className="text-sm font-medium text-gray-800">
-                                {event.workstation_name}
+                                {event.stage_label}
                               </span>
                             </td>
                             <td className="px-5 py-3.5">

@@ -18,22 +18,24 @@ export async function GET() {
     }
 
     const admin = createAdminClient();
+
     const { data: userData, error: userError } = await admin
       .from("users")
       .select(
         `
-        id,
-        full_name,
-        username,
-        status,
-        role:roles!users_role_id_fkey (
           id,
-          name,
-          role_group,
-          permissions,
-          allowed_stages
-        )
-      `,
+          full_name,
+          username,
+          status,
+          pin_hash,
+          role:roles!users_role_id_fkey (
+            id,
+            name,
+            role_group,
+            permissions,
+            allowed_stages
+          )
+        `,
       )
       .eq("id", authUser.id)
       .is("deleted_at", null)
@@ -61,6 +63,7 @@ export async function GET() {
         id: userData.id,
         full_name: userData.full_name,
         username: userData.username,
+        pin_hash: userData.pin_hash,
         role: {
           id: roleObj?.id,
           name: roleObj?.name,

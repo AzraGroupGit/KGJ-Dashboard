@@ -3,10 +3,8 @@
 import { useMemo } from "react";
 import {
   STAGE_SEQUENCE,
-  STAGE_LABELS,
   getStageLabel,
   getProgressPercent,
-  isStageCompleted,
   isStageActive,
 } from "@/lib/stages";
 
@@ -100,9 +98,7 @@ export default function CustomerTimeline({
       <div>
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-stone-700">
-            {isComplete
-              ? "Pesanan Selesai"
-              : `Progress: ${progress}%`}
+            {isComplete ? "Pesanan Selesai" : `Progress: ${progress}%`}
           </span>
           {!isComplete && deadline && (
             <span className="text-xs text-stone-500">
@@ -124,8 +120,18 @@ export default function CustomerTimeline({
       <div className="text-center">
         {isComplete ? (
           <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-semibold text-emerald-800">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4.5 12.75l6 6 9-13.5" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M4.5 12.75l6 6 9-13.5"
+              />
             </svg>
             Pesanan Selesai
           </div>
@@ -143,7 +149,8 @@ export default function CustomerTimeline({
       <div className="space-y-1">
         {STAGE_SEQUENCE.map((stage) => {
           const done = isComplete || completedStages.has(stage);
-          const active = !isComplete && isStageActive(stage, currentStage || "");
+          const active =
+            !isComplete && isStageActive(stage, currentStage || "");
           const date = completedDates.get(stage) || entryDates.get(stage);
           return (
             <div
@@ -158,8 +165,18 @@ export default function CustomerTimeline({
             >
               <div className="flex-shrink-0">
                 {done ? (
-                  <svg className="h-5 w-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4.5 12.75l6 6 9-13.5" />
+                  <svg
+                    className="h-5 w-5 text-emerald-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M4.5 12.75l6 6 9-13.5"
+                    />
                   </svg>
                 ) : active ? (
                   <span className="flex h-5 w-5 items-center justify-center">

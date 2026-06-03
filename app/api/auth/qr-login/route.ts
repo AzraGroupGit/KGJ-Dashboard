@@ -1,6 +1,7 @@
 // app/api/auth/qr-login/route.ts
 
 import { NextResponse } from "next/server";
+import bcrypt from "bcrypt";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
         username,
         status,
         deleted_at,
+        pin_hash,
         role:roles!users_role_id_fkey (
           id,
           name,
@@ -77,12 +79,32 @@ export async function POST(request: Request) {
       );
     }
 
-    // Session client for signInWithPassword — must write the auth cookie
+    // Try Supabase Auth signInWithPassword (original password)
     const supabase = await createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({
+    let { error: authError } = await supabase.auth.signInWithPassword({
       email: userData.email,
       password,
     });
+
+    // If primary fails and user has a PIN hash, try PIN-based login
+    if (authError && userData.pin_hash) {
+      const pinValid = await bcrypt.compare(password, userData.pin_hash);
+      if (pinValid) {
+        // Use original password if available, otherwise fall back to PIN
+        const { data: authUser } = await admin.auth.admin.getUserById(userData.id);
+        const loginPassword = authUser?.user?.user_metadata?.workshop_password || password;
+        try {
+          await admin.auth.admin.updateUserById(userData.id, { password: loginPassword });
+        } catch {
+          // Non-critical — continue to signIn attempt
+        }
+        const { error: retryError } = await supabase.auth.signInWithPassword({
+          email: userData.email,
+          password: loginPassword,
+        });
+        authError = retryError ?? null;
+      }
+    }
 
     if (authError) {
       let message = "Kata sandi salah";

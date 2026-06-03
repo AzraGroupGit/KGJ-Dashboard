@@ -206,8 +206,12 @@ export async function PUT(
       }
 
       const admin = createAdminClient();
+      // Read existing metadata so we don't overwrite other fields
+      const { data: existingAuth } = await admin.auth.admin.getUserById(id);
+      const existingMeta = existingAuth?.user?.user_metadata ?? {};
       const { error: pwError } = await admin.auth.admin.updateUserById(id, {
         password,
+        user_metadata: { ...existingMeta, workshop_password: password },
       });
 
       if (pwError) {

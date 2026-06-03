@@ -5,34 +5,48 @@ import { STAGE_SEQUENCE, getStageLabel } from "@/lib/stages";
 export async function GET(_request: Request) {
   try {
     const db = createAdminClient();
-    const stageLabels = STAGE_SEQUENCE.map((s) => getStageLabel(s));
 
-    const { data: results, error } = await db
-      .from("stage_results")
-      .select("id, order_id, stage, started_at, finished_at, attempt_number")
-      .not("finished_at", "is", null)
-      .not("started_at", "is", null)
-      .order("finished_at", { ascending: true });
+    const { data: transitions, error } = await db
+      .from("order_stage_transitions")
+      .select("order_id, from_stage, to_stage, transitioned_at")
+      .order("order_id", { ascending: true })
+      .order("transitioned_at", { ascending: true });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Duration per stage in hours, collected by stage key
+    // Group transitions by order, then compute duration per stage
     const stageDurations: Record<string, number[]> = {};
     for (const stage of STAGE_SEQUENCE) {
       stageDurations[stage] = [];
     }
 
-    for (const r of results) {
-      const start = new Date(r.started_at).getTime();
-      const end = new Date(r.finished_at).getTime();
-      if (end <= start) continue;
-      const hours = (end - start) / (1000 * 60 * 60);
-      if (stageDurations[r.stage]) {
-        stageDurations[r.stage].push(hours);
+    const orderGroups: Record<string, any[]> = {};
+    for (const t of transitions) {
+      if (!orderGroups[t.order_id]) orderGroups[t.order_id] = [];
+      orderGroups[t.order_id].push(t);
+    }
+
+    for (const orderId of Object.keys(orderGroups)) {
+      const txns = orderGroups[orderId];
+      for (let i = 0; i < txns.length; i++) {
+        const enteredStage = txns[i].to_stage;
+        if (!stageDurations[enteredStage]) continue;
+
+        // Duration = time until the next transition leaves this stage
+        const nextTxn = txns[i + 1];
+        const endTime = nextTxn
+          ? new Date(nextTxn.transitioned_at).getTime()
+          : Date.now();
+        const startTime = new Date(txns[i].transitioned_at).getTime();
+        const hours = (endTime - startTime) / (1000 * 60 * 60);
+
+        stageDurations[enteredStage].push(hours);
       }
     }
+
+    const stageLabels = STAGE_SEQUENCE.map((s) => getStageLabel(s));
 
     const cycleData = STAGE_SEQUENCE.map((stage, i) => {
       const durs = stageDurations[stage];
@@ -69,16 +83,26 @@ export async function GET(_request: Request) {
       };
     });
 
-    // Monthly aggregated data for trend chart
+    // Monthly trend from transitions
     const monthlyBuckets: Record<string, Record<string, number[]>> = {};
-    for (const r of results) {
-      const m = r.finished_at.slice(0, 7);
-      if (!monthlyBuckets[m]) monthlyBuckets[m] = {};
-      if (!monthlyBuckets[m][r.stage]) monthlyBuckets[m][r.stage] = [];
-      const start = new Date(r.started_at).getTime();
-      const end = new Date(r.finished_at).getTime();
-      if (end > start) {
-        monthlyBuckets[m][r.stage].push((end - start) / (1000 * 60 * 60));
+    for (const orderId of Object.keys(orderGroups)) {
+      const txns = orderGroups[orderId];
+      for (let i = 0; i < txns.length; i++) {
+        const enteredStage = txns[i].to_stage;
+        if (!stageDurations[enteredStage]) continue;
+
+        const nextTxn = txns[i + 1];
+        const endTime = nextTxn
+          ? new Date(nextTxn.transitioned_at).getTime()
+          : Date.now();
+        const startTime = new Date(txns[i].transitioned_at).getTime();
+        const hours = (endTime - startTime) / (1000 * 60 * 60);
+
+        const month = txns[i].transitioned_at.slice(0, 7);
+        if (!monthlyBuckets[month]) monthlyBuckets[month] = {};
+        if (!monthlyBuckets[month][enteredStage])
+          monthlyBuckets[month][enteredStage] = [];
+        monthlyBuckets[month][enteredStage].push(hours);
       }
     }
 

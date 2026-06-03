@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const MAX_PIN_ATTEMPTS = 3;
@@ -113,8 +112,7 @@ export async function POST(request: Request) {
           })
           .eq("id", userData.id);
 
-        // The pin param here is the login PIN — it should match setup_pin
-        // since the frontend sends the same value for both
+        userData.pin_hash = pinHash;
       } else {
         return NextResponse.json(
           {
@@ -173,31 +171,15 @@ export async function POST(request: Request) {
       .update({ pin_attempts: 0, pin_locked_until: null })
       .eq("id", userData.id);
 
-    // 7. Sync Supabase auth password and create session
-    const supabase = await createClient();
-    let sessionError: string | null = null;
+    // 7. Get workshop password for client-side sign in
+    const { data: authUser } = await admin.auth.admin.getUserById(userData.id);
+    const workshopPassword = authUser?.user?.user_metadata?.workshop_password || pin;
 
+    // Ensure Auth password matches what the frontend will use
     try {
-      // Ensure the auth password matches the PIN (sync)
-      await admin.auth.admin.updateUserById(userData.id, { password: pin });
+      await admin.auth.admin.updateUserById(userData.id, { password: workshopPassword });
     } catch {
-      // Non-critical — if admin update fails, we still try signInWithPassword
-    }
-
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: userData.email,
-      password: pin,
-    });
-
-    if (authError) {
-      sessionError = authError.message;
-    }
-
-    if (sessionError) {
-      return NextResponse.json(
-        { error: "Gagal membuat sesi. Coba lagi atau hubungi administrator." },
-        { status: 500 },
-      );
+      // Non-critical
     }
 
     // 8. Log activity
@@ -229,6 +211,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: "Login berhasil",
+      email: userData.email,
+      workshopPassword,
       user: {
         id: userData.id,
         fullName: userData.full_name,
