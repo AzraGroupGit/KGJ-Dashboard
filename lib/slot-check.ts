@@ -1,6 +1,6 @@
 export interface SlotCheckResult {
   kategori: string;
-  deadline: string;
+  tgl_order: string;
   label: string;
   max_slots: number;
   overrides: number;
@@ -12,12 +12,12 @@ export interface SlotCheckResult {
 
 export async function checkSlotAvailability(
   kategori: string,
-  deadline: string,
+  tglOrder: string,
 ): Promise<SlotCheckResult | null> {
-  if (!kategori || !deadline) return null;
+  if (!kategori || !tglOrder) return null;
   try {
     const res = await fetch(
-      `/api/slots/slot-check?kategori=${encodeURIComponent(kategori)}&deadline=${encodeURIComponent(deadline)}`,
+      `/api/slots/slot-check?kategori=${encodeURIComponent(kategori)}&tgl_order=${encodeURIComponent(tglOrder)}`,
     );
     const json = await res.json();
     if (json.success) return json.data;

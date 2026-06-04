@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/Header";
 import { Loader2, Plus, Trash2, Calendar, AlertTriangle } from "lucide-react";
@@ -52,12 +52,23 @@ export default function SlotManagementPage() {
   const [overrides, setOverrides] = useState<SlotOverride[]>([]);
   const [showOverrides, setShowOverrides] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const hasAutoSwitched = useRef(false);
 
   const fetchCategories = useCallback(async (date: string) => {
     try {
       const res = await fetch(`/api/slots/slot-categories?date=${date}`);
       const json = await res.json();
-      if (json.success) setCategories(json.data);
+      if (json.success) {
+        setCategories(json.data);
+        if (json.nearest_date && !hasAutoSwitched.current && json.nearest_date !== date) {
+          hasAutoSwitched.current = true;
+          setSelectedDate(json.nearest_date);
+          setMessage({
+            type: "success",
+            text: `Menampilkan slot untuk tanggal ${new Date(json.nearest_date).toLocaleDateString("id-ID")} (tanggal order terdekat)`,
+          });
+        }
+      }
     } catch (err) {
       console.error("fetch categories error:", err);
     }
