@@ -27,8 +27,8 @@ export async function GET(req: Request) {
           .from("cs_orders")
           .select("*", { count: "exact", head: true })
           .eq("kategori", cat.key)
-          .eq("deadline", date)
-          .neq("status", "cancelled");
+          .eq("tgl_order", date)
+          .or("status.is.null,status.neq.cancelled");
 
         if (countError) throw countError;
 
@@ -51,7 +51,22 @@ export async function GET(req: Request) {
       }),
     );
 
-    return NextResponse.json({ success: true, data: categoriesWithUsage });
+    const allZero = (categoriesWithUsage || []).every((c) => (c.used || 0) === 0);
+
+    let nearestDate: string | null = null;
+    if (allZero) {
+      const { data: nearest } = await supabase
+        .from("cs_orders")
+        .select("tgl_order")
+        .gte("tgl_order", new Date().toISOString().split("T")[0])
+        .or("status.is.null,status.neq.cancelled")
+        .order("tgl_order", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (nearest?.tgl_order) nearestDate = nearest.tgl_order;
+    }
+
+    return NextResponse.json({ success: true, data: categoriesWithUsage, nearest_date: nearestDate });
   } catch (err) {
     console.error("GET /api/slots/slot-categories error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

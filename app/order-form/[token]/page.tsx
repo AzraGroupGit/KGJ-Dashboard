@@ -112,6 +112,8 @@ interface OrderInfo {
   pengiriman: string | null;
   box: string | null;
   transfer_ke_bank: string | null;
+  current_stage: string | null;
+  status: string | null;
 }
 
 type PageState = "loading" | "not_found" | "ready" | "submitted" | "error";
@@ -473,16 +475,16 @@ export default function OrderFormPage() {
   }, [formData.kategori]);
 
   useEffect(() => {
-    if (formData.kategori && formData.deadline) {
+    if (formData.kategori && formData.tglOrder) {
       setSlotLoading(true);
-      checkSlotAvailability(formData.kategori, formData.deadline).then((result) => {
+      checkSlotAvailability(formData.kategori, formData.tglOrder).then((result) => {
         setSlotInfo(result);
         setSlotLoading(false);
       });
     } else {
       setSlotInfo(null);
     }
-  }, [formData.kategori, formData.deadline]);
+  }, [formData.kategori, formData.tglOrder]);
 
   const setField = <K extends keyof OrderFormData>(
     key: K,
@@ -673,9 +675,10 @@ export default function OrderFormPage() {
 
   if (pageState === "submitted") {
     const currentStage =
-      transitions.length > 0
+      orderInfo?.current_stage ??
+      (transitions.length > 0
         ? transitions[transitions.length - 1].to_stage as string
-        : null;
+        : null);
 
     return (
       <Shell>
@@ -737,7 +740,7 @@ export default function OrderFormPage() {
             <div className="bg-white rounded-2xl shadow-2xl p-8">
               <CustomerTimeline
                 currentStage={currentStage}
-                status={orderInfo?.form_status ?? "submitted"}
+                status={orderInfo?.status ?? orderInfo?.form_status ?? "submitted"}
                 stageResults={stageResults as any}
                 transitions={transitions as any}
                 deliveries={deliveries as any}
@@ -896,7 +899,7 @@ export default function OrderFormPage() {
                 {slotInfo && slotInfo.is_full && (
                   <p className="text-xs text-amber-600 font-medium mt-1 flex items-center gap-1">
                     <span>⚠</span>
-                    <span>Slot {slotInfo.label} untuk tanggal {new Date(slotInfo.deadline).toLocaleDateString("id-ID")} penuh ({slotInfo.used}/{slotInfo.total_slots} terpakai)</span>
+                    <span>Slot {slotInfo.label} untuk tanggal {new Date(slotInfo.tgl_order).toLocaleDateString("id-ID")} penuh ({slotInfo.used}/{slotInfo.total_slots} terpakai)</span>
                   </p>
                 )}
                 {slotInfo && !slotInfo.is_full && slotInfo.total_slots > 0 && (

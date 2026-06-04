@@ -63,6 +63,8 @@ const PUBLIC_SELECT = [
   "transfer_ke_bank",
   "submitted_at",
   "created_at",
+  "current_stage",
+  "status",
 ].join(", ");
 
 // ── GET /api/order-form/[token] ────────────────────────────────────────────

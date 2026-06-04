@@ -5,10 +5,10 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const kategori = searchParams.get("kategori");
-    const deadline = searchParams.get("deadline");
+    const tglOrder = searchParams.get("tgl_order");
 
-    if (!kategori || !deadline) {
-      return NextResponse.json({ error: "kategori and deadline are required" }, { status: 400 });
+    if (!kategori || !tglOrder) {
+      return NextResponse.json({ error: "kategori and tgl_order are required" }, { status: 400 });
     }
 
     const admin = createAdminClient();
@@ -27,14 +27,14 @@ export async function GET(req: Request) {
       .from("cs_orders")
       .select("*", { count: "exact", head: true })
       .eq("kategori", kategori)
-      .eq("deadline", deadline)
-      .neq("status", "cancelled");
+      .eq("tgl_order", tglOrder)
+      .or("status.is.null,status.neq.cancelled");
 
     const { count: overrides } = await admin
       .from("slot_overrides")
       .select("*", { count: "exact", head: true })
       .eq("category_id", category.id)
-      .eq("date", deadline);
+      .eq("date", tglOrder);
 
     const totalSlots = category.max_slots + (overrides || 0);
     const usedCount = used || 0;
@@ -43,7 +43,7 @@ export async function GET(req: Request) {
       success: true,
       data: {
         kategori,
-        deadline,
+        tgl_order: tglOrder,
         label: category.label,
         max_slots: category.max_slots,
         overrides: overrides || 0,

@@ -1620,16 +1620,16 @@ function OrderFormFields({
   }, [data.kategori]);
 
   useEffect(() => {
-    if (data.kategori && data.deadline) {
+    if (data.kategori && data.tglOrder) {
       setSlotLoading(true);
-      checkSlotAvailability(data.kategori, data.deadline).then((result) => {
+      checkSlotAvailability(data.kategori, data.tglOrder).then((result) => {
         setSlotInfo(result);
         setSlotLoading(false);
       });
     } else {
       setSlotInfo(null);
     }
-  }, [data.kategori, data.deadline]);
+  }, [data.kategori, data.tglOrder]);
 
   const detailField = (prefix: string, gender: "Pria" | "Wanita") =>
     `${prefix}${gender}` as keyof OrderFormData;
@@ -1739,7 +1739,7 @@ function OrderFormFields({
           {slotInfo && slotInfo.is_full && (
             <p className="text-xs text-amber-600 font-medium mt-1 flex items-center gap-1">
               <span>⚠</span>
-              <span>Slot {slotInfo.label} untuk {new Date(slotInfo.deadline).toLocaleDateString("id-ID")} penuh ({slotInfo.used}/{slotInfo.total_slots} terpakai)</span>
+              <span>Slot {slotInfo.label} untuk {new Date(slotInfo.tgl_order).toLocaleDateString("id-ID")} penuh ({slotInfo.used}/{slotInfo.total_slots} terpakai)</span>
             </p>
           )}
           {slotInfo && !slotInfo.is_full && slotInfo.total_slots > 0 && (
