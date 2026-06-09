@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { formatAddsOnList } from "@/lib/adds-on";
 import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
+import { getStageLabel } from "@/lib/stages";
 import StageTimeline from "@/components/orders/StageTimeline";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -168,29 +169,6 @@ const APPROVAL_STAGES = [
   "approval_produksi",
   "approval_qc_2",
 ];
-
-const STAGE_LABELS_DETAIL: Record<string, string> = {
-  penerimaan_order: "Penerimaan Order",
-  approval_penerimaan_order: "Approval Penerimaan Order",
-  racik_bahan: "Persiapan Bahan",
-  approval_racik_bahan: "Approval Persiapan Bahan",
-  lebur_bahan: "Lebur Bahan",
-  pembentukan_cincin: "Pembentukan Cincin",
-  cek_kadar: "Cek Kadar",
-  pemasangan_permata: "Micro Setting",
-  pemolesan: "Pemolesan Awal",
-  qc_1: "QC Awal",
-  approval_qc_1: "Approval QC Awal",
-  laser: "Laser Engraving",
-  finishing: "Finishing",
-  approval_produksi: "Approval Produksi",
-  qc_2: "QC Akhir",
-  approval_qc_2: "Approval QC Akhir",
-  konfirmasi: "Konfirmasi Customer Care",
-  packing: "Packing & Persiapan Kirim",
-  pengiriman: "Pengiriman",
-  selesai: "Selesai",
-};
 
 const DEADLINE_WARN_DAYS = 2;
 
@@ -445,7 +423,7 @@ function OrderDetailPopup({
                     ]
                   }`}
                 >
-                  {STAGE_LABELS_DETAIL[o.current_stage] ?? o.current_stage}
+                  {getStageLabel(o.current_stage)}
                 </span>
               )}
             </div>
@@ -802,7 +780,7 @@ function OrderDetailPopup({
                         >
                           <div className="flex items-center justify-between mb-1">
                             <span className="font-medium text-slate-700">
-                              {STAGE_LABELS_DETAIL[a.stage] ?? a.stage}
+                              {getStageLabel(a.stage)}
                             </span>
                             <span
                               className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${

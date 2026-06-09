@@ -86,7 +86,7 @@ export async function POST(request: Request) {
       );
 
     const body = await request.json();
-    const { order_id, stage, action, remarks } = body;
+    const { order_id, stage, action, remarks, rework_stage } = body;
     const stage_result_id: string | null = body.stage_result_id ?? null;
 
     if (!order_id || !stage || !action)
@@ -153,10 +153,10 @@ export async function POST(request: Request) {
         );
     }
 
-    const productionStage =
-      Object.entries(PRODUCTION_TO_APPROVAL_STAGE).find(
+    const productionStage = rework_stage ||
+      (Object.entries(PRODUCTION_TO_APPROVAL_STAGE).find(
         ([, approvalStage]) => approvalStage === stage,
-      )?.[0] ?? stage.replace("approval_", "");
+      )?.[0] ?? stage.replace("approval_", ""));
 
     const now = new Date().toISOString();
     const supervisorName: string = (profile as any)?.full_name ?? "Supervisor";

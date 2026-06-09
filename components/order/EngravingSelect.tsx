@@ -7,7 +7,7 @@ const OPTIONS = [
   { value: "Jepang Korea", label: "Jepang Korea" },
 ] as const;
 
-const CUSTOM_VALUE = "";
+const CUSTOM_VALUE = "__custom__";
 
 export default function EngravingSelect({
   value,
@@ -22,7 +22,7 @@ export default function EngravingSelect({
 }) {
   const isCustom = value !== "" && !OPTIONS.some((o) => o.value === value);
   const selectedValue = isCustom ? CUSTOM_VALUE : value;
-  const customText = isCustom ? value : "";
+  const customText = isCustom && value !== CUSTOM_VALUE ? value : "";
 
   return (
     <div className="space-y-2">
@@ -42,7 +42,7 @@ export default function EngravingSelect({
             {o.label}
           </option>
         ))}
-        <option value={CUSTOM_VALUE}>Custom</option>
+        <option value={CUSTOM_VALUE}>Custom Ukiran</option>
       </select>
 
       {selectedValue === CUSTOM_VALUE && (

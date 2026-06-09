@@ -219,6 +219,14 @@ const SUB_SOURCES: Record<string, { value: string; label: string }[]> = {
   ],
 };
 
+const BANKS = ["BCA", "Mandiri", "BNI", "BRI"] as const;
+
+function paymentCategory(v: string): "ke_pt" | "non_pt_cash" | "" {
+  if (!v) return "";
+  if (v === "Ke PT" || (BANKS as readonly string[]).includes(v)) return "ke_pt";
+  return "non_pt_cash";
+}
+
 const GOLD = "#C8A951";
 
 const inputCls =
@@ -272,9 +280,16 @@ export default function OrderFormPage() {
   const [slotInfo, setSlotInfo] = useState<SlotCheckResult | null>(null);
   const [slotLoading, setSlotLoading] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
-  const [stageResults, setStageResults] = useState<Array<Record<string, unknown>>>([]);
-  const [transitions, setTransitions] = useState<Array<Record<string, unknown>>>([]);
-  const [deliveries, setDeliveries] = useState<Array<Record<string, unknown>>>([]);
+  const [stageResults, setStageResults] = useState<
+    Array<Record<string, unknown>>
+  >([]);
+  const [transitions, setTransitions] = useState<
+    Array<Record<string, unknown>>
+  >([]);
+  const [deliveries, setDeliveries] = useState<Array<Record<string, unknown>>>(
+    [],
+  );
+  const [showInstructions, setShowInstructions] = useState(true);
 
   const saveDraft = useCallback(
     (data: OrderFormData) => {
@@ -464,9 +479,14 @@ export default function OrderFormPage() {
 
   useEffect(() => {
     if (formData.kategori && formData.tglOrder) {
-      const threshold = KATEGORI_THRESHOLDS.find((k) => k.value === formData.kategori);
+      const threshold = KATEGORI_THRESHOLDS.find(
+        (k) => k.value === formData.kategori,
+      );
       if (threshold) {
-        const suggestedDeadline = addWorkingDays(formData.tglOrder, threshold.minDays);
+        const suggestedDeadline = addWorkingDays(
+          formData.tglOrder,
+          threshold.minDays,
+        );
         if (!formData.deadline) {
           setField("deadline", suggestedDeadline);
         }
@@ -477,10 +497,12 @@ export default function OrderFormPage() {
   useEffect(() => {
     if (formData.kategori && formData.tglOrder) {
       setSlotLoading(true);
-      checkSlotAvailability(formData.kategori, formData.tglOrder).then((result) => {
-        setSlotInfo(result);
-        setSlotLoading(false);
-      });
+      checkSlotAvailability(formData.kategori, formData.tglOrder).then(
+        (result) => {
+          setSlotInfo(result);
+          setSlotLoading(false);
+        },
+      );
     } else {
       setSlotInfo(null);
     }
@@ -677,7 +699,7 @@ export default function OrderFormPage() {
     const currentStage =
       orderInfo?.current_stage ??
       (transitions.length > 0
-        ? transitions[transitions.length - 1].to_stage as string
+        ? (transitions[transitions.length - 1].to_stage as string)
         : null);
 
     return (
@@ -719,7 +741,10 @@ export default function OrderFormPage() {
               <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">
                 No. Order Anda
               </p>
-              <p className="font-mono font-bold text-xl" style={{ color: GOLD }}>
+              <p
+                className="font-mono font-bold text-xl"
+                style={{ color: GOLD }}
+              >
                 {orderInfo?.order_number}
               </p>
             </div>
@@ -730,8 +755,18 @@ export default function OrderFormPage() {
             className="w-full rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-zinc-800 shadow-lg hover:bg-zinc-50 transition-all flex items-center justify-center gap-2"
             style={{ boxShadow: `0 4px 20px rgba(200,169,81,0.12)` }}
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
             </svg>
             {showTimeline ? "Sembunyikan Status" : "Lacak Status Pesanan"}
           </button>
@@ -740,7 +775,9 @@ export default function OrderFormPage() {
             <div className="bg-white rounded-2xl shadow-2xl p-8">
               <CustomerTimeline
                 currentStage={currentStage}
-                status={orderInfo?.status ?? orderInfo?.form_status ?? "submitted"}
+                status={
+                  orderInfo?.status ?? orderInfo?.form_status ?? "submitted"
+                }
                 stageResults={stageResults as any}
                 transitions={transitions as any}
                 deliveries={deliveries as any}
@@ -757,11 +794,94 @@ export default function OrderFormPage() {
 
   // ── Main form ──────────────────────────────────────────────────────────────
 
+  const handleDismissInstructions = () => {
+    setShowInstructions(false);
+    try {
+      localStorage.setItem(`order-form-instructions-${token}`, "1");
+    } catch {}
+  };
+
   return (
-    <div
-      className="min-h-screen py-8 px-4 relative"
-      style={{ backgroundColor: "#F2E4C0" }}
-    >
+    <>
+      {/* Instruction overlay */}
+      {showInstructions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 md:p-8">
+            <div className="text-center mb-6">
+              <div className="flex justify-center mb-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo.png"
+                  alt="PT Kotagede Jewellery"
+                  className="h-24 w-auto object-contain"
+                />
+              </div>
+              <h2 className="text-lg font-bold text-zinc-900">
+                Selamat Datang
+              </h2>
+              <p className="text-sm text-zinc-500 mt-1">
+                Silakan isi formulir order cincin berikut dengan lengkap dan
+                benar.
+              </p>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <div className="rounded-xl bg-amber-50 border border-amber-200 p-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800 mb-2">
+                  Persiapan
+                </h3>
+                <ul className="space-y-1.5 text-[13px] text-amber-900">
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600 mt-0.5">•</span>
+                    <span>Siapkan ukuran cincin (pria & wanita) dan alat ukur yang digunakan</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600 mt-0.5">•</span>
+                    <span>Tentukan teks ukiran nama yang diinginkan</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600 mt-0.5">•</span>
+                    <span>Siapkan referensi model / bentuk cincin (jika ada)</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="rounded-xl bg-blue-50 border border-blue-200 p-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-blue-800 mb-2">
+                  Petunjuk Pengisian
+                </h3>
+                <ul className="space-y-1.5 text-[13px] text-blue-900">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>Isi semua data sesuai dengan pesanan Anda</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>Pastikan nomor WhatsApp aktif untuk dikonfirmasi</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>Data dapat disimpan otomatis sebagai draft</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <button
+              onClick={handleDismissInstructions}
+              className="w-full py-3 text-white font-semibold rounded-xl text-sm transition-all hover:brightness-110"
+              style={{ backgroundColor: GOLD }}
+            >
+              Mulai Isi Form
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div
+        className="min-h-screen py-8 px-4 relative"
+        style={{ backgroundColor: "#F2E4C0" }}
+      >
       {/* Watermark */}
       <div
         className="fixed inset-0 pointer-events-none select-none"
@@ -894,17 +1014,24 @@ export default function OrderFormPage() {
                   </p>
                 )}
                 {slotLoading && (
-                  <p className="text-xs text-zinc-400 mt-1">Memeriksa slot...</p>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Memeriksa slot...
+                  </p>
                 )}
                 {slotInfo && slotInfo.is_full && (
                   <p className="text-xs text-amber-600 font-medium mt-1 flex items-center gap-1">
                     <span>⚠</span>
-                    <span>Slot {slotInfo.label} untuk tanggal {new Date(slotInfo.tgl_order).toLocaleDateString("id-ID")} penuh ({slotInfo.used}/{slotInfo.total_slots} terpakai)</span>
+                    <span>
+                      Slot {slotInfo.label} untuk tanggal{" "}
+                      {new Date(slotInfo.tgl_order).toLocaleDateString("id-ID")}{" "}
+                      penuh ({slotInfo.used}/{slotInfo.total_slots} terpakai)
+                    </span>
                   </p>
                 )}
                 {slotInfo && !slotInfo.is_full && slotInfo.total_slots > 0 && (
                   <p className="text-xs text-emerald-600 mt-1">
-                    Slot tersedia: {slotInfo.available} dari {slotInfo.total_slots}
+                    Slot tersedia: {slotInfo.available} dari{" "}
+                    {slotInfo.total_slots}
                   </p>
                 )}
               </div>
@@ -917,6 +1044,7 @@ export default function OrderFormPage() {
                 >
                   <option value="">Pilih acara</option>
                   {[
+                    "Daily",
                     "Lamaran/Tunangan",
                     "Pernikahan",
                     "Anniversary",
@@ -1312,7 +1440,9 @@ export default function OrderFormPage() {
                     <span className="text-sm text-zinc-700">Dari Store</span>
                   </label>
                   {formData.alatUkur === "Dari Store" && (
-                    <p className="text-xs text-emerald-600 ml-6">✓ Tercover garansi re-size selama 1 bulan</p>
+                    <p className="text-xs text-emerald-600 ml-6">
+                      ✓ Tercover garansi re-size 2 Angka
+                    </p>
                   )}
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -1327,7 +1457,9 @@ export default function OrderFormPage() {
                     <span className="text-sm text-zinc-700">Luar Store</span>
                   </label>
                   {formData.alatUkur === "Luar Store" && (
-                    <p className="text-xs text-rose-500 ml-6">✗ Tidak tercover garansi re-size</p>
+                    <p className="text-xs text-rose-500 ml-6">
+                      ✗ Tidak tercover garansi re-size
+                    </p>
                   )}
                 </div>
               </div>
@@ -1696,19 +1828,54 @@ export default function OrderFormPage() {
             {/* ── Pembayaran ────────────────────────────────────────────── */}
             <SectionDivider title="Pembayaran" />
 
-            <div>
-              <label className={labelCls}>Metode Pembayaran</label>
-              <select
-                value={formData.transferKeBank}
-                onChange={(e) => setField("transferKeBank", e.target.value)}
-                className={inputCls}
-              >
-                <option value="">Pilih metode</option>
-                <option value="Pembayaran Ke PT">Pembayaran Ke PT</option>
-                <option value="Pembayaran non PT">Pembayaran non PT</option>
-                <option value="Cash">Cash</option>
-              </select>
-            </div>
+            {paymentCategory(formData.transferKeBank) === "ke_pt" ? (
+              <div>
+                <label className={labelCls}>
+                  Transfer ke Bank<Required />
+                </label>
+                <select
+                  value={formData.transferKeBank === "Ke PT" ? "" : formData.transferKeBank}
+                  onChange={(e) => setField("transferKeBank", e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="">Pilih bank</option>
+                  {BANKS.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : paymentCategory(formData.transferKeBank) === "non_pt_cash" ? (
+              <div>
+                <label className={labelCls}>
+                  Metode Pembayaran<Required />
+                </label>
+                <select
+                  value={formData.transferKeBank === "Non PT / Cash" ? "" : formData.transferKeBank}
+                  onChange={(e) => setField("transferKeBank", e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="">Pilih metode</option>
+                  <option value="Non PT">Non PT</option>
+                  <option value="Cash">Cash</option>
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className={labelCls}>Metode Pembayaran</label>
+                <select
+                  value={formData.transferKeBank}
+                  onChange={(e) => setField("transferKeBank", e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="">Pilih metode</option>
+                  <option value="Pembayaran Ke PT">Pembayaran Ke PT</option>
+                  <option value="Pembayaran non PT">Pembayaran non PT</option>
+                  <option value="Cash">Cash</option>
+                </select>
+              </div>
+            )}
 
             {/* ── Submit ───────────────────────────────────────────────── */}
             <div className="pt-8">
@@ -1751,5 +1918,6 @@ export default function OrderFormPage() {
         </p>
       </div>
     </div>
+    </>
   );
 }

@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { STAGE_LABELS } from "@/lib/stages";
 
 const ACTIVE_STAGES = [
   "penerimaan_order",
@@ -10,10 +11,10 @@ const ACTIVE_STAGES = [
   "racik_bahan",
   "approval_racik_bahan",
   "lebur_bahan",
-  "cek_kadar",
   "pembentukan_cincin",
   "pemasangan_permata",
   "pemolesan",
+  "cek_kadar",
   "qc_1",
   "approval_qc_1",
   "laser",
@@ -25,28 +26,6 @@ const ACTIVE_STAGES = [
   "packing",
   "pengiriman",
 ] as const;
-
-const STAGE_LABELS: Record<string, string> = {
-  penerimaan_order: "Penerimaan Order",
-  approval_penerimaan_order: "Approval Penerimaan Order",
-  racik_bahan: "Persiapan Bahan",
-  approval_racik_bahan: "Approval Persiapan Bahan",
-  lebur_bahan: "Lebur Bahan",
-  cek_kadar: "Cek Kadar",
-  pembentukan_cincin: "Pembentukan Cincin",
-  pemasangan_permata: "Micro Setting",
-  pemolesan: "Pemolesan Awal",
-  qc_1: "QC Awal",
-  approval_qc_1: "Approval QC Awal",
-  laser: "Laser Engraving",
-  finishing: "Finishing",
-  approval_produksi: "Approval Produksi",
-  qc_2: "QC Akhir",
-  approval_qc_2: "Approval QC Akhir",
-  konfirmasi: "Konfirmasi Customer Care",
-  packing: "Packing & Persiapan Kirim",
-  pengiriman: "Pengiriman",
-};
 
 const STAGE_GROUPS: Record<string, "production" | "operational"> = {
   penerimaan_order: "operational",

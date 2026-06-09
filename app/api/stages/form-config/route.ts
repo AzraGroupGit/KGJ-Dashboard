@@ -13,6 +13,8 @@ type FieldType =
   | "textarea"
   | "boolean"
   | "quality_checklist"
+  | "multi_select"
+  | "file"
   | "date";
 
 export type StageType =
@@ -28,9 +30,11 @@ interface FieldConfig {
   label: string;
   type: FieldType;
   required: boolean;
-  options?: { value: string; label: string }[];
+  options?: { value: string; label: string; group?: string }[];
   placeholder?: string;
-  items?: { key: string; label: string }[];
+  items?: { key: string; label: string; reworkStage?: string }[];
+  accept?: string;
+  maxSize?: number;
 }
 
 interface StageConfig {
@@ -90,16 +94,17 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
         name: "tukang",
         label: "Tukang",
         type: "select",
-        required: true,
+        required: false,
         options: [
-          { value: "Tukang Pembentukan Cincin Internal 1", label: "Tukang Pembentukan Cincin Internal 1" },
-          { value: "Tukang Pembentukan Cincin Internal 2", label: "Tukang Pembentukan Cincin Internal 2" },
-          { value: "Tukang Pembentukan Cincin Internal 3", label: "Tukang Pembentukan Cincin Internal 3" },
-          { value: "Tukang Pembentukan Cincin Internal 4", label: "Tukang Pembentukan Cincin Internal 4" },
-          { value: "Tukang Pembentukan Cincin Eksternal 1", label: "Tukang Pembentukan Cincin Eksternal 1" },
-          { value: "Tukang Pembentukan Cincin Eksternal 2", label: "Tukang Pembentukan Cincin Eksternal 2" },
-          { value: "Tukang Pembentukan Cincin Eksternal 3", label: "Tukang Pembentukan Cincin Eksternal 3" },
-          { value: "Tukang Pembentukan Cincin Eksternal 4", label: "Tukang Pembentukan Cincin Eksternal 4" },
+          { value: "PR", label: "PR" },
+          { value: "RZ", label: "RZ" },
+          { value: "NR", label: "NR" },
+          { value: "ZG", label: "ZG" },
+          { value: "BG", label: "BG" },
+          { value: "DI", label: "DI" },
+          { value: "IS", label: "IS" },
+          { value: "WK", label: "WK" },
+          { value: "AN", label: "AN" },
         ],
       },
       NOTES,
@@ -114,16 +119,13 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
         name: "tukang",
         label: "Tukang",
         type: "select",
-        required: true,
+        required: false,
         options: [
-          { value: "Micro Setting Internal 1", label: "Micro Setting Internal 1" },
-          { value: "Micro Setting Internal 2", label: "Micro Setting Internal 2" },
-          { value: "Micro Setting Internal 3", label: "Micro Setting Internal 3" },
-          { value: "Micro Setting Internal 4", label: "Micro Setting Internal 4" },
-          { value: "Micro Setting Eksternal 1", label: "Micro Setting Eksternal 1" },
-          { value: "Micro Setting Eksternal 2", label: "Micro Setting Eksternal 2" },
-          { value: "Micro Setting Eksternal 3", label: "Micro Setting Eksternal 3" },
-          { value: "Micro Setting Eksternal 4", label: "Micro Setting Eksternal 4" },
+          { value: "AL", label: "AL" },
+          { value: "AG", label: "AG" },
+          { value: "YR", label: "YR" },
+          { value: "RN", label: "RN" },
+          { value: "UD", label: "UD" },
         ],
       },
       NOTES,
@@ -146,16 +148,14 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
         type: "quality_checklist",
         required: true,
         items: [
-          { key: "bentuk_sesuai", label: "Bentuk cincin sesuai order" },
-          { key: "ukuran_sesuai", label: "Ukuran cincin sesuai" },
-          { key: "berat_minimum", label: "Berat memenuhi syarat minimum" },
-          {
-            key: "permukaan_bersih",
-            label: "Permukaan bersih, tidak ada cacat",
-          },
-          { key: "solder_rapi", label: "Sambungan / patri rapi dan kuat" },
-          { key: "pemasangan_permata", label: "Pemasangan permata sesuai atau belum?" },
-          { key: "cek_kadar", label: "Cek kadar sudah sesuai atau belum?" },
+          { key: "bentuk_sesuai", label: "Bentuk cincin sesuai order", reworkStage: "pembentukan_cincin" },
+          { key: "ukuran_sesuai", label: "Ukuran cincin sesuai", reworkStage: "pembentukan_cincin" },
+          { key: "berat_minimum", label: "Berat memenuhi syarat minimum", reworkStage: "pembentukan_cincin" },
+          { key: "solder_rapi", label: "Sambungan / patri rapi dan kuat", reworkStage: "pembentukan_cincin" },
+          { key: "permukaan_bersih", label: "Permukaan bersih, tidak ada cacat", reworkStage: "pemolesan" },
+          { key: "pemasangan_permata", label: "Pemasangan permata sesuai atau belum?", reworkStage: "pemasangan_permata" },
+          { key: "cek_kadar", label: "Cek kadar sudah sesuai atau belum?", reworkStage: "cek_kadar" },
+          { key: "sertifikat_berlian", label: "Sertifikat berlian tersedia", reworkStage: "" },
         ],
       },
       { ...NOTES, placeholder: "Temuan QC, catatan perbaikan..." },
@@ -167,19 +167,49 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
     stageType: "select_action",
     fields: [
       {
-        name: "tukang",
-        label: "Tukang",
+        name: "tukang_batik",
+        label: "Tukang Laser Batik",
         type: "select",
-        required: true,
+        required: false,
+        options: [],
+      },
+      {
+        name: "tukang_nama",
+        label: "Tukang Laser Nama",
+        type: "select",
+        required: false,
+        options: [],
+      },
+      {
+        name: "model_nusantara",
+        label: "Model Nusantara",
+        type: "multi_select",
+        required: false,
         options: [
-          { value: "Laser Internal 1", label: "Laser Internal 1" },
-          { value: "Laser Internal 2", label: "Laser Internal 2" },
-          { value: "Laser Internal 3", label: "Laser Internal 3" },
-          { value: "Laser Internal 4", label: "Laser Internal 4" },
-          { value: "Laser Eksternal 1", label: "Laser Eksternal 1" },
-          { value: "Laser Eksternal 2", label: "Laser Eksternal 2" },
-          { value: "Laser Eksternal 3", label: "Laser Eksternal 3" },
-          { value: "Laser Eksternal 4", label: "Laser Eksternal 4" },
+          { value: "kawung_nj001", label: "Kawung NJ001", group: "Jawa (NJ)" },
+          { value: "kawung_nj002", label: "Kawung NJ002", group: "Jawa (NJ)" },
+          { value: "mega_mendung_nj003", label: "Mega Mendung NJ003", group: "Jawa (NJ)" },
+          { value: "kawung_nj004", label: "Kawung NJ004", group: "Jawa (NJ)" },
+          { value: "kawung_nj005", label: "Kawung NJ005", group: "Jawa (NJ)" },
+          { value: "sidomukti_nj007", label: "Sidomukti NJ007", group: "Jawa (NJ)" },
+          { value: "truntum_nj008", label: "Truntum NJ008", group: "Jawa (NJ)" },
+          { value: "dayak_perisai_nk001", label: "Dayak Perisai NK001", group: "Kalimantan (NK)" },
+          { value: "tengkawak_ampiek_nk002", label: "Tengkawak Ampiek NK002", group: "Kalimantan (NK)" },
+          { value: "dayak_perisai_nk003", label: "Dayak Perisai NK003", group: "Kalimantan (NK)" },
+          { value: "tidayu_nk004", label: "Tidayu NK004", group: "Kalimantan (NK)" },
+          { value: "jagatan_pisang_nb001", label: "Jagatan Pisang NB001", group: "Bali & Nusa Tenggara (NB)" },
+          { value: "sabuk_prada_nb002", label: "Sabuk Prada NB002", group: "Bali & Nusa Tenggara (NB)" },
+          { value: "batik_bunga_bali_nb003", label: "Batik Bunga Bali NB003", group: "Bali & Nusa Tenggara (NB)" },
+          { value: "kamoro_np001", label: "Kamoro NP001", group: "Papua (NP)" },
+          { value: "batik_asmat_np002", label: "Batik Asmat NP002", group: "Papua (NP)" },
+          { value: "motif_cendrawasih_np003", label: "Motif Cendrawasih NP003", group: "Papua (NP)" },
+          { value: "motif_sentani_np004", label: "Motif Sentani NP004", group: "Papua (NP)" },
+          { value: "biak_np005", label: "Biak NP005", group: "Papua (NP)" },
+          { value: "bunga_melur_ns001", label: "Bunga Melur NS001", group: "Sumatera (NS)" },
+          { value: "pucuak_labuar_ns002", label: "Pucuak Labuar NS002", group: "Sumatera (NS)" },
+          { value: "naga_besaung_ns003", label: "Naga Besaung NS003", group: "Sumatera (NS)" },
+          { value: "ulos_ragi_hotang_ns004", label: "Ulos Ragi Hotang NS004", group: "Sumatera (NS)" },
+          { value: "tapis_lampung_ns005", label: "Tapis Lampung NS005", group: "Sumatera (NS)" },
         ],
       },
       NOTES,
@@ -188,8 +218,22 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
 
   finishing: {
     label: "Finishing",
-    stageType: "done",
-    fields: [NOTES],
+    stageType: "select_action",
+    fields: [
+      {
+        name: "tukang",
+        label: "Tukang",
+        type: "select",
+        required: false,
+        options: [
+          { value: "EF", label: "EF" },
+          { value: "RA", label: "RA" },
+          { value: "DO", label: "DO" },
+          { value: "RD", label: "RD" },
+        ],
+      },
+      NOTES,
+    ],
   },
 
   qc_2: {
@@ -202,21 +246,12 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
         type: "quality_checklist",
         required: true,
         items: [
-          {
-            key: "kualitas_laser",
-            label: "Hasil laser / ukiran bersih dan terbaca",
-          },
-          {
-            key: "kualitas_finishing",
-            label: "Finishing merata, tidak ada bercak",
-          },
-          {
-            key: "teks_ukiran_benar",
-            label: "Teks ukiran sesuai order (cek ejaan)",
-          },
-          { key: "bentuk_final_sesuai", label: "Bentuk final sesuai order" },
-          { key: "produk_bersih", label: "Produk bersih, siap serah terima" },
-          { key: "sertifikasi_berlian", label: "Sudah sertifikasi berlian?" },
+          { key: "kualitas_laser", label: "Hasil laser / ukiran bersih dan terbaca", reworkStage: "finishing" },
+          { key: "kualitas_finishing", label: "Finishing merata, tidak ada bercak", reworkStage: "finishing" },
+          { key: "teks_ukiran_benar", label: "Teks ukiran sesuai order (cek ejaan)", reworkStage: "finishing" },
+          { key: "bentuk_final_sesuai", label: "Bentuk final sesuai order", reworkStage: "finishing" },
+          { key: "produk_bersih", label: "Produk bersih, siap serah terima", reworkStage: "pembentukan_cincin" },
+          { key: "permata_sesuai_bentuk", label: "Permata sesuai bentuk", reworkStage: "" },
         ],
       },
       { ...NOTES, placeholder: "Temuan QC akhir..." },
@@ -239,6 +274,29 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
             label: "Tidak Disetujui — Kembali ke QC Akhir",
           },
         ],
+      },
+      {
+        name: "foto_cincin_pria",
+        label: "Foto Cincin Pria",
+        type: "file",
+        required: false,
+        accept: "image/jpeg,image/png,image/webp",
+        maxSize: 5 * 1024 * 1024,
+      },
+      {
+        name: "foto_cincin_wanita",
+        label: "Foto Cincin Wanita",
+        type: "file",
+        required: false,
+        accept: "image/jpeg,image/png,image/webp",
+        maxSize: 5 * 1024 * 1024,
+      },
+      {
+        name: "nomor_resi",
+        label: "Nomor Resi",
+        type: "text",
+        required: false,
+        placeholder: "Masukkan nomor resi pengiriman",
       },
       {
         name: "tanggal_packing",
@@ -337,6 +395,62 @@ function hasAccess(
   return false;
 }
 
+// ── Get personnel-backed options ────────────────────────────────────────────────
+
+const TUKANG_STAGES = new Set([
+  "pembentukan_cincin",
+  "pemasangan_permata",
+  "laser",
+  "finishing",
+]);
+
+async function enrichTukangOptions(
+  admin: ReturnType<typeof createAdminClient>,
+  stage: string,
+  fields: FieldConfig[],
+): Promise<FieldConfig[]> {
+  if (!TUKANG_STAGES.has(stage)) return fields;
+
+  if (stage === "laser") {
+    const [batik, nama] = await Promise.all([
+      admin.from("stage_personnel").select("person_code").eq("stage", "laser").eq("sub_type", "batik").order("sort_order"),
+      admin.from("stage_personnel").select("person_code").eq("stage", "laser").eq("sub_type", "nama").order("sort_order"),
+    ]);
+
+    const toOptions = (data: { person_code: string }[] | null) =>
+      data && data.length > 0 ? data.map((p) => ({ value: p.person_code, label: p.person_code })) : null;
+
+    const batikOpts = toOptions(batik.data);
+    const namaOpts = toOptions(nama.data);
+
+    return fields.map((f) => {
+      if (f.name === "tukang_batik" && batikOpts) return { ...f, options: batikOpts };
+      if (f.name === "tukang_nama" && namaOpts) return { ...f, options: namaOpts };
+      return f;
+    });
+  }
+
+  const { data: personnel } = await admin
+    .from("stage_personnel")
+    .select("person_code")
+    .eq("stage", stage)
+    .order("sort_order", { ascending: true });
+
+  if (!personnel || personnel.length === 0) return fields;
+
+  const options = personnel.map((p: { person_code: string }) => ({
+    value: p.person_code,
+    label: p.person_code,
+  }));
+
+  return fields.map((f) => {
+    if (f.name === "tukang") {
+      return { ...f, options };
+    }
+    return f;
+  });
+}
+
 // ── GET ────────────────────────────────────────────────────────────────────────
 
 export async function GET(request: Request) {
@@ -425,6 +539,7 @@ export async function GET(request: Request) {
       .maybeSingle();
 
     const stageConfig = STAGE_CONFIGS[stage];
+    const fields = await enrichTukangOptions(admin, stage, stageConfig?.fields ?? []);
 
     const workerGroups = ["production", "operational"];
     const canSubmit =
@@ -487,7 +602,7 @@ export async function GET(request: Request) {
           stage_label: stageConfig?.label ?? stage,
           order_number: order.order_number,
           product_name: order.customer_name,
-          fields: stageConfig?.fields ?? [],
+          fields,
           permissions: { can_submit: canSubmit, can_edit: canEdit },
           current_data: lastResult?.data ?? {},
           work_order: workOrder,

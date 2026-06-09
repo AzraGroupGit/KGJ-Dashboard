@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
+import { getStageLabel } from "@/lib/stages";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -283,32 +284,11 @@ export const dynamic = "force-dynamic";
 const ROLE_CONFIG: Record<string, { name: string; Icon: LucideIcon }> = {
   jewelry_expert_lebur_bahan: { name: "Lebur Bahan", Icon: Flame },
   jewelry_expert_pembentukan_awal: { name: "Pembentukan Cincin", Icon: Hammer },
-  jewelry_expert_finishing: { name: "Finishing & Poles", Icon: Sparkles },
-  micro_setting: { name: "Micro Setting", Icon: Gem },
-  laser: { name: "Laser Engraving", Icon: ScanLine },
-};
-
-const STAGE_LABELS: Record<string, string> = {
-  penerimaan_order: "Penerimaan Order",
-  approval_penerimaan_order: "Approval Penerimaan",
-  racik_bahan: "Racik Bahan",
-  approval_racik_bahan: "Approval Racik",
-  lebur_bahan: "Lebur Bahan",
-  pembentukan_cincin: "Pembentukan Cincin",
-  cek_kadar: "Cek Kadar",
-  pemasangan_permata: "Micro Setting",
-  pemolesan: "Pemolesan",
-  qc_1: "QC Awal",
-  approval_qc_1: "Approval QC Awal",
-  laser: "Laser Engraving",
-  finishing: "Finishing",
-  approval_produksi: "Approval Produksi",
-  qc_2: "QC Akhir",
-  approval_qc_2: "Approval QC Akhir",
-  konfirmasi: "Konfirmasi Customer",
-  packing: "Packing",
-  pengiriman: "Pengiriman",
-  order_complete: "Penyelesaian Order",
+  jewelry_expert_pemasangan_permata: { name: "Micro Setting", Icon: Gem },
+  jewelry_expert_pemolesan: { name: "Pemolesan", Icon: Sparkles },
+  jewelry_expert_finishing: { name: "Finishing", Icon: Sparkles },
+  laser_batik: { name: "Laser Batik", Icon: ScanLine },
+  laser_nama: { name: "Laser Nama", Icon: ScanLine },
 };
 
 const QC_LABELS: Record<string, string> = { qc_1: "QC Awal", qc_2: "QC Akhir" };
@@ -319,29 +299,6 @@ const DELIVERY_LABELS: Record<string, string> = {
   courier_intercity: "Kurir Antar Kota",
   in_house_delivery: "Antar Langsung",
   other: "Lainnya",
-};
-
-const STAGE_LABELS_DETAIL: Record<string, string> = {
-  penerimaan_order: "Penerimaan Order",
-  approval_penerimaan_order: "Approval Penerimaan Order",
-  racik_bahan: "Persiapan Bahan",
-  approval_racik_bahan: "Approval Persiapan Bahan",
-  lebur_bahan: "Lebur Bahan",
-  cek_kadar: "Cek Kadar",
-  pembentukan_cincin: "Pembentukan Cincin",
-  pemasangan_permata: "Micro Setting",
-  pemolesan: "Pemolesan Awal",
-  qc_1: "QC Awal",
-  approval_qc_1: "Approval QC Awal",
-  laser: "Laser Engraving",
-  finishing: "Finishing",
-  approval_produksi: "Approval Produksi",
-  qc_2: "QC Akhir",
-  approval_qc_2: "Approval QC Akhir",
-  konfirmasi: "Konfirmasi Customer Care",
-  packing: "Packing & Persiapan Kirim",
-  pengiriman: "Pengiriman",
-  selesai: "Selesai",
 };
 
 // ── Formatters ────────────────────────────────────────────────────────────────
@@ -472,7 +429,7 @@ function OrderDetailPopup({
               </h3>
               {o && (
                 <span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-medium mt-1 text-slate-600">
-                  {STAGE_LABELS_DETAIL[o.current_stage] ?? o.current_stage}
+                  {getStageLabel(o.current_stage)}
                 </span>
               )}
             </div>
@@ -755,7 +712,7 @@ function OrderDetailPopup({
                         >
                           <div className="flex items-center justify-between mb-1">
                             <span className="font-medium text-slate-700">
-                              {STAGE_LABELS_DETAIL[a.stage] ?? a.stage}
+                              {getStageLabel(a.stage)}
                             </span>
                             <span
                               className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -2197,7 +2154,7 @@ function OperasionalTab({ data, searchQuery }: { data: OperasionalData | null; s
                         <span
                           className={`text-sm ${task.is_delayed ? "font-medium text-rose-700" : "text-slate-700"}`}
                         >
-                          {STAGE_LABELS[task.stage] ?? task.stage}
+                          {getStageLabel(task.stage)}
                         </span>
                       </td>
                       <td className="px-3 py-2.5 font-mono text-xs text-slate-600">

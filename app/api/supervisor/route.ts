@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { STAGE_LABELS } from "@/lib/stages";
 
 const PRODUCTION_STAGES = new Set([
   "lebur_bahan",
@@ -47,28 +48,6 @@ const APPROVAL_TO_PRODUCTION_STAGE: Record<string, string> = {
   approval_qc_1: "qc_1",
   approval_produksi: "finishing",
   approval_qc_2: "qc_2",
-};
-
-const STAGE_LABELS: Record<string, string> = {
-  penerimaan_order: "Penerimaan Order",
-  approval_penerimaan_order: "Approval Penerimaan Order",
-  racik_bahan: "Persiapan Bahan",
-  approval_racik_bahan: "Approval Persiapan Bahan",
-  lebur_bahan: "Lebur Bahan",
-  pembentukan_cincin: "Pembentukan Cincin",
-  cek_kadar: "Cek Kadar",
-  pemasangan_permata: "Micro Setting",
-  pemolesan: "Pemolesan Awal",
-  qc_1: "QC Awal",
-  approval_qc_1: "Approval QC Awal",
-  laser: "Laser Engraving",
-  finishing: "Finishing",
-  approval_produksi: "Approval Produksi",
-  qc_2: "QC Akhir",
-  approval_qc_2: "Approval QC Akhir",
-  konfirmasi: "Konfirmasi Customer Care",
-  packing: "Packing & Persiapan Kirim",
-  pengiriman: "Pengiriman",
 };
 
 async function verifySupervisor(userId: string) {

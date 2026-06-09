@@ -840,6 +840,7 @@ function PhaseForm({
         initialData={config.current_data}
         onSubmit={onSubmit}
         stageType={config.stage_type}
+        orderId={order.id}
       />
     </div>
   );

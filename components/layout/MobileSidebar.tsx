@@ -121,6 +121,7 @@ const menuItems: Record<string, MenuItem[]> = {
     { name: "Monitoring", icon: "monitor", href: SUPERVISOR_ROUTES.MONITORING },
     { name: "Persetujuan", icon: "approval", href: SUPERVISOR_ROUTES.APPROVAL },
     { name: "Kelola Akun", icon: "users", href: SUPERVISOR_ROUTES.ACCOUNTS },
+    { name: "Personnel", icon: "personnel", href: SUPERVISOR_ROUTES.PERSONNEL },
     { name: "Slot Management", icon: "slot", href: SUPERVISOR_ROUTES.SLOT_MANAGEMENT },
     { name: "QR Code", icon: "qr", href: SUPERVISOR_ROUTES.QR_CODES },
   ],
@@ -322,6 +323,21 @@ const iconMap = {
       />
     </svg>
   ),
+  personnel: (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+      />
+    </svg>
+  ),
   chevronDown: (
     <svg
       className="w-4 h-4"
@@ -362,12 +378,24 @@ const iconMap = {
 export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [actualRole, setActualRole] = useState<string | null>(null);
   const [collapsedMenus, setCollapsedMenus] = useState<CollapseState>({
     BMS: false,
     OPRPRD: true,
   });
 
-  const items = menuItems[role as keyof typeof menuItems] || [];
+  useEffect(() => {
+    if (role !== "supervisor") return;
+    fetch("/api/me")
+      .then((r) => r.json())
+      .then((j) => setActualRole(j.data?.role?.name ?? null))
+      .catch(() => {});
+  }, [role]);
+
+  let items = menuItems[role as keyof typeof menuItems] || [];
+  if (actualRole === "production_supervisor") {
+    items = items.filter((i) => i.name !== "Slot Management");
+  }
 
   // Always hold the latest onClose without re-triggering effects
   const onCloseRef = useRef(onClose);

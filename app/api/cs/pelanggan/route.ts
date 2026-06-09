@@ -56,6 +56,7 @@ function groupOrders(orders: any[]) {
       status: order.status,
       current_stage: order.current_stage,
       created_at: order.created_at,
+      transfer_ke_bank: order.transfer_ke_bank,
     });
     group.total_orders++;
     group.total_spent += order.harga || 0;
@@ -89,7 +90,7 @@ export async function GET(request: Request) {
         `id, order_number, customer_name, customer_wa, customer_email, customer_instagram,
          alamat_pengiriman, kelurahan, kecamatan, kabupaten_kota, provinsi, kodepos,
          tgl_order, tgl_chat, tgl_acara, acara, kategori, harga, status, current_stage,
-         created_by, created_at, updated_at`,
+         created_by, created_at, updated_at, transfer_ke_bank`,
       )
       .is("deleted_at", null)
       .order("created_at", { ascending: false })

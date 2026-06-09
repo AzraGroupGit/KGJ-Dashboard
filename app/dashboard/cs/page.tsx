@@ -13,6 +13,14 @@ import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import { CS_ROUTES } from "@/lib/routes";
 import type { CsOrder } from "@/types/cs-orders";
 
+const BANKS = ["BCA", "Mandiri", "BNI", "BRI"] as const;
+
+function paymentCategory(v: string | null): "ke_pt" | "non_pt_cash" | "" {
+  if (!v) return "";
+  if (v === "Ke PT" || (BANKS as readonly string[]).includes(v)) return "ke_pt";
+  return "non_pt_cash";
+}
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface StatsData {
@@ -604,6 +612,19 @@ export default function CSDashboard() {
                           </p>
                           <p className="text-xs text-gray-400 font-mono">
                             {order.order_number}
+                            {order.transfer_ke_bank && (
+                              <span
+                                className={`ml-1.5 inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium ${
+                                  paymentCategory(order.transfer_ke_bank) === "ke_pt"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-green-100 text-green-700"
+                                }`}
+                              >
+                                {paymentCategory(order.transfer_ke_bank) === "ke_pt"
+                                  ? "Ke PT"
+                                  : "Non PT / Cash"}
+                              </span>
+                            )}
                           </p>
                         </div>
                         <div className="text-right flex-shrink-0">

@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { STAGE_LABELS } from "@/lib/stages";
 
 const PRODUCTION_TO_APPROVAL_STAGE: Record<string, string> = {
   penerimaan_order: "approval_penerimaan_order",
@@ -17,14 +18,6 @@ const APPROVAL_TO_PRODUCTION_STAGE: Record<string, string> = Object.fromEntries(
 );
 
 const APPROVAL_STAGES = new Set(Object.values(PRODUCTION_TO_APPROVAL_STAGE));
-
-const STAGE_LABELS: Record<string, string> = {
-  approval_penerimaan_order: "Approval Penerimaan Order",
-  approval_racik_bahan: "Approval Persiapan Bahan",
-  approval_qc_1: "Approval QC Awal",
-  approval_produksi: "Approval Produksi",
-  approval_qc_2: "Approval QC Akhir",
-};
 
 const SUPERVISOR_VISIBLE_STAGES: Record<string, Set<string>> = {
   operational_supervisor: new Set([

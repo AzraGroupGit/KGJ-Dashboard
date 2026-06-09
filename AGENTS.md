@@ -1,20 +1,42 @@
 # BMS-OPR-PRD ERP System
 
-## Next.js 16 — breaking changes from your training data
+**Always confirm before making changes** — do not modify code, schema, or config without proposing and getting approval.
 
-- `middleware.ts` renamed to `proxy.ts` — export a named `proxy` function, not `middleware`
-- Route handler `params` is a `Promise` — must `await` it before access
-- Proxy defaults to **Node.js runtime** (not Edge)
-- Read `node_modules/next/dist/docs/` before writing any Next.js code
+## Project Identity
+- **Name:** BMS-OPR-PRD ERP System
+- **Stack:** Next.js 16, React 19, TypeScript 5, Tailwind CSS v4, Supabase, Pusher
+- **Status:** Production (Live)
 
-## Tech stack
+## Mandatory on Every New Session
 
-- **Framework**: Next.js 16.2.4 (App Router, no `src/` dir)
-- **UI**: React 19.2.4, Tailwind CSS v4 (PostCSS), Geist fonts
-- **Auth/DB**: Supabase (3 client variants, `@supabase/ssr` for cookie-based SSR)
-- **Realtime**: Pusher (`pusher-js` client + `pusher` server)
-- **Build**: TypeScript 5, ESLint 9 (`eslint-config-next`)
-- **PDF**: `@react-pdf/renderer`
+Before working on anything, do these steps in order:
+
+1. Read `memory-bank/PROGRESS.md` — understand the last project state
+2. Read `memory-bank/TASK.md` — find active or unfinished tasks
+3. Summarize to the developer: "I have read the documents. Last state: [summary]. Next task: [task]. Shall we proceed from here?"
+4. Wait for confirmation before starting to code
+
+## Reference Documents
+
+| File | Covers |
+|------|--------|
+| `memory-bank/ARCHITECTURE.md` | System architecture, data flows, auth design, key decisions |
+| `memory-bank/TECH_STACK.md` | Full dependency inventory, versions, config specifics |
+| `memory-bank/DATABASE_SCHEMA.md` | All tables, columns, relationships, inferred from code |
+| `memory-bank/DESIGN.md` | UI/UX: design system, component patterns, responsive layout |
+| `memory-bank/PRD.md` | Product requirements, 90+ features, user roles, priorities |
+| `memory-bank/SECURITY.md` | Auth model, secrets, RLS, API security, checklist |
+| `memory-bank/PROGRESS.md` | Feature completion status, known gaps, technical debt |
+| `memory-bank/TASK.md` | Active tasks, backlog, priorities, known bugs |
+| `memory-bank/API_SPEC.md` | All API endpoints, request/response schemas, error codes |
+
+## Mandatory Rules
+
+- Do not start coding before reading `PROGRESS.md` and `TASK.md`
+- Work on one small task at a time
+- After finishing a task, update `PROGRESS.md` and `TASK.md`
+- Do not install new dependencies without informing the developer
+- Always use the stack from `TECH_STACK.md` — no improvisation
 
 ## Commands
 
@@ -22,71 +44,17 @@
 |---------|---------|
 | `npm run dev` | Dev server |
 | `npm run build` | Production build |
-| `npm run start` | Start production server |
-| `npm run lint` | ESLint only |
+| `npm run start` | Start production |
+| `npm run lint` | ESLint v9 (flat config at `eslint.config.mjs`) |
 
-No typecheck script exists — run `npx tsc --noEmit` manually.
+No typecheck script — run `npx tsc --noEmit` manually.
+No test framework — none installed; no test scripts exist.
 
-## Supabase clients (3 variants)
+## Framework & toolchain quirks
 
-| File | When to use | Key |
-|------|-------------|-----|
-| `lib/supabase/client.ts` | Browser components (`"use client"`) | Anon key |
-| `lib/supabase/server.ts` | Server Components / Route Handlers | Cookie-based SSR |
-| `lib/supabase/admin.ts` | Server-only admin ops | Service role key |
-
-`lib/supabase/server.ts` uses `@supabase/ssr` and `cookies()` from `next/headers`. `cookies()` is async — must `await`.
-
-## Auth & roles
-
-- **Login roles** (form-based, defined in `lib/auth/session.ts`): `superadmin`, `customer_service`, `marketing`
-- **Workshop roles** (QR/PIN-based, DB-driven): any string not in login roles — detected by exclusion (`isWorkshopRole`)
-- **Supervisor roles**: `operational_supervisor`, `production_supervisor`, `supervisor`
-- Dashboard session stored in **localStorage** (`lib/auth/session.ts`: `getClientUser`/`setClientUser`/`clearClientUser`)
-- Supabase manages its own session via cookies
-- `proxy.ts` handles auth checks and role-based redirects; **excludes `/api/*`** from matcher
-
-## Routing
-
-- `@/*` alias maps to project root `./`
-- `/dashboard/[role]/` — per-role dashboards (cs, marketing, superadmin, supervisor)
-- `/workshop/` — QR/PIN login, input, PIN settings
-- `/api/` — 31 API endpoint directories (auth, cs, marketing, production, slots, pusher, etc.)
-- `/order-form/[token]/` — public order forms (token-based, no auth)
-- `lib/routes.ts` is the centralized route constant source — never hardcode paths
-
-## Key files
-
-| File | Role |
-|------|------|
-| `proxy.ts` | Auth middleware (was `middleware.ts`) |
-| `lib/routes.ts` | Route constants + RBAC helpers |
-| `lib/auth/session.ts` | Client-side session (localStorage) + role definitions |
-| `lib/supabase/*.ts` | Database clients |
-| `lib/pusher/client.ts` | Pusher realtime client |
-| `lib/pusher/server.ts` | Pusher server trigger |
-| `lib/notifications.ts` | Notification helpers (DB + Pusher) |
-| `lib/stages.ts` | Stage sequence (production flow) |
-| `types/cs-orders.ts` | Shared CsOrder type |
-
-## Env vars required
-
-| Variable | Used in |
-|----------|---------|
-| `NEXT_PUBLIC_SUPABASE_URL` | All Supabase clients |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | All Supabase clients |
-| `SUPABASE_SERVICE_ROLE_KEY` | Admin client |
-| `NEXT_PUBLIC_APP_URL` | Redirects / links |
-| `NEXT_PUBLIC_PUSHER_KEY` | Pusher client + server |
-| `NEXT_PUBLIC_PUSHER_CLUSTER` | Pusher client + server |
-| `PUSHER_APP_ID` | Pusher server |
-| `PUSHER_SECRET` | Pusher server |
-
-## Database migrations
-
-Schema migrations are tracked in `AGENTS.md` as raw SQL. Key migrations applied to Supabase:
-- FK constraints across 17 child tables were re-pointed from `orders(id)` → `cs_orders(id)` (run FK migration SQL in Supabase SQL Editor)
-- 15 new columns on `cs_orders` (ring-specific fields, JSONB arrays)
-- `sumber_media` column changed from enum → text
-- Slot management tables: `slot_categories` + `slot_overrides`
-- PIN columns on `users`: `pin_hash`, `pin_attempts`, `pin_locked_until`
+- **Tailwind v4**: postcss plugin is `@tailwindcss/postcss` (not `tailwindcss`); CSS entry is `@import "tailwindcss"` (not `@tailwind` directives); no `tailwind.config` — theme via `@theme inline` in `globals.css`
+- **ESLint v9 flat config** (`eslint.config.mjs`) imports `defineConfig` from `"eslint/config"` — do NOT create `.eslintrc.*`
+- **`proxy.ts`** exports named `proxy` (NOT `middleware`) — matcher excludes `/api/*`, defaults to Node.js runtime
+- **Route handler `params`** is `Promise` — must `await` before accessing properties
+- **`lib/supabase/server.ts`** `createClient()` is `async` — `cookies()` must be awaited in Next.js 16
+- **`@/*` alias** → `./` (no `src/` dir; App Router at root)

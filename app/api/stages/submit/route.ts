@@ -356,7 +356,7 @@ export async function POST(request: Request) {
         user_id: userId,
         stage: "konfirmasi",
         attempt_number: attemptNumber,
-        data: { result, notes: data.notes ?? null },
+        data: { ...data },
         started_at: now,
         finished_at: now,
       });

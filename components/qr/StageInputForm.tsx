@@ -73,9 +73,10 @@ interface Field {
     | "attachment_list"
     | "object"
     | "customer_selector"
-    | "gemstone_array";
+    | "gemstone_array"
+    | "multi_select";
   required: boolean;
-  options?: { value: string; label: string }[];
+  options?: { value: string; label: string; group?: string }[];
   placeholder?: string;
   unit?: string;
   min?: number;
@@ -83,6 +84,8 @@ interface Field {
   transactionTypes?: TransactionType[];
   items?: { key: string; label: string }[];
   allowedFileTypes?: string[];
+  accept?: string;
+  maxSize?: number;
 }
 
 interface StageInputFormProps {
@@ -91,6 +94,7 @@ interface StageInputFormProps {
   initialData?: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
   stageType?: string;
+  orderId?: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1027,6 +1031,216 @@ function CompletenessListField({
   );
 }
 
+// ─── MultiSelectField ─────────────────────────────────────────────────────────
+
+function MultiSelectField({
+  options,
+  value,
+  onChange,
+  disabled,
+  error,
+}: {
+  options: { value: string; label: string; group?: string }[];
+  value: string[];
+  onChange: (v: string[]) => void;
+  disabled: boolean;
+  error?: string;
+}) {
+  const grouped = options.reduce<
+    Record<string, { value: string; label: string }[]>
+  >((acc, opt) => {
+    const g = opt.group ?? "Lainnya";
+    if (!acc[g]) acc[g] = [];
+    acc[g].push({ value: opt.value, label: opt.label });
+    return acc;
+  }, {});
+
+  const toggle = (val: string) => {
+    if (value.includes(val)) {
+      onChange(value.filter((v) => v !== val));
+    } else {
+      onChange([...value, val]);
+    }
+  };
+
+  const selectedCount = value.length;
+
+  return (
+    <div className="space-y-2">
+      {Object.entries(grouped).map(([group, opts]) => (
+        <details key={group} className="group">
+          <summary className="cursor-pointer text-[13px] font-medium text-stone-700 hover:text-stone-900">
+            {group}
+          </summary>
+          <div className="mt-1 space-y-1 pl-2">
+            {opts.map((opt) => {
+              const checked = value.includes(opt.value);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => toggle(opt.value)}
+                  disabled={disabled}
+                  className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left text-[13px] transition-colors ${
+                    checked
+                      ? "border-emerald-200 bg-emerald-50/60 text-emerald-800"
+                      : "border-stone-200 bg-white text-stone-700 hover:border-stone-300"
+                  }`}
+                >
+                  <span
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors ${
+                      checked
+                        ? "border-emerald-500 bg-emerald-500"
+                        : "border-stone-300 bg-white"
+                    }`}
+                  >
+                    {checked && (
+                      <svg
+                        className="h-3 w-3 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={3}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    )}
+                  </span>
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </details>
+      ))}
+      {selectedCount > 0 && (
+        <p className="text-[12px] text-emerald-600">{selectedCount} dipilih</p>
+      )}
+      {error && <p className="text-[12px] text-red-500">{error}</p>}
+    </div>
+  );
+}
+
+// ─── FileUploadField ──────────────────────────────────────────────────────────
+
+function FileUploadField({
+  label,
+  value,
+  accept,
+  maxSize,
+  disabled,
+  orderId,
+  fieldName,
+  error,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  accept?: string;
+  maxSize?: number;
+  disabled: boolean;
+  orderId?: string;
+  fieldName: string;
+  error?: string;
+  onChange: (url: string) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (maxSize && file.size > maxSize) {
+      alert(`Ukuran file maksimal ${Math.round(maxSize / 1024 / 1024)} MB`);
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("order_id", orderId ?? "");
+      fd.append("field_name", fieldName);
+      const res = await fetch("/api/stages/upload", { method: "POST", body: fd });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? "Gagal mengunggah");
+      onChange(body.url);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal mengunggah gambar");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const handleRemove = () => {
+    onChange("");
+  };
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-stone-400">
+        {label}
+      </p>
+      {value ? (
+        <div className="relative inline-block">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={value}
+            alt={label}
+            className="h-32 w-32 rounded-xl object-cover border border-stone-200"
+          />
+          {!disabled && (
+            <button
+              type="button"
+              onClick={handleRemove}
+              className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white text-xs shadow hover:bg-red-600 transition-colors"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      ) : (
+        <label
+          className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed py-6 px-4 transition-colors ${
+            uploading
+              ? "border-amber-300 bg-amber-50/50"
+              : "border-stone-200 bg-stone-50/50 hover:border-amber-300 hover:bg-amber-50/30"
+          } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+        >
+          {uploading ? (
+            <div className="flex items-center gap-2 text-[13px] text-amber-700">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-300 border-t-amber-600" />
+              Mengunggah...
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-1">
+              <svg className="h-8 w-8 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span className="text-[13px] text-stone-500">Klik untuk upload foto</span>
+            </div>
+          )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept={accept ?? "image/*"}
+            onChange={handleFile}
+            disabled={disabled || uploading}
+            className="hidden"
+          />
+        </label>
+      )}
+      {error && <p className="text-[12px] text-red-500">{error}</p>}
+    </div>
+  );
+}
+
 // ─── ConfirmationFormField ────────────────────────────────────────────────────
 
 function ConfirmationFormField({
@@ -1705,6 +1919,7 @@ function initField(field: Field, initial: Record<string, unknown>): unknown {
   )
     return Array.isArray(v) ? v : [];
   if (field.type === "attachment_list") return Array.isArray(v) ? v : [];
+  if (field.type === "file") return v ?? "";
   if (field.type === "quality_checklist")
     return (field.items ?? []).map((item) => {
       const ex = (Array.isArray(v) ? (v as any[]) : []).find(
@@ -1727,6 +1942,8 @@ function initField(field: Field, initial: Record<string, unknown>): unknown {
         notes: ex?.notes ?? "",
       };
     });
+  if (field.type === "multi_select")
+    return Array.isArray(v) ? v : [];
   if (COMPLEX_OBJ_TYPES.has(field.type))
     return v && typeof v === "object" && !Array.isArray(v) ? v : {};
   if (field.type === "boolean") return v ?? false;
@@ -1743,15 +1960,16 @@ const SUBMIT_LABELS: Record<string, string> = {
 export default function StageInputForm({
   fields,
   permissions,
-  initialData = {},
+  initialData,
   onSubmit,
-  stageType = "done",
+  stageType,
+  orderId,
 }: StageInputFormProps) {
-  const submitLabel = SUBMIT_LABELS[stageType] ?? "Simpan & Lanjut";
+  const submitLabel = (stageType && SUBMIT_LABELS[stageType]) ?? "Simpan & Lanjut";
   const [formData, setFormData] = useState<Record<string, unknown>>(() => {
     const d: Record<string, unknown> = {};
     fields.forEach((f) => {
-      d[f.name] = initField(f, initialData);
+      d[f.name] = initField(f, initialData ?? {});
     });
     return d;
   });
@@ -1802,6 +2020,7 @@ export default function StageInputForm({
         COMPLEX_OBJ_TYPES.has(field.type) ||
         field.type === "quality_checklist" ||
         field.type === "completeness_list" ||
+        field.type === "multi_select" ||
         field.type === "certificate_array"
       )
         return;
@@ -1869,7 +2088,8 @@ export default function StageInputForm({
                 field.type !== "completeness_list" &&
                 field.type !== "material_array" &&
                 field.type !== "certificate_array" &&
-                field.type !== "payment_array" && (
+                field.type !== "payment_array" &&
+                field.type !== "file" && (
                   <label className="mb-1.5 flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-stone-400">
                     {field.label}
                     {field.required && <span className="text-red-400">*</span>}
@@ -2053,6 +2273,30 @@ export default function StageInputForm({
                 />
               )}
 
+              {field.type === "multi_select" && (
+                <MultiSelectField
+                  options={field.options ?? []}
+                  value={(formData[field.name] as string[]) ?? []}
+                  onChange={(vals) => updateField(field.name, vals)}
+                  disabled={!permissions.can_edit}
+                  error={errors[field.name]}
+                />
+              )}
+
+              {field.type === "file" && (
+                <FileUploadField
+                  label={field.label}
+                  value={String(formData[field.name] ?? "")}
+                  accept={field.accept}
+                  maxSize={field.maxSize}
+                  disabled={!permissions.can_edit}
+                  orderId={orderId}
+                  fieldName={field.name}
+                  error={errors[field.name]}
+                  onChange={(url) => updateField(field.name, url)}
+                />
+              )}
+
               {field.type === "certificate_array" && (
                 <CertificateArrayField
                   value={(formData[field.name] as CertRow[]) ?? []}
@@ -2118,6 +2362,8 @@ export default function StageInputForm({
                 !COMPLEX_OBJ_TYPES.has(field.type) &&
                 field.type !== "quality_checklist" &&
                 field.type !== "completeness_list" &&
+                field.type !== "multi_select" &&
+                field.type !== "file" &&
                 errors[field.name] && (
                   <p className="mt-1 text-[12px] text-red-500">
                     {errors[field.name]}

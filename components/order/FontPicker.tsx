@@ -29,7 +29,7 @@ const FONT_OPTIONS = [
   { value: "Constantia", family: "'Constantia', serif", label: "Constantia" },
 ] as const;
 
-const CUSTOM_VALUE = "";
+const CUSTOM_VALUE = "__custom__";
 
 export default function FontPicker({
   value,
@@ -40,7 +40,7 @@ export default function FontPicker({
 }) {
   const isCustom = value !== "" && !FONT_OPTIONS.some((f) => f.value === value);
   const selectedValue = isCustom ? CUSTOM_VALUE : value;
-  const customText = isCustom ? value : "";
+  const customText = isCustom && value !== CUSTOM_VALUE ? value : "";
   const matchedFont = FONT_OPTIONS.find((f) => f.value === selectedValue);
 
   const [previewText, setPreviewText] = useState("");
@@ -67,7 +67,7 @@ export default function FontPicker({
           ))}
         </optgroup>
         <optgroup label="Berbayar">
-          <option value={CUSTOM_VALUE}>Custom / Kustom</option>
+          <option value={CUSTOM_VALUE}>Custom Font</option>
         </optgroup>
       </select>
       <p className="text-[11px] text-slate-400">

@@ -102,9 +102,10 @@ export async function POST(request: Request) {
     if ("error" in auth) return auth.error;
 
     const body = await request.json();
-    const { customer_name, tgl_chat } = body as {
+    const { customer_name, tgl_chat, transfer_ke_bank } = body as {
       customer_name?: string;
       tgl_chat?: string;
+      transfer_ke_bank?: string;
     };
 
     if (!customer_name?.trim()) {
@@ -142,6 +143,7 @@ export async function POST(request: Request) {
         created_by: auth.authUser.id,
         branch_id: csUser?.branch_id ?? null,
         form_status: "pending",
+        transfer_ke_bank: transfer_ke_bank || null,
       })
       .select("*")
       .single();
