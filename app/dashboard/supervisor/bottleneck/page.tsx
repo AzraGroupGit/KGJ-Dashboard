@@ -17,6 +17,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
+import { getStageLabel } from "@/lib/stages";
 import StageTimeline from "@/components/orders/StageTimeline";
 import BottleneckHeatmap from "@/components/analytics/BottleneckHeatmap";
 import EstimatedCompletion from "@/components/analytics/EstimatedCompletion";
@@ -126,52 +127,6 @@ interface OrderDetail {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-const STAGE_LABELS_DETAIL: Record<string, string> = {
-  penerimaan_order: "Penerimaan Order",
-  approval_penerimaan_order: "Approval Penerimaan Order",
-  racik_bahan: "Persiapan Bahan",
-  approval_racik_bahan: "Approval Persiapan Bahan",
-  lebur_bahan: "Lebur Bahan",
-  cek_kadar: "Cek Kadar",
-  pembentukan_cincin: "Pembentukan Cincin",
-  pemasangan_permata: "Micro Setting",
-  pemolesan: "Pemolesan Awal",
-  qc_1: "QC Awal",
-  approval_qc_1: "Approval QC Awal",
-  laser: "Laser Engraving",
-  finishing: "Finishing",
-  approval_produksi: "Approval Produksi",
-  qc_2: "QC Akhir",
-  approval_qc_2: "Approval QC Akhir",
-  konfirmasi: "Konfirmasi Customer Care",
-  packing: "Packing & Persiapan Kirim",
-  pengiriman: "Pengiriman",
-  selesai: "Selesai",
-};
-
-const STAGE_LABELS: Record<string, string> = {
-  penerimaan_order: "Penerimaan Order",
-  approval_penerimaan_order: "Approval Penerimaan",
-  racik_bahan: "Persiapan Bahan",
-  approval_racik_bahan: "Approval Persiapan Bahan",
-  lebur_bahan: "Lebur Bahan",
-  cek_kadar: "Cek Kadar",
-  pembentukan_cincin: "Pembentukan Cincin",
-  pemasangan_permata: "Micro Setting",
-  pemolesan: "Pemolesan Awal",
-  qc_1: "QC Awal",
-  approval_qc_1: "Approval QC Awal",
-  laser: "Laser Engraving",
-  finishing: "Finishing",
-  approval_produksi: "Approval Produksi",
-  qc_2: "QC Akhir",
-  approval_qc_2: "Approval QC Akhir",
-  konfirmasi: "Konfirmasi Customer",
-  packing: "Packing",
-  pengiriman: "Pengiriman",
-  order_complete: "Penyelesaian Order",
-};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -313,7 +268,7 @@ function BottleneckTableRow({
               className={`h-2.5 w-2.5 rounded-full ${isProduction ? "bg-amber-400" : "bg-blue-400"}`}
             />
             <span className="text-sm font-medium text-slate-800">
-              {STAGE_LABELS[stage.stage] || stage.stage_label}
+              {getStageLabel(stage.stage)}
             </span>
           </div>
         </td>
@@ -566,7 +521,7 @@ function OrderDetailPopup({
               </h3>
               {o && (
                 <span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-medium mt-1 text-slate-600">
-                  {STAGE_LABELS_DETAIL[o.current_stage] ?? o.current_stage}
+                  {getStageLabel(o.current_stage)}
                 </span>
               )}
             </div>
@@ -848,7 +803,7 @@ function OrderDetailPopup({
                         >
                           <div className="flex items-center justify-between mb-1">
                             <span className="font-medium text-slate-700">
-                              {STAGE_LABELS_DETAIL[a.stage] ?? a.stage}
+                              {getStageLabel(a.stage)}
                             </span>
                             <span
                               className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -1131,7 +1086,7 @@ export default function SupervisorBottleneckPage() {
                     <div>
                       <p className="text-sm font-medium text-amber-800">
                         Tahap dengan waktu tunggu terlama:{" "}
-                        {STAGE_LABELS[slowest.stage] || slowest.stage_label}
+                        {getStageLabel(slowest.stage)}
                       </p>
                       <p className="text-xs text-amber-600 mt-0.5">
                         Rata-rata{" "}

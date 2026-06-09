@@ -122,6 +122,7 @@ export const SUPERVISOR_ROUTES = {
   MONITORING: "/dashboard/supervisor/monitoring",
   APPROVAL: "/dashboard/supervisor/approval",
   ACCOUNTS: "/dashboard/supervisor/accounts",
+  PERSONNEL: "/dashboard/supervisor/personnel",
   SLOT_MANAGEMENT: "/dashboard/supervisor/slot-management",
   QR_CODES: "/dashboard/supervisor/qr-codes",
 } as const;

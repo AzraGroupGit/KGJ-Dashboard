@@ -19,6 +19,7 @@ interface PelangganOrder {
   status: string | null;
   current_stage: string | null;
   created_at: string;
+  transfer_ke_bank: string | null;
 }
 
 interface PelangganGroup {
@@ -134,8 +135,7 @@ export default function PelangganPage() {
     debounceRef.current = setTimeout(() => fetchData(value), 400);
   }
 
-  function toggleExpand(wa: string | null) {
-    const key = wa || "__no_wa__";
+  function toggleExpand(key: string) {
     setExpandedId((prev) => (prev === key ? null : key));
   }
 
@@ -255,14 +255,14 @@ export default function PelangganPage() {
                 </span>
               </div>
 
-              {allData.map((group, idx) => {
-                const key = group.customer_wa || "__no_wa__";
+              {allData.map((group) => {
+                const key = group.customer_wa || `no-wa-${group.customer_name}`;
                 const open = expandedId === key;
 
                 return (
                   <div key={key}>
                     <button
-                      onClick={() => toggleExpand(group.customer_wa)}
+                      onClick={() => toggleExpand(key)}
                       className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors border-t border-gray-50 first:border-t-0"
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -372,6 +372,19 @@ export default function PelangganPage() {
                                 >
                                   <td className="px-6 py-3 text-gray-800 font-medium">
                                     {order.order_number}
+                                    {order.transfer_ke_bank && (
+                                      <span
+                                        className={`ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                          ["BCA", "Mandiri", "BNI", "BRI"].includes(order.transfer_ke_bank) || order.transfer_ke_bank === "Ke PT"
+                                            ? "bg-blue-100 text-blue-700"
+                                            : "bg-green-100 text-green-700"
+                                        }`}
+                                      >
+                                        {["BCA", "Mandiri", "BNI", "BRI"].includes(order.transfer_ke_bank) || order.transfer_ke_bank === "Ke PT"
+                                          ? "Ke PT"
+                                          : "Non PT / Cash"}
+                                      </span>
+                                    )}
                                   </td>
                                   <td className="px-6 py-3 text-gray-500">
                                     {formatDate(order.tgl_order)}

@@ -1,0 +1,4 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["memory-bank/ARCHITECTURE.md", "memory-bank/TECH_STACK.md"]
+}

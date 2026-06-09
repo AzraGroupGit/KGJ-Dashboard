@@ -30,7 +30,9 @@ import AddsOnAccordion from "@/components/order/AddsOnAccordion";
 const DRAFT_PREFIX = "order-draft-";
 const DRAFT_INTERVAL = 5000;
 
-function draftKey(orderId: string) { return `${DRAFT_PREFIX}${orderId}`; }
+function draftKey(orderId: string) {
+  return `${DRAFT_PREFIX}${orderId}`;
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -143,6 +145,14 @@ const emptyFormData = (): OrderFormData => ({
   transferKeBank: "",
   keteranganTambahan: "",
 });
+
+const BANKS = ["BCA", "Mandiri", "BNI", "BRI"] as const;
+
+function paymentCategory(v: string): "ke_pt" | "non_pt_cash" | "" {
+  if (!v) return "";
+  if (v === "Ke PT" || (BANKS as readonly string[]).includes(v)) return "ke_pt";
+  return "non_pt_cash";
+}
 
 const LABELS: Record<string, string> = {
   instagram: "Instagram",
@@ -348,6 +358,7 @@ export default function InputOrderPage() {
   // create step 1
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newTglChat, setNewTglChat] = useState(today);
+  const [newTipePembayaran, setNewTipePembayaran] = useState("");
 
   // generated link result
   const [generatedOrder, setGeneratedOrder] = useState<CsOrder | null>(null);
@@ -424,6 +435,7 @@ export default function InputOrderPage() {
   const openCreateModal = () => {
     setNewCustomerName("");
     setNewTglChat(today);
+    setNewTipePembayaran("");
     setShowCreateModal(true);
   };
 
@@ -440,6 +452,7 @@ export default function InputOrderPage() {
         body: JSON.stringify({
           customer_name: newCustomerName.trim(),
           tgl_chat: newTglChat,
+          transfer_ke_bank: newTipePembayaran || null,
         }),
       });
       const body = await res.json();
@@ -534,7 +547,12 @@ export default function InputOrderPage() {
     const key = draftKey(selectedOrder.id);
     const id = setInterval(() => {
       localStorage.setItem(key, JSON.stringify(formData));
-      setDraftSavedAt(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }));
+      setDraftSavedAt(
+        new Date().toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      );
     }, DRAFT_INTERVAL);
     return () => clearInterval(id);
   }, [showFormModal, selectedOrder, isViewOnly, formData]);
@@ -548,7 +566,9 @@ export default function InputOrderPage() {
         const parsed = JSON.parse(raw) as OrderFormData;
         setFormData(parsed);
         setDraftRestored(true);
-      } catch { /* ignore corrupted draft */ }
+      } catch {
+        /* ignore corrupted draft */
+      }
     }
   }, [showFormModal, selectedOrder, draftRestored]);
 
@@ -890,6 +910,19 @@ export default function InputOrderPage() {
                             <span className="font-mono text-sm font-medium text-indigo-600">
                               {order.order_number}
                             </span>
+                            {order.transfer_ke_bank && (
+                              <span
+                                className={`ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                  paymentCategory(order.transfer_ke_bank) === "ke_pt"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-green-100 text-green-700"
+                                }`}
+                              >
+                                {paymentCategory(order.transfer_ke_bank) === "ke_pt"
+                                  ? "Ke PT"
+                                  : "Non PT / Cash"}
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3 font-medium text-gray-800">
                             {order.customer_name}
@@ -1023,8 +1056,8 @@ export default function InputOrderPage() {
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-500">
-            Masukkan nama pelanggan untuk membuat nomor order dan link formulir
-            yang bisa dikirim ke pelanggan.
+            Masukkan nama pelanggan, tanggal chat, dan tipe pembayaran untuk
+            membuat nomor order dan link formulir yang bisa dikirim ke pelanggan.
           </p>
           <Input
             label="Nama Customer"
@@ -1045,6 +1078,21 @@ export default function InputOrderPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700"
               disabled={isSaving}
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipe Pembayaran
+            </label>
+            <select
+              value={newTipePembayaran}
+              onChange={(e) => setNewTipePembayaran(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700"
+              disabled={isSaving}
+            >
+              <option value="">Pilih tipe pembayaran</option>
+              <option value="Ke PT">Ke PT</option>
+              <option value="Non PT / Cash">Non PT / Cash</option>
+            </select>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button
@@ -1274,8 +1322,18 @@ export default function InputOrderPage() {
         {!isViewOnly && draftSavedAt && (
           <div className="mb-4 flex items-center justify-between rounded-lg border border-sky-200 bg-sky-50 px-4 py-2.5">
             <div className="flex items-center gap-2 text-xs text-sky-700">
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
               Draft tersimpan otomatis pukul {draftSavedAt}
             </div>
@@ -1609,11 +1667,19 @@ function OrderFormFields({
 
   useEffect(() => {
     if (data.kategori && data.tglOrder) {
-      const threshold = KATEGORI_THRESHOLDS.find((k) => k.value === data.kategori);
+      const threshold = KATEGORI_THRESHOLDS.find(
+        (k) => k.value === data.kategori,
+      );
       if (threshold) {
-        const suggestedDeadline = addWorkingDays(data.tglOrder, threshold.minDays);
+        const suggestedDeadline = addWorkingDays(
+          data.tglOrder,
+          threshold.minDays,
+        );
         if (!data.deadline) {
-          onChangeField("deadline" as keyof OrderFormData, suggestedDeadline as any);
+          onChangeField(
+            "deadline" as keyof OrderFormData,
+            suggestedDeadline as any,
+          );
         }
       }
     }
@@ -1739,7 +1805,11 @@ function OrderFormFields({
           {slotInfo && slotInfo.is_full && (
             <p className="text-xs text-amber-600 font-medium mt-1 flex items-center gap-1">
               <span>⚠</span>
-              <span>Slot {slotInfo.label} untuk {new Date(slotInfo.tgl_order).toLocaleDateString("id-ID")} penuh ({slotInfo.used}/{slotInfo.total_slots} terpakai)</span>
+              <span>
+                Slot {slotInfo.label} untuk{" "}
+                {new Date(slotInfo.tgl_order).toLocaleDateString("id-ID")} penuh
+                ({slotInfo.used}/{slotInfo.total_slots} terpakai)
+              </span>
             </p>
           )}
           {slotInfo && !slotInfo.is_full && slotInfo.total_slots > 0 && (
@@ -1757,6 +1827,7 @@ function OrderFormFields({
           >
             <option value="">Pilih acara</option>
             {[
+              "Daily",
               "Lamaran/Tunangan",
               "Pernikahan",
               "Anniversary",
@@ -2093,7 +2164,9 @@ function OrderFormFields({
       <div className="space-y-3">
         <FieldRow label="Alat Ukur">
           <div className="space-y-2">
-            <label className={`flex items-center gap-2 ${disabled ? "cursor-default" : "cursor-pointer"}`}>
+            <label
+              className={`flex items-center gap-2 ${disabled ? "cursor-default" : "cursor-pointer"}`}
+            >
               <input
                 type="radio"
                 name="alatUkur"
@@ -2106,9 +2179,13 @@ function OrderFormFields({
               <span className="text-sm text-gray-700">Dari Store</span>
             </label>
             {data.alatUkur === "Dari Store" && (
-              <p className="text-xs text-emerald-600 ml-6">✓ Tercover garansi re-size selama 1 bulan</p>
+              <p className="text-xs text-emerald-600 ml-6">
+                ✓ Tercover garansi re-size 2 Angka
+              </p>
             )}
-            <label className={`flex items-center gap-2 ${disabled ? "cursor-default" : "cursor-pointer"}`}>
+            <label
+              className={`flex items-center gap-2 ${disabled ? "cursor-default" : "cursor-pointer"}`}
+            >
               <input
                 type="radio"
                 name="alatUkur"
@@ -2121,7 +2198,9 @@ function OrderFormFields({
               <span className="text-sm text-gray-700">Luar Store</span>
             </label>
             {data.alatUkur === "Luar Store" && (
-              <p className="text-xs text-rose-500 ml-6">✗ Tidak tercover garansi re-size</p>
+              <p className="text-xs text-rose-500 ml-6">
+                ✗ Tidak tercover garansi re-size
+              </p>
             )}
           </div>
         </FieldRow>
@@ -2487,19 +2566,90 @@ function OrderFormFields({
       <SectionHeader title="Pembayaran" />
 
       <div className="space-y-3">
-        <FieldRow label="Metode Pembayaran">
-          <select
-            value={data.transferKeBank}
-            onChange={(e) => onChangeField("transferKeBank", e.target.value)}
-            className={inputCls(disabled)}
-            disabled={disabled}
-          >
-            <option value="">Pilih metode</option>
-            <option value="Pembayaran Ke PT">Pembayaran Ke PT</option>
-            <option value="Pembayaran non PT">Pembayaran non PT</option>
-            <option value="Cash">Cash</option>
-          </select>
-        </FieldRow>
+        {(paymentCategory(data.transferKeBank) === "ke_pt" ||
+          paymentCategory(data.transferKeBank) === "non_pt_cash") && (
+          <FieldRow label="Tipe Pembayaran">
+            <select
+              value={paymentCategory(data.transferKeBank)}
+              onChange={(e) =>
+                onChangeField(
+                  "transferKeBank",
+                  e.target.value === "ke_pt"
+                    ? "Ke PT"
+                    : e.target.value === "non_pt_cash"
+                      ? "Non PT / Cash"
+                      : "",
+                )
+              }
+              className={inputCls(disabled)}
+              disabled={disabled}
+            >
+              <option value="ke_pt">Ke PT</option>
+              <option value="non_pt_cash">Non PT / Cash</option>
+            </select>
+          </FieldRow>
+        )}
+        {paymentCategory(data.transferKeBank) === "ke_pt" && (
+          <FieldRow label="Pilih Bank">
+            <select
+              value={
+                (BANKS as readonly string[]).includes(data.transferKeBank)
+                  ? data.transferKeBank
+                  : ""
+              }
+              onChange={(e) =>
+                onChangeField("transferKeBank", e.target.value)
+              }
+              className={inputCls(disabled)}
+              disabled={disabled}
+            >
+              <option value="">Pilih bank</option>
+              {BANKS.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </FieldRow>
+        )}
+        {paymentCategory(data.transferKeBank) === "non_pt_cash" && (
+          <FieldRow label="Metode Pembayaran">
+            <select
+              value={
+                data.transferKeBank === "Non PT" ||
+                data.transferKeBank === "Cash"
+                  ? data.transferKeBank
+                  : ""
+              }
+              onChange={(e) =>
+                onChangeField("transferKeBank", e.target.value)
+              }
+              className={inputCls(disabled)}
+              disabled={disabled}
+            >
+              <option value="">Pilih metode</option>
+              <option value="Non PT">Non PT</option>
+              <option value="Cash">Cash</option>
+            </select>
+          </FieldRow>
+        )}
+        {!paymentCategory(data.transferKeBank) && (
+          <FieldRow label="Metode Pembayaran">
+            <select
+              value={data.transferKeBank}
+              onChange={(e) =>
+                onChangeField("transferKeBank", e.target.value)
+              }
+              className={inputCls(disabled)}
+              disabled={disabled}
+            >
+              <option value="">Pilih metode</option>
+              <option value="Pembayaran Ke PT">Pembayaran Ke PT</option>
+              <option value="Pembayaran non PT">Pembayaran non PT</option>
+              <option value="Cash">Cash</option>
+            </select>
+          </FieldRow>
+        )}
       </div>
 
       <SectionHeader title="Keterangan Tambahan" />
@@ -2508,7 +2658,9 @@ function OrderFormFields({
         <FieldRow label="Keterangan Tambahan (internal CS)">
           <textarea
             value={data.keteranganTambahan}
-            onChange={(e) => onChangeField("keteranganTambahan", e.target.value)}
+            onChange={(e) =>
+              onChangeField("keteranganTambahan", e.target.value)
+            }
             className={inputCls(disabled)}
             disabled={disabled}
             rows={3}

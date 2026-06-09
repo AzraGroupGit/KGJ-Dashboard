@@ -800,12 +800,30 @@ function PendingCard({
     orderId: string,
     stage: string,
     notes: string,
+    reworkStage?: string,
   ) => Promise<void>;
 }) {
   const [state, setState] = useState<ActionState>({ type: "idle" });
   const [rejectNotes, setRejectNotes] = useState("");
+  const [reworkStage, setReworkStage] = useState("");
   const [dataExpanded, setDataExpanded] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+
+  const isQCStage = item.stage === "approval_qc_1" || item.stage === "approval_qc_2";
+  const qcReworkOptions: { value: string; label: string }[] = [];
+  if (item.stage === "approval_qc_1") {
+    qcReworkOptions.push(
+      { value: "pembentukan_cincin", label: "Pembentukan Cincin" },
+      { value: "pemolesan", label: "Pemolesan" },
+      { value: "pemasangan_permata", label: "Micro Setting" },
+      { value: "cek_kadar", label: "Cek Kadar" },
+    );
+  } else if (item.stage === "approval_qc_2") {
+    qcReworkOptions.push(
+      { value: "finishing", label: "Finishing" },
+      { value: "pembentukan_cincin", label: "Pembentukan Cincin" },
+    );
+  }
 
   const isProduction = item.stage_group === "production";
 
@@ -826,6 +844,7 @@ function PendingCard({
 
   const handleRejectConfirm = async () => {
     if (!rejectNotes.trim()) return;
+    if (isQCStage && !reworkStage) return;
     setState({ type: "loading" });
     try {
       await onReject(
@@ -833,11 +852,12 @@ function PendingCard({
         item.order_id,
         item.stage,
         rejectNotes,
+        reworkStage || undefined,
       );
       setState({
         type: "done",
         result: "rejected",
-        message: "Ditolak — worker perlu submit ulang",
+        message: `Ditolak — dikembalikan ke ${qcReworkOptions.find(o => o.value === reworkStage)?.label || reworkStage}`,
       });
     } catch (err) {
       setState({ type: "idle" });
@@ -956,6 +976,21 @@ function PendingCard({
 
         {state.type === "confirming_reject" && (
           <div className="space-y-2">
+            {isQCStage && (
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Tujuan Rework</label>
+                <select
+                  value={reworkStage}
+                  onChange={(e) => setReworkStage(e.target.value)}
+                  className="w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                >
+                  <option value="">Pilih tahap rework</option>
+                  {qcReworkOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <textarea
               value={rejectNotes}
               onChange={(e) => setRejectNotes(e.target.value)}
@@ -967,7 +1002,7 @@ function PendingCard({
             <div className="flex flex-col sm:flex-row gap-2">
               <button
                 onClick={handleRejectConfirm}
-                disabled={!rejectNotes.trim()}
+                disabled={!rejectNotes.trim() || (isQCStage && !reworkStage)}
                 className="flex-1 rounded-lg bg-rose-600 py-3 sm:py-2.5 text-sm font-medium text-white transition-all hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
               >
                 Konfirmasi Tolak
@@ -976,6 +1011,7 @@ function PendingCard({
                 onClick={() => {
                   setState({ type: "idle" });
                   setRejectNotes("");
+                  setReworkStage("");
                 }}
                 className="rounded-lg border border-slate-200 bg-white px-4 py-3 sm:py-2 text-sm text-slate-600 hover:bg-slate-50 min-h-[44px]"
               >
@@ -1104,17 +1140,20 @@ export default function SupervisorApprovalPage() {
       orderId: string,
       stage: string,
       notes: string,
+      reworkStage?: string,
     ) => {
+      const body: Record<string, any> = {
+        stage_result_id: stageResultId,
+        order_id: orderId,
+        stage,
+        action: "reject",
+        remarks: notes,
+      };
+      if (reworkStage) body.rework_stage = reworkStage;
       const res = await fetch("/api/supervisor/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stage_result_id: stageResultId,
-          order_id: orderId,
-          stage,
-          action: "reject",
-          remarks: notes,
-        }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Gagal menolak");
