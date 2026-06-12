@@ -2,7 +2,9 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { ClipboardCheck, Clock, DollarSign, Zap, AlertTriangle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 
 interface KpiApiResponse {
   success: boolean;
@@ -39,35 +41,27 @@ interface KpiApiResponse {
 }
 
 export function KpiCards() {
-  const [apiData, setApiData] = useState<KpiApiResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: raw,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<KpiApiResponse>({
+    queryKey: ["kpi", "dashboard"],
+    queryFn: () => fetcher<KpiApiResponse>("/api/owner/dashboard"),
+    refetchInterval: 30000,
+  });
 
-  const fetchData = async () => {
-    try {
-      const res = await fetch("/api/owner/dashboard");
-      if (!res.ok) throw new Error("Failed to fetch KPI data");
-      const json = await res.json();
-      if (!json.success) throw new Error(json.message || "API returned error");
-      setApiData(json);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const apiData = raw?.success ? raw : null;
 
-  useEffect(() => {
-    fetchData();
-
-    // Auto refresh setiap 30 detik
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (loading) return <KpiCardsSkeleton />;
-  if (error) return <KpiCardsError error={error} onRetry={fetchData} />;
+  if (isLoading) return <KpiCardsSkeleton />;
+  if (error)
+    return (
+      <KpiCardsError
+        error={error instanceof Error ? error.message : "Gagal memuat data"}
+        onRetry={() => refetch()}
+      />
+    );
   if (!apiData?.data) return null;
 
   const data = apiData.data;
@@ -108,19 +102,7 @@ export function KpiCards() {
               </p>
             </div>
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-sm">
-              <svg
-                className="w-6 h-6 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                />
-              </svg>
+              <ClipboardCheck className="w-6 h-6 text-white" />
             </div>
           </div>
           <div className="flex items-center justify-between mt-3">
@@ -178,19 +160,7 @@ export function KpiCards() {
                   : "bg-gradient-to-br from-gray-400 to-gray-500"
               }`}
             >
-              <svg
-                className="w-6 h-6 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <Clock className="w-6 h-6 text-white" />
             </div>
           </div>
           <div className="flex items-center gap-2 mt-3">
@@ -232,19 +202,7 @@ export function KpiCards() {
               </p>
             </div>
             <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm">
-              <svg
-                className="w-6 h-6 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <DollarSign className="w-6 h-6 text-white" />
             </div>
           </div>
           <div className="flex items-center gap-4 mt-3">
@@ -298,19 +256,7 @@ export function KpiCards() {
                   : "bg-gradient-to-br from-green-500 to-green-600"
               }`}
             >
-              <svg
-                className="w-6 h-6 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
+              <Zap className="w-6 h-6 text-white" />
             </div>
           </div>
 
@@ -355,7 +301,7 @@ export function KpiCards() {
           {new Date(data.meta.generatedAt).toLocaleTimeString("id-ID")}
           <span className="ml-2 text-gray-300">|</span>
           <button
-            onClick={fetchData}
+            onClick={() => refetch()}
             className="ml-2 text-blue-500 hover:text-blue-700 transition-colors"
           >
             🔄 Refresh
@@ -408,19 +354,7 @@ function KpiCardsError({
     <div className="bg-red-50 rounded-xl border border-red-200 p-4">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-          <svg
-            className="w-5 h-5 text-red-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
+          <AlertTriangle className="w-5 h-5 text-red-600" />
         </div>
         <div className="flex-1">
           <p className="text-sm font-medium text-red-800">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
 export async function GET(request?: NextRequest) {
   try {
@@ -20,7 +21,7 @@ export async function GET(request?: NextRequest) {
       .is("deleted_at", null)
       .single();
 
-    const roleName: string = (profile?.role as any)?.name ?? "";
+    const roleName: string = getRoleProps(profile).name;
     if (roleName !== "superadmin")
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 

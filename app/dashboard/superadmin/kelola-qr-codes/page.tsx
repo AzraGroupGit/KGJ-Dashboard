@@ -2,7 +2,9 @@
 
 "use client";
 
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Button from "@/components/ui/Button";
@@ -13,31 +15,8 @@ import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import QRCodeLib from "qrcode";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface Role {
-  id: string;
-  name: string;
-  role_group: "management" | "operational" | "production";
-  description: string | null;
-  allowed_stages: string[];
-}
-
-interface QRCode {
-  id: string;
-  role_id: string;
-  role_name?: string;
-  role_group?: string;
-  allowed_stages: string[];
-  workstation_name: string;
-  location: string | null;
-  qr_token: string;
-  qr_payload: string;
-  is_active: boolean;
-  generated_at: string;
-  expired_at: string | null;
-}
+import { Download, Eye, MapPin, Plus, Power, QrCode, Trash2 } from "lucide-react";
+import type { Role, QRCode } from "@/types/qr-code";
 
 interface ScanEvent {
   id: string;
@@ -152,114 +131,18 @@ function QRCodeImage({
 
 // ─── Icons ──────────────────────────────────────────────────────────────────
 
-function PlusIcon() {
-  return (
-    <svg
-      className="w-4 h-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M12 4v16m8-8H4"
-      />
-    </svg>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg
-      className="w-4 h-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-      />
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-      />
-    </svg>
-  );
-}
-
-function PowerIcon() {
-  return (
-    <svg
-      className="w-4 h-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-      />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg
-      className="w-4 h-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-      />
-    </svg>
-  );
-}
-
-function DownloadIcon() {
-  return (
-    <svg
-      className="w-4 h-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-      />
-    </svg>
-  );
-}
+const PlusIcon = () => <Plus className="w-4 h-4" />;
+const EyeIcon = () => <Eye className="w-4 h-4" />;
+const PowerIcon = () => <Power className="w-4 h-4" />;
+const TrashIcon = () => <Trash2 className="w-4 h-4" />;
+const DownloadIcon = () => <Download className="w-4 h-4" />;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function KelolaQRPage() {
-  const [qrCodes, setQrCodes] = useState<QRCode[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [scanEvents, setScanEvents] = useState<ScanEvent[]>([]);
-  const [scansToday, setScansToday] = useState(0);
-
   const [activeTab, setActiveTab] = useState<"workstations" | "scan-logs">(
     "workstations",
   );
-  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedQR, setSelectedQR] = useState<QRCode | null>(null);
@@ -291,7 +174,7 @@ export default function KelolaQRPage() {
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
 
-  const fetchQRCodes = useCallback(async () => {
+  const qrParams = useMemo(() => {
     const params = new URLSearchParams();
     if (filterStatus !== "all") {
       params.append("is_active", filterStatus === "active" ? "true" : "false");
@@ -299,72 +182,65 @@ export default function KelolaQRPage() {
     if (filterRoleGroup) {
       params.append("role_group", filterRoleGroup);
     }
-
-    const res = await fetch(`/api/qr-codes?${params.toString()}`);
-    const json = await res.json();
-    if (!res.ok) {
-      showAlert("error", json.error || "Gagal memuat data QR Code");
-      return;
-    }
-    setQrCodes(json.data ?? []);
+    return params.toString();
   }, [filterStatus, filterRoleGroup]);
 
-  const fetchRoles = useCallback(async () => {
-    const res = await fetch("/api/roles");
-    const json = await res.json();
-    if (!res.ok) {
-      showAlert("error", json.error || "Gagal memuat data role");
-      return;
-    }
-    const filteredRoles = (json.data ?? []).filter((r: Role) =>
-      ["operational", "production"].includes(r.role_group),
-    );
-    setRoles(filteredRoles);
-  }, []);
+  const {
+    data: qrCodes = [],
+    isLoading: isQrLoading,
+    refetch: refetchQRCodes,
+  } = useQuery<QRCode[]>({
+    queryKey: ["qr-codes", qrParams],
+    queryFn: () =>
+      fetcher<{ data: QRCode[] }>(`/api/qr-codes?${qrParams}`).then(
+        (r) => r.data ?? [],
+      ),
+  });
 
-  const fetchScansToday = useCallback(async () => {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const res = await fetch(
-      `/api/scan-events?start_date=${todayStart.toISOString()}&limit=1`,
-    );
-    if (!res.ok) return;
-    const json = await res.json();
-    setScansToday(json.total ?? 0);
-  }, []);
+  const {
+    data: roles = [],
+    isLoading: isRolesLoading,
+  } = useQuery<Role[]>({
+    queryKey: ["roles"],
+    queryFn: () =>
+      fetcher<{ data: Role[] }>("/api/roles").then((r) =>
+        (r.data ?? []).filter((role: Role) =>
+          ["operational", "production"].includes(role.role_group),
+        ),
+      ),
+  });
 
-  const fetchScanEvents = useCallback(async () => {
-    const res = await fetch("/api/scan-events?limit=100");
-    if (!res.ok) return;
-    const json = await res.json();
-    const mapped = (json.data ?? []).map((e: any) => ({
-      id: e.id,
-      order_id: e.order_id,
-      order_number: e.order_number ?? "—",
-      user_name: e.user_name ?? "—",
-      stage_label: e.stage_label ?? "—",
-      action: e.action,
-      action_label: e.action_label ?? "—",
-      scanned_at: e.scanned_at,
-      scanned_at_formatted: e.scanned_at_formatted,
-    }));
-    setScanEvents(mapped);
-  }, []);
+  const { data: scansToday = 0 } = useQuery<number>({
+    queryKey: ["scans-today"],
+    queryFn: () => {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      return fetcher<{ total: number }>(
+        `/api/scan-events?start_date=${todayStart.toISOString()}&limit=1`,
+      ).then((r) => r.total ?? 0);
+    },
+  });
 
-  useEffect(() => {
-    const load = async () => {
-      setIsLoading(true);
-      await Promise.all([fetchQRCodes(), fetchRoles(), fetchScansToday()]);
-      setIsLoading(false);
-    };
-    load();
-  }, [fetchQRCodes, fetchRoles, fetchScansToday]);
+  const { data: scanEvents = [] } = useQuery<ScanEvent[]>({
+    queryKey: ["scan-events"],
+    queryFn: () =>
+      fetcher<{ data: Record<string, unknown>[] }>("/api/scan-events?limit=100").then((r) =>
+        (r.data ?? []).map((e) => ({
+          id: e.id as string,
+          order_id: e.order_id as string,
+          order_number: (e.order_number as string) ?? "—",
+          user_name: (e.user_name as string) ?? "—",
+          stage_label: (e.stage_label as string) ?? "—",
+          action: e.action as string,
+          action_label: (e.action_label as string) ?? "—",
+          scanned_at: e.scanned_at as string,
+          scanned_at_formatted: e.scanned_at_formatted as string,
+        })),
+      ),
+    enabled: activeTab === "scan-logs",
+  });
 
-  useEffect(() => {
-    if (activeTab === "scan-logs") {
-      fetchScanEvents();
-    }
-  }, [activeTab, fetchScanEvents]);
+  const isLoading = isQrLoading || isRolesLoading;
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
@@ -409,7 +285,7 @@ export default function KelolaQRPage() {
       );
       setIsModalOpen(false);
       setGenerateForm(EMPTY_GENERATE_FORM);
-      await fetchQRCodes();
+      await refetchQRCodes();
     } finally {
       setIsGenerating(false);
     }
@@ -434,7 +310,7 @@ export default function KelolaQRPage() {
         "success",
         `QR Code ${qr.workstation_name} ${!qr.is_active ? "diaktifkan" : "dinonaktifkan"}`,
       );
-      await fetchQRCodes();
+      await refetchQRCodes();
     } finally {
       setIsProcessing(false);
       setQrToDeactivate(null);
@@ -460,7 +336,7 @@ export default function KelolaQRPage() {
         "success",
         `QR Code ${qrToDelete.workstation_name} berhasil dihapus`,
       );
-      await fetchQRCodes();
+      await refetchQRCodes();
     } finally {
       setIsProcessing(false);
       setQrToDelete(null);
@@ -786,7 +662,7 @@ export default function KelolaQRPage() {
                               key={qr.id}
                               qr={qr}
                               onView={() => setSelectedQR(qr)}
-                              onToggleStatus={() => handleToggleStatus(qr)}
+                              onToggleStatus={() => setQrToDeactivate(qr)}
                               onDelete={() => setQrToDelete(qr)}
                               getStatusBadge={getStatusBadge}
                               getRoleGroupBadge={getRoleGroupBadge}
@@ -810,7 +686,7 @@ export default function KelolaQRPage() {
                               key={qr.id}
                               qr={qr}
                               onView={() => setSelectedQR(qr)}
-                              onToggleStatus={() => handleToggleStatus(qr)}
+                              onToggleStatus={() => setQrToDeactivate(qr)}
                               onDelete={() => setQrToDelete(qr)}
                               getStatusBadge={getStatusBadge}
                               getRoleGroupBadge={getRoleGroupBadge}
@@ -1193,25 +1069,7 @@ function QRCodeCard({
         <div className="flex items-start gap-3 mb-4">
           {/* Icon QR sebagai ganti preview */}
           <div className="flex-shrink-0 w-10 h-10 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center">
-            <svg
-              className="w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M12 4v1m6 11h2m-6 0h-2.48a2.5 2.5 0 00-4.52 0H4m16 0a2.5 2.5 0 00-4.52 0H15m-6 0H6.48"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M8 8h.01M12 8h.01M16 8h.01M8 8a1 1 0 110-2 1 1 0 010 2zm4 0a1 1 0 110-2 1 1 0 010 2zm4 0a1 1 0 110-2 1 1 0 010 2z"
-              />
-            </svg>
+            <QrCode className="w-5 h-5 text-gray-400" />
           </div>
 
           {/* Info dan Status */}
@@ -1247,25 +1105,7 @@ function QRCodeCard({
           )}
           {qr.location && (
             <p className="text-xs text-gray-500 truncate flex items-center gap-1">
-              <svg
-                className="w-3 h-3 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
+              <MapPin className="w-3 h-3 flex-shrink-0" />
               {qr.location}
             </p>
           )}

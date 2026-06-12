@@ -3,6 +3,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
@@ -11,6 +13,7 @@ import Alert from "@/components/ui/Alert";
 import Button from "@/components/ui/Button";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import { CS_ROUTES } from "@/lib/routes";
+import { Clock, Check, Bell, CheckCircle, ChevronRight, AlertTriangle } from "lucide-react";
 import type { CsOrder } from "@/types/cs-orders";
 
 const BANKS = ["BCA", "Mandiri", "BNI", "BRI"] as const;
@@ -56,58 +59,55 @@ function fmtDate(d: string): string {
 
 export default function CSDashboard() {
   const router = useRouter();
-  const [user, setUser] = useState<ClientUser | null>(null);
-  const [stats, setStats] = useState<StatsData | null>(null);
-  const [recentInputs, setRecentInputs] = useState<RecentInput[]>([]);
-  const [orders, setOrders] = useState<CsOrder[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [user] = useState<ClientUser | null>(() => {
+    if (typeof window === "undefined") return null;
+    return getClientUser();
+  });
+  const [dismissedError, setDismissedError] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(Date.now);
 
   useEffect(() => {
-    const clientUser = getClientUser();
-    if (!clientUser) {
-      router.push("/login");
-      return;
-    }
-    setUser(clientUser);
+    if (!user) router.push("/login");
+  }, [user, router]);
 
-    (async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const [statsRes, inputsRes, ordersRes] = await Promise.all([
-          fetch("/api/cs/stats"),
-          fetch("/api/cs/inputs?limit=7"),
-          fetch("/api/cs/orders"),
-        ]);
-        if (!statsRes.ok)
-          throw new Error(
-            (await statsRes.json()).error || "Gagal memuat stats",
-          );
-        if (!inputsRes.ok)
-          throw new Error(
-            (await inputsRes.json()).error || "Gagal memuat riwayat",
-          );
-        if (!ordersRes.ok)
-          throw new Error(
-            (await ordersRes.json()).error || "Gagal memuat orders",
-          );
+  useEffect(() => {
+    const t = setInterval(() => setCurrentTime(Date.now()), 60000);
+    return () => clearInterval(t);
+  }, []);
 
-        const [s, i, o] = await Promise.all([
-          statsRes.json(),
-          inputsRes.json(),
-          ordersRes.json(),
-        ]);
-        setStats(s.data);
-        setRecentInputs(i.data || []);
-        setOrders(o.data || []);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Terjadi kesalahan");
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  }, [router]);
+  const {
+    data: statsRes,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useQuery({
+    queryKey: ["cs-stats"],
+    queryFn: () => fetcher<{ data: StatsData }>("/api/cs/stats"),
+  });
+
+  const {
+    data: inputsRes,
+    isLoading: inputsLoading,
+    error: inputsError,
+  } = useQuery({
+    queryKey: ["cs-inputs"],
+    queryFn: () => fetcher<{ data: RecentInput[] }>("/api/cs/inputs?limit=7"),
+  });
+
+  const {
+    data: ordersRes,
+    isLoading: ordersLoading,
+    error: ordersError,
+  } = useQuery({
+    queryKey: ["cs-orders"],
+    queryFn: () => fetcher<{ data: CsOrder[] }>("/api/cs/orders"),
+  });
+
+  const stats = statsRes?.data ?? null;
+  const recentInputs = inputsRes?.data ?? [];
+  const orders = ordersRes?.data ?? [];
+  const isLoading = statsLoading || inputsLoading || ordersLoading;
+  const errorMessage = [statsError, inputsError, ordersError].find(Boolean)?.message ?? null;
+  const error = errorMessage && errorMessage !== dismissedError ? errorMessage : null;
 
   // ── Derived order data ───────────────────────────────────────────────────
 
@@ -128,7 +128,7 @@ export default function CSDashboard() {
   const oldestPending =
     pending.length > 0
       ? Math.floor(
-          (Date.now() -
+          (currentTime -
             new Date(pending[pending.length - 1].created_at).getTime()) /
             86400000,
         )
@@ -162,7 +162,7 @@ export default function CSDashboard() {
             <Alert
               type="error"
               message={error}
-              onClose={() => setError(null)}
+              onClose={() => setDismissedError(errorMessage)}
             />
           )}
 
@@ -203,19 +203,7 @@ export default function CSDashboard() {
             {!stats?.today.hasInput ? (
               <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
                 <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg
-                    className="w-4 h-4 text-amber-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
+                  <Clock className="w-4 h-4 text-amber-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-amber-800">
@@ -235,19 +223,7 @@ export default function CSDashboard() {
             ) : (
               <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
                 <div className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg
-                    className="w-4 h-4 text-green-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
+                  <Check className="w-4 h-4 text-green-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-green-800">
@@ -271,19 +247,7 @@ export default function CSDashboard() {
             {needsReview > 0 ? (
               <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-xl p-4">
                 <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg
-                    className="w-4 h-4 text-orange-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                    />
-                  </svg>
+                  <Bell className="w-4 h-4 text-orange-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-orange-800">
@@ -303,19 +267,7 @@ export default function CSDashboard() {
             ) : (
               <div className="flex items-start gap-3 bg-gray-50 border border-gray-200 rounded-xl p-4">
                 <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg
-                    className="w-4 h-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
+                  <CheckCircle className="w-4 h-4 text-gray-400" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-600">
@@ -408,19 +360,7 @@ export default function CSDashboard() {
                     <p className="text-xs text-gray-400 mt-1.5">{stage.desc}</p>
                   </div>
                   {idx < 3 && (
-                    <svg
-                      className="w-4 h-4 text-gray-300 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
+                    <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
                   )}
                 </div>
               ))}
@@ -429,19 +369,7 @@ export default function CSDashboard() {
             {/* Warning if oldest pending is very old */}
             {oldestPending !== null && oldestPending >= 3 && (
               <div className="mt-3 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                <svg
-                  className="w-3.5 h-3.5 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
                 Ada order yang sudah menunggu pengisian selama{" "}
                 <strong className="mx-1">{oldestPending} hari</strong> —
                 pertimbangkan follow-up ke pelanggan.

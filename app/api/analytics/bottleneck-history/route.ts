@@ -101,7 +101,7 @@ export async function GET(_request: Request) {
 
     const currentCounts: Record<string, number> = {};
     for (const o of currentOrders || []) {
-      const stage = (o as any).current_stage;
+      const stage = o.current_stage;
       currentCounts[stage] = (currentCounts[stage] || 0) + 1;
     }
 

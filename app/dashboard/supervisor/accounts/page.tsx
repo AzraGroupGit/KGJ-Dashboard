@@ -2,10 +2,13 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
+import Alert from "@/components/ui/Alert";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -22,6 +25,7 @@ import {
   UserX,
   XCircle,
 } from "lucide-react";
+import type { SupervisorGroup } from "@/types/roles";
 
 // ════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -774,7 +778,7 @@ function DeactivateModal({
   const [error, setError] = useState<string | null>(null);
 
   const isActivating = account.status === "inactive";
-  const action = isActivating ? "mengaktifkan" : "menonaktifkan";
+  const _action = isActivating ? "mengaktifkan" : "menonaktifkan";
   const actionLabel = isActivating ? "Aktifkan" : "Nonaktifkan";
 
   const confirm = async () => {
@@ -1035,16 +1039,9 @@ function AccountsSkeleton() {
 // ════════════════════════════════════════════════════════════════════════════
 
 type FilterTab = "all" | "production" | "operational";
-type SupervisorGroup = "operational" | "production" | "all";
 
 export default function SupervisorAccountsPage() {
   const router = useRouter();
-
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [scopedGroup, setScopedGroup] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const [modal, setModal] = useState<ModalType>(null);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
@@ -1054,7 +1051,9 @@ export default function SupervisorAccountsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userEmail, setUserEmail] = useState("");
 
-  const [filter, setFilter] = useState<FilterTab>("all");
+  const [alert, setAlert] = useState<{ type: "success" | "error" | "warning" | "info"; message: string } | null>(null);
+
+  const [_filter, _setFilter] = useState<FilterTab>("all");
   const [supervisorGroup, setSupervisorGroup] =
     useState<SupervisorGroup>("all");
 
@@ -1079,63 +1078,51 @@ export default function SupervisorAccountsPage() {
       setUserEmail(u.username || u.full_name || "");
       if (u.role?.name === "production_supervisor") {
         setSupervisorGroup("production");
-        setFilter("production");
+        _setFilter("production");
       } else if (u.role?.name === "operational_supervisor") {
         setSupervisorGroup("operational");
-        setFilter("operational");
+        _setFilter("operational");
       } else {
         setSupervisorGroup("all");
       }
     })();
   }, [router]);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/supervisor/accounts");
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal memuat data");
-      setAccounts(data.accounts ?? []);
-      setRoles(data.roles ?? []);
-      setScopedGroup(data.supervisor?.scoped_group ?? "");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat data");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  interface AccountsResponse { accounts: Account[]; roles: Role[]; supervisor: { scoped_group: string } | null; }
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const { data: accountsData, isLoading, error: queryError, refetch: refetchAccounts } = useQuery<AccountsResponse>({
+    queryKey: ["supervisor-accounts"],
+    queryFn: () => fetcher("/api/supervisor/accounts"),
+  });
+
+  const accounts = accountsData?.accounts ?? [];
+  const roles = accountsData?.roles ?? [];
+  const scopedGroup = accountsData?.supervisor?.scoped_group ?? "";
 
   const closeModal = () => {
     setModal(null);
     setSelectedAccount(null);
   };
 
-  const handleCreated = (account: Account) => {
-    setAccounts((prev) => [account, ...prev]);
-    // Don't close modal on create — show success state first
+  const handleCreated = () => {
+    refetchAccounts();
+    setAlert({ type: "success", message: "Akun berhasil dibuat" });
   };
 
-  const handleUpdated = (id: string, changes: Partial<Account>) => {
-    setAccounts((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, ...changes } : a)),
-    );
+  const handleUpdated = () => {
+    refetchAccounts();
     closeModal();
+    setAlert({ type: "success", message: "Akun berhasil diperbarui" });
   };
 
-  const handleDeleted = (id: string) => {
-    setAccounts((prev) => prev.filter((a) => a.id !== id));
+  const handleDeleted = () => {
+    refetchAccounts();
     closeModal();
+    setAlert({ type: "success", message: "Akun berhasil dihapus" });
   };
 
-  const handleDeactivated = (id: string, changes: Partial<Account>) => {
-    setAccounts((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, ...changes } : a)),
-    );
+  const handleDeactivated = () => {
+    refetchAccounts();
     closeModal();
   };
 
@@ -1179,6 +1166,9 @@ export default function SupervisorAccountsPage() {
         />
 
         <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
+          {alert && (
+            <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />
+          )}
           {/* Header */}
           <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
@@ -1290,14 +1280,14 @@ export default function SupervisorAccountsPage() {
           </div>
 
           {/* Content */}
-          {loading ? (
+          {isLoading ? (
             <AccountsSkeleton />
-          ) : error ? (
+          ) : queryError ? (
             <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center px-4">
               <AlertTriangle className="mb-3 h-8 w-8 text-rose-400" />
-              <p className="text-sm font-medium text-stone-700">{error}</p>
+              <p className="text-sm font-medium text-stone-700">{queryError instanceof Error ? queryError.message : "Gagal memuat data"}</p>
               <button
-                onClick={fetchData}
+                onClick={() => refetchAccounts()}
                 className="mt-4 rounded-md border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 min-h-[44px]"
               >
                 Coba lagi

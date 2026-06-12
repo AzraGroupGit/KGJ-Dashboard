@@ -4,14 +4,19 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
+import { formatAddsOnList } from "@/lib/adds-on";
+import type { SupervisorGroup } from "@/types/roles";
 import {
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   Clock,
+  ExternalLink,
   Hammer,
   RefreshCw,
   Settings,
@@ -67,6 +72,7 @@ interface PendingItem {
 
 type ActionState =
   | { type: "idle" }
+  | { type: "confirming_approve" }
   | { type: "confirming_reject" }
   | { type: "loading" }
   | { type: "done"; result: "approved" | "rejected"; message: string };
@@ -187,18 +193,6 @@ function StageInfoPopup({
             dataKey: "notes",
             dataValue: d.notes as string | null ?? null,
           },
-          {
-            label: "Jenis & Karat Bahan",
-            detail: "Pastikan jenis dan karat bahan sesuai dengan spesifikasi order.",
-          },
-          {
-            label: "Kuantitas Bahan",
-            detail: "Jumlah bahan yang disiapkan cukup untuk target berat produk.",
-          },
-          {
-            label: "Kualitas Bahan",
-            detail: "Tidak ada cacat atau kontaminasi pada bahan baku.",
-          },
         ];
 
       case "approval_qc_1":
@@ -250,16 +244,10 @@ function StageInfoPopup({
             dataValue: d.notes as string | null ?? null,
           },
           {
-            label: "Finishing Merata",
-            detail: "Finishing permukaan merata di seluruh bagian cincin.",
-          },
-          {
-            label: "Tidak Ada Cacat Visual",
-            detail: "Tidak ada goresan, bercak, atau cacat lain setelah finishing.",
-          },
-          {
-            label: "Produk Siap QC Akhir",
-            detail: "Produk layak dan siap memasuki tahap QC akhir.",
+            label: "Tukang Finishing",
+            detail: "Pastikan tukang finishing yang mengerjakan tercatat.",
+            dataKey: "tukang",
+            dataValue: d.tukang as string | null ?? null,
           },
         ];
 
@@ -462,7 +450,7 @@ function formatDataValue(value: unknown): string {
     // Summarise array of objects (e.g. material_transactions)
     if (typeof value[0] === "object" && value[0] !== null) {
       return value
-        .map((item: any) => {
+        .map((item) => {
           const parts: string[] = [];
           if (item.transaction_type) parts.push(item.transaction_type);
           if (item.material_type) parts.push(item.material_type);
@@ -496,6 +484,14 @@ const KEY_LABELS: Record<string, string> = {
   is_delivered: "Status pengiriman",
   courier_name: "Nama kurir",
   tracking_number: "Nomor resi",
+  tukang: "Tukang",
+  tukang_batik: "Tukang Batik",
+  tukang_nama: "Tukang Nama",
+  model_nusantara: "Model Nusantara",
+  nomor_resi: "Nomor Resi",
+  tanggal_packing: "Tanggal Packing",
+  foto_cincin_pria: "Foto Cincin Pria",
+  foto_cincin_wanita: "Foto Cincin Wanita",
 };
 
 const VALUE_LABELS: Record<string, string> = {
@@ -592,14 +588,34 @@ function DataViewer({
       {/* Key-value fields */}
       {entries.length > 0 && (
         <dl className="space-y-1.5">
-          {(expanded ? entries : preview).map(([key, val]) => (
-            <div key={key} className="flex items-baseline justify-between gap-3">
-              <dt className="text-[11px] text-slate-400 shrink-0">{humanizeKey(key)}</dt>
-              <dd className="text-[12px] font-medium text-slate-700 text-right break-words">
-                {typeof val === "string" ? humanizeValue(val) : formatDataValue(val)}
-              </dd>
-            </div>
-          ))}
+          {(expanded ? entries : preview).map(([key, val]) => {
+            const isUrl = key.endsWith("_url") && typeof val === "string" && val.length > 0;
+            const isFeatures = key === "jenis_cincin_features" && Array.isArray(val) && val.length > 0;
+            return (
+              <div key={key} className="flex items-baseline justify-between gap-3">
+                <dt className="text-[11px] text-slate-400 shrink-0">{humanizeKey(key)}</dt>
+                <dd className="text-[12px] font-medium text-slate-700 text-right break-words max-w-[70%]">
+                  {isUrl ? (
+                    <a
+                      href={val}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Buka
+                    </a>
+                  ) : isFeatures ? (
+                    formatAddsOnList(val)
+                  ) : typeof val === "string" ? (
+                    humanizeValue(val)
+                  ) : (
+                    formatDataValue(val)
+                  )}
+                </dd>
+              </div>
+            );
+          })}
         </dl>
       )}
       {hasMore && (
@@ -680,7 +696,7 @@ function WorkOrderCard({ wo }: { wo: WorkOrder }) {
                 {wo.jenis_cincin_pria && (
                   <div className="flex justify-between">
                     <dt className="text-[11px] text-slate-500">Jenis</dt>
-                    <dd className="text-[11px] font-semibold text-slate-700">{wo.jenis_cincin_pria}</dd>
+                    <dd className="text-[11px] font-semibold text-slate-700 text-right max-w-[60%] break-words">{wo.jenis_cincin_pria}</dd>
                   </div>
                 )}
                 {wo.ukiran_pria && (
@@ -714,7 +730,7 @@ function WorkOrderCard({ wo }: { wo: WorkOrder }) {
                 {wo.jenis_cincin_wanita && (
                   <div className="flex justify-between">
                     <dt className="text-[11px] text-slate-500">Jenis</dt>
-                    <dd className="text-[11px] font-semibold text-slate-700">{wo.jenis_cincin_wanita}</dd>
+                    <dd className="text-[11px] font-semibold text-slate-700 text-right max-w-[60%] break-words">{wo.jenis_cincin_wanita}</dd>
                   </div>
                 )}
                 {wo.ukiran_wanita && (
@@ -759,7 +775,7 @@ function WorkOrderCard({ wo }: { wo: WorkOrder }) {
                   href={wo.reference_image_pria_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-center text-[10px] font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+                  className="w-1/2 rounded border border-slate-200 bg-white px-2 py-1 text-center text-[10px] font-medium text-blue-600 hover:bg-blue-50 transition-colors"
                 >
                   Referensi Pria ↗
                 </a>
@@ -769,7 +785,7 @@ function WorkOrderCard({ wo }: { wo: WorkOrder }) {
                   href={wo.reference_image_wanita_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-center text-[10px] font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+                  className="w-1/2 rounded border border-slate-200 bg-white px-2 py-1 text-center text-[10px] font-medium text-blue-600 hover:bg-blue-50 transition-colors"
                 >
                   Referensi Wanita ↗
                 </a>
@@ -960,7 +976,7 @@ function PendingCard({
         {state.type === "idle" && (
           <div className="flex flex-col sm:flex-row gap-2">
             <button
-              onClick={handleApprove}
+              onClick={() => setState({ type: "confirming_approve" })}
               className="flex-1 rounded-lg bg-emerald-600 py-3 sm:py-2.5 text-sm font-medium text-white transition-all hover:bg-emerald-700 active:scale-[0.98] min-h-[44px]"
             >
               Setujui
@@ -971,6 +987,28 @@ function PendingCard({
             >
               Tolak
             </button>
+          </div>
+        )}
+
+        {state.type === "confirming_approve" && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-3">
+            <p className="text-sm text-amber-800">
+              Setujui tahap ini? Order akan maju ke tahap berikutnya dan tidak dapat dikembalikan.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={handleApprove}
+                className="flex-1 rounded-lg bg-emerald-600 py-2.5 text-sm font-medium text-white transition-all hover:bg-emerald-700 active:scale-[0.98]"
+              >
+                Ya, Setujui
+              </button>
+              <button
+                onClick={() => setState({ type: "idle" })}
+                className="flex-1 rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 active:scale-[0.98]"
+              >
+                Batal
+              </button>
+            </div>
           </div>
         )}
 
@@ -1048,19 +1086,15 @@ function PendingCard({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 type FilterTab = "all" | "production" | "operational";
-type SupervisorGroup = "all" | "production" | "operational";
 
 export default function SupervisorApprovalPage() {
   const router = useRouter();
-  const [items, setItems] = useState<PendingItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterTab>("all");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [userEmail, setUserEmail] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [supervisorGroup, setSupervisorGroup] = useState<SupervisorGroup>("all");
+  const [refreshing, setRefreshing] = useState(false);
 
   // Verify supervisor identity
   useEffect(() => {
@@ -1093,28 +1127,50 @@ export default function SupervisorApprovalPage() {
     })();
   }, [router]);
 
-  const fetchPending = useCallback(async (manual = false) => {
-    if (manual) setRefreshing(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/supervisor/pending");
-      if (!res.ok) throw new Error("Gagal memuat data persetujuan");
-      const json = await res.json();
-      setItems(json.data || []);
-      setLastUpdated(new Date());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const { data: items = [], isLoading: loading, error, refetch } = useQuery({
+    queryKey: ["supervisor", "pending"],
+    queryFn: () => fetcher<{ data: PendingItem[] }>("/api/supervisor/pending"),
+    select: (res) => res.data ?? [],
+    refetchInterval: 30_000,
+  });
 
   useEffect(() => {
-    fetchPending();
-    const interval = setInterval(() => fetchPending(false), 30_000);
-    return () => clearInterval(interval);
-  }, [fetchPending]);
+    let channel: import("pusher-js").Channel | null = null;
+
+    (async () => {
+      try {
+        const meRes = await fetch("/api/me");
+        if (!meRes.ok) return;
+        const meJson = await meRes.json();
+        const userId = meJson.data?.id;
+        if (!userId) return;
+
+        const { default: Pusher } = await import("pusher-js");
+        const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+          cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+          authEndpoint: "/api/pusher/auth",
+        });
+
+        channel = pusher.subscribe(`private-user-${userId}`);
+        channel.bind("new-notification", () => {
+          refetch();
+        });
+      } catch {
+        // Pusher failed — polling fallback via refetchInterval
+      }
+    })();
+
+    return () => {
+      if (channel) channel.unsubscribe();
+    };
+  }, [refetch]);
+
+  const fetchPending = useCallback(async (manual = false) => {
+    if (manual) setRefreshing(true);
+    await refetch();
+    setLastUpdated(new Date());
+    setRefreshing(false);
+  }, [refetch]);
 
   const handleApprove = useCallback(
     async (stageResultId: string | null, orderId: string, stage: string) => {
@@ -1130,8 +1186,9 @@ export default function SupervisorApprovalPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Gagal menyetujui");
+      refetch();
     },
-    [],
+    [refetch],
   );
 
   const handleReject = useCallback(
@@ -1142,7 +1199,7 @@ export default function SupervisorApprovalPage() {
       notes: string,
       reworkStage?: string,
     ) => {
-      const body: Record<string, any> = {
+      const body: Record<string, unknown> = {
         stage_result_id: stageResultId,
         order_id: orderId,
         stage,
@@ -1157,12 +1214,14 @@ export default function SupervisorApprovalPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Gagal menolak");
+      refetch();
     },
-    [],
+    [refetch],
   );
 
   const filteredItems = items.filter((item) => {
     if (filter === "all") return true;
+    if (supervisorGroup !== "all") return true;
     return item.stage_group === filter;
   });
 
@@ -1254,7 +1313,9 @@ export default function SupervisorApprovalPage() {
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center px-4">
               <AlertTriangle className="mb-3 h-8 w-8 text-rose-400" />
-              <p className="text-sm font-medium text-slate-700">{error}</p>
+              <p className="text-sm font-medium text-slate-700">
+                {error instanceof Error ? error.message : "Terjadi kesalahan"}
+              </p>
               <button
                 onClick={() => fetchPending(true)}
                 className="mt-4 rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px]"

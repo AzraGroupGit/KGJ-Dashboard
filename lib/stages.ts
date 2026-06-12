@@ -22,6 +22,11 @@ export const STAGE_SEQUENCE = [
   "selesai",
 ] as const;
 
+// Customer-facing sequence — excludes internal approval gates and penerimaan_order
+export const CUSTOMER_STAGE_SEQUENCE = STAGE_SEQUENCE.filter(
+  (s) => !s.startsWith("approval_") && s !== "penerimaan_order",
+);
+
 export type StageKey = (typeof STAGE_SEQUENCE)[number];
 
 // Full display labels for timeline / detail views

@@ -164,7 +164,7 @@ export async function GET(request: Request) {
           form_status: csOrder.form_status,
           created_at: csOrder.created_at,
           updated_at: csOrder.updated_at,
-          created_by_name: (csOrder as any).users?.full_name ?? null,
+          created_by_name: (csOrder as { users?: { full_name?: string } }).users?.full_name ?? null,
         },
         transitions: transitions || [],
         stageResults: stageResults || [],

@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
 export async function GET() {
   try {
@@ -55,7 +56,7 @@ export async function GET() {
       );
     }
 
-    const roleObj = userData.role as any;
+    const roleProps = getRoleProps(userData);
 
     return NextResponse.json({
       success: true,
@@ -65,11 +66,11 @@ export async function GET() {
         username: userData.username,
         pin_hash: userData.pin_hash,
         role: {
-          id: roleObj?.id,
-          name: roleObj?.name,
-          role_group: roleObj?.role_group,
-          permissions: roleObj?.permissions || {},
-          allowed_stages: roleObj?.allowed_stages || [],
+          id: roleProps.id,
+          name: roleProps.name,
+          role_group: roleProps.role_group,
+          permissions: roleProps.permissions,
+          allowed_stages: roleProps.allowed_stages,
         },
       },
     });

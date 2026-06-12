@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
 async function verifySupervisor(userId: string) {
   const admin = createAdminClient();
@@ -14,7 +15,7 @@ async function verifySupervisor(userId: string) {
     .single();
 
   if (!data) return null;
-  const roleName: string = (data.role as any)?.name ?? "";
+  const roleName: string = getRoleProps(data).name;
 
   if (
     roleName === "operational_supervisor" ||
@@ -72,7 +73,7 @@ export async function GET() {
       .in("stage", allowedStages as unknown as string[])
       .order("sort_order");
 
-    const assignmentsByUser: Record<string, any[]> = {};
+    const assignmentsByUser: Record<string, unknown[]> = {};
     if (assignments) {
       for (const a of assignments) {
         if (!assignmentsByUser[a.user_id]) assignmentsByUser[a.user_id] = [];
@@ -81,15 +82,15 @@ export async function GET() {
     }
 
     const mapped = (users || [])
-      .filter((u: any) => (u.role as any)?.role_group === targetGroup)
-      .map((u: any) => ({
+      .filter((u) => getRoleProps(u).role_group === targetGroup)
+      .map((u) => ({
       id: u.id,
       full_name: u.full_name,
       username: u.username,
       email: u.email,
       status: u.status,
-      role_name: (u.role as any)?.name ?? "",
-      role_group: (u.role as any)?.role_group ?? "",
+      role_name: getRoleProps(u).name,
+      role_group: getRoleProps(u).role_group,
       assignments: assignmentsByUser[u.id] || [],
     }));
 
@@ -187,7 +188,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "id wajib diisi" }, { status: 400 });
 
     const admin = createAdminClient();
-    const updates: Record<string, any> = {};
+    const updates: Record<string, unknown> = {};
     if (person_code !== undefined) updates.person_code = person_code;
     if (sort_order !== undefined) updates.sort_order = sort_order;
 

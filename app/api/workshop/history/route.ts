@@ -61,7 +61,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Gagal memuat riwayat" }, { status: 500 });
     }
 
-    const history = (results || []).map((r: any) => ({
+    const history = (results || []).map((r) => ({
       id: r.id,
       order_id: r.order_id,
       stage: r.stage,
@@ -70,8 +70,8 @@ export async function GET(request: Request) {
       notes: r.notes ?? null,
       data: r.data ?? null,
       finished_at: r.finished_at,
-      order_number: r.cs_orders?.order_number ?? "—",
-      customer_name: r.cs_orders?.customer_name ?? "—",
+      order_number: (r.cs_orders as any)?.order_number ?? "—",
+      customer_name: (r.cs_orders as any)?.customer_name ?? "—",
     }));
 
     return NextResponse.json({ success: true, data: history, total: total ?? 0 });

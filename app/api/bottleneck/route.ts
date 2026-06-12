@@ -3,51 +3,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { STAGE_LABELS } from "@/lib/stages";
+import { STAGE_SEQUENCE, STAGE_GROUP, STAGE_LABELS } from "@/lib/stages";
+import { getRoleProps } from "@/lib/auth/session";
 
-const ACTIVE_STAGES = [
-  "penerimaan_order",
-  "approval_penerimaan_order",
-  "racik_bahan",
-  "approval_racik_bahan",
-  "lebur_bahan",
-  "pembentukan_cincin",
-  "pemasangan_permata",
-  "pemolesan",
-  "cek_kadar",
-  "qc_1",
-  "approval_qc_1",
-  "laser",
-  "finishing",
-  "approval_produksi",
-  "qc_2",
-  "approval_qc_2",
-  "konfirmasi",
-  "packing",
-  "pengiriman",
-] as const;
-
-const STAGE_GROUPS: Record<string, "production" | "operational"> = {
-  penerimaan_order: "operational",
-  approval_penerimaan_order: "operational",
-  racik_bahan: "operational",
-  approval_racik_bahan: "operational",
-  lebur_bahan: "production",
-  cek_kadar: "production",
-  pembentukan_cincin: "production",
-  pemasangan_permata: "production",
-  pemolesan: "production",
-  qc_1: "operational",
-  approval_qc_1: "operational",
-  laser: "operational",
-  finishing: "production",
-  approval_produksi: "production",
-  qc_2: "operational",
-  approval_qc_2: "operational",
-  konfirmasi: "operational",
-  packing: "operational",
-  pengiriman: "operational",
-};
+const ACTIVE_STAGES = STAGE_SEQUENCE.filter(s => s !== "selesai") as readonly string[];
 
 interface StageBottleneck {
   stage: string;
@@ -84,9 +43,9 @@ export async function GET(request?: NextRequest) {
       .is("deleted_at", null)
       .single();
 
-    const roleName: string = (profile?.role as any)?.name ?? "";
-    const roleGroup: string = (profile?.role as any)?.role_group ?? "";
-    const allowedStages: string[] = (profile?.role as any)?.allowed_stages ?? [];
+    const roleName: string = getRoleProps(profile).name;
+    const roleGroup: string = getRoleProps(profile).role_group;
+    const allowedStages: string[] = getRoleProps(profile).allowed_stages;
 
     const canAccess =
       roleName === "superadmin" ||
@@ -121,9 +80,9 @@ export async function GET(request?: NextRequest) {
     if (ordersError)
       return NextResponse.json({ error: "Gagal mengambil data" }, { status: 500 });
 
-    const orderIds = (orders || []).map((o: any) => o.id);
-    let latestResults: any[] = [];
-    let approvalsData: any[] = [];
+    const orderIds = (orders || []).map((o) => o.id);
+    let latestResults: unknown[] = [];
+    let approvalsData: unknown[] = [];
     if (orderIds.length > 0) {
       const { data: results } = await admin
         .from("stage_results")
@@ -143,22 +102,25 @@ export async function GET(request?: NextRequest) {
       approvalsData = approvals || [];
     }
 
-    const latestByOrder = new Map<string, any>();
-    for (const r of latestResults) {
+    type StageResultRec = { order_id: string; finished_at: string; users?: { full_name: string | null } | null };
+    const latestByOrder = new Map<string, StageResultRec>();
+    for (const r of latestResults as StageResultRec[]) {
       if (!latestByOrder.has(r.order_id)) {
         latestByOrder.set(r.order_id, r);
       }
     }
 
-    const approvalByOrder = new Map<string, any>();
-    for (const a of approvalsData) {
+    type ApprovalRec = { order_id: string; decision: string | null; decided_at: string | null; users?: { full_name: string | null } | null };
+    const approvalByOrder = new Map<string, ApprovalRec>();
+    for (const a of approvalsData as ApprovalRec[]) {
       if (!approvalByOrder.has(a.order_id)) {
         approvalByOrder.set(a.order_id, a);
       }
     }
 
     // Group by stage
-    const stageMap = new Map<string, any[]>();
+    type OrderRec = { id: string; current_stage: string; status: string; order_number: string; customer_name: string | null; updated_at: string; deadline: string | null };
+    const stageMap = new Map<string, OrderRec[]>();
     for (const order of orders || []) {
       const stage = order.current_stage;
       if (!stageMap.has(stage)) stageMap.set(stage, []);
@@ -168,13 +130,13 @@ export async function GET(request?: NextRequest) {
     const bottlenecks: StageBottleneck[] = ACTIVE_STAGES.map((stage) => {
       const stageOrders = stageMap.get(stage) || [];
       const waitingOrders = stageOrders.filter(
-        (o: any) => o.status === "waiting_approval",
+        (o) => o.status === "waiting_approval",
       );
       const inProgressOrders = stageOrders.filter(
-        (o: any) => o.status !== "waiting_approval",
+        (o) => o.status !== "waiting_approval",
       );
 
-      const ordersWithHours = inProgressOrders.map((o: any) => {
+      const ordersWithHours = inProgressOrders.map((o) => {
         const latest = latestByOrder.get(o.id);
         const arrivedAt = latest?.finished_at || o.updated_at;
         const hours = (now.getTime() - new Date(arrivedAt).getTime()) / 3_600_000;
@@ -182,7 +144,7 @@ export async function GET(request?: NextRequest) {
         return {
           order_id: o.id,
           order_number: o.order_number,
-          customer_name: o.customer_name ?? null,
+          customer_name: o.customer_name ?? "—",
           hours_waiting: Math.round(hours * 10) / 10,
           status: o.status,
           current_stage: o.current_stage,
@@ -196,7 +158,7 @@ export async function GET(request?: NextRequest) {
       });
 
       const hoursValues = ordersWithHours
-        .map((o: any) => o.hours_waiting)
+        .map((o) => o.hours_waiting)
         .filter((h: number) => h > 0);
       const avgHours =
         hoursValues.length > 0
@@ -204,11 +166,11 @@ export async function GET(request?: NextRequest) {
           : null;
       const longestHours = hoursValues.length > 0 ? Math.max(...hoursValues) : null;
 
-      const sortedOrders = [...ordersWithHours].sort((a: any, b: any) => b.hours_waiting - a.hours_waiting);
+      const sortedOrders = [...ordersWithHours].sort((a, b) => b.hours_waiting - a.hours_waiting);
       return {
         stage,
         stage_label: STAGE_LABELS[stage] || stage,
-        stage_group: STAGE_GROUPS[stage] || "operational",
+        stage_group: STAGE_GROUP[stage] || "operational",
         order_count: stageOrders.length,
         waiting_orders: waitingOrders.length,
         in_progress_orders: inProgressOrders.length,

@@ -3,6 +3,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
@@ -13,24 +15,10 @@ import Modal from "@/components/ui/Modal";
 import Loading from "@/components/ui/Loading";
 import Alert from "@/components/ui/Alert";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { Plus, Trash2, AlertTriangle } from "lucide-react";
+import { MarketingInputSchema } from "@/lib/schemas/marketing-input";
 
-interface MarketingInput {
-  id: string;
-  channel: string;
-  input_date: string;
-  biaya_marketing: number;
-  lead_serius: number;
-  lead_all: number;
-  closing: number;
-  notes: string | null;
-  created_at: string;
-  cs_user_id?: string;
-  cs_user_name?: string;
-  users?: {
-    full_name: string;
-    email: string;
-  };
-}
+import type { MarketingInput } from "@/types/marketing";
 
 interface Channel {
   id: string;
@@ -68,10 +56,6 @@ interface CSInput {
 export default function InputMarketingPage() {
   const router = useRouter();
   const [user, setUser] = useState<ClientUser | null>(null);
-  const [marketingInputs, setMarketingInputs] = useState<MarketingInput[]>([]);
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [csUsers, setCsUsers] = useState<CSUser[]>([]);
-  const [csInputs, setCsInputs] = useState<CSInput[]>([]);
   const [selectedCSUser, setSelectedCSUser] = useState("");
   const [selectedCSInputId, setSelectedCSInputId] = useState("");
   const [selectedChannel, setSelectedChannel] = useState("");
@@ -84,13 +68,41 @@ export default function InputMarketingPage() {
   const [closing, setClosing] = useState("");
   const [notes, setNotes] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const [alert, setAlert] = useState<{
     type: "success" | "error" | "warning" | "info";
     message: string;
   } | null>(null);
+
+  const queryClient = useQueryClient();
+
+  const channelsQuery = useQuery({
+    queryKey: ["marketing-channels"],
+    queryFn: () => fetcher<{ data: Channel[] }>("/api/marketing/channels"),
+  });
+
+  const csUsersQuery = useQuery({
+    queryKey: ["cs-users"],
+    queryFn: () => fetcher<{ data: CSUser[] }>("/api/cs/users"),
+  });
+
+  const marketingInputsQuery = useQuery({
+    queryKey: ["marketing-inputs"],
+    queryFn: () => fetcher<{ data: MarketingInput[] }>("/api/marketing/inputs?limit=100"),
+  });
+
+  const csInputsQuery = useQuery({
+    queryKey: ["cs-inputs", selectedCSUser],
+    queryFn: () => fetcher<{ data: CSInput[] }>(`/api/cs/inputs?user_id=${selectedCSUser}&limit=50`),
+    enabled: !!selectedCSUser,
+  });
+
+  const marketingInputs = marketingInputsQuery.data?.data ?? [];
+  const channels = channelsQuery.data?.data ?? [];
+  const csUsers = csUsersQuery.data?.data ?? [];
+  const csInputs = csInputsQuery.data?.data ?? [];
+  const isLoading = channelsQuery.isLoading || csUsersQuery.isLoading || marketingInputsQuery.isLoading;
 
   // Confirm Dialog state
   const [confirmDialog, setConfirmDialog] = useState({
@@ -118,58 +130,12 @@ export default function InputMarketingPage() {
     }
   };
 
-  // Fetch channels
-  const fetchChannels = async () => {
-    try {
-      const response = await fetch("/api/marketing/channels");
-      const data = await response.json();
-      if (data.data) {
-        setChannels(data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching channels:", error);
-    }
-  };
-
-  // Fetch CS users
-  const fetchCSUsers = async () => {
-    try {
-      const response = await fetch("/api/cs/users");
-      const data = await response.json();
-      if (data.data) {
-        setCsUsers(data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching CS users:", error);
-    }
-  };
-
-  // Fetch CS inputs based on selected user
-  const fetchCSInputs = async (userId: string) => {
-    if (!userId) {
-      setCsInputs([]);
-      return;
-    }
-    try {
-      const response = await fetch(`/api/cs/inputs?user_id=${userId}&limit=50`);
-      const data = await response.json();
-      if (data.data) {
-        setCsInputs(data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching CS inputs:", error);
-    }
-  };
-
   // Handle CS user selection
-  const handleCSUserChange = async (userId: string) => {
+  const handleCSUserChange = (userId: string) => {
     setSelectedCSUser(userId);
     setSelectedCSInputId("");
     setLeadSerius("");
     setClosing("");
-    if (userId) {
-      await fetchCSInputs(userId);
-    }
   };
 
   // Handle CS input selection (auto-fill lead_serius and closing)
@@ -182,31 +148,6 @@ export default function InputMarketingPage() {
     setSelectedCSInputId(inputId);
   };
 
-  // Fetch marketing inputs
-  const fetchMarketingInputs = async () => {
-    try {
-      const response = await fetch("/api/marketing/inputs?limit=100");
-      const data = await response.json();
-      if (data.data) {
-        setMarketingInputs(data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching marketing inputs:", error);
-      setAlert({ type: "error", message: "Gagal memuat data marketing" });
-    }
-  };
-
-  // Fetch all data
-  const fetchAllData = async () => {
-    setIsLoading(true);
-    await Promise.all([
-      fetchChannels(),
-      fetchCSUsers(),
-      fetchMarketingInputs(),
-    ]);
-    setIsLoading(false);
-  };
-
   useEffect(() => {
     const clientUser = getClientUser();
     if (!clientUser) {
@@ -214,7 +155,6 @@ export default function InputMarketingPage() {
       return;
     }
     setUser(clientUser);
-    fetchAllData();
   }, [router]);
 
   const calculateMetrics = (data: MarketingInput) => {
@@ -224,11 +164,19 @@ export default function InputMarketingPage() {
   };
 
   const handleSave = async () => {
-    // Validasi channel
-    if (!selectedChannel) {
+    const result = MarketingInputSchema.safeParse({
+      channel: selectedChannel,
+      biayaMarketing,
+      leadAll,
+      leadSerius,
+      closing,
+      notes,
+    });
+    if (!result.success) {
+      const firstIssue = result.error.issues[0];
       setAlert({
         type: "error",
-        message: "Pilih channel marketing terlebih dahulu!",
+        message: firstIssue.message,
       });
       setTimeout(() => setAlert(null), 3000);
       return;
@@ -238,46 +186,6 @@ export default function InputMarketingPage() {
     const leadSeriusNum = parseInt(leadSerius) || 0;
     const leadAllNum = parseInt(leadAll) || 0;
     const closingNum = parseInt(closing) || 0;
-
-    // Validasi biaya marketing
-    if (biayaMarketingNum <= 0) {
-      setAlert({
-        type: "error",
-        message: "Biaya marketing harus diisi dengan angka positif!",
-      });
-      setTimeout(() => setAlert(null), 3000);
-      return;
-    }
-
-    // Validasi Lead All
-    if (leadAllNum <= 0) {
-      setAlert({
-        type: "error",
-        message: "Lead All harus diisi dengan angka positif!",
-      });
-      setTimeout(() => setAlert(null), 3000);
-      return;
-    }
-
-    // Validasi Lead Serius tidak boleh melebihi Lead All
-    if (leadSeriusNum > leadAllNum) {
-      setAlert({
-        type: "error",
-        message: `Lead Serius (${leadSeriusNum.toLocaleString("id-ID")}) tidak boleh melebihi Lead All (${leadAllNum.toLocaleString("id-ID")})!`,
-      });
-      setTimeout(() => setAlert(null), 3000);
-      return;
-    }
-
-    // Validasi Closing tidak boleh melebihi Lead Serius
-    if (closingNum > leadSeriusNum) {
-      setAlert({
-        type: "error",
-        message: `Closing (${closingNum.toLocaleString("id-ID")}) tidak boleh melebihi Lead Serius (${leadSeriusNum.toLocaleString("id-ID")})!`,
-      });
-      setTimeout(() => setAlert(null), 3000);
-      return;
-    }
 
     setIsSaving(true);
 
@@ -310,7 +218,7 @@ export default function InputMarketingPage() {
         });
         setIsModalOpen(false);
         resetForm();
-        await fetchMarketingInputs();
+        queryClient.invalidateQueries({ queryKey: ["marketing-inputs"] });
       } else if (response.status === 409) {
         setModalError(
           data.error || "Data sudah ada untuk channel dan tanggal ini.",
@@ -356,7 +264,7 @@ export default function InputMarketingPage() {
           type: "success",
           message: `Data ${confirmDialog.deleteChannel} berhasil dihapus`,
         });
-        await fetchMarketingInputs();
+        queryClient.invalidateQueries({ queryKey: ["marketing-inputs"] });
       } else {
         throw new Error(data.error || "Gagal menghapus data");
       }
@@ -481,21 +389,7 @@ export default function InputMarketingPage() {
                 setModalError(null);
                 setIsModalOpen(true);
               }}
-              leftIcon={
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-              }
+              leftIcon={<Plus className="w-4 h-4" />}
             >
               Input Data Baru
             </Button>
@@ -611,19 +505,7 @@ export default function InputMarketingPage() {
                             className="text-red-600 hover:text-red-900 transition-colors"
                             title="Hapus data"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
+                            <Trash2 className="w-5 h-5" />
                           </button>
                         </td>
                       </tr>
@@ -635,7 +517,7 @@ export default function InputMarketingPage() {
                         colSpan={8}
                         className="px-6 py-8 text-center text-gray-500"
                       >
-                        Belum ada data input. Klik "Input Data Baru" untuk
+                        Belum ada data input. Klik &ldquo;Input Data Baru&rdquo; untuk
                         mulai.
                       </td>
                     </tr>
@@ -864,19 +746,7 @@ export default function InputMarketingPage() {
               {/* Error Messages */}
               {leadSeriusError && (
                 <div className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg flex items-start gap-2">
-                  <svg
-                    className="w-4 h-4 mt-0.5 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                    />
-                  </svg>
+                  <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   <span>
                     Lead Serius ({leadSeriusNum.toLocaleString("id-ID")}) tidak
                     boleh melebihi Lead All (
@@ -887,19 +757,7 @@ export default function InputMarketingPage() {
 
               {closingError && (
                 <div className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg flex items-start gap-2">
-                  <svg
-                    className="w-4 h-4 mt-0.5 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                    />
-                  </svg>
+                  <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   <span>
                     Closing ({closingNum.toLocaleString("id-ID")}) tidak boleh
                     melebihi Lead Serius (

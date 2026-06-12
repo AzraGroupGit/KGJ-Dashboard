@@ -45,7 +45,7 @@ Before working on anything, do these steps in order:
 | `npm run dev` | Dev server |
 | `npm run build` | Production build |
 | `npm run start` | Start production |
-| `npm run lint` | ESLint v9 (flat config at `eslint.config.mjs`) |
+| `npm run lint` | Type check (`tsc --noEmit`) then ESLint v9 (flat config) |
 
 No typecheck script — run `npx tsc --noEmit` manually.
 No test framework — none installed; no test scripts exist.

@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import Alert from "@/components/ui/Alert";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
+import { ChevronDown } from "lucide-react";
 
 interface PelangganOrder {
   id: string;
@@ -88,51 +91,34 @@ function StatusBadge({ status }: { status: string | null }) {
 
 export default function PelangganPage() {
   const router = useRouter();
-  const [user, setUser] = useState<ClientUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSearching, setIsSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [user] = useState<ClientUser | null>(() => getClientUser() ?? null);
   const [query, setQuery] = useState("");
-  const [allData, setAllData] = useState<PelangganGroup[]>([]);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchData = useCallback(async (q: string) => {
-    setIsSearching(true);
-    setError(null);
-    try {
-      const url = q.trim()
-        ? `/api/cs/pelanggan?q=${encodeURIComponent(q.trim())}`
-        : "/api/cs/pelanggan";
-      const res = await fetch(url);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Gagal memuat data");
-      }
-      const json = await res.json();
-      setAllData(json.data || []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Terjadi kesalahan");
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
-
   useEffect(() => {
-    const clientUser = getClientUser();
-    if (!clientUser) {
+    if (!user) {
       router.push("/login");
-      return;
     }
-    setUser(clientUser);
-    setIsLoading(false);
-    fetchData("");
-  }, [router, fetchData]);
+  }, [user, router]);
+
+  const { data: allData = [], isLoading, isFetching, error: queryError } = useQuery<PelangganGroup[]>({
+    queryKey: ["cs-pelanggan", debouncedQuery],
+    queryFn: async () => {
+      const url = debouncedQuery.trim()
+        ? `/api/cs/pelanggan?q=${encodeURIComponent(debouncedQuery.trim())}`
+        : "/api/cs/pelanggan";
+      const res = await fetcher<{ data: PelangganGroup[] }>(url);
+      return res.data ?? [];
+    },
+    enabled: !!user,
+  });
 
   function handleQueryChange(value: string) {
     setQuery(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchData(value), 400);
+    debounceRef.current = setTimeout(() => setDebouncedQuery(value), 400);
   }
 
   function toggleExpand(key: string) {
@@ -144,7 +130,7 @@ export default function PelangganPage() {
   const totalSpent = allData.reduce((s, g) => s + g.total_spent, 0);
   const repeatCount = allData.filter((g) => g.total_orders > 1).length;
 
-  if (isLoading || !user) {
+  if (!user) {
     return (
       <div className="flex h-screen bg-gray-50">
         <Sidebar role="customer_service" />
@@ -164,11 +150,11 @@ export default function PelangganPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail={user.email} role="customer_service" />
         <main className="flex-1 overflow-y-auto p-6 space-y-5">
-          {error && (
+          {queryError && (
             <Alert
               type="error"
-              message={error}
-              onClose={() => setError(null)}
+              message={queryError instanceof Error ? queryError.message : "Terjadi kesalahan"}
+              onClose={() => {}}
             />
           )}
 
@@ -228,13 +214,13 @@ export default function PelangganPage() {
             </div>
           </div>
 
-          {isSearching && (
+          {(isLoading || isFetching) && (
             <div className="flex justify-center py-12">
               <Loading variant="spinner" text="Mencari..." size="md" />
             </div>
           )}
 
-          {!isSearching && allData.length === 0 && (
+          {!(isLoading || isFetching) && allData.length === 0 && (
             <div className="bg-white rounded-xl shadow-sm p-12 text-center">
               <p className="text-sm text-gray-400">
                 {query.trim()
@@ -244,7 +230,7 @@ export default function PelangganPage() {
             </div>
           )}
 
-          {!isSearching && allData.length > 0 && (
+          {!(isLoading || isFetching) && allData.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100">
                 <span className="text-sm font-medium text-gray-700">
@@ -300,21 +286,11 @@ export default function PelangganPage() {
                             Repeat
                           </span>
                         )}
-                        <svg
+                        <ChevronDown
                           className={`w-4 h-4 text-gray-300 transition-transform ${
                             open ? "rotate-180" : ""
                           }`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
+                        />
                       </div>
                     </button>
 

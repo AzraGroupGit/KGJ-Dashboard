@@ -2,7 +2,9 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
@@ -18,113 +20,10 @@ import {
 } from "lucide-react";
 import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
 import { getStageLabel } from "@/lib/stages";
-import StageTimeline from "@/components/orders/StageTimeline";
 import BottleneckHeatmap from "@/components/analytics/BottleneckHeatmap";
-import EstimatedCompletion from "@/components/analytics/EstimatedCompletion";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface BottleneckItem {
-  order_id: string;
-  order_number: string;
-  product_name: string;
-  customer_name: string | null;
-  hours_waiting: number | null;
-  status: string;
-  current_stage: string;
-  deadline: string | null;
-  tgl_order: string | null;
-  last_worker: string | null;
-  approval_decision: string | null;
-  approved_by: string | null;
-}
-
-interface StageBottleneck {
-  stage: string;
-  stage_label: string;
-  stage_group: string;
-  order_count: number;
-  waiting_orders: number;
-  in_progress_orders: number;
-  avg_hours: number | null;
-  longest_hours: number | null;
-  bottlenecks: BottleneckItem[];
-}
-
-interface BottleneckData {
-  bottlenecks: StageBottleneck[];
-  summary: {
-    total_stages_with_orders: number;
-    total_orders: number;
-    busiest_stage: StageBottleneck | null;
-    slowest_stage: StageBottleneck | null;
-  };
-}
-
-interface OrderDetail {
-  order: {
-    id: string;
-    order_number: string;
-    customer_name: string;
-    customer_wa: string | null;
-    customer_email: string | null;
-    ukuran_pria: string | null;
-    ukiran_pria: string | null;
-    jenis_cincin_pria: string | null;
-    keterangan_pria: string[] | null;
-    ukuran_wanita: string | null;
-    ukiran_wanita: string | null;
-    jenis_cincin_wanita: string | null;
-    keterangan_wanita: string[] | null;
-    font: string | null;
-    laser_position: string | null;
-    harga: number | null;
-    dp_amount: number | null;
-    deadline: string | null;
-    tgl_order: string | null;
-    tgl_acara: string | null;
-    acara: string | null;
-    pengiriman: string | null;
-    alamat_pengiriman: string | null;
-    reference_image_pria_url: string | null;
-    reference_image_wanita_url: string | null;
-    current_stage: string;
-    status: string;
-    created_at: string;
-    updated_at: string;
-  };
-  transitions: Array<{
-    from_stage: string | null;
-    to_stage: string;
-    reason: string | null;
-    transitioned_at: string;
-  }>;
-  stageResults: Array<{
-    id: string;
-    stage: string;
-    attempt_number: number;
-    data: Record<string, unknown>;
-    notes: string | null;
-    started_at: string;
-    finished_at: string;
-    users: { full_name: string } | null;
-  }>;
-  approvals: Array<{
-    id: string;
-    stage: string;
-    decision: string;
-    remarks: string | null;
-    decided_at: string;
-    users: { full_name: string } | null;
-  }>;
-  scanEvents: Array<{
-    id: string;
-    stage: string;
-    action: string;
-    scanned_at: string;
-    users: { full_name: string } | null;
-  }>;
-}
+import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
+import type { StageBottleneck, BottleneckData } from "@/types/bottleneck";
+import type { SupervisorGroup } from "@/types/roles";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -448,409 +347,10 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function OrderDetailPopup({
-  orderId,
-  orderNumber,
-  onClose,
-}: {
-  orderId: string;
-  orderNumber: string;
-  onClose: () => void;
-}) {
-  const [detail, setDetail] = useState<OrderDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"info" | "stages" | "approvals">("info");
-
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/order-detail?order_id=${orderId}`);
-        if (!res.ok) throw new Error("Gagal memuat detail");
-        const json = await res.json();
-        setDetail(json.data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Gagal memuat");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [orderId]);
-
-  const o = detail?.order;
-
-  const formatCurrency = (val: number | null) =>
-    val ? `Rp ${val.toLocaleString("id-ID")}` : "—";
-
-  const formatDate = (iso: string | null) =>
-    iso
-      ? new Date(iso).toLocaleDateString("id-ID", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        })
-      : "—";
-
-  const formatDateTime = (iso: string) =>
-    new Date(iso).toLocaleString("id-ID", {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-xl bg-white shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-5 py-4 rounded-t-xl">
-          <div className="flex items-center justify-between">
-            <div className="min-w-0 pr-3">
-              <span className="font-mono text-xs font-semibold text-slate-500">
-                {orderNumber}
-              </span>
-              <h3 className="text-sm font-semibold text-slate-800 mt-0.5 truncate">
-                {o?.customer_name || "Memuat..."}
-              </h3>
-              {o && (
-                <span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-medium mt-1 text-slate-600">
-                  {getStageLabel(o.current_stage)}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={onClose}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                className="h-5 w-5"
-              >
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <RefreshCw className="h-6 w-6 animate-spin text-slate-300" />
-          </div>
-        ) : error ? (
-          <div className="py-12 text-center">
-            <AlertTriangle className="mx-auto h-8 w-8 text-rose-400 mb-2" />
-            <p className="text-sm text-slate-600">{error}</p>
-          </div>
-        ) : detail && o ? (
-          <>
-            {/* Tabs */}
-            <div className="flex border-b border-slate-100 px-5">
-              {(["info", "stages", "approvals"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setTab(t)}
-                  className={`px-3 py-2.5 text-xs font-medium border-b-2 transition-colors ${
-                    tab === t
-                      ? "border-slate-800 text-slate-900"
-                      : "border-transparent text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  {t === "info"
-                    ? "Info Order"
-                    : t === "stages"
-                      ? "Riwayat Tahap"
-                      : "Persetujuan"}
-                </button>
-              ))}
-            </div>
-
-            <div className="p-5 space-y-4">
-              {/* ── INFO TAB ── */}
-              {tab === "info" && (
-                <>
-                  {/* Customer */}
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
-                      Pelanggan
-                    </p>
-                    <div className="rounded-lg bg-slate-50 p-3 space-y-1">
-                      <p className="text-sm font-semibold text-slate-800">
-                        {o.customer_name}
-                      </p>
-                      {o.customer_wa && (
-                        <p className="text-xs text-slate-500">
-                          WhatsApp: {o.customer_wa}
-                        </p>
-                      )}
-                      {o.customer_email && (
-                        <p className="text-xs text-slate-500">
-                          Email: {o.customer_email}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Ring specs */}
-                  {(o.ukuran_pria || o.jenis_cincin_pria || o.ukiran_pria) && (
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
-                        Spesifikasi Pria
-                      </p>
-                      <div className="rounded-lg bg-slate-50 p-3 space-y-1.5 text-xs">
-                        {o.ukuran_pria && (
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Ukuran</span>
-                            <span className="font-semibold text-slate-700">
-                              {o.ukuran_pria}
-                            </span>
-                          </div>
-                        )}
-                        {o.jenis_cincin_pria && (
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Jenis</span>
-                            <span className="font-semibold text-slate-700">
-                              {o.jenis_cincin_pria}
-                            </span>
-                          </div>
-                        )}
-                        {o.ukiran_pria && (
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Ukiran</span>
-                            <span className="font-semibold text-slate-700 font-mono">
-                              {o.ukiran_pria}
-                            </span>
-                          </div>
-                        )}
-                        {o.keterangan_pria && o.keterangan_pria.length > 0 && (
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Ket.</span>
-                            <span className="text-slate-600 text-right max-w-[60%]">
-                              {o.keterangan_pria.join(", ")}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {(o.ukuran_wanita ||
-                    o.jenis_cincin_wanita ||
-                    o.ukiran_wanita) && (
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
-                        Spesifikasi Wanita
-                      </p>
-                      <div className="rounded-lg bg-slate-50 p-3 space-y-1.5 text-xs">
-                        {o.ukuran_wanita && (
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Ukuran</span>
-                            <span className="font-semibold text-slate-700">
-                              {o.ukuran_wanita}
-                            </span>
-                          </div>
-                        )}
-                        {o.jenis_cincin_wanita && (
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Jenis</span>
-                            <span className="font-semibold text-slate-700">
-                              {o.jenis_cincin_wanita}
-                            </span>
-                          </div>
-                        )}
-                        {o.ukiran_wanita && (
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Ukiran</span>
-                            <span className="font-semibold text-slate-700 font-mono">
-                              {o.ukiran_wanita}
-                            </span>
-                          </div>
-                        )}
-                        {o.keterangan_wanita &&
-                          o.keterangan_wanita.length > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">Ket.</span>
-                              <span className="text-slate-600 text-right max-w-[60%]">
-                                {o.keterangan_wanita.join(", ")}
-                              </span>
-                            </div>
-                          )}
-                      </div>
-                    </div>
-                  )}
-
-                  {(o.font || o.laser_position) && (
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      {o.font && (
-                        <div className="bg-slate-50 rounded p-2">
-                          <span className="text-slate-400">Font</span>
-                          <p className="font-medium text-slate-700">{o.font}</p>
-                        </div>
-                      )}
-                      {o.laser_position && (
-                        <div className="bg-slate-50 rounded p-2">
-                          <span className="text-slate-400">Posisi Laser</span>
-                          <p className="font-medium text-slate-700">
-                            {o.laser_position}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Reference images */}
-                  {(o.reference_image_pria_url ||
-                    o.reference_image_wanita_url) && (
-                    <div className="flex gap-2">
-                      {o.reference_image_pria_url && (
-                        <a
-                          href={o.reference_image_pria_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 rounded-lg border border-blue-200 bg-blue-50 py-2 text-center text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
-                        >
-                          Referensi Pria ↗
-                        </a>
-                      )}
-                      {o.reference_image_wanita_url && (
-                        <a
-                          href={o.reference_image_wanita_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 rounded-lg border border-blue-200 bg-blue-50 py-2 text-center text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
-                        >
-                          Referensi Wanita ↗
-                        </a>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Price & dates */}
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-slate-50 rounded p-2">
-                      <span className="text-slate-400">Total Harga</span>
-                      <p className="font-semibold text-slate-700">
-                        {formatCurrency(o.harga)}
-                      </p>
-                    </div>
-                    <div className="bg-slate-50 rounded p-2">
-                      <span className="text-slate-400">DP</span>
-                      <p className="font-semibold text-slate-700">
-                        {formatCurrency(o.dp_amount)}
-                      </p>
-                    </div>
-                    {o.tgl_order && (
-                      <div className="bg-slate-50 rounded p-2">
-                        <span className="text-slate-400">Tgl Order</span>
-                        <p className="font-medium text-slate-700">
-                          {formatDate(o.tgl_order)}
-                        </p>
-                      </div>
-                    )}
-                    <div className="bg-slate-50 rounded p-2">
-                      <span className="text-slate-400">Deadline</span>
-                      <p
-                        className={`font-medium ${o.deadline && new Date(o.deadline) < new Date() ? "text-rose-600" : "text-slate-700"}`}
-                      >
-                        {formatDate(o.deadline)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Estimated completion */}
-                  {o.current_stage && (
-                    <EstimatedCompletion
-                      currentStage={o.current_stage}
-                      deadline={o.deadline}
-                    />
-                  )}
-                </>
-              )}
-
-              {/* ── STAGES TAB ── */}
-              {tab === "stages" && (
-                <StageTimeline
-                  transitions={detail.transitions}
-                  stageResults={detail.stageResults}
-                  scanEvents={detail.scanEvents}
-                  approvals={detail.approvals}
-                  currentStage={detail.order.current_stage}
-                />
-              )}
-
-              {/* ── APPROVALS TAB ── */}
-              {tab === "approvals" && (
-                <>
-                  {detail.approvals.length === 0 ? (
-                    <p className="text-sm text-slate-400 text-center py-8">
-                      Belum ada riwayat persetujuan
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {detail.approvals.map((a) => (
-                        <div
-                          key={a.id}
-                          className="rounded-lg border border-slate-200 p-3 text-xs"
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-medium text-slate-700">
-                              {getStageLabel(a.stage)}
-                            </span>
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                a.decision === "approved"
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-rose-100 text-rose-700"
-                              }`}
-                            >
-                              {a.decision === "approved"
-                                ? "Disetujui"
-                                : "Ditolak"}
-                            </span>
-                          </div>
-                          <p className="text-slate-500">
-                            {a.users?.full_name || "—"} ·{" "}
-                            {formatDateTime(a.decided_at)}
-                          </p>
-                          {a.remarks && (
-                            <p className="text-slate-500 mt-1 italic">
-                              "{a.remarks}"
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
-
-type SupervisorGroup = "all" | "production" | "operational";
 
 export default function SupervisorBottleneckPage() {
   const router = useRouter();
-  const [data, setData] = useState<BottleneckData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [userEmail, setUserEmail] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
@@ -861,6 +361,14 @@ export default function SupervisorBottleneckPage() {
   const [filterGroup, setFilterGroup] =
     useState<SupervisorGroup>("all");
   const [showHeatmap, setShowHeatmap] = useState(false);
+
+  const { data: res, isLoading, error, refetch, dataUpdatedAt, isRefetching } = useQuery<{ data: BottleneckData }>({
+    queryKey: ["bottleneck-monitoring"],
+    queryFn: () => fetcher<{ data: BottleneckData }>("/api/bottleneck"),
+    refetchInterval: 60_000,
+  });
+  const data = res?.data ?? null;
+  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
 
   useEffect(() => {
     (async () => {
@@ -899,28 +407,7 @@ export default function SupervisorBottleneckPage() {
     })();
   }, [router]);
 
-  const fetchData = useCallback(async (manual = false) => {
-    if (manual) setRefreshing(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/bottleneck");
-      if (!res.ok) throw new Error("Gagal memuat data bottleneck");
-      const json = await res.json();
-      setData(json.data);
-      setLastUpdated(new Date());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(() => fetchData(false), 60_000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
 
   const toggleStage = (stage: string) => {
     setExpandedStages((prev) => {
@@ -1004,26 +491,26 @@ export default function SupervisorBottleneckPage() {
                 </span>
               )}
               <button
-                onClick={() => fetchData(true)}
-                disabled={refreshing}
+                onClick={() => refetch()}
+                disabled={isRefetching}
                 className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 sm:px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60 whitespace-nowrap"
               >
                 <RefreshCw
-                  className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
+                  className={`h-3.5 w-3.5 ${isRefetching ? "animate-spin" : ""}`}
                 />
                 <span className="hidden sm:inline">Refresh</span>
               </button>
             </div>
           </div>
 
-          {loading ? (
+          {isLoading ? (
             <BottleneckSkeleton />
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center px-4">
               <AlertTriangle className="mb-3 h-8 w-8 text-rose-400" />
-              <p className="text-sm font-medium text-slate-700">{error}</p>
+              <p className="text-sm font-medium text-slate-700">{error instanceof Error ? error.message : "Terjadi kesalahan"}</p>
               <button
-                onClick={() => fetchData(true)}
+                onClick={() => refetch()}
                 className="mt-4 rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px]"
               >
                 Coba lagi

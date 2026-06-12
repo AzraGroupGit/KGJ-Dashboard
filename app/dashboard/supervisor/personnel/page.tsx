@@ -2,7 +2,9 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
@@ -28,13 +30,12 @@ interface Assignment {
   sort_order: number;
 }
 
+interface PersonnelResponse { success: boolean; data: { users: PersonnelUser[]; stages: string[] }; }
+
 export default function PersonnelPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userEmail, setUserEmail] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<PersonnelUser[]>([]);
-  const [stages, setStages] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -43,21 +44,6 @@ export default function PersonnelPage() {
   const [assignSubType, setAssignSubType] = useState("");
   const [assignCode, setAssignCode] = useState("");
   const [saving, setSaving] = useState(false);
-
-  const fetchData = useCallback(async () => {
-    try {
-      const res = await fetch("/api/supervisor/personnel");
-      const json = await res.json();
-      if (json.success) {
-        setUsers(json.data.users);
-        setStages(json.data.stages);
-      }
-    } catch {
-      setMessage({ type: "error", text: "Gagal memuat data" });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -68,9 +54,16 @@ export default function PersonnelPage() {
       }
       const json = await res.json();
       setUserEmail(json.data.username || json.data.full_name || "");
-      fetchData();
     })();
-  }, [router, fetchData]);
+  }, [router]);
+
+  const { data: personnelData, isLoading, refetch: refetchPersonnel } = useQuery<PersonnelResponse>({
+    queryKey: ["supervisor-personnel"],
+    queryFn: () => fetcher("/api/supervisor/personnel"),
+  });
+
+  const users = personnelData?.data.users ?? [];
+  const stages = personnelData?.data.stages ?? [];
 
   const filtered = users.filter((u) =>
     !search ||
@@ -84,7 +77,7 @@ export default function PersonnelPage() {
     const json = await res.json();
     if (json.success) {
       setMessage({ type: "success", text: "Berhasil dihapus" });
-      fetchData();
+      refetchPersonnel();
     } else {
       setMessage({ type: "error", text: json.error || "Gagal menghapus" });
     }
@@ -94,7 +87,7 @@ export default function PersonnelPage() {
     e.preventDefault();
     if (!assignModal || !assignStage || !assignCode) return;
     setSaving(true);
-    const body: Record<string, any> = { user_id: assignModal.user.id, stage: assignStage, person_code: assignCode };
+    const body: { user_id: string; stage: string; person_code: string; sub_type?: string } = { user_id: assignModal.user.id, stage: assignStage, person_code: assignCode };
     if (assignStage === "laser") body.sub_type = assignSubType;
     const res = await fetch("/api/supervisor/personnel", {
       method: "POST",
@@ -108,7 +101,7 @@ export default function PersonnelPage() {
       setAssignStage("");
       setAssignSubType("");
       setAssignCode("");
-      fetchData();
+      refetchPersonnel();
     } else {
       setMessage({ type: "error", text: json.error || "Gagal menambahkan" });
     }
@@ -159,7 +152,7 @@ export default function PersonnelPage() {
             </div>
 
             {/* Table */}
-            {loading ? (
+            {isLoading ? (
               <div className="text-center py-12 text-gray-500">Memuat data...</div>
             ) : (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

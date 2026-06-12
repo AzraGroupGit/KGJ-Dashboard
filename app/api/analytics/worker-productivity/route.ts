@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStageLabel } from "@/lib/stages";
+import { getRoleProps } from "@/lib/auth/session";
 
 export async function GET() {
   try {
@@ -26,10 +27,10 @@ export async function GET() {
     }
 
     const filtered = (workers || []).filter(
-      (w: any) => !EXCLUDED_ROLES.has((w.role as any)?.name ?? ""),
+      (w) => !EXCLUDED_ROLES.has(getRoleProps(w).name),
     );
 
-    const workerIds = filtered.map((w: any) => w.id);
+    const workerIds = filtered.map((w) => w.id);
 
     // Get all stage results by these workers
     const { data: stageResults } = await db
@@ -49,23 +50,25 @@ export async function GET() {
       .in("created_by", workerIds)
       .is("deleted_at", null);
 
-    const stageByWorker = new Map<string, any[]>();
-    for (const sr of stageResults || []) {
+    type StageRec = { id: string; order_id: string; stage: string; started_at: string | null; finished_at: string | null; data: Record<string, unknown> | null; user_id: string };
+    const stageByWorker = new Map<string, StageRec[]>();
+    for (const sr of (stageResults ?? []) as StageRec[]) {
       if (!stageByWorker.has(sr.user_id)) {
         stageByWorker.set(sr.user_id, []);
       }
       stageByWorker.get(sr.user_id)!.push(sr);
     }
 
-    const txByWorker = new Map<string, any[]>();
-    for (const tx of materialTx || []) {
+    type TxRec = { order_id: string; type: string; amount: number; gramasi: number | null; created_by: string };
+    const txByWorker = new Map<string, TxRec[]>();
+    for (const tx of (materialTx ?? []) as TxRec[]) {
       if (!txByWorker.has(tx.created_by)) {
         txByWorker.set(tx.created_by, []);
       }
       txByWorker.get(tx.created_by)!.push(tx);
     }
 
-    const workersData = (filtered || []).map((w: any) => {
+    const workersData = (filtered || []).map((w) => {
       const results = stageByWorker.get(w.id) || [];
       const materialTxns = txByWorker.get(w.id) || [];
 
@@ -124,8 +127,8 @@ export async function GET() {
       return {
         userId: w.id,
         fullName: w.full_name,
-        roleName: (w.role as any)?.name ?? "",
-        roleGroup: (w.role as any)?.role_group ?? "",
+        roleName: getRoleProps(w).name,
+        roleGroup: getRoleProps(w).role_group,
         totalScans,
         totalCompleted,
         totalOrders,

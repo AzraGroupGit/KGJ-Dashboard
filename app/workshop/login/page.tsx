@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef, Suspense } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import BrandHeader from "@/components/qr/BrandHeader";
 import LoginForm from "@/components/qr/LoginForm";
 import WorkerSelect from "@/components/qr/WorkerSelect";
 import PinPad from "@/components/qr/PinPad";
+import { Loader2, Check, Delete } from "lucide-react";
 import { getDashboardPath } from "@/lib/routes";
 
 type Step = "loading" | "workers" | "pin" | "setup" | "manual";
@@ -80,16 +83,11 @@ function Numpad({
                   disabled={disabled}
                   className="flex h-16 w-16 items-center justify-center rounded-xl bg-stone-800 text-white shadow-sm transition-all hover:bg-stone-900 active:scale-[0.95] disabled:opacity-30"
                 >
-                  {disabled ? (
-                    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
-                      <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor" className="opacity-75" />
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                  )}
+                    {disabled ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Check className="h-5 w-5" strokeWidth={2.5} />
+                    )}
                 </button>
               ) : (
                 <div key="sp" className="h-16 w-16" />
@@ -123,10 +121,20 @@ function WorkshopLoginContent() {
   const qrToken = searchParams.get("qr_token");
 
   const [step, setStep] = useState<Step>(qrToken ? "workers" : "manual");
-  const [workers, setWorkers] = useState<WorkerInfo[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<WorkerInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { data: workers = [] } = useQuery<WorkerInfo[]>({
+    queryKey: ["workshop-workers", qrToken],
+    queryFn: async () => {
+      const res = await fetcher<{ success: boolean; data: { workers: WorkerInfo[] } }>(
+        `/api/workshop/workers?qr_token=${encodeURIComponent(qrToken!)}`,
+      );
+      return res.data?.workers ?? [];
+    },
+    enabled: !!qrToken,
+  });
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
 
   // Setup state
@@ -215,25 +223,6 @@ function WorkshopLoginContent() {
     },
     [doRedirect],
   );
-
-  // Fetch workers on mount
-  useEffect(() => {
-    if (!qrToken) return;
-    (async () => {
-      try {
-        const res = await fetch(`/api/workshop/workers?qr_token=${encodeURIComponent(qrToken)}`);
-        const data = await res.json();
-        if (data.success && data.data?.workers) {
-          setWorkers(data.data.workers);
-        }
-        if (data.error) {
-          setError(data.error);
-        }
-      } catch {
-        setError("Gagal memuat daftar pekerja");
-      }
-    })();
-  }, [qrToken]);
 
   // ── PIN login handler ──────────────────────────────────────────
 
@@ -527,9 +516,7 @@ function WorkshopLoginContent() {
                 disabled={setupPin.length === 0 || setupSubmitting}
                 className="mb-3 flex h-12 w-[148px] items-center justify-center gap-1.5 rounded-xl border-2 border-stone-200 bg-white text-[14px] font-medium text-stone-500 transition-all hover:border-stone-300 hover:bg-stone-50 active:scale-[0.95] disabled:opacity-30 mx-auto"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-4 w-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9.75L14.25 12m0 0l2.25 2.25M14.25 12l2.25-2.25M14.25 12L12 14.25m-2.58 4.92l-6.375-6.375a1.125 1.125 0 010-1.59L9.42 4.83c.211-.211.498-.33.796-.33H19.5a2.25 2.25 0 012.25 2.25v10.5a2.25 2.25 0 01-2.25 2.25h-9.284c-.298 0-.585-.119-.796-.33z" />
-                </svg>
+                <Delete className="h-4 w-4" strokeWidth={1.5} />
                 Hapus
               </button>
               <br />

@@ -2,12 +2,16 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import BrandHeader from "@/components/qr/BrandHeader";
 import StageInputForm from "@/components/qr/StageInputForm";
+import { Loader2, ChevronRight, ChevronLeft, CheckCircle, X, AlertTriangle, Key, Search, ClipboardList } from "lucide-react";
 import { formatAddsOnList } from "@/lib/adds-on";
 import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
+import type { Field } from "@/components/fields/types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -23,7 +27,7 @@ interface UserProfile {
   };
 }
 
-interface OrderInfo {
+interface WorkshopOrderInfo {
   id: string;
   order_number: string;
   current_stage: string;
@@ -34,19 +38,7 @@ interface OrderInfo {
   customer_name: string | null;
 }
 
-interface StageField {
-  name: string;
-  label: string;
-  type: string;
-  required: boolean;
-  options?: { value: string; label: string }[];
-  placeholder?: string;
-  unit?: string;
-  min?: number;
-  max?: number;
-}
-
-interface WorkOrder {
+interface WorkshopWorkOrder {
   deadline: string | null;
   customer_name: string | null;
   customer_email: string | null;
@@ -94,10 +86,57 @@ interface FormConfig {
   stage: string;
   stage_type?: string;
   stage_label: string;
-  fields: StageField[];
-  permissions: { can_submit: boolean; can_edit: boolean };
+  fields: Field[];
+  permissions: { can_submit: boolean; can_edit: boolean; can_reject: boolean };
   current_data?: Record<string, unknown>;
-  work_order?: WorkOrder;
+  work_order?: WorkshopWorkOrder;
+}
+
+interface OrderDetailData {
+  customer_name: string | null;
+  tgl_order: string | null;
+  tgl_acara: string | null;
+  deadline: string | null;
+  kategori: string | null;
+  acara: string | null;
+  jenis_cincin_features: string[] | null;
+  gramasi_pria: number | null;
+  ukuran_pria: string | null;
+  jenis_cincin_pria: string | null;
+  ukiran_pria: string | null;
+  ukiran_cincin_pria: string | null;
+  model_bentuk_pria: string[] | null;
+  microsetting_pria: string[] | null;
+  detail_laser_pria: string[] | null;
+  detail_finishing_pria: string[] | null;
+  gramasi_wanita: number | null;
+  ukuran_wanita: string | null;
+  jenis_cincin_wanita: string | null;
+  ukiran_wanita: string | null;
+  ukiran_cincin_wanita: string | null;
+  model_bentuk_wanita: string[] | null;
+  microsetting_wanita: string[] | null;
+  detail_laser_wanita: string[] | null;
+  detail_finishing_wanita: string[] | null;
+  font: string | null;
+  laser_position: string | null;
+  pengiriman: string | null;
+  box: string | null;
+  dari_artis_detail: string | null;
+}
+
+interface WorkerHistoryItem {
+  id: string;
+  order_id: string;
+  order_number: string;
+  stage_label: string;
+  stage: string;
+  started_at: string;
+  finished_at: string | null;
+  data: Record<string, unknown>;
+  notes?: string | null;
+  user_id?: string;
+  attempt_number?: number;
 }
 
 type Phase = "loading" | "list" | "form" | "success";
@@ -172,11 +211,11 @@ function getTheme(roleGroup: string): Theme {
   return GROUP_THEME.default;
 }
 
-function inputCls(theme: Theme) {
+function _inputCls(theme: Theme) {
   return `w-full rounded-xl border border-stone-200 bg-stone-50/50 py-2.5 px-3.5 text-[14px] text-stone-700 placeholder:text-stone-300 focus:bg-white focus:outline-none focus:ring-2 transition-all ${theme.ring}`;
 }
 
-function FieldRow({
+function _FieldRow({
   label,
   theme,
   children,
@@ -196,27 +235,7 @@ function FieldRow({
 }
 
 function SpinIcon({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg
-      className={`animate-spin ${className}`}
-      viewBox="0 0 24 24"
-      fill="none"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="3"
-        className="opacity-25"
-      />
-      <path
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-        fill="currentColor"
-        className="opacity-75"
-      />
-    </svg>
-  );
+  return <Loader2 className={`animate-spin ${className}`} />;
 }
 
 // ── Phase: Loading ────────────────────────────────────────────────────────────
@@ -238,20 +257,32 @@ function PhaseOrderList({
   search,
   sortBy,
   onSelect,
-  onLogout,
+  _onLogout,
 }: {
   user: UserProfile;
   theme: Theme;
   search: string;
   sortBy: "newest" | "deadline";
-  onSelect: (order: OrderInfo) => Promise<void>;
-  onLogout: () => void;
+  onSelect: (order: WorkshopOrderInfo) => Promise<void>;
+  _onLogout: () => void;
 }) {
-  const [orders, setOrders] = useState<OrderInfo[]>([]);
-  const [isFetching, setIsFetching] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectingId, setSelectingId] = useState<string | null>(null);
   const [selectError, setSelectError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data: orders = [], isFetching, error: fetchError, refetch } = useQuery<WorkshopOrderInfo[]>({
+    queryKey: ["workshop-orders", debouncedSearch],
+    queryFn: async () => {
+      const url = `/api/workshop/orders${debouncedSearch ? `?q=${encodeURIComponent(debouncedSearch)}` : ""}`;
+      const res = await fetcher<{ data: WorkshopOrderInfo[] }>(url);
+      return res.data ?? [];
+    },
+  });
 
   const roleStages = (
     user.role.allowed_stages.length > 0
@@ -259,7 +290,7 @@ function PhaseOrderList({
       : (ROLE_STAGE_MAP[user.role.name] ?? [])
   ).filter((s) => s !== "penerimaan_order" && !s.startsWith("approval_"));
 
-  const roleLabel =
+  const _roleLabel =
     roleStages.map((s) => STAGE_LABELS[s] ?? s).join(", ") || user.role.name;
 
   const displayOrders = orders
@@ -280,32 +311,7 @@ function PhaseOrderList({
       return 0;
     });
 
-  const fetchOrders = useCallback(async (q: string) => {
-    setIsFetching(true);
-    setFetchError(null);
-    try {
-      const url = `/api/workshop/orders${q ? `?q=${encodeURIComponent(q)}` : ""}`;
-      const res = await fetch(url);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Gagal memuat daftar order");
-      setOrders(json.data ?? []);
-    } catch (err) {
-      setFetchError(err instanceof Error ? err.message : "Gagal memuat data");
-    } finally {
-      setIsFetching(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchOrders("");
-  }, [fetchOrders]);
-
-  useEffect(() => {
-    const t = setTimeout(() => fetchOrders(search), 350);
-    return () => clearTimeout(t);
-  }, [search, fetchOrders]);
-
-  const handleSelect = async (order: OrderInfo) => {
+  const handleSelect = async (order: WorkshopOrderInfo) => {
     setSelectingId(order.id);
     setSelectError(null);
     try {
@@ -351,9 +357,9 @@ function PhaseOrderList({
           </div>
         ) : fetchError ? (
           <div className="flex flex-col items-center gap-3 py-12 px-6 text-center">
-            <p className="text-[13px] text-red-500">{fetchError}</p>
+            <p className="text-[13px] text-red-500">{fetchError instanceof Error ? fetchError.message : "Terjadi kesalahan"}</p>
             <button
-              onClick={() => fetchOrders(search)}
+              onClick={() => refetch()}
               className={`rounded-lg px-4 py-2 text-[13px] font-medium text-white ${theme.btn}`}
             >
               Coba lagi
@@ -361,19 +367,7 @@ function PhaseOrderList({
           </div>
         ) : displayOrders.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-14 px-6 text-center">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              className="h-10 w-10 text-stone-200"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
-            </svg>
+            <ClipboardList className="h-10 w-10 text-stone-200" strokeWidth={1.5} />
             <p className="text-[14px] font-medium text-stone-400">
               {search
                 ? "Order tidak ditemukan"
@@ -438,19 +432,7 @@ function PhaseOrderList({
                         {isSelecting ? (
                           <SpinIcon className={`h-4 w-4 text-stone-400`} />
                         ) : (
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                            className="h-4 w-4 text-stone-300"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M9 5l7 7-7 7"
-                            />
-                          </svg>
+                          <ChevronRight className="h-4 w-4 text-stone-300" strokeWidth={2} />
                         )}
                       </div>
                     </div>
@@ -465,7 +447,7 @@ function PhaseOrderList({
       {/* Refresh hint */}
       {!isFetching && !fetchError && displayOrders.length > 0 && (
         <button
-          onClick={() => fetchOrders(search)}
+          onClick={() => refetch()}
           className="mt-3 w-full text-center text-[12px] text-stone-300 hover:text-stone-500 transition-colors py-1"
         >
           Refresh daftar
@@ -475,9 +457,49 @@ function PhaseOrderList({
   );
 }
 
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+const Row = ({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | null | undefined;
+}) =>
+  value !== null && value !== undefined && value !== "" ? (
+    <div className="flex gap-2 text-[12px]">
+      <span className="shrink-0 text-stone-400 w-28">{label}</span>
+      <span className="text-stone-700 font-medium break-words">{String(value)}</span>
+    </div>
+  ) : null;
+
+const DetailCard = ({
+  title,
+  items,
+  color,
+}: {
+  title: string;
+  items: string[] | null | undefined;
+  color: string;
+}) => {
+  if (!items?.length) return null;
+  return (
+    <div className={`rounded-lg border ${color} p-2.5 space-y-1`}>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-500">
+        {title}
+      </p>
+      {items.map((item, i) => (
+        <p key={i} className="text-[12px] text-stone-700 font-medium">
+          {item}
+        </p>
+      ))}
+    </div>
+  );
+};
+
 // ── Work Order Card ───────────────────────────────────────────────────────────
 
-function WorkOrderCard({ wo, theme }: { wo: WorkOrder; theme: Theme }) {
+function WorkshopWorkOrderCard({ wo, theme }: { wo: WorkshopWorkOrder; theme: Theme }) {
   const hasPria =
     wo.pria &&
     (wo.pria.ukuran ||
@@ -497,44 +519,6 @@ function WorkOrderCard({ wo, theme }: { wo: WorkOrder; theme: Theme }) {
       wo.wanita.detail_laser?.length ||
       wo.wanita.detail_finishing?.length);
   const hasLaser = wo.font || wo.laser_position;
-
-  const Row = ({
-    label,
-    value,
-  }: {
-    label: string;
-    value: string | number | null | undefined;
-  }) =>
-    value !== null && value !== undefined && value !== "" ? (
-      <div className="flex gap-2 text-[12px]">
-        <span className="shrink-0 text-stone-400 w-28">{label}</span>
-        <span className="text-stone-700 font-medium">{String(value)}</span>
-      </div>
-    ) : null;
-
-  const DetailCard = ({
-    title,
-    items,
-    color,
-  }: {
-    title: string;
-    items: string[] | null | undefined;
-    color: string;
-  }) => {
-    if (!items?.length) return null;
-    return (
-      <div className={`rounded-lg border ${color} p-2.5 space-y-1`}>
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-500">
-          {title}
-        </p>
-        {items.map((item, i) => (
-          <p key={i} className="text-[12px] text-stone-700 font-medium">
-            {item}
-          </p>
-        ))}
-      </div>
-    );
-  };
 
   return (
     <div
@@ -747,7 +731,7 @@ function PhaseForm({
   onBack,
 }: {
   user: UserProfile;
-  order: OrderInfo;
+  order: WorkshopOrderInfo;
   config: FormConfig;
   theme: Theme;
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
@@ -762,19 +746,7 @@ function PhaseForm({
           onClick={onBack}
           className="flex items-center gap-1 text-[13px] text-stone-400 hover:text-stone-600 transition-colors"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            className="h-4 w-4"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
+          <ChevronLeft className="h-4 w-4" strokeWidth={2} />
           Daftar order
         </button>
         <p className="text-[13px] font-medium text-stone-700">
@@ -831,12 +803,12 @@ function PhaseForm({
       </div>
 
       {config.work_order && (
-        <WorkOrderCard wo={config.work_order} theme={theme} />
+        <WorkshopWorkOrderCard wo={config.work_order} theme={theme} />
       )}
 
       <StageInputForm
-        fields={config.fields as any}
-        permissions={config.permissions as any}
+        fields={config.fields}
+        permissions={config.permissions}
         initialData={config.current_data}
         onSubmit={onSubmit}
         stageType={config.stage_type}
@@ -862,19 +834,7 @@ function PhaseSuccess({
   return (
     <div className="w-full max-w-[380px] text-center">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-50 border border-green-200">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-          className="h-8 w-8 text-green-500"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+        <CheckCircle className="h-8 w-8 text-green-500" strokeWidth={1.5} />
       </div>
       <h2 className="text-[18px] font-semibold text-stone-800 mb-1">
         Data Tersimpan
@@ -912,13 +872,13 @@ function WorkerHistorySection({
   expanded,
   onToggle,
 }: {
-  history: any[];
+  history: WorkerHistoryItem[];
   search: string;
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const [detail, setDetail] = useState<any | null>(null);
-  const [orderDetail, setOrderDetail] = useState<any | null>(null);
+  const [detail, setDetail] = useState<WorkerHistoryItem | null>(null);
+  const [orderDetail, setOrderDetail] = useState<OrderDetailData | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const q = search.toLowerCase();
@@ -949,7 +909,7 @@ function WorkerHistorySection({
               Tidak ada hasil pencarian
             </div>
           ) : (
-            display.map((h: any) => (
+            display.map((h) => (
               <button
                 key={h.id}
                 onClick={async () => {
@@ -979,21 +939,9 @@ function WorkerHistorySection({
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                   <p className="text-[11px] text-stone-400">
-                    {formatDate(h.finished_at)}
+                    {h.finished_at ? formatDate(h.finished_at) : ""}
                   </p>
-                  <svg
-                    className="w-3.5 h-3.5 text-stone-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
+                  <ChevronRight className="w-3.5 h-3.5 text-stone-300" strokeWidth={2} />
                 </div>
               </button>
             ))
@@ -1034,19 +982,7 @@ function WorkerHistorySection({
                 }}
                 className="text-stone-400 hover:text-stone-600"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <X className="w-5 h-5" strokeWidth={2} />
               </button>
             </div>
 
@@ -1075,7 +1011,7 @@ function WorkerHistorySection({
                     {detail.stage_label}
                   </p>
                   <p className="text-stone-400 text-[12px]">
-                    {formatDate(detail.finished_at)}
+                    {formatDate(detail.finished_at!)}
                   </p>
                 </div>
 
@@ -1141,7 +1077,7 @@ function WorkerHistorySection({
                     <p className="text-[10px] font-medium uppercase tracking-wider text-stone-400 mb-0.5">
                       Adds-On
                     </p>
-                    <p className="text-stone-700">
+                    <p className="text-stone-700 break-words">
                       {formatAddsOnList(orderDetail.jenis_cincin_features)}
                     </p>
                   </div>
@@ -1374,8 +1310,8 @@ function WorkerHistorySection({
                     <div className="bg-stone-50 rounded-xl px-3 py-2.5 space-y-1.5">
                       {Object.entries(detail.data).map(([key, value]) => {
                         const displayVal = Array.isArray(value)
-                          ? (value as any[])
-                              .map((v: any) =>
+                          ? (value as unknown[])
+                              .map((v) =>
                                 typeof v === "object"
                                   ? JSON.stringify(v)
                                   : String(v),
@@ -1449,49 +1385,27 @@ function WorkerHistorySection({
 
 function WorkshopInputContent() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [phase, setPhase] = useState<Phase>("loading");
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [order, setOrder] = useState<OrderInfo | null>(null);
+  const [order, setOrder] = useState<WorkshopOrderInfo | null>(null);
   const [config, setConfig] = useState<FormConfig | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [workerHistory, setWorkerHistory] = useState<any[]>([]);
-  const [historyTotal, setHistoryTotal] = useState(0);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [listSearch, setListSearch] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "deadline">("deadline");
   const [listTab, setListTab] = useState<"orders" | "history">("orders");
 
-  // Load worker history on mount
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/workshop/history?limit=200");
-        if (!res.ok) return;
-        const json = await res.json();
-        if (json.success) {
-          setWorkerHistory(json.data);
-          setHistoryTotal(json.total);
-        }
-      } catch (e) {
-        console.warn("[workshop/input] load history failed:", e);
-      }
-    })();
-  }, []);
-
-  // Refresh history after a successful submission
-  const refreshHistory = useCallback(async () => {
-    try {
-      const res = await fetch("/api/workshop/history?limit=200");
-      if (!res.ok) return;
-      const json = await res.json();
-      if (json.success) {
-        setWorkerHistory(json.data);
-        setHistoryTotal(json.total);
-      }
-    } catch (e) {
-      console.warn("[workshop/input] refresh history failed:", e);
-    }
-  }, []);
+  const {
+    data: workerHistory = [],
+    refetch: refetchHistory,
+  } = useQuery<WorkerHistoryItem[]>({
+    queryKey: ["workshop-history"],
+    queryFn: () =>
+      fetcher<{ success: boolean; data: Record<string, unknown>[] }>("/api/workshop/history?limit=200").then(
+        (r) => (r.success ? (r.data ?? []) as unknown as WorkerHistoryItem[] : []),
+      ),
+  });
 
   // Load user profile on mount
   useEffect(() => {
@@ -1517,7 +1431,7 @@ function WorkshopInputContent() {
 
   // Called when worker taps an order card — fetch form config directly
   const handleSelect = useCallback(
-    async (selectedOrder: OrderInfo) => {
+    async (selectedOrder: WorkshopOrderInfo) => {
       if (!user) return;
 
       const allowedStages: string[] = user.role.allowed_stages ?? [];
@@ -1558,7 +1472,7 @@ function WorkshopInputContent() {
       const data = { ...formData };
       // StageInputForm uses check_key; API expects key
       if (Array.isArray(data.quality_checklist)) {
-        data.quality_checklist = (data.quality_checklist as any[]).map(
+        data.quality_checklist = (data.quality_checklist as Array<Record<string, unknown>>).map(
           (item) => ({
             key: item.check_key ?? item.key,
             passed: item.passed,
@@ -1572,10 +1486,11 @@ function WorkshopInputContent() {
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error ?? "Gagal menyimpan data");
-      refreshHistory();
+      refetchHistory();
+      queryClient.invalidateQueries({ queryKey: ["workshop-orders"] });
       setPhase("success");
     },
-    [order, config, refreshHistory],
+    [order, config, refetchHistory, queryClient],
   );
 
   const handleLogout = useCallback(async () => {
@@ -1595,19 +1510,7 @@ function WorkshopInputContent() {
         <BrandHeader subtitle="Workshop Access Point" />
         <div className="rounded-2xl border border-red-100 bg-white/90 p-7 shadow-sm">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              className="h-7 w-7 text-red-400"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-              />
-            </svg>
+            <AlertTriangle className="h-7 w-7 text-red-400" strokeWidth={1.5} />
           </div>
           <p className="text-[14px] text-stone-600 mb-5">{loadError}</p>
           <button
@@ -1651,19 +1554,7 @@ function WorkshopInputContent() {
               onClick={() => router.push("/workshop/settings/pin")}
               className="text-[11px] text-stone-400 hover:text-stone-600 transition-colors flex items-center gap-1"
             >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.5}
-                className="h-3 w-3"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"
-                />
-              </svg>
+              <Key className="h-3 w-3" strokeWidth={1.5} />
               Pengaturan PIN
             </button>
           </div>
@@ -1686,16 +1577,7 @@ function WorkshopInputContent() {
         <div className="relative mb-3">
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-300 pointer-events-none"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path strokeLinecap="round" d="M21 21l-4.35-4.35" />
-              </svg>
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-300 pointer-events-none" strokeWidth={2} />
               <input
                 type="text"
                 value={listSearch}
@@ -1708,15 +1590,7 @@ function WorkshopInputContent() {
                   onClick={() => setListSearch("")}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-300 hover:text-stone-500"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    className="h-4 w-4"
-                  >
-                    <path strokeLinecap="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <X className="h-4 w-4" strokeWidth={2} />
                 </button>
               )}
             </div>
@@ -1764,7 +1638,7 @@ function WorkshopInputContent() {
             search={listSearch}
             sortBy={sortBy}
             onSelect={handleSelect}
-            onLogout={handleLogout}
+            _onLogout={handleLogout}
           />
         ) : (
           <WorkerHistorySection

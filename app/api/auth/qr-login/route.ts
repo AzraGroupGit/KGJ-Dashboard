@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
 export async function POST(request: Request) {
   try {
@@ -57,9 +58,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const roleObj = userData.role as any;
-    const roleName = roleObj?.name;
-    const roleGroup = roleObj?.role_group;
+    const roleProps = getRoleProps(userData);
+    const roleName = roleProps.name;
+    const roleGroup = roleProps.role_group;
 
     // QR login hanya untuk workshop + management (supervisor)
     if (roleName === "superadmin") {
@@ -139,11 +140,11 @@ export async function POST(request: Request) {
         username: userData.username,
         role: roleName,
         roleDetail: {
-          id: roleObj.id,
-          name: roleObj.name,
-          role_group: roleObj.role_group,
-          permissions: roleObj.permissions,
-          allowed_stages: roleObj.allowed_stages,
+          id: roleProps.id,
+          name: roleProps.name,
+          role_group: roleProps.role_group,
+          permissions: roleProps.permissions,
+          allowed_stages: roleProps.allowed_stages,
         },
       },
     });

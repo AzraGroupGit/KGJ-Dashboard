@@ -2,69 +2,30 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, startTransition } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import Alert from "@/components/ui/Alert";
+import { BarChart3, Users, FileText, Info } from "lucide-react";
 
-interface MarketingInput {
-  id: string;
-  channel: string;
-  biaya_marketing: number;
-  lead_serius: number;
-  lead_all: number;
-  closing: number;
-  notes: string | null;
-  input_date: string;
-  created_at: string;
-  users?: {
-    full_name: string;
-    email: string;
-  };
-}
-
-interface AnalyticsData {
-  summary: {
-    totalBiayaMarketing: number;
-    totalLeadSerius: number;
-    totalLeadAll: number;
-    totalClosing: number;
-    roi: number;
-    crSerius: number;
-    crAll: number;
-    cpls: number;
-    cpla: number;
-    cac: number;
-    totalInputs: number;
-  };
-  channelMetrics: Array<{
-    channel: string;
-    biayaMarketing: number;
-    leadSerius: number;
-    leadAll: number;
-    closing: number;
-    roi: number;
-    crSerius: number;
-    cac: number;
-  }>;
-  recommendations: Array<{
-    type: "increase" | "decrease" | "warning" | "improve";
-    channel: string;
-    reason: string;
-    action: string;
-  }>;
-}
+import type { MarketingInput, AnalyticsData } from "@/types/marketing";
 
 export default function MarketingDashboard() {
-  const [marketingInputs, setMarketingInputs] = useState<MarketingInput[]>([]);
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const today = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const monthStart = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
+  const todayStr = fmt(today);
+
   const [alert, setAlert] = useState<{
     type: "success" | "error" | "warning" | "info";
     message: string;
   } | null>(null);
-  const [filterDate, setFilterDate] = useState({ from: "", to: "" });
+  const [filterDate, setFilterDate] = useState({ from: monthStart, to: todayStr });
   const [activePreset, setActivePreset] = useState("bulan-ini");
   const [showCustomRange, setShowCustomRange] = useState(false);
 
@@ -103,58 +64,44 @@ export default function MarketingDashboard() {
     }
   };
 
-  // Fetch marketing inputs
-  const fetchMarketingInputs = async () => {
-    try {
-      let url = "/api/marketing/inputs?limit=100";
-      if (filterDate.from) url += `&from=${filterDate.from}`;
-      if (filterDate.to) url += `&to=${filterDate.to}`;
+  const filterParams = new URLSearchParams();
+  if (filterDate.from) filterParams.set("from", filterDate.from);
+  if (filterDate.to) filterParams.set("to", filterDate.to);
 
-      const response = await fetch(url);
-      const data = await response.json();
-      if (data.data) {
-        setMarketingInputs(data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching marketing inputs:", error);
-      setAlert({
-        type: "error",
-        message: "Gagal memuat data marketing",
+  const marketingInputsUrl = `/api/marketing/inputs?limit=100&${filterParams.toString()}`;
+  const analyticsUrl = `/api/marketing/analytics?${filterParams.toString()}`;
+
+  const {
+    data: marketingInputsRes,
+    isLoading: inputsLoading,
+    error: inputsError,
+  } = useQuery<{ data: MarketingInput[] }>({
+    queryKey: ["marketing-inputs", filterDate],
+    queryFn: () => fetcher<{ data: MarketingInput[] }>(marketingInputsUrl),
+  });
+
+  const {
+    data: analyticsRes,
+    isLoading: analyticsLoading,
+  } = useQuery<{ data: AnalyticsData }>({
+    queryKey: ["marketing-analytics", filterDate],
+    queryFn: () => fetcher<{ data: AnalyticsData }>(analyticsUrl),
+  });
+
+  const marketingInputs = marketingInputsRes?.data ?? [];
+  const analytics = analyticsRes?.data ?? null;
+  const isLoading = inputsLoading || analyticsLoading;
+
+  useEffect(() => {
+    if (inputsError) {
+      startTransition(() => {
+        setAlert({
+          type: "error",
+          message: "Gagal memuat data marketing",
+        });
       });
     }
-  };
-
-  // Fetch analytics
-  const fetchAnalytics = async () => {
-    try {
-      let url = "/api/marketing/analytics?";
-      if (filterDate.from) url += `from=${filterDate.from}&`;
-      if (filterDate.to) url += `to=${filterDate.to}`;
-
-      const response = await fetch(url);
-      const data = await response.json();
-      if (data.data) {
-        setAnalytics(data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
-    }
-  };
-
-  // Fetch all data
-  const fetchAllData = async () => {
-    setIsLoading(true);
-    await Promise.all([fetchMarketingInputs(), fetchAnalytics()]);
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    applyPreset("bulan-ini");
-  }, []);
-
-  useEffect(() => {
-    fetchAllData();
-  }, [filterDate]);
+  }, [inputsError]);
 
   const calculateMetrics = (input: MarketingInput) => {
     const crSerius =
@@ -275,19 +222,7 @@ export default function MarketingDashboard() {
               <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm opacity-90">Conversion Rate</p>
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                    />
-                  </svg>
+                  <BarChart3 className="w-5 h-5" />
                 </div>
                 <p className="text-2xl font-bold">
                   {summary.crSerius.toFixed(1)}%
@@ -302,19 +237,7 @@ export default function MarketingDashboard() {
                   <p className="text-sm opacity-90">
                     Customer Acquisition Cost
                   </p>
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                    />
-                  </svg>
+                  <Users className="w-5 h-5" />
                 </div>
                 <p className="text-2xl font-bold">
                   Rp {summary.cac.toLocaleString("id-ID")}
@@ -325,19 +248,7 @@ export default function MarketingDashboard() {
               <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm opacity-90">Total Data Input</p>
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
+                  <FileText className="w-5 h-5" />
                 </div>
                 <p className="text-2xl font-bold">{summary.totalInputs}</p>
                 <p className="text-xs opacity-80 mt-2">Data marketing tercatat</p>
@@ -516,19 +427,7 @@ export default function MarketingDashboard() {
           {/* Info Section */}
           <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <svg
-                className="w-5 h-5 text-blue-600 mt-0.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <Info className="w-5 h-5 text-blue-600 mt-0.5" />
               <div>
                 <p className="text-sm text-blue-800 font-medium">
                   Informasi Metrik

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { STAGE_SEQUENCE, getStageLabel } from "@/lib/stages";
 import {
   AlertTriangle,
-  RefreshCw,
   BarChart3,
   TrendingUp,
 } from "lucide-react";
@@ -28,27 +29,10 @@ function fmtCount(n: number): string {
 }
 
 export default function BottleneckHeatmap() {
-  const [data, setData] = useState<HeatmapData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const res = await fetch("/api/analytics/bottleneck-history");
-        if (!res.ok) throw new Error("Gagal memuat data");
-        const json = await res.json();
-        setData(json);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+  const { data, isLoading, error } = useQuery<HeatmapData>({
+    queryKey: ["analytics", "bottleneck-history"],
+    queryFn: () => fetcher<HeatmapData>("/api/analytics/bottleneck-history"),
+  });
 
   const maxCount = useMemo(() => {
     if (!data) return 0;
@@ -61,7 +45,7 @@ export default function BottleneckHeatmap() {
     return max;
   }, [data]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-4 animate-pulse">
         {[1, 2, 3, 4, 5].map((i) => (
@@ -75,7 +59,7 @@ export default function BottleneckHeatmap() {
     return (
       <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-8 text-center">
         <AlertTriangle className="mx-auto mb-3 h-6 w-6 text-rose-600" />
-        <p className="text-sm text-rose-700">{error}</p>
+        <p className="text-sm text-rose-700">{error instanceof Error ? error.message : "Gagal memuat data"}</p>
       </div>
     );
   }
@@ -90,7 +74,7 @@ export default function BottleneckHeatmap() {
   }
 
   const dates = Object.keys(data.heatmap[STAGE_SEQUENCE[0]] || {}).sort();
-  const dayLabels = dates.map((d) => {
+  const _dayLabels = dates.map((d) => {
     const dt = new Date(d + "T00:00:00");
     return dt.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
   });

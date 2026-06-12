@@ -2,10 +2,11 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getDashboardPath } from "@/lib/routes";
+import { LogIn } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
@@ -24,7 +25,9 @@ export default function Home() {
         return;
       }
     }
-    setIsLoading(false);
+    startTransition(() => {
+      setIsLoading(false);
+    });
   }, [router]);
 
   if (isLoading) {
@@ -228,20 +231,7 @@ export default function Home() {
 
           <div className="cta-group">
             <Link href="/login" className="btn-primary">
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                <polyline points="10 17 15 12 10 7" />
-                <line x1="15" y1="12" x2="3" y2="12" />
-              </svg>
+              <LogIn className="w-4 h-4" />
               Masuk ke Dashboard
             </Link>
           </div>

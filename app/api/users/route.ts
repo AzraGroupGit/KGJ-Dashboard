@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
 // ════════════════════════════════════════════════════════════════════════════
 // CONSTANTS & TYPES
@@ -72,8 +73,7 @@ export async function requireSuperadmin(
     };
   }
 
-  const role = currentUser.role as any;
-  if (role?.name !== "superadmin") {
+  if (getRoleProps(currentUser).name !== "superadmin") {
     return {
       error: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
     };
@@ -86,9 +86,9 @@ export async function requireSuperadmin(
 // RESPONSE MAPPER  (export juga)
 // ════════════════════════════════════════════════════════════════════════════
 
-export function mapUserResponse(dbUser: any) {
+export function mapUserResponse(dbUser: Record<string, unknown>) {
   const roleObj = dbUser.role;
-  const roleName = roleObj?.name ?? null;
+  const roleName = (roleObj as any)?.name ?? null;
 
   return {
     // Common fields
@@ -191,12 +191,12 @@ export async function GET(request: Request) {
     // Filter role_group & role_name di aplikasi
     let filtered = data ?? [];
     if (roleGroups && roleGroups.length > 0) {
-      filtered = filtered.filter((u: any) =>
-        roleGroups.includes(u.role?.role_group),
+      filtered = filtered.filter((u) =>
+        roleGroups.includes((u.role as any)?.role_group),
       );
     }
     if (roleName) {
-      filtered = filtered.filter((u: any) => u.role?.name === roleName);
+      filtered = filtered.filter((u) => (u.role as any)?.name === roleName);
     }
 
     return NextResponse.json({

@@ -3,15 +3,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { STAGE_LABELS } from "@/lib/stages";
+import { getRoleProps } from "@/lib/auth/session";
+import { STAGE_SEQUENCE, STAGE_GROUP, STAGE_LABELS } from "@/lib/stages";
 
-const PRODUCTION_TO_APPROVAL_STAGE: Record<string, string> = {
-  penerimaan_order: "approval_penerimaan_order",
-  racik_bahan: "approval_racik_bahan",
-  qc_1: "approval_qc_1",
-  finishing: "approval_produksi",
-  qc_2: "approval_qc_2",
-};
+const APPROVAL_STAGES_ARRAY = STAGE_SEQUENCE.filter(s => s.startsWith("approval_"));
+
+const PRODUCTION_TO_APPROVAL_STAGE: Record<string, string> = {};
+STAGE_SEQUENCE.forEach((stage, i) => {
+  const next = STAGE_SEQUENCE[i + 1];
+  if (next && next.startsWith("approval_")) {
+    PRODUCTION_TO_APPROVAL_STAGE[stage] = next;
+  }
+});
 
 const APPROVAL_TO_PRODUCTION_STAGE: Record<string, string> = Object.fromEntries(
   Object.entries(PRODUCTION_TO_APPROVAL_STAGE).map(([k, v]) => [v, k]),
@@ -20,21 +23,8 @@ const APPROVAL_TO_PRODUCTION_STAGE: Record<string, string> = Object.fromEntries(
 const APPROVAL_STAGES = new Set(Object.values(PRODUCTION_TO_APPROVAL_STAGE));
 
 const SUPERVISOR_VISIBLE_STAGES: Record<string, Set<string>> = {
-  operational_supervisor: new Set([
-    "approval_penerimaan_order",
-    "approval_racik_bahan",
-    "approval_qc_1",
-    "approval_qc_2",
-  ]),
+  operational_supervisor: new Set(APPROVAL_STAGES_ARRAY.filter(s => s !== "approval_produksi")),
   production_supervisor: new Set(["approval_produksi"]),
-};
-
-const STAGE_GROUPS: Record<string, "operational" | "production"> = {
-  approval_penerimaan_order: "operational",
-  approval_racik_bahan: "operational",
-  approval_qc_1: "operational",
-  approval_produksi: "production",
-  approval_qc_2: "operational",
 };
 
 export async function GET() {
@@ -61,9 +51,9 @@ export async function GET() {
     if (!profile)
       return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 });
 
-    const roleName: string = (profile.role as any)?.name ?? "";
-    const roleGroup: string = (profile.role as any)?.role_group ?? "";
-    const allowedStages: string[] = (profile.role as any)?.allowed_stages ?? [];
+    const roleName: string = getRoleProps(profile).name;
+    const roleGroup: string = getRoleProps(profile).role_group;
+    const allowedStages: string[] = getRoleProps(profile).allowed_stages;
 
     const isSupervisor =
       roleName === "superadmin" ||
@@ -78,11 +68,11 @@ export async function GET() {
 
     let visibleApprovalStages: string[];
     if (roleName === "superadmin") {
-      visibleApprovalStages = [...APPROVAL_STAGES];
+      visibleApprovalStages = [...APPROVAL_STAGES] as string[];
     } else if (SUPERVISOR_VISIBLE_STAGES[roleName]) {
       visibleApprovalStages = [...SUPERVISOR_VISIBLE_STAGES[roleName]];
     } else {
-      visibleApprovalStages = [...APPROVAL_STAGES];
+      visibleApprovalStages = [...APPROVAL_STAGES] as string[];
     }
 
     // ── 1. cs_orders at an approval stage ─────────────────────────────────────
@@ -121,12 +111,12 @@ export async function GET() {
     for (const o of pendingOrders ?? []) {
       const productionStage = APPROVAL_TO_PRODUCTION_STAGE[o.current_stage];
       if (productionStage && productionStage !== "penerimaan_order") {
-        orderProductionStageMap[(o as any).id] = productionStage;
-        stageResultOrderIds.push((o as any).id);
+        orderProductionStageMap[o.id] = productionStage;
+        stageResultOrderIds.push(o.id);
       }
     }
 
-    let stageResultMap: Record<
+    const stageResultMap: Record<
       string,
       {
         id: string;
@@ -162,22 +152,22 @@ export async function GET() {
           _sv_at: _t,
           _sv_by: _b,
           ...cleanData
-        } = (r as any).data ?? {};
+        } = (r.data ?? {}) as Record<string, unknown>
 
         stageResultMap[r.order_id] = {
           id: r.id,
           data: cleanData,
           attempt_number: r.attempt_number,
           finished_at: r.finished_at,
-          user_name: (r as any).users?.full_name ?? "—",
-          user_role: (r as any).users?.role?.name ?? "—",
+          user_name: (r.users as any)?.full_name ?? "—",
+          user_role: (r.users as any)?.role?.name ?? "—",
         };
       }
     }
 
     // ── 3. Shape response ──────────────────────────────────────────────────────
     const pending = (pendingOrders ?? [])
-      .map((o: any) => {
+      .map((o) => {
         const productionStage =
           APPROVAL_TO_PRODUCTION_STAGE[o.current_stage] ?? o.current_stage;
         const isPenerimaanOrder = productionStage === "penerimaan_order";
@@ -264,7 +254,7 @@ export async function GET() {
           customer_name: o.customer_name,
           stage: o.current_stage,
           stage_label: STAGE_LABELS[o.current_stage] ?? o.current_stage,
-          stage_group: STAGE_GROUPS[o.current_stage] ?? "operational",
+          stage_group: STAGE_GROUP[o.current_stage] ?? "operational",
           production_stage: productionStage,
           waiting_since: o.updated_at,
           stage_result_id: sr?.id ?? null,
@@ -273,7 +263,7 @@ export async function GET() {
             ? (o.tgl_order ?? o.updated_at)
             : (sr?.finished_at ?? null),
           worker_name: isPenerimaanOrder
-            ? (o.users?.full_name ?? "—")
+            ? ((o.users as any)?.full_name ?? "—")
             : (sr?.user_name ?? "—"),
           worker_role: isPenerimaanOrder
             ? "customer_service"

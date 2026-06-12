@@ -2,11 +2,14 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
+import { BarChart3, RefreshCw, Users } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -223,32 +226,19 @@ function KpiCard({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function DailyAnalysisPage() {
-  const [clientUser, setClientUser] = useState<ClientUser | null>(null);
+  const [clientUser] = useState<ClientUser | null>(() => {
+    if (typeof window === "undefined") return null;
+    return getClientUser();
+  });
   const [selectedDate, setSelectedDate] = useState(toLocalDate(new Date()));
-  const [data, setData] = useState<DailyData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"overview" | "staff" | "trend">(
     "overview",
   );
 
-  useEffect(() => {
-    setClientUser(getClientUser());
-  }, []);
-
-  const fetchDaily = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(`/api/daily-stats-1?date=${selectedDate}`);
-      const json = await res.json();
-      if (res.ok) setData(json);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedDate]);
-
-  useEffect(() => {
-    fetchDaily();
-  }, [fetchDaily]);
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["daily-stats", selectedDate],
+    queryFn: () => fetcher<DailyData>(`/api/daily-stats-1?date=${selectedDate}`),
+  });
 
   // Keyboard navigation: ← / →
   useEffect(() => {
@@ -357,23 +347,11 @@ export default function DailyAnalysisPage() {
                 </button>
               )}
               <button
-                onClick={fetchDaily}
+                onClick={() => refetch()}
                 title="Refresh"
                 className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 transition-colors"
               >
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
+                <RefreshCw className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -399,19 +377,7 @@ export default function DailyAnalysisPage() {
             <Loading variant="skeleton" text="Memuat data harian..." />
           ) : !data ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-              <svg
-                className="w-12 h-12 mb-4 opacity-40"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
+              <BarChart3 className="w-12 h-12 mb-4 opacity-40" />
               <p className="text-sm">Tidak ada data untuk tanggal ini.</p>
             </div>
           ) : (
@@ -536,19 +502,7 @@ export default function DailyAnalysisPage() {
 
                   {data.staff.length === 0 ? (
                     <div className="flex flex-col items-center py-14 text-slate-400">
-                      <svg
-                        className="w-10 h-10 mb-3 opacity-40"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.5}
-                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
+                      <Users className="w-10 h-10 mb-3 opacity-40" />
                       <p className="text-sm">
                         Belum ada aktivitas untuk tanggal ini.
                       </p>

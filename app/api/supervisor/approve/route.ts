@@ -3,48 +3,26 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 import { sendNotification } from "@/lib/notifications";
+import { STAGE_SEQUENCE } from "@/lib/stages";
 
-const PRODUCTION_TO_APPROVAL_STAGE: Record<string, string> = {
-  penerimaan_order: "approval_penerimaan_order",
-  racik_bahan:      "approval_racik_bahan",
-  qc_1:             "approval_qc_1",
-  finishing:        "approval_produksi",
-  qc_2:             "approval_qc_2",
-};
+const PRODUCTION_TO_APPROVAL_STAGE: Record<string, string> = {};
+const APPROVAL_STAGES: string[] = [];
+STAGE_SEQUENCE.forEach((stage, i) => {
+  if (stage.startsWith("approval_")) {
+    APPROVAL_STAGES.push(stage);
+    const prevStage = STAGE_SEQUENCE[i - 1];
+    if (prevStage) {
+      PRODUCTION_TO_APPROVAL_STAGE[prevStage] = stage;
+    }
+  }
+});
 
 const SUPERVISOR_ALLOWED_STAGES: Record<string, Set<string>> = {
-  operational_supervisor: new Set([
-    "approval_penerimaan_order",
-    "approval_racik_bahan",
-    "approval_qc_1",
-    "approval_qc_2",
-  ]),
+  operational_supervisor: new Set(APPROVAL_STAGES.filter(s => s !== "approval_produksi")),
   production_supervisor: new Set(["approval_produksi"]),
 };
-
-const STAGE_SEQUENCE = [
-  "penerimaan_order",
-  "approval_penerimaan_order",
-  "racik_bahan",
-  "approval_racik_bahan",
-  "lebur_bahan",
-  "pembentukan_cincin",
-  "pemasangan_permata",
-  "pemolesan",
-  "cek_kadar",
-  "qc_1",
-  "approval_qc_1",
-  "laser",
-  "finishing",
-  "approval_produksi",
-  "qc_2",
-  "approval_qc_2",
-  "konfirmasi",
-  "packing",
-  "pengiriman",
-  "selesai",
-] as const;
 
 export async function POST(request: Request) {
   try {
@@ -70,9 +48,9 @@ export async function POST(request: Request) {
     if (!profile)
       return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 });
 
-    const roleName: string = (profile.role as any)?.name ?? "";
-    const roleGroup: string = (profile.role as any)?.role_group ?? "";
-    const allowedStages: string[] = (profile.role as any)?.allowed_stages ?? [];
+    const roleName: string = getRoleProps(profile).name;
+    const roleGroup: string = getRoleProps(profile).role_group;
+    const allowedStages: string[] = getRoleProps(profile).allowed_stages;
 
     const isSupervisor =
       roleName === "superadmin" ||
@@ -107,13 +85,11 @@ export async function POST(request: Request) {
         { status: 400 },
       );
 
-    if (roleName !== "superadmin" && SUPERVISOR_ALLOWED_STAGES[roleName]) {
-      if (!SUPERVISOR_ALLOWED_STAGES[roleName].has(stage)) {
-        return NextResponse.json(
-          { error: "Anda tidak memiliki akses untuk approval tahap ini" },
-          { status: 403 },
-        );
-      }
+    if (roleName === "operational_supervisor" && !SUPERVISOR_ALLOWED_STAGES.operational_supervisor.has(stage)) {
+      return NextResponse.json({ error: "Anda tidak memiliki akses untuk approval tahap ini" }, { status: 403 });
+    }
+    if (roleName === "production_supervisor" && !SUPERVISOR_ALLOWED_STAGES.production_supervisor.has(stage)) {
+      return NextResponse.json({ error: "Anda tidak memiliki akses untuk approval tahap ini" }, { status: 403 });
     }
 
     const { data: order, error: orderError } = await admin
@@ -159,13 +135,12 @@ export async function POST(request: Request) {
       )?.[0] ?? stage.replace("approval_", ""));
 
     const now = new Date().toISOString();
-    const supervisorName: string = (profile as any)?.full_name ?? "Supervisor";
+      const supervisorName: string = (profile as { full_name?: string })?.full_name ?? "Supervisor";
 
     let nextStage: string | null = null;
     if (action === "approve") {
-      const seq = STAGE_SEQUENCE as readonly string[];
-      const idx = seq.indexOf(stage);
-      nextStage = idx >= 0 && idx < seq.length - 1 ? seq[idx + 1] : null;
+      const idx = STAGE_SEQUENCE.indexOf(stage);
+      nextStage = idx >= 0 && idx < STAGE_SEQUENCE.length - 1 ? STAGE_SEQUENCE[idx + 1] : null;
     }
 
     // ── 1. Insert approval record ──────────────────────────────────────────────

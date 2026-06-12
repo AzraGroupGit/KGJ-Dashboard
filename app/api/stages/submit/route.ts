@@ -3,79 +3,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 import { notifySupervisors, getSupervisorRoleForApproval, notifyCsForOrder } from "@/lib/notifications";
-
-// ── Stage sequence ─────────────────────────────────────────────────────────────
-
-const STAGE_SEQUENCE = [
-  "penerimaan_order",
-  "approval_penerimaan_order",
-  "racik_bahan",
-  "approval_racik_bahan",
-  "lebur_bahan",
-  "pembentukan_cincin",
-  "pemasangan_permata",
-  "pemolesan",
-  "cek_kadar",
-  "qc_1",
-  "approval_qc_1",
-  "laser",
-  "finishing",
-  "approval_produksi",
-  "qc_2",
-  "approval_qc_2",
-  "konfirmasi",
-  "packing",
-  "pengiriman",
-  "selesai",
-] as const;
-
-// Stages that need supervisor approval before the next working stage
-const APPROVAL_GATE_MAP: Record<string, string> = {
-  racik_bahan: "approval_racik_bahan",
-  qc_1: "approval_qc_1",
-  finishing: "approval_produksi",
-  qc_2: "approval_qc_2",
-};
-
-// Stages submittable by workers (approval stages go via /api/supervisor/approve)
-const WORKER_STAGES = new Set([
-  "racik_bahan",
-  "lebur_bahan",
-  "cek_kadar",
-  "pembentukan_cincin",
-  "pemasangan_permata",
-  "pemolesan",
-  "qc_1",
-  "laser",
-  "finishing",
-  "qc_2",
-  "konfirmasi",
-  "packing",
-  "pengiriman",
-]);
+import { STAGE_SEQUENCE, STAGE_GROUP, getStageIndex } from "@/lib/stages";
 
 // ── Role access ────────────────────────────────────────────────────────────────
-
-const GROUP_STAGES: Record<string, Set<string>> = {
-  operational: new Set([
-    "racik_bahan",
-    "qc_1",
-    "qc_2",
-    "laser",
-    "konfirmasi",
-    "packing",
-    "pengiriman",
-  ]),
-  production: new Set([
-    "lebur_bahan",
-    "cek_kadar",
-    "pembentukan_cincin",
-    "pemasangan_permata",
-    "pemolesan",
-    "finishing",
-  ]),
-};
 
 const ROLE_STAGES: Record<string, Set<string>> = {
   customer_care: new Set(["konfirmasi"]),
@@ -90,9 +22,19 @@ function hasAccess(
   if (roleName === "superadmin") return true;
   if (allowedStages.includes(stage)) return true;
   if (ROLE_STAGES[roleName]?.has(stage)) return true;
-  if (GROUP_STAGES[roleGroup]?.has(stage)) return true;
+  if (STAGE_GROUP[stage] === roleGroup) return true;
   return false;
 }
+
+const WORKER_STAGES = new Set<string>(STAGE_SEQUENCE.filter(s => !s.startsWith("approval_") && s !== "penerimaan_order"));
+
+const APPROVAL_GATE_MAP: Record<string, string> = {};
+STAGE_SEQUENCE.forEach((stage, i) => {
+  const next = STAGE_SEQUENCE[i + 1];
+  if (next && next.startsWith("approval_")) {
+    APPROVAL_GATE_MAP[stage] = next;
+  }
+});
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -113,15 +55,13 @@ async function getAttemptNumber(
 }
 
 function nextInSequence(stage: string): string | null {
-  const idx = (STAGE_SEQUENCE as readonly string[]).indexOf(stage);
-  return idx >= 0 && idx < STAGE_SEQUENCE.length - 1
-    ? (STAGE_SEQUENCE as readonly string[])[idx + 1]
-    : null;
+  const idx = getStageIndex(stage);
+  return idx >= 0 && idx < STAGE_SEQUENCE.length - 1 ? STAGE_SEQUENCE[idx + 1] : null;
 }
 
-function prevInSequence(stage: string): string | null {
-  const idx = (STAGE_SEQUENCE as readonly string[]).indexOf(stage);
-  return idx > 0 ? (STAGE_SEQUENCE as readonly string[])[idx - 1] : null;
+function _prevInSequence(stage: string): string | null {
+  const idx = getStageIndex(stage);
+  return idx > 0 ? STAGE_SEQUENCE[idx - 1] : null;
 }
 
 async function advanceOrder(
@@ -187,10 +127,9 @@ export async function POST(request: Request) {
         { status: 404 },
       );
 
-    const roleName: string = (userData.role as any)?.name ?? "";
-    const roleGroup: string = (userData.role as any)?.role_group ?? "";
-    const allowedStages: string[] =
-      (userData.role as any)?.allowed_stages ?? [];
+    const roleName: string = getRoleProps(userData).name;
+    const roleGroup: string = getRoleProps(userData).role_group;
+    const allowedStages: string[] = getRoleProps(userData).allowed_stages;
 
     const body = await request.json();
     const {
@@ -565,10 +504,11 @@ export async function POST(request: Request) {
       });
     }
 
-    // ── pengiriman: mark delivered → selesai ──────────────────────────────────
+    // ── pengiriman: mark delivered/dispatched → selesai ────────────────────────
     if (stage === "pengiriman") {
-      const isDelivered = data.is_delivered === "sampai_store";
+      const isCompleted = data.is_delivered === "sampai_store" || data.is_delivered === "sampai_expedisi";
       const isFailed = data.is_delivered === "gagal";
+      const isDelivered = data.is_delivered === "sampai_store";
 
       await admin.from("stage_results").insert({
         order_id: orderId,
@@ -601,7 +541,11 @@ export async function POST(request: Request) {
         .eq("order_id", orderId)
         .eq("status", "pending");
 
-      if (isDelivered) {
+      if (isCompleted) {
+        const reason = isDelivered
+          ? "Produk berhasil diterima pelanggan — order selesai"
+          : "Produk sudah sampai di expedisi — order selesai";
+
         await admin
           .from("cs_orders")
           .update({
@@ -617,7 +561,7 @@ export async function POST(request: Request) {
           from_stage: "pengiriman",
           to_stage: "selesai",
           transitioned_by: userId,
-          reason: "Produk berhasil diterima pelanggan — order selesai",
+          reason,
           transitioned_at: now,
         });
 

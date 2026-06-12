@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
 const MAX_PIN_ATTEMPTS = 3;
 const PIN_LOCKOUT_MINUTES = 5;
@@ -72,8 +73,7 @@ export async function POST(request: Request) {
     }
 
     // 3. Check role matches QR role
-    const userRole = userData.role as any;
-    if (!userRole || userRole.id !== qrCode.role_id) {
+    if (getRoleProps(userData).id !== qrCode.role_id) {
       return NextResponse.json(
         { error: "Pekerja tidak sesuai dengan workstation ini" },
         { status: 403 },
@@ -206,7 +206,7 @@ export async function POST(request: Request) {
       scanned_at: new Date().toISOString(),
     });
 
-    const roleObj = userRole as any;
+    const roleProps = getRoleProps(userData);
 
     return NextResponse.json({
       success: true,
@@ -217,12 +217,12 @@ export async function POST(request: Request) {
         id: userData.id,
         fullName: userData.full_name,
         username: userData.username,
-        role: roleObj.name,
+        role: roleProps.name,
         roleDetail: {
-          id: roleObj.id,
-          name: roleObj.name,
-          role_group: roleObj.role_group,
-          allowed_stages: roleObj.allowed_stages,
+          id: roleProps.id,
+          name: roleProps.name,
+          role_group: roleProps.role_group,
+          allowed_stages: roleProps.allowed_stages,
         },
       },
     });

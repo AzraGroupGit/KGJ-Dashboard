@@ -3,6 +3,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getStageLabel } from "@/lib/stages";
+import { getRoleProps } from "@/lib/auth/session";
 
 const PRODUCTION_ROLES = [
   "jewelry_expert_lebur_bahan",
@@ -11,23 +13,6 @@ const PRODUCTION_ROLES = [
   "micro_setting",
   "laser",
 ];
-
-const STAGE_LABELS: Record<string, string> = {
-  racik_bahan: "Racik Bahan",
-  lebur_bahan: "Lebur Bahan",
-  pembentukan_cincin: "Pembentukan Cincin",
-  pemasangan_permata: "Pemasangan Permata",
-  pemolesan: "Pemolesan",
-  laser: "Laser",
-  finishing: "Finishing",
-  qc_1: "QC 1",
-  qc_2: "QC 2",
-  qc_3: "QC 3",
-  pelunasan: "Pelunasan",
-  kelengkapan: "Kelengkapan",
-  packing: "Packing",
-  pengiriman: "Pengiriman",
-};
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "-";
@@ -94,7 +79,7 @@ export async function GET(request: Request) {
       .eq("id", authData.user.id)
       .single();
 
-    if ((profile?.role as any)?.name !== "superadmin") {
+    if (getRoleProps(profile).name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -149,7 +134,7 @@ export async function GET(request: Request) {
         );
       }
 
-      const rows = (data ?? []).map((r: any, i: number) => {
+      const rows = (data ?? []).map((r, i: number) => {
         let susut = "-";
         if (r.stage === "lebur_bahan") {
           const sp = parseFloat(r.data?.shrinkage_percent);
@@ -169,11 +154,11 @@ export async function GET(request: Request) {
         return [
           i + 1,
           fmtDate(r.started_at),
-          r.orders?.order_number ?? "-",
-          r.orders?.customer_name ?? "-",
-          STAGE_LABELS[r.stage] ?? r.stage,
-          r.users?.full_name ?? "-",
-          (r.users?.role as any)?.name ?? "-",
+          (r as any).orders?.order_number ?? "-",
+          (r as any).orders?.customer_name ?? "-",
+          getStageLabel(r.stage),
+          (r as any).users?.full_name ?? "-",
+          getRoleProps(r.users).name ?? "-",
           fmtDuration(r.started_at, r.finished_at),
           r.attempt_number ?? 1,
           susut,
@@ -224,13 +209,13 @@ export async function GET(request: Request) {
         );
       }
 
-      const rows = (data ?? []).map((r: any, i: number) => [
+      const rows = (data ?? []).map((r, i: number) => [
         i + 1,
         fmtDate(r.finished_at),
-        r.orders?.order_number ?? "-",
-        r.orders?.customer_name ?? "-",
-        STAGE_LABELS[r.stage] ?? r.stage,
-        r.users?.full_name ?? "-",
+        (r as any).orders?.order_number ?? "-",
+        (r as any).orders?.customer_name ?? "-",
+        getStageLabel(r.stage),
+        (r as any).users?.full_name ?? "-",
         r.data?.overall_result ?? r.data?.result ?? "-",
         r.notes ?? "-",
         fmtDuration(r.started_at, r.finished_at),
@@ -238,7 +223,7 @@ export async function GET(request: Request) {
 
       const stageSummary: Record<string, { total: number; passed: number }> =
         {};
-      (data ?? []).forEach((r: any) => {
+      (data ?? []).forEach((r) => {
         const acc = stageSummary[r.stage] ?? { total: 0, passed: 0 };
         acc.total += 1;
         const res = r.data?.overall_result ?? r.data?.result;
@@ -257,7 +242,7 @@ export async function GET(request: Request) {
           acc.total > 0 ? fmtPct((acc.passed / acc.total) * 100) : "-";
         summaryLines.push(
           [
-            STAGE_LABELS[stage] ?? stage,
+            getStageLabel(stage),
             fmtNum(acc.total),
             fmtNum(acc.passed),
             fmtNum(failed),
@@ -312,19 +297,19 @@ export async function GET(request: Request) {
           .lte("scanned_at", toISO),
       ]);
 
-      const allStaff: any[] = staffRes.data ?? [];
-      const allStages: any[] = stageRes.data ?? [];
-      const allScans: any[] = scanRes.data ?? [];
+      const allStaff = staffRes.data ?? [];
+      const allStages = stageRes.data ?? [];
+      const allScans = scanRes.data ?? [];
 
-      const productionStaff = allStaff.filter((u: any) =>
-        PRODUCTION_ROLES.includes((u.role as any)?.name),
+      const productionStaff = allStaff.filter((u) =>
+        PRODUCTION_ROLES.includes(getRoleProps(u).name),
       );
 
       const scanMap = new Map<
         string,
         { scans: number; orderSet: Set<string> }
       >();
-      allScans.forEach((s: any) => {
+      allScans.forEach((s) => {
         const e = scanMap.get(s.user_id) ?? {
           scans: 0,
           orderSet: new Set<string>(),
@@ -337,7 +322,7 @@ export async function GET(request: Request) {
       const stagesMap = new Map<string, number>();
       const susutMap = new Map<string, { sum: number; count: number }>();
 
-      allStages.forEach((sr: any) => {
+      allStages.forEach((sr) => {
         stagesMap.set(sr.user_id, (stagesMap.get(sr.user_id) ?? 0) + 1);
         if (
           ["lebur_bahan", "pembentukan_cincin", "pemolesan"].includes(sr.stage)
@@ -364,7 +349,7 @@ export async function GET(request: Request) {
         }
       });
 
-      const rows = productionStaff.map((u: any, i: number) => {
+      const rows = productionStaff.map((u, i: number) => {
         const scan = scanMap.get(u.id);
         const susutAcc = susutMap.get(u.id);
         const avgSusut =
@@ -372,7 +357,7 @@ export async function GET(request: Request) {
         return [
           i + 1,
           u.full_name,
-          (u.role as any)?.name ?? "-",
+          getRoleProps(u).name ?? "-",
           fmtNum(scan?.scans ?? 0),
           fmtNum(scan?.orderSet.size ?? 0),
           fmtNum(stagesMap.get(u.id) ?? 0),
@@ -460,35 +445,35 @@ export async function GET(request: Request) {
       day: "numeric",
     });
 
-    const prodRows = (prodRes.data ?? []).map((r: any, i: number) => [
+    const prodRows = (prodRes.data ?? []).map((r, i: number) => [
       i + 1,
       fmtDate(r.started_at),
-      r.orders?.order_number ?? "-",
-      STAGE_LABELS[r.stage] ?? r.stage,
-      r.users?.full_name ?? "-",
-      (r.users?.role as any)?.name ?? "-",
+      (r as any).orders?.order_number ?? "-",
+      getStageLabel(r.stage),
+      (r as any).users?.full_name ?? "-",
+      getRoleProps(r.users).name ?? "-",
       fmtDuration(r.started_at, r.finished_at),
     ]);
 
-    const qcRows = (qcRes.data ?? []).map((r: any, i: number) => [
+    const qcRows = (qcRes.data ?? []).map((r, i: number) => [
       i + 1,
       fmtDate(r.finished_at),
-      r.orders?.order_number ?? "-",
-      STAGE_LABELS[r.stage] ?? r.stage,
-      r.users?.full_name ?? "-",
+      (r as any).orders?.order_number ?? "-",
+      getStageLabel(r.stage),
+      (r as any).users?.full_name ?? "-",
       r.data?.overall_result ?? r.data?.result ?? "-",
       r.notes ?? "-",
     ]);
 
-    const prodStaff: any[] = (staffAll.data ?? []).filter((u: any) =>
-      PRODUCTION_ROLES.includes((u.role as any)?.name),
+    const prodStaff = (staffAll.data ?? []).filter((u) =>
+      PRODUCTION_ROLES.includes(getRoleProps(u).name),
     );
 
     const scanMap2 = new Map<
       string,
       { scans: number; orderSet: Set<string> }
     >();
-    (scanAll.data ?? []).forEach((s: any) => {
+    (scanAll.data ?? []).forEach((s) => {
       const e = scanMap2.get(s.user_id) ?? {
         scans: 0,
         orderSet: new Set<string>(),
@@ -499,16 +484,16 @@ export async function GET(request: Request) {
     });
 
     const stageMap2 = new Map<string, number>();
-    (stageAll.data ?? []).forEach((s: any) => {
+    (stageAll.data ?? []).forEach((s) => {
       stageMap2.set(s.user_id, (stageMap2.get(s.user_id) ?? 0) + 1);
     });
 
-    const staffRows = prodStaff.map((u: any, i: number) => {
+    const staffRows = prodStaff.map((u, i: number) => {
       const sc = scanMap2.get(u.id);
       return [
         i + 1,
         u.full_name,
-        (u.role as any)?.name ?? "-",
+        getRoleProps(u).name ?? "-",
         fmtNum(sc?.scans ?? 0),
         fmtNum(sc?.orderSet.size ?? 0),
         fmtNum(stageMap2.get(u.id) ?? 0),

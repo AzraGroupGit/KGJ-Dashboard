@@ -3,16 +3,17 @@
 "use client";
 
 import { useState } from "react";
+import { Search, Download } from "lucide-react";
 
 interface Column {
   key: string;
   label: string;
-  format?: (value: any) => string;
+  format?: (value: unknown) => string;
 }
 
 interface DataTableProps {
   title: string;
-  data: any[];
+  data: Record<string, unknown>[];
   columns: Column[];
   onSearch?: boolean;
   onExport?: boolean;
@@ -85,19 +86,7 @@ export default function DataTable({
                 }}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
-              <svg
-                className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+              <Search className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
             </div>
           )}
           {onExport && (
@@ -105,19 +94,7 @@ export default function DataTable({
               onClick={handleExport}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
+              <Download className="w-5 h-5" />
               Export CSV
             </button>
           )}
@@ -149,7 +126,7 @@ export default function DataTable({
                     >
                       {column.format
                         ? column.format(row[column.key])
-                        : row[column.key]}
+                        : (row[column.key] as React.ReactNode)}
                     </td>
                   ))}
                 </tr>

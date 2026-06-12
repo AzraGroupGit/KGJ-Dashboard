@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getRoleProps } from "@/lib/auth/session";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    if ((currentUser?.role as any)?.name !== "superadmin") {
+    if (getRoleProps(currentUser).name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -115,7 +116,7 @@ export async function GET(request: NextRequest) {
 
     // ── 2. Filter rows by day ─────────────────────────────────────────────────
     const mktToday = allMkt.filter((r) => r.input_date === dateStr);
-    const mktPrev = allMkt.filter((r) => r.input_date === prev);
+    const _mktPrev = allMkt.filter((r) => r.input_date === prev);
     const csToday = allCs.filter((r) => r.input_date === dateStr);
     const csPrev = allCs.filter((r) => r.input_date === prev);
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { STAGE_SEQUENCE, getStageLabel } from "@/lib/stages";
 import {
   BarChart3,
@@ -9,7 +10,6 @@ import {
   TrendingDown,
   Minus,
   AlertTriangle,
-  RefreshCw,
 } from "lucide-react";
 
 interface CycleStageData {
@@ -48,29 +48,12 @@ function fmtDurationHours(h: number | null): string {
 }
 
 export default function CycleTimeTab() {
-  const [data, setData] = useState<CycleTimeData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, error } = useQuery<CycleTimeData>({
+    queryKey: ["analytics", "cycle-time"],
+    queryFn: () => fetcher<CycleTimeData>("/api/analytics/cycle-time"),
+  });
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const res = await fetch("/api/analytics/cycle-time");
-        if (!res.ok) throw new Error("Gagal memuat data");
-        const json = await res.json();
-        setData(json);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-4 animate-pulse">
         {[1, 2, 3, 4, 5].map((i) => (
@@ -84,7 +67,7 @@ export default function CycleTimeTab() {
     return (
       <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-8 text-center">
         <AlertTriangle className="mx-auto mb-3 h-6 w-6 text-rose-600" />
-        <p className="text-sm text-rose-700">{error}</p>
+        <p className="text-sm text-rose-700">{error instanceof Error ? error.message : "Gagal memuat data"}</p>
       </div>
     );
   }
@@ -188,7 +171,7 @@ export default function CycleTimeTab() {
               </tr>
             </thead>
             <tbody>
-              {data.cycleData.map((s, i) => {
+              {data.cycleData.map((s, _i) => {
                 const barWidth =
                   totalAvg > 0 ? ((s.avg ?? 0) / totalAvg) * 100 : 0;
                 return (

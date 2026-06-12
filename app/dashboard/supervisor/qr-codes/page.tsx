@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
 import {
@@ -18,32 +20,8 @@ import {
   AlertTriangle,
   Loader2,
 } from "lucide-react";
+import type { Role, QRCode } from "@/types/qr-code";
 import QRCodeLib from "qrcode";
-
-// ─── Types ──────────────────────────────────────────────────────────
-
-interface Role {
-  id: string;
-  name: string;
-  role_group: string;
-  description: string | null;
-  allowed_stages: string[];
-}
-
-interface QRCode {
-  id: string;
-  role_id: string;
-  role_name?: string;
-  role_group?: string;
-  allowed_stages: string[];
-  workstation_name: string;
-  location: string | null;
-  qr_token: string;
-  qr_payload: string;
-  is_active: boolean;
-  generated_at: string;
-  expired_at: string | null;
-}
 
 // ─── Constants ──────────────────────────────────────────────────────
 
@@ -109,9 +87,6 @@ function QRCodeImage({ data, size = 160 }: { data: string; size?: number }) {
 
 export default function SupervisorQRCodesPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [qrCodes, setQrCodes] = useState<QRCode[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterGroup, setFilterGroup] = useState<string>("all");
   const [alert, setAlert] = useState<{
@@ -137,6 +112,21 @@ export default function SupervisorQRCodesPage() {
   const [toggling, setToggling] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Action feedback (checkmark on button after action)
+  const [actionFeedback, setActionFeedback] = useState<{
+    type: "download" | "print" | "copy";
+    qrId: string;
+  } | null>(null);
+
+  const flashFeedback = (type: "download" | "print" | "copy", qrId: string) => {
+    setActionFeedback({ type, qrId });
+    setTimeout(() => {
+      setActionFeedback((prev) =>
+        prev?.type === type && prev?.qrId === qrId ? null : prev,
+      );
+    }, 1500);
+  };
+
   const showAlert = (type: "success" | "error", message: string) => {
     setAlert({ type, message });
     setTimeout(() => setAlert(null), 4000);
@@ -144,27 +134,20 @@ export default function SupervisorQRCodesPage() {
 
   // ── Fetch data ──────────────────────────────────────────────────
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [qrRes, rolesRes] = await Promise.all([
-        fetch("/api/supervisor/qr-codes"),
-        fetch("/api/roles"),
-      ]);
-      const qrJson = await qrRes.json();
-      const rolesJson = await rolesRes.json();
-      if (qrJson.success) setQrCodes(qrJson.data ?? []);
-      if (rolesJson.data) setRoles(rolesJson.data);
-    } catch {
-      showAlert("error", "Gagal memuat data");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: qrCodes = [], isLoading: qrLoading, error: qrError, refetch: refetchQr } = useQuery({
+    queryKey: ["supervisor", "qr-codes"],
+    queryFn: () => fetcher<{ success: boolean; data: QRCode[] }>("/api/supervisor/qr-codes"),
+    select: (res) => (res.success ? res.data ?? [] : []),
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const { data: roles = [], isLoading: rolesLoading, error: rolesError } = useQuery({
+    queryKey: ["roles"],
+    queryFn: () => fetcher<{ data: Role[] }>("/api/roles"),
+    select: (res) => res.data ?? [],
+  });
+
+  const loading = qrLoading || rolesLoading;
+  const error = qrError || rolesError;
 
   // ── Filter ──────────────────────────────────────────────────────
 
@@ -201,7 +184,7 @@ export default function SupervisorQRCodesPage() {
       );
       setShowGenerate(false);
       setGenerateForm({ role_id: "", workstation_name: "", location: "" });
-      fetchData();
+      refetchQr();
     } catch (err) {
       showAlert(
         "error",
@@ -227,7 +210,7 @@ export default function SupervisorQRCodesPage() {
       if (!res.ok) throw new Error(json.error ?? "Gagal mengubah status");
       showAlert("success", json.message ?? "Status berhasil diubah");
       setToggleQR(null);
-      fetchData();
+      refetchQr();
     } catch (err) {
       showAlert(
         "error",
@@ -252,7 +235,7 @@ export default function SupervisorQRCodesPage() {
       showAlert("success", json.message ?? "QR Code berhasil dihapus");
       setDeleteQR(null);
       if (selectedQR?.id === deleteQR.id) setSelectedQR(null);
-      fetchData();
+      refetchQr();
     } catch (err) {
       showAlert(
         "error",
@@ -265,8 +248,9 @@ export default function SupervisorQRCodesPage() {
 
   // ── Copy / Download / Print ─────────────────────────────────────
 
-  const handleCopyLink = (payload: string) => {
+  const handleCopyLink = (payload: string, qrId: string) => {
     navigator.clipboard.writeText(payload);
+    flashFeedback("copy", qrId);
     showAlert("success", "Link QR Code disalin ke clipboard");
   };
 
@@ -281,6 +265,7 @@ export default function SupervisorQRCodesPage() {
       link.download = `QR-${qr.workstation_name.replace(/\s+/g, "-")}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
+      flashFeedback("download", qr.id);
     } catch {
       showAlert("error", "Gagal mengunduh QR Code");
     }
@@ -307,6 +292,7 @@ export default function SupervisorQRCodesPage() {
       </body></html>
     `);
     win.document.close();
+    flashFeedback("print", qr.id);
   };
 
   // ── Stats ───────────────────────────────────────────────────────
@@ -436,6 +422,19 @@ export default function SupervisorQRCodesPage() {
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-stone-300" />
             </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+              <AlertTriangle className="mb-3 h-8 w-8 text-rose-400" />
+              <p className="text-sm font-medium text-stone-700">
+                {error instanceof Error ? error.message : "Gagal memuat data"}
+              </p>
+              <button
+                onClick={() => refetchQr()}
+                className="mt-4 rounded-md border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 min-h-[44px]"
+              >
+                Coba lagi
+              </button>
+            </div>
           ) : filtered.length === 0 ? (
             <div className="rounded-xl border border-stone-100 bg-white py-16 text-center shadow-sm">
               <QrCode className="mx-auto mb-4 h-10 w-10 text-stone-200" />
@@ -539,24 +538,48 @@ export default function SupervisorQRCodesPage() {
                       </button>
                       <button
                         onClick={() => handleDownload(qr)}
-                        className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors"
-                        title="Download PNG"
+                        className={`rounded-lg p-1.5 transition-colors ${
+                          actionFeedback?.type === "download" && actionFeedback?.qrId === qr.id
+                            ? "text-emerald-500 bg-emerald-50"
+                            : "text-stone-400 hover:bg-stone-100 hover:text-stone-600"
+                        }`}
+                        title={actionFeedback?.type === "download" && actionFeedback?.qrId === qr.id ? "Tersimpan" : "Download PNG"}
                       >
-                        <Download className="h-4 w-4" />
+                        {actionFeedback?.type === "download" && actionFeedback?.qrId === qr.id ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )}
                       </button>
                       <button
                         onClick={() => handlePrint(qr)}
-                        className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors"
-                        title="Print"
+                        className={`rounded-lg p-1.5 transition-colors ${
+                          actionFeedback?.type === "print" && actionFeedback?.qrId === qr.id
+                            ? "text-emerald-500 bg-emerald-50"
+                            : "text-stone-400 hover:bg-stone-100 hover:text-stone-600"
+                        }`}
+                        title={actionFeedback?.type === "print" && actionFeedback?.qrId === qr.id ? "Tercetak" : "Print"}
                       >
-                        <Printer className="h-4 w-4" />
+                        {actionFeedback?.type === "print" && actionFeedback?.qrId === qr.id ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Printer className="h-4 w-4" />
+                        )}
                       </button>
                       <button
-                        onClick={() => handleCopyLink(qr.qr_payload)}
-                        className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors"
-                        title="Salin Link"
+                        onClick={() => handleCopyLink(qr.qr_payload, qr.id)}
+                        className={`rounded-lg p-1.5 transition-colors ${
+                          actionFeedback?.type === "copy" && actionFeedback?.qrId === qr.id
+                            ? "text-emerald-500 bg-emerald-50"
+                            : "text-stone-400 hover:bg-stone-100 hover:text-stone-600"
+                        }`}
+                        title={actionFeedback?.type === "copy" && actionFeedback?.qrId === qr.id ? "Tersalin" : "Salin Link"}
                       >
-                        <Copy className="h-4 w-4" />
+                        {actionFeedback?.type === "copy" && actionFeedback?.qrId === qr.id ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
                       </button>
                       <div className="flex-1" />
                       <button
@@ -718,21 +741,45 @@ export default function SupervisorQRCodesPage() {
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <button
                 onClick={() => handleDownload(selectedQR)}
-                className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50 flex items-center gap-1"
+                className={`rounded-lg border px-3 py-1.5 text-xs font-medium flex items-center gap-1 transition-colors ${
+                  actionFeedback?.type === "download" && actionFeedback?.qrId === selectedQR.id
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-stone-200 text-stone-600 hover:bg-stone-50"
+                }`}
               >
-                <Download className="h-3 w-3" /> Download
+                {actionFeedback?.type === "download" && actionFeedback?.qrId === selectedQR.id ? (
+                  <><Check className="h-3 w-3" /> Tersimpan</>
+                ) : (
+                  <><Download className="h-3 w-3" /> Download</>
+                )}
               </button>
               <button
                 onClick={() => handlePrint(selectedQR)}
-                className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50 flex items-center gap-1"
+                className={`rounded-lg border px-3 py-1.5 text-xs font-medium flex items-center gap-1 transition-colors ${
+                  actionFeedback?.type === "print" && actionFeedback?.qrId === selectedQR.id
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-stone-200 text-stone-600 hover:bg-stone-50"
+                }`}
               >
-                <Printer className="h-3 w-3" /> Print
+                {actionFeedback?.type === "print" && actionFeedback?.qrId === selectedQR.id ? (
+                  <><Check className="h-3 w-3" /> Tercetak</>
+                ) : (
+                  <><Printer className="h-3 w-3" /> Print</>
+                )}
               </button>
               <button
-                onClick={() => handleCopyLink(selectedQR.qr_payload)}
-                className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50 flex items-center gap-1"
+                onClick={() => handleCopyLink(selectedQR.qr_payload, selectedQR.id)}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-medium flex items-center gap-1 transition-colors ${
+                  actionFeedback?.type === "copy" && actionFeedback?.qrId === selectedQR.id
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-stone-200 text-stone-600 hover:bg-stone-50"
+                }`}
               >
-                <Copy className="h-3 w-3" /> Salin Link
+                {actionFeedback?.type === "copy" && actionFeedback?.qrId === selectedQR.id ? (
+                  <><Check className="h-3 w-3" /> Tersalin</>
+                ) : (
+                  <><Copy className="h-3 w-3" /> Salin Link</>
+                )}
               </button>
             </div>
             <div className="mt-4 text-left space-y-1 text-xs text-stone-500 bg-stone-50 rounded-xl px-3 py-2.5">

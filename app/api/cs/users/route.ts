@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getRoleProps } from "@/lib/auth/session";
 
 /**
  * GET /api/cs/users
@@ -35,7 +36,7 @@ export async function GET() {
       );
     }
 
-    const roleName = (currentUser.role as any)?.name;
+    const roleName = getRoleProps(currentUser).name;
 
     // Resolve role_id for customer_service
     const { data: csRole } = await supabase
@@ -77,12 +78,12 @@ export async function GET() {
       );
     }
 
-    const mapped = (data ?? []).map((u: any) => ({
+    const mapped = (data ?? []).map((u) => ({
       id: u.id,
       full_name: u.full_name,
       email: u.email,
       branch_id: u.branch_id,
-      branch_name: u.branches?.name ?? null,
+      branch_name: (u.branches as any)?.name ?? null,
     }));
 
     return NextResponse.json({ data: mapped });

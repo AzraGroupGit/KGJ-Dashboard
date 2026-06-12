@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
 // ── Auth helper (exported for use in [id]/route.ts) ────────────────────────
 
@@ -25,7 +26,7 @@ export async function requireCsOrAdmin(
     .is("deleted_at", null)
     .single();
 
-  const roleName = (userData?.role as any)?.name ?? "";
+  const roleName = getRoleProps(userData).name;
   if (!["customer_service", "superadmin"].includes(roleName)) {
     return {
       error: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
