@@ -42,3 +42,42 @@ jobs:
       - run: npm ci
 
       - run: npx eslint .
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/playwright@v2
+        with:
+          version: latest
+
+      - run: npx playwright test
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ vars.PLAYWRIGHT_BASE_URL || 'http://localhost:3000' }}

@@ -512,30 +512,34 @@ export default function OrderDetailPopup({
                         Pengiriman
                       </p>
                       <div className="rounded-lg bg-slate-50 p-3 space-y-1 text-xs">
-                        {o.pengiriman && (
+                        {o.pengiriman && o.pengiriman !== "Alamat Customer" && (
                           <p className="font-medium text-slate-700">
                             {o.pengiriman}
                           </p>
                         )}
-                        {o.alamat_pengiriman && (
-                          <p className="text-slate-500">
-                            {o.alamat_pengiriman}
-                          </p>
-                        )}
-                        {(o.kelurahan ||
-                          o.kecamatan ||
-                          o.kabupaten_kota) && (
-                          <p className="text-slate-500">
-                            {[
-                              o.kelurahan,
-                              o.kecamatan,
-                              o.kabupaten_kota,
-                              o.provinsi,
-                            ]
-                              .filter(Boolean)
-                              .join(", ")}
-                            {o.kodepos ? ` ${o.kodepos}` : ""}
-                          </p>
+                        {(o.pengiriman === "Alamat Customer" || !o.pengiriman) && (
+                          <>
+                            {o.alamat_pengiriman && (
+                              <p className="text-slate-500">
+                                {o.alamat_pengiriman}
+                              </p>
+                            )}
+                            {(o.kelurahan ||
+                              o.kecamatan ||
+                              o.kabupaten_kota) && (
+                              <p className="text-slate-500">
+                                {[
+                                  o.kelurahan,
+                                  o.kecamatan,
+                                  o.kabupaten_kota,
+                                  o.provinsi,
+                                ]
+                                  .filter(Boolean)
+                                  .join(", ")}
+                                {o.kodepos ? ` ${o.kodepos}` : ""}
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>

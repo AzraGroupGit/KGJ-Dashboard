@@ -58,8 +58,8 @@
 | Task | Description | Status |
 |------|-------------|--------|
 | L-01 | Add React Query/SWR for data fetching | ✅ Done (all GET data fetching across 23 pages/components) |
-| L-02 | Install and configure testing framework | 📋 Backlog |
-| L-03 | Add E2E tests for critical flows (order → approval → shipping) | 📋 Backlog |
+| L-02 | Install and configure testing framework | ✅ Done — Vitest installed (`vitest@4.1.8`, `@vitejs/plugin-react@6.0.2`, `jsdom@29.1.1`); `vitest.config.ts` with jsdom env + `@/*` alias; sample test: `lib/__tests__/stages.test.ts` (20 tests covering STAGE_SEQUENCE helpers); scripts: `npm test` (run), `npm run test:watch` (watch); CI job added (parallel with typecheck + lint) |
+| L-03 | Add E2E tests for critical flows (order → approval → shipping) | ✅ Done — Playwright installed (`@playwright/test@^1.60.0`, chromium); `playwright.config.ts` with baseURL localhost:3000 + CI webServer auto-start; sample test: `e2e/auth.spec.ts` (5 tests: login page loads, protected redirect, workshop login, email/password fields, empty submit error); auth helper: `e2e/helpers/auth.ts` (`mockSupabaseSession()` for future authenticated flows); script: `npm run test:e2e`; CI job added (disabled with `if: false` until Supabase env vars configured as GitHub secrets); `.gitignore` updated with `test-results/` + `playwright-report/`
 | L-04 | Add migration files to repository | ✅ Done — `migrations/001_initial_schema.sql` (24 tables with indexes, constraints, comments), `migrations/002_rls_policies.sql` (RLS policies + 7 auth helper functions), `migrations/README.md` (setup docs) |
 | L-05 | Add CI/CD pipeline (GitHub Actions) | ✅ Done — `.github/workflows/ci.yml`: parallel typecheck (tsc --noEmit) + lint (eslint) jobs on push/PR to main; Node 20, npm ci with caching, 10min timeout, cancel-in-progress concurrency. Vercel Git integration handles production build + deploy. |
 | L-06 | Add automated type checking to lint script | ✅ Done — `"lint": "tsc --noEmit && eslint"` already in `package.json:9` since inception; TECH_STACK.md docs corrected to reflect this |
@@ -103,16 +103,20 @@
 | 2026-06-11 | UX: Added ConfirmDialog to Setujui (approval), Hapus draft (CS), and user/branch toggle (superadmin kelola-akun). Added Alert success toasts to supervisor accounts page. Added `refetch()` after approve/reject and `queryClient.invalidateQueries()` after stage submit. |
 | 2026-06-11 | Interface deduplication: Extracted ~10 duplicated interfaces to 6 shared files in `types/` (`order-timeline.ts`, `layout.ts`, `qr-code.ts`, `roles.ts`, `marketing.ts`, `bottleneck.ts`). Renamed 3 name-collision interfaces (`WorkOrder`→`WorkshopWorkOrder`, `OrderInfo`→`WorkshopOrderInfo`, `StatsData`→`BMSStatsData`). Moved `OrderInfo` from order-form page to `types/order-info.ts`. |
 | 2026-06-11 | Revalidation audit: Confirmed all 27 pages correctly invalidate/refetch queries after mutations. Fixed the 2 remaining gaps: approval page (`refetch()`) and workshop input (`invalidateQueries`). |
+| 2026-06-12 | OrderDetailPopup: Fixed "Pengiriman" field to show address only when `pengiriman === "Alamat Customer"`, store name only for store deliveries (not combined). |
+| 2026-06-12 | L-02: ✅ **DONE** — Installed `vitest@4.1.8` + `@vitejs/plugin-react@6.0.2` + `jsdom@29.1.1`; `vitest.config.ts` with jsdom env + `@/*` alias; `npm test` / `npm run test:watch` scripts; sample test `lib/__tests__/stages.test.ts` (20 tests covering stage sequence helpers); CI `test` job added (parallel with typecheck + lint). |
+| 2026-06-12 | L-03: ✅ **DONE** — Installed `@playwright/test@^1.60.0` + chromium; `playwright.config.ts` (baseURL localhost:3000, webServer auto-start in CI); `npm run test:e2e` script; sample test `e2e/auth.spec.ts` (5 tests: login loads, protected redirect, workshop login, form fields, empty submit); auth helper `e2e/helpers/auth.ts`; CI `e2e` job added (disabled with `if: false` until Supabase secrets configured); `.gitignore` updated with `test-results/` + `playwright-report/`; Vitest config excludes `e2e/` directory. |
 
 ---
 
 ## Development Workflow
 
 1. Code changes are made directly (no formal PR process)
-2. CI runs automatically on push/PR: `tsc --noEmit` + `eslint` (`.github/workflows/ci.yml`)
+2. CI runs automatically on push/PR: `tsc --noEmit` + `eslint` + `npm test` (`.github/workflows/ci.yml`)
 3. Run `npm run build` before deployment
-4. Test manually before deploying
-5. Deploy: push to `main` → Vercel auto-deploys
-6. All env vars must be present in `.env.local`
-7. Realtime notifications: Pusher (primary) + 60s polling fallback; TanStack Query `refetchInterval` for dashboard data
-8. After mutations, always call `refetch()` or `queryClient.invalidateQueries()` for instant UI updates
+4. Run `npm test` before committing (Vitest unit tests)
+5. Run `npm run test:e2e` with dev server running for browser tests
+6. Deploy: push to `main` → Vercel auto-deploys
+7. All env vars must be present in `.env.local`
+8. Realtime notifications: Pusher (primary) + 30s polling fallback; TanStack Query `refetchInterval` for dashboard data
+9. After mutations, always call `refetch()` or `queryClient.invalidateQueries()` for instant UI updates
