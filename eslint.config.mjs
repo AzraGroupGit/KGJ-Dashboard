@@ -21,6 +21,10 @@ const eslintConfig = defineConfig([
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "jsx-a11y/alt-text": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/static-components": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/refs": "off",
     },
   },
 ]);

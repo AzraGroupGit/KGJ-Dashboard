@@ -621,7 +621,6 @@ function OverviewTab({
   } | null;
   onOrderClick: (orderId: string, orderNumber: string) => void;
 }) {
-  // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   return (
     <div className="space-y-5">
@@ -2065,7 +2064,6 @@ function ExpertCard({ expert }: { expert: Expert }) {
   const isActive = !!expert.activeOrder;
   const hasSusut = expert.rataSusut != null && expert.targetSusut != null;
   const isOverSusut = hasSusut && expert.rataSusut! > expert.targetSusut!;
-  // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   const mins = expert.activeOrder
     ? Math.floor(
