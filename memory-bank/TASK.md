@@ -76,6 +76,55 @@
 
 ---
 
+## Code Quality & Scalability Recommendations (2026-06-12 Audit)
+
+> Full audit of 66 API routes, 24 pages, 33 components. Ordered by risk/impact.
+
+### Priority 1 — Security (must fix)
+
+| ID | Task | Detail | Risk |
+|----|------|--------|------|
+| S-01 | Add auth checks to 4 analytics routes | `analytics/bottleneck-history`, `cycle-time`, `stage-durations`, `worker-productivity` — all use `createAdminClient()` with no `createClient()` auth check. Exposes production data publicly. | High |
+| S-02 | Add auth checks to 5 slot routes | `slots/slot-categories`, `slot-categories/[id]`, `slot-check`, `slot-overrides`, `slot-overrides/[id]` — read/write slot config unprotected. | High |
+| S-03 | Add auth check to `workshop/workers` route | Fetches worker list with no authentication. | Medium |
+
+**Root cause:** 12 routes use `createAdminClient()` (service role, bypasses RLS) without first verifying user session via `createClient()`. The other 31 routes that use the dual-client pattern correctly already do this.
+
+### Priority 2 — Data Integrity (should fix)
+
+| ID | Task | Detail | Lines |
+|----|------|--------|-------|
+| D-01 | Add Zod schema to `supervisor/accounts` | User CRUD (create/edit/delete/deactivate) — zero validation on form inputs | 1,590 |
+| D-02 | Add Zod schema to `superadmin/kelola-akun` | Account creation with no schema validation | 1,927 |
+| D-03 | Add Zod schema to `cs/input-leads` | Daily lead data submitted unvalidated | ~400 |
+| D-04 | Add Zod schema to `workshop/input` | Stage data submitted with no schema; relies entirely on field-level config | 1,696 |
+
+### Priority 3 — Maintainability (nice to have)
+
+| ID | Task | Detail | Lines |
+|----|------|--------|-------|
+| M-05 | Split monolithic page: `superadmin/oprprd/monitoring` | Largest file in app; extract sub-tabs/components | 2,488 |
+| M-06 | Split monolithic page: `supervisor/accounts` | Mixes list + 5 modals in one file; extract modal components | 1,590 |
+| M-07 | Split monolithic page: `superadmin/kelola-akun` | Branch toggle + 3 account modals in one file | 1,927 |
+| M-08 | Split monolithic page: `cs/input-order` | 2,449-line form; extract MaterialSelect, EngravingSelect, Address, etc. | 2,449 |
+| M-09 | Extract 34 inline styles from `order-form/[token]` | Gold theming, watermark, box shadows → Tailwind classes or CSS variables | 34 occurrences |
+| M-10 | Generate Supabase database types | Run `supabase gen types typescript` → replace 55 `as any` casts with proper types across 12 route files | 55 casts |
+
+### Priority 4 — Already Clean
+
+| Area | Status |
+|------|--------|
+| Error handling | 100% of 66 routes have try/catch with consistent `NextResponse.json({ error })` |
+| CI/CD | Parallel typecheck + lint + unit tests on every push/PR |
+| Shared types | `types/` directory with 7 shared interface files; no duplication left |
+| Realtime | Pusher + 30s polling fallback on all dashboard pages |
+| Revalidation | All 27 pages correctly refetch after mutations |
+| Icons | 100% lucide-react; zero inline SVGs remain |
+| Charts | 100% recharts; no Canvas 2D charts remain |
+| Linting | 0 errors, 0 warnings across entire codebase |
+
+---
+
 ## Recent Updates
 
 | Date | Change |
