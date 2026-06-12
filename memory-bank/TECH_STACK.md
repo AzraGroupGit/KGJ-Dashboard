@@ -23,8 +23,7 @@
 ### Charts & Visualization
 | Package | Version | Usage |
 |---------|---------|-------|
-| **recharts** | ^3.8.1 | Analytics pages (cycle time, productivity, bottleneck heatmap) |
-| **Canvas 2D API** | (native) | `ChartCard` component (dashboard charts, no external dep) |
+| **recharts** | ^3.8.1 | All charts (cycle time, productivity, bottleneck heatmap, statistik dashboard) |
 
 ### PDF
 | Package | Version | Usage |
@@ -76,6 +75,8 @@
 
 | Package | Version | Usage |
 |---------|---------|-------|
+| **@tanstack/react-query** | ^5.101.0 | Data fetching, caching, and revalidation across all dashboard pages |
+| **zod** | ^4.4.3 | Schema-based form validation for CS order form, public order form, and marketing input |
 | **date-holidays** | ^3.30.2 | Indonesian public holiday data for working-day calculations |
 | **qrcode** | ^1.5.4 | QR code generation for workstation QR codes |
 | **LocationIQ** | (external API) | Address autocomplete (kecamatan/kelurahan level) |
@@ -90,17 +91,19 @@
 | **eslint-config-next** | 16.2.4 | Next.js ESLint rules (core-web-vitals + typescript) |
 | **TypeScript** | ^5 | `tsconfig.json` |
 | **Next.js** | 16.2.4 | `next.config.ts` (minimal — empty config) |
+| **GitHub Actions** | — | `.github/workflows/ci.yml` (typecheck + lint on push/PR) |
 
 ## What's NOT in the Stack
 
 - **No test framework** — no Jest, Vitest, Playwright, or any testing deps
 - **No state management library** — no Redux, Zustand, Jotai; all state is `useState`/`useReducer`
-- **No data fetching library** — no React Query, SWR, Apollo; raw `fetch()` + `useEffect`
 - **No UI component library** — no shadcn/ui, Radix, MUI, Chakra, Headless UI, DaisyUI
 - **No ORM** — no Prisma, Drizzle, TypeORM; raw Supabase JS client
+- **No form library** — no React Hook Form, Formik; raw form state management with Zod schemas for validation
 - **No migration tooling** — no migration files in repository
 - **No CI/CD** — no GitHub Actions or other CI in `.github/`
 - **No form library** — no React Hook Form, Formik; raw form state management
+- **Validation** — `zod` added for schema-based validation (no form library)
 
 ---
 
@@ -126,7 +129,7 @@ All env vars are required. `.env*` files are in `.gitignore` — not tracked in 
 | `npm run dev` | Start dev server |
 | `npm run build` | Production build |
 | `npm run start` | Start production server |
-| `npm run lint` | Run ESLint |
-| `npx tsc --noEmit` | TypeScript type check (no npm script) |
+| `npm run lint` | Type check (`tsc --noEmit`) then ESLint |
+| `npx tsc --noEmit` | TypeScript type check only (duplicate; `npm run lint` covers this) |
 
 No test, format, or codegen scripts exist.

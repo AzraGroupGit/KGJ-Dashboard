@@ -2,7 +2,9 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
@@ -12,6 +14,7 @@ import Modal from "@/components/ui/Modal";
 import Loading from "@/components/ui/Loading";
 import Alert from "@/components/ui/Alert";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
+import { Plus, Pencil, AlertTriangle } from "lucide-react";
 
 interface LeadInput {
   id: string;
@@ -29,8 +32,6 @@ interface LeadInput {
 export default function InputLeadsPage() {
   const router = useRouter();
   const [user, setUser] = useState<ClientUser | null>(null);
-  const [leadInputs, setLeadInputs] = useState<LeadInput[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -44,6 +45,15 @@ export default function InputLeadsPage() {
     type: "success" | "error" | "warning" | "info";
     message: string;
   } | null>(null);
+
+  const queryClient = useQueryClient();
+
+  const { data: leadInputsData, isLoading } = useQuery({
+    queryKey: ["cs-inputs"],
+    queryFn: () => fetcher<{ data: LeadInput[] }>("/api/cs/inputs?limit=100"),
+  });
+
+  const leadInputs = leadInputsData?.data ?? [];
 
   const showAlert = (
     type: "success" | "error" | "warning" | "info",
@@ -81,26 +91,6 @@ export default function InputLeadsPage() {
     }
   };
 
-  const loadInputs = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/cs/inputs?limit=100");
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Gagal memuat data");
-      }
-      const { data } = await res.json();
-      setLeadInputs(data || []);
-    } catch (e) {
-      showAlert(
-        "error",
-        e instanceof Error ? e.message : "Gagal memuat data input",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     const clientUser = getClientUser();
     if (!clientUser) {
@@ -108,8 +98,7 @@ export default function InputLeadsPage() {
       return;
     }
     setUser(clientUser);
-    loadInputs();
-  }, [router, loadInputs]);
+  }, [router]);
 
   const today = new Date().toISOString().split("T")[0];
   const todayInput = leadInputs.find((i) => i.input_date === today);
@@ -173,7 +162,7 @@ export default function InputLeadsPage() {
         throw new Error(body.error || "Gagal menyimpan data");
       }
 
-      await loadInputs();
+      queryClient.invalidateQueries({ queryKey: ["cs-inputs"] });
       setIsModalOpen(false);
       showAlert(
         "success",
@@ -248,30 +237,7 @@ export default function InputLeadsPage() {
             <Button
               variant="primary"
               onClick={openInputModal}
-              leftIcon={
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  {todayInput ? (
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                    />
-                  ) : (
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  )}
-                </svg>
-              }
+              leftIcon={todayInput ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
             >
               {modeLabel}
             </Button>
@@ -520,19 +486,7 @@ export default function InputLeadsPage() {
                 closing !== "" &&
                 parseInt(closing) > parseInt(leadMasuk) && (
                   <div className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg flex items-start gap-2">
-                    <svg
-                      className="w-4 h-4 mt-0.5 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                      />
-                    </svg>
+                    <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                     Closing tidak boleh melebihi Lead Masuk
                   </div>
                 )}

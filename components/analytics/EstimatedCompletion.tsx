@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { STAGE_SEQUENCE, getStageLabel, getStageIndex } from "@/lib/stages";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
+import { STAGE_SEQUENCE, getStageIndex } from "@/lib/stages";
 import { Clock, AlertTriangle, CalendarDays } from "lucide-react";
 
 interface StageStat {
@@ -35,35 +37,23 @@ export default function EstimatedCompletion({
   deadline,
   compact = false,
 }: EstimatedCompletionProps) {
-  const [stageStats, setStageStats] = useState<StageStat[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading } = useQuery<{ stageStats: StageStat[] }>({
+    queryKey: ["analytics", "stage-durations"],
+    queryFn: () => fetcher<{ stageStats: StageStat[] }>("/api/analytics/stage-durations"),
+  });
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch("/api/analytics/stage-durations");
-        if (!res.ok) return;
-        const json = await res.json();
-        setStageStats(json.stageStats || []);
-      } catch {
-        // silent — component is non-critical
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+  const stageStats = useMemo(() => data?.stageStats ?? [], [data]);
 
   const estimate = useMemo(() => {
     if (stageStats.length === 0)
-      return { avgRemaining: null, p75Remaining: null, hasData: false };
+      return { avgRemaining: null, p75Remaining: null, hasData: false, stagesMissing: 0, remainingStageCount: 0 };
 
     const currentIdx = getStageIndex(currentStage);
     if (currentIdx < 0 || currentIdx >= STAGE_SEQUENCE.length - 1) {
-      return { avgRemaining: null, p75Remaining: null, hasData: false };
+      return { avgRemaining: null, p75Remaining: null, hasData: false, stagesMissing: 0, remainingStageCount: 0 };
     }
 
-    const remainingStages = STAGE_SEQUENCE.slice(currentIdx + 1, -1); // exclude "selesai"
+    const remainingStages = STAGE_SEQUENCE.slice(currentIdx + 1, -1);
     let avgSum = 0;
     let p75Sum = 0;
     let stagesWithData = 0;
@@ -87,22 +77,23 @@ export default function EstimatedCompletion({
       stagesWithData,
       stagesMissing,
       remainingStageCount: remainingStages.length,
-      avgDeadline: hasData
-        ? new Date(Date.now() + avgSum * 3600000)
-        : null,
-      p75Deadline: hasData
-        ? new Date(Date.now() + p75Sum * 3600000)
-        : null,
+      avgSum,
+      p75Sum,
       hasData,
     };
   }, [stageStats, currentStage]);
 
+  const [now] = useState(() => Date.now());
+  const avgDeadline = estimate.hasData && estimate.avgSum != null
+    ? new Date(now + estimate.avgSum * 3600000)
+    : null;
+
   const isOverdue =
     deadline &&
-    estimate.avgDeadline &&
-    new Date(deadline) < estimate.avgDeadline;
+    avgDeadline &&
+    new Date(deadline) < avgDeadline;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className={`animate-pulse ${compact ? "h-8 w-32 rounded bg-slate-100" : "h-24 rounded-lg bg-slate-100"}`} />
     );
@@ -117,8 +108,8 @@ export default function EstimatedCompletion({
         <span className="text-slate-600">
           Estimasi:{" "}
           <span className="font-semibold text-slate-800">
-            {estimate.avgDeadline
-              ? estimate.avgDeadline.toLocaleDateString("id-ID", {
+            {avgDeadline
+              ? avgDeadline.toLocaleDateString("id-ID", {
                   day: "numeric",
                   month: "short",
                 })
@@ -169,8 +160,8 @@ export default function EstimatedCompletion({
             Perkiraan selesai
           </span>
           <span className="text-sm font-semibold text-slate-900">
-            {estimate.avgDeadline
-              ? estimate.avgDeadline.toLocaleDateString("id-ID", {
+            {avgDeadline
+              ? avgDeadline.toLocaleDateString("id-ID", {
                   day: "numeric",
                   month: "short",
                   year: "numeric",

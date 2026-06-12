@@ -13,6 +13,9 @@ import {
 } from "@react-pdf/renderer";
 import type { CsOrder } from "@/types/cs-orders";
 
+// ── Stable cache-buster for image URLs ───────────────────────────────────
+const PDF_CACHE_BUST = Date.now();
+
 // ── Register fonts for engraving ──────────────────────────────────────────
 
 const FONT_SRC: Record<string, string> = {
@@ -417,7 +420,7 @@ export function OrderFormPDF({ order }: { order: CsOrder }) {
                 {order.reference_image_pria_url ? (
                   <Image
                     style={s.photoImg}
-                    src={`${order.reference_image_pria_url}?t=${Date.now()}`}
+                    src={`${order.reference_image_pria_url}?t=${PDF_CACHE_BUST}`}
                   />
                 ) : (
                   <View style={s.photoPlaceholder}>
@@ -434,7 +437,7 @@ export function OrderFormPDF({ order }: { order: CsOrder }) {
                 {order.reference_image_wanita_url ? (
                   <Image
                     style={s.photoImg}
-                    src={`${order.reference_image_wanita_url}?t=${Date.now()}`}
+                    src={`${order.reference_image_wanita_url}?t=${PDF_CACHE_BUST}`}
                   />
                 ) : (
                   <View style={s.photoPlaceholder}>

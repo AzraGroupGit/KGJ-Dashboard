@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
 export interface SupervisorInfo {
   id: string;
@@ -30,9 +31,9 @@ export async function verifySupervisorScope(): Promise<{
     return { user: null, error: "User not found" };
   }
 
-  const roleName: string = (profile.role as any)?.name ?? "";
-  const roleGroup: string = (profile.role as any)?.role_group ?? "";
-  const allowedStages: string[] = (profile.role as any)?.allowed_stages ?? [];
+  const roleName: string = getRoleProps(profile).name;
+  const roleGroup: string = getRoleProps(profile).role_group;
+  const allowedStages: string[] = getRoleProps(profile).allowed_stages;
 
   const isSupervisor =
     roleName === "superadmin" ||

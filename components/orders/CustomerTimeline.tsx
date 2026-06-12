@@ -2,33 +2,13 @@
 
 import { useMemo } from "react";
 import {
-  STAGE_SEQUENCE,
+  CUSTOMER_STAGE_SEQUENCE,
   getStageLabel,
   getProgressPercent,
   isStageActive,
 } from "@/lib/stages";
-
-interface StageResult {
-  id: string;
-  stage: string;
-  finished_at: string;
-  users?: { full_name: string } | null;
-}
-
-interface Transition {
-  from_stage: string | null;
-  to_stage: string;
-  transitioned_at: string;
-}
-
-interface Delivery {
-  delivery_method: string | null;
-  status: string | null;
-  courier_name: string | null;
-  tracking_number: string | null;
-  dispatched_at: string | null;
-  delivered_at: string | null;
-}
+import { Check } from "lucide-react";
+import type { StageResult, Transition, Delivery } from "@/types/order-timeline";
 
 interface CustomerTimelineProps {
   currentStage: string | null;
@@ -120,19 +100,7 @@ export default function CustomerTimeline({
       <div className="text-center">
         {isComplete ? (
           <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-semibold text-emerald-800">
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2.5}
-                d="M4.5 12.75l6 6 9-13.5"
-              />
-            </svg>
+            <Check className="h-4 w-4" strokeWidth={2.5} />
             Pesanan Selesai
           </div>
         ) : currentStage ? (
@@ -147,7 +115,7 @@ export default function CustomerTimeline({
 
       {/* Stage list */}
       <div className="space-y-1">
-        {STAGE_SEQUENCE.map((stage) => {
+        {CUSTOMER_STAGE_SEQUENCE.map((stage) => {
           const done = isComplete || completedStages.has(stage);
           const active =
             !isComplete && isStageActive(stage, currentStage || "");
@@ -165,19 +133,7 @@ export default function CustomerTimeline({
             >
               <div className="flex-shrink-0">
                 {done ? (
-                  <svg
-                    className="h-5 w-5 text-emerald-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M4.5 12.75l6 6 9-13.5"
-                    />
-                  </svg>
+                  <Check className="h-5 w-5 text-emerald-500" strokeWidth={2.5} />
                 ) : active ? (
                   <span className="flex h-5 w-5 items-center justify-center">
                     <span className="h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse" />
@@ -207,6 +163,7 @@ export default function CustomerTimeline({
             {referenceImagePria && (
               <div>
                 <p className="text-[11px] text-stone-400 mb-1">Cincin Pria</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={referenceImagePria}
                   alt="Referensi Cincin Pria"
@@ -217,6 +174,7 @@ export default function CustomerTimeline({
             {referenceImageWanita && (
               <div>
                 <p className="text-[11px] text-stone-400 mb-1">Cincin Wanita</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={referenceImageWanita}
                   alt="Referensi Cincin Wanita"

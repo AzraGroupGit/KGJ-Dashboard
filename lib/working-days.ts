@@ -16,7 +16,7 @@ export function countWorkingDays(start: string, end: string): number {
 
   const holidays = getIndonesianHolidays(s.getFullYear());
   let count = 0;
-  let cur = new Date(s);
+  const cur = new Date(s);
 
   while (cur < e) {
     const day = cur.getDay();

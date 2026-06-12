@@ -59,7 +59,7 @@ export async function GET(request: Request) {
       data: {
         workers: safeWorkers,
         workstation: qrCode.roles
-          ? (qrCode.roles as any).name
+          ? (qrCode.roles as { name?: string }).name
           : null,
       },
     });

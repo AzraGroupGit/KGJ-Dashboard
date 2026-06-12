@@ -75,7 +75,7 @@ root/
 ├── components/                   # All UI components (33 files, 8 dirs)
 │   ├── ui/                       # Primitives: Button, Input, Modal, Alert, etc.
 │   ├── layout/                   # Sidebar, Header, Mobile variants
-│   ├── dashboard/                # StatCard, ChartCard, DataTable, KpiCard
+│   ├── dashboard/                # StatCard, DataTable, KpiCard
 │   ├── analytics/                # CycleTimeTab, WorkerProductivityTab, etc.
 │   ├── order/                    # Order form widgets: MaterialSelect, FontPicker
 │   ├── orders/                   # StageTimeline, CustomerTimeline
@@ -273,4 +273,4 @@ const { data } = await admin.from("cs_orders").insert({ ... });
 3. **No server components in components/** — all 33 components are `"use client"` due to hooks usage
 4. **Working days as time model** — all deadlines calculated in Indonesian working days (excl. weekends + national holidays), not calendar days
 5. **Stage as state machine** — orders follow the 20-stage sequence strictly; no skipping stages
-6. **Canvas-based charting** — `ChartCard` uses raw Canvas 2D API instead of external chart libraries, while analytics views use `recharts`
+6. **Charting** — all charts use `recharts` (bar, line, area charts in dashboard and analytics views)

@@ -336,10 +336,78 @@ Every time an order moves from one stage to another.
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | `uuid` | PK |
+| `title` | `text` | |
+| `type` | `text` | `monthly` \| `quarterly` \| `yearly` |
+| `period` | `text` | e.g., `2024-06`, `2024-Q2`, `2024` |
+| `file_url` | `text?` | Supabase Storage public URL |
+| `file_size` | `integer?` | In bytes |
+| `status` | `text` | `processing` \| `ready` \| `failed`, default: `processing` |
+| `generated_by` | `uuid` | FK → `users.id` |
+| `generated_at` | `timestamptz` | |
+
+---
+
+## Workshop Tables
+
+### `stage_personnel` — Worker to stage assignment
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `uuid` | PK |
+| `user_id` | `uuid` | FK → `users.id` |
+| `stage` | `text` | Stage key |
+| `person_code` | `text` | Short code (e.g., `PR`, `RZ`) |
+| `sub_type` | `text?` | For `laser`: `batik` \| `nama` |
+| `sort_order` | `integer?` | Default: 0 |
+
+### `material_transactions` — Material usage per order
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `uuid` | PK |
+| `order_id` | `uuid` | FK → `cs_orders.id` |
 | `type` | `text` | |
-| `period` | `text` | Monthly/quarterly/yearly |
-| `data` | `jsonb` | Report data |
+| `amount` | `numeric` | |
+| `gramasi` | `numeric?` | |
 | `created_by` | `uuid` | FK → `users.id` |
+| `deleted_at` | `timestamptz?` | Soft delete |
+| `created_at` | `timestamptz` | |
+
+### `work_instructions` — Stage-specific work parameters
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `uuid` | PK |
+| `stage` | `text` | Stage key |
+| `parameters` | `jsonb` | e.g., `shrinkage_buffer_percent`, `max_shrinkage_percent` |
+| `is_active` | `boolean` | Default: `true` |
+
+### `quality_checklist_results` — Per-item QC checklist
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `uuid` | PK |
+| `order_id` | `uuid` | FK → `cs_orders.id` |
+| `stage_result_id` | `uuid` | FK → `stage_results.id` |
+| `check_key` | `text` | e.g., `bentuk_sesuai`, `ukuran_sesuai` |
+| `passed` | `boolean` | Default: `false` |
+| `recorded_by` | `uuid` | FK → `users.id` |
+| `created_at` | `timestamptz` | |
+
+### `customer_confirmations` — Customer confirmation records
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `uuid` | PK |
+| `order_id` | `uuid` | FK → `cs_orders.id` |
+| `stage_result_id` | `uuid?` | FK → `stage_results.id` |
+| `confirmation_type` | `text?` | |
+| `confirmation_method` | `text?` | |
+| `confirmation_status` | `text?` | |
+| `rejection_reason` | `text?` | |
+| `change_requests` | `text?` | |
+| `photos_sent_at` | `timestamptz?` | |
+| `confirmed_at` | `timestamptz?` | |
 | `created_at` | `timestamptz` | |
 
 ---
@@ -359,9 +427,12 @@ cs_orders ──── order_stage_transitions
     │      (rejection history)
     ├──── deliveries
     │      (shipping info)
-    ├──── attachments
-    │      (file uploads → Supabase Storage)
-    ├──── payments
+    ├──── material_transactions
+    │      (material usage)
+    ├──── quality_checklist_results
+    │      (QC per-item checklist)
+    ├──── customer_confirmations
+    │      (customer confirmation events)
     ├──── activity_logs
     └──── notifications
              (via user_id)
@@ -378,4 +449,4 @@ cs_orders ──── order_stage_transitions
 - User status uses `status` text column with values `active`/`inactive`
 - `stage_results.data` is `jsonb` — schema varies per stage
 - `permissions` in `roles` table is `jsonb` — structure `{ can_read, can_insert, can_update, can_delete }`
-- No explicit migration files exist in the repository; schema is managed via Supabase dashboard or external tooling
+- Migration files available in `migrations/` directory: `001_initial_schema.sql` (24 tables DDL), `002_rls_policies.sql` (RLS + 7 helper functions)

@@ -3,6 +3,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { AlertTriangle, Info, LogOut, Loader2 } from "lucide-react";
 
 export type ConfirmVariant = "danger" | "warning" | "info";
 
@@ -26,21 +27,7 @@ const variantConfig = {
     confirmBg:
       "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800",
     confirmRing: "focus:ring-red-500",
-    icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-        />
-      </svg>
-    ),
+    icon: <LogOut className="w-6 h-6" />,
   },
   warning: {
     iconBg: "bg-yellow-50",
@@ -49,21 +36,7 @@ const variantConfig = {
     confirmBg:
       "bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600",
     confirmRing: "focus:ring-yellow-500",
-    icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-        />
-      </svg>
-    ),
+    icon: <AlertTriangle className="w-6 h-6" />,
   },
   info: {
     iconBg: "bg-indigo-50",
@@ -72,21 +45,7 @@ const variantConfig = {
     confirmBg:
       "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700",
     confirmRing: "focus:ring-indigo-500",
-    icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
-    ),
+    icon: <Info className="w-6 h-6" />,
   },
 };
 
@@ -178,7 +137,7 @@ export default function ConfirmDialog({
           >
             {isLoading ? (
               <>
-                <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Memproses</span>
               </>
             ) : (

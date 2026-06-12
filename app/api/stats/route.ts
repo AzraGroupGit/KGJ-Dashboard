@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getRoleProps } from "@/lib/auth/session";
 
 const MONTH_NAMES = [
   "Januari",
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
       .eq("id", user.id)
       .single();
 
-    if ((currentUser?.role as any)?.name !== "superadmin") {
+    if (getRoleProps(currentUser).name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

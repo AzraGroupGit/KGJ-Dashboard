@@ -2,7 +2,9 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Button from "@/components/ui/Button";
@@ -10,6 +12,7 @@ import Alert from "@/components/ui/Alert";
 import Loading from "@/components/ui/Loading";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
+import { BarChart3, Download, FileText, Trash2, Users } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,9 +67,7 @@ function formatDate(iso: string): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function LaporanPage() {
-  const [reports, setReports] = useState<Report[]>([]);
   const [filterType, setFilterType] = useState<"all" | ReportType>("all");
-  const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportToDelete, setReportToDelete] = useState<Report | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -108,26 +109,16 @@ export default function LaporanPage() {
 
   // ─── Fetch ─────────────────────────────────────────────────────────────────
 
-  const fetchReports = useCallback(async () => {
-    const url =
-      filterType === "all" ? "/api/reports" : `/api/reports?type=${filterType}`;
-    const res = await fetch(url);
-    const json = await res.json();
-    if (!res.ok) {
-      showAlert("error", json.error || "Gagal memuat laporan");
-      return;
-    }
-    setReports(json.data ?? []);
-  }, [filterType]);
+  const reportUrl = filterType === "all" ? "/api/reports" : `/api/reports?type=${filterType}`;
 
-  useEffect(() => {
-    const load = async () => {
-      setIsLoading(true);
-      await fetchReports();
-      setIsLoading(false);
-    };
-    load();
-  }, [fetchReports]);
+  const {
+    data: reports = [],
+    isLoading,
+    refetch: refetchReports,
+  } = useQuery<Report[]>({
+    queryKey: ["reports", filterType],
+    queryFn: () => fetcher<{ data: Report[] }>(reportUrl).then((r) => r.data ?? []),
+  });
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
 
@@ -150,7 +141,7 @@ export default function LaporanPage() {
         return;
       }
       showAlert("success", `${title} berhasil dibuat!`);
-      await fetchReports();
+      await refetchReports();
     } finally {
       setIsGenerating(false);
     }
@@ -169,7 +160,7 @@ export default function LaporanPage() {
         return;
       }
       showAlert("success", `Laporan "${reportToDelete.title}" berhasil dihapus!`);
-      await fetchReports();
+      await refetchReports();
     } finally {
       setIsDeleting(false);
       setReportToDelete(null);
@@ -290,9 +281,7 @@ export default function LaporanPage() {
               <div className="lg:col-span-3 bg-white rounded-xl shadow-sm p-6">
                 <div className="flex items-center gap-3 mb-5">
                   <div className="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+                    <FileText className="w-5 h-5 text-indigo-600" />
                   </div>
                   <h3 className="text-base font-semibold text-gray-800">Generate Laporan Baru</h3>
                 </div>
@@ -371,46 +360,42 @@ export default function LaporanPage() {
 
               {/* Export shortcuts — 2 cols */}
               <div className="lg:col-span-2 flex flex-col gap-3">
-                {[
+                {([
                   {
                     label: "Ekspor Data CS",
                     desc: "Lead & closing per cabang",
-                    icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z",
+                    icon: <Users className="w-5 h-5" />,
                     gradient: "from-blue-500 to-blue-600",
                     action: () => handleExport("cs"),
                   },
                   {
                     label: "Ekspor Data Marketing",
                     desc: "Channel & performa marketing",
-                    icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
+                    icon: <BarChart3 className="w-5 h-5" />,
                     gradient: "from-green-500 to-green-600",
                     action: () => handleExport("marketing"),
                   },
                   {
                     label: "Ekspor Data Lengkap",
                     desc: "Semua data dalam satu file",
-                    icon: "M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4",
+                    icon: <Download className="w-5 h-5" />,
                     gradient: "from-purple-500 to-purple-600",
                     action: () => handleExport("complete"),
                   },
-                ].map(({ label, desc, icon, gradient, action }) => (
+                ] as const).map(({ label, desc, icon, gradient, action }) => (
                   <button
                     key={label}
                     onClick={action}
                     className={`flex items-center gap-4 w-full bg-gradient-to-r ${gradient} text-white rounded-xl px-5 py-4 hover:opacity-90 transition-opacity text-left shadow-sm`}
                   >
                     <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
-                      </svg>
+                      {icon}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm">{label}</p>
                       <p className="text-xs text-white/80">{desc}</p>
                     </div>
-                    <svg className="w-4 h-4 text-white/60 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
+                    <Download className="w-4 h-4 text-white/60 shrink-0" />
                   </button>
                 ))}
               </div>
@@ -449,9 +434,7 @@ export default function LaporanPage() {
                 </div>
               ) : reports.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-                  <svg className="w-14 h-14 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  <FileText className="w-14 h-14 mb-3 opacity-40" />
                   <p className="text-sm font-medium">Belum ada laporan</p>
                   <p className="text-xs mt-1">Generate laporan pertama Anda di atas</p>
                 </div>
@@ -466,9 +449,7 @@ export default function LaporanPage() {
                         <div className="flex items-start gap-4 min-w-0">
                           {/* Icon */}
                           <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
-                            <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
+                            <FileText className="w-5 h-5 text-indigo-500" />
                           </div>
                           {/* Info */}
                           <div className="min-w-0">
@@ -502,16 +483,12 @@ export default function LaporanPage() {
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                             >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                              </svg>
+                              <Download className="w-3.5 h-3.5" />
                               Download
                             </a>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed">
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                              </svg>
+                              <Download className="w-3.5 h-3.5" />
                               Download
                             </span>
                           )}
@@ -520,9 +497,7 @@ export default function LaporanPage() {
                             className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                             title="Hapus laporan"
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>

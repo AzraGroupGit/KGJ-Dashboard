@@ -273,6 +273,26 @@ export function hasPermission(
   return user.role === "superadmin";
 }
 
+/**
+ * Helper untuk ekstrak properti role dari Supabase user object yang loosely-typed.
+ * Digunakan di API routes untuk menghindari `(role as any)?.name`.
+ *
+ * Menerima object apapun yang punya `role` (object atau array hasil join Supabase).
+ * Return default aman kalau role tidak ada.
+ */
+export function getRoleProps(user: unknown): { id: string; name: string; role_group: string; description: string | null; allowed_stages: string[]; permissions: Record<string, unknown> } {
+  const userObj = user as { role?: unknown } | null;
+  const role = Array.isArray(userObj?.role) ? (userObj.role as Record<string, unknown>[])[0] : userObj?.role as Record<string, unknown> | undefined;
+  return {
+    id: (role?.id as string) ?? "",
+    name: (role?.name as string) ?? "",
+    role_group: (role?.role_group as string) ?? "",
+    description: (role?.description as string) ?? null,
+    allowed_stages: (role?.allowed_stages as string[]) ?? [],
+    permissions: (role?.permissions as Record<string, unknown>) ?? {},
+  };
+}
+
 /** Dapatkan display name role untuk UI (human-readable). */
 export function getRoleDisplayName(role: LoginRole): string {
   const map: Record<LoginRole, string> = {

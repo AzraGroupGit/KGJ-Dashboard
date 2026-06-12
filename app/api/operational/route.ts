@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
 export async function GET(request?: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function GET(request?: NextRequest) {
       );
     }
 
-    if ((profile?.role as any)?.name !== "superadmin") {
+    if (getRoleProps(profile).name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -43,7 +44,7 @@ export async function GET(request?: NextRequest) {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const threeDaysAgoISO = fromParam ? new Date(fromParam).toISOString() : threeDaysAgo.toISOString();
     const sevenDaysAgoISO = fromParam ? new Date(fromParam).toISOString() : sevenDaysAgo.toISOString();
-    const toDateISO = toParam ? new Date(toParam + "T23:59:59").toISOString() : now.toISOString();
+    const _toDateISO = toParam ? new Date(toParam + "T23:59:59").toISOString() : now.toISOString();
 
     // ========== FETCH ALL SECTIONS IN PARALLEL ==========
     const [
@@ -162,11 +163,11 @@ export async function GET(request?: NextRequest) {
     ]);
 
     // Helper: log errors
-    const logError = (label: string, result: PromiseSettledResult<any>) => {
-      if (result.status === "fulfilled" && result.value.error) {
+    const logError = (label: string, result: PromiseSettledResult<unknown>) => {
+      if (result.status === "fulfilled" && (result.value as any)?.error) {
         console.error(
           `[GET /api/operational] ${label}:`,
-          result.value.error.message,
+          (result.value as any).error.message,
         );
       }
     };
@@ -199,7 +200,7 @@ export async function GET(request?: NextRequest) {
 
     const konfirmasi = (waitingApprovalOrders || [])
       .slice(0, 10)
-      .map((row: any) => {
+      .map((row) => {
         const hoursElapsed = row.created_at
           ? (now.getTime() - new Date(row.created_at).getTime()) / 3_600_000
           : 0;
@@ -223,7 +224,7 @@ export async function GET(request?: NextRequest) {
         ? pelunasanResult.value.data || []
         : [];
 
-    const pelunasan = (pelunasanRaw as any[])
+    const pelunasan = pelunasanRaw
       .map((row) => {
         const total = row.harga || 0;
         const dp = row.dp_amount || 0;
@@ -248,23 +249,23 @@ export async function GET(request?: NextRequest) {
         ? deliveryResult.value.data || []
         : [];
 
-    const delivery = (deliveryRaw as any[])
+    const delivery = deliveryRaw
       .filter(
         (row) =>
           row.data?.picked_up_by_customer_at == null &&
-          row.orders?.completed_at == null,
+          (row as any).orders?.completed_at == null,
       )
       .slice(0, 10)
       .map((row) => ({
-        order_number: row.orders?.order_number ?? null,
-        customer_name: row.orders?.customers?.name ?? null,
-        delivery_method: row.orders?.delivery_method ?? null,
+        order_number: (row as any).orders?.order_number ?? null,
+        customer_name: (row as any).orders?.customers?.name ?? null,
+        delivery_method: (row as any).orders?.delivery_method ?? null,
         shipped_at: row.data?.shipped_to_store_at ?? null,
         customer_notified_at: row.data?.customer_notified_at ?? null,
         picked_up_by_customer_at: row.data?.picked_up_by_customer_at ?? null,
         courier_name: row.data?.courier_name ?? null,
         tracking_number: row.data?.tracking_number ?? null,
-        completed_at: row.orders?.completed_at ?? null,
+        completed_at: (row as any).orders?.completed_at ?? null,
         delivery_finished_at: row.finished_at,
       }));
 
@@ -277,7 +278,7 @@ export async function GET(request?: NextRequest) {
     const fourHoursAgo = new Date(now);
     fourHoursAgo.setHours(fourHoursAgo.getHours() - 4);
 
-    const adminTasks = (adminTasksRaw as any[])
+    const adminTasks = adminTasksRaw
       .sort((a, b) => {
         const aActive = a.finished_at == null ? 0 : 1;
         const bActive = b.finished_at == null ? 0 : 1;
@@ -289,12 +290,12 @@ export async function GET(request?: NextRequest) {
       .slice(0, 20)
       .map((row) => ({
         order_id: row.order_id,
-        order_number: row.orders?.order_number,
+        order_number: (row as any).orders?.order_number,
         stage: row.stage,
-        executed_by: row.users?.full_name ?? null,
-        executed_by_role: row.users?.role?.name ?? null,
+        executed_by: (row as any).users?.full_name ?? null,
+        executed_by_role: (row as any).users?.role?.name ?? null,
         duration_minutes:
-          row.duration_minutes ??
+          (row as any).duration_minutes ??
           (row.started_at && !row.finished_at
             ? (now.getTime() - new Date(row.started_at).getTime()) / 60000
             : null),
@@ -310,7 +311,7 @@ export async function GET(request?: NextRequest) {
         ? racikResult.value.data || []
         : [];
 
-    const racikFinished = (racikRaw as any[]).filter(
+    const racikFinished = racikRaw.filter(
       (row) => row.finished_at != null,
     );
 
@@ -321,7 +322,7 @@ export async function GET(request?: NextRequest) {
 
     racikFinished.forEach((row) => {
       const totalWeight = parseFloat(row.data?.total_weight);
-      const targetWeight = parseFloat(row.orders?.target_weight);
+      const targetWeight = parseFloat((row as any).orders?.target_weight);
       if (!isNaN(totalWeight) && !isNaN(targetWeight) && targetWeight > 0) {
         deviationSum +=
           (Math.abs(totalWeight - targetWeight) / targetWeight) * 100;
@@ -335,9 +336,9 @@ export async function GET(request?: NextRequest) {
     });
 
     const racikLogs = racikFinished.slice(0, 5).map((row) => ({
-      order_number: row.orders?.order_number ?? null,
-      staff_name: row.users?.full_name ?? null,
-      target_weight: row.orders?.target_weight ?? null,
+      order_number: (row as any).orders?.order_number ?? null,
+      staff_name: (row as any).users?.full_name ?? null,
+      target_weight: (row as any).orders?.target_weight ?? null,
       total_weight: row.data?.total_weight ?? null,
       shrinkage_buffer: row.data?.shrinkage_buffer ?? null,
       timestamp: row.finished_at,
@@ -356,8 +357,11 @@ export async function GET(request?: NextRequest) {
 
     const wiRacik =
       wiRacikResult.status === "fulfilled" ? wiRacikResult.value.data : null;
-    const targetShrinkagePercent =
-      parseFloat((wiRacik as any)?.parameters?.shrinkage_buffer_percent) || 5.0;
+    const targetShrinkagePercent = (() => {
+      const params = (wiRacik as Record<string, unknown>)?.parameters as Record<string, unknown> | undefined;
+      const val = params?.shrinkage_buffer_percent as string | undefined;
+      return val ? parseFloat(val) || 5.0 : 5.0;
+    })();
     const totalBeratTeoritis = 0;
 
     // ========== LASER ==========
@@ -366,13 +370,13 @@ export async function GET(request?: NextRequest) {
         ? laserResult.value.data || []
         : [];
 
-    const antrianUkir = (laserRaw as any[]).filter(
+    const antrianUkir = laserRaw.filter(
       (r) => r.finished_at == null,
     ).length;
 
     let durationSum = 0,
       durationCount = 0;
-    (laserRaw as any[]).forEach((r) => {
+    laserRaw.forEach((r) => {
       if (r.finished_at != null) {
         const dur = parseFloat(r.data?.engraving_duration_seconds);
         if (!isNaN(dur)) {
@@ -383,18 +387,18 @@ export async function GET(request?: NextRequest) {
     });
 
     const mesinSet = new Set<string>();
-    (laserRaw as any[]).forEach((r) => {
+    laserRaw.forEach((r) => {
       if (r.finished_at == null) {
         const mid = r.data?.laser_machine_id;
         if (mid) mesinSet.add(mid);
       }
     });
 
-    const laserRecent = (laserRaw as any[])
+    const laserRecent = laserRaw
       .filter((r) => r.finished_at != null)
       .slice(0, 5)
       .map((r) => ({
-        order_number: r.orders?.order_number ?? null,
+        order_number: (r as any).orders?.order_number ?? null,
         engraved_text: r.data?.engraved_text ?? null,
         ring_identity_number: r.data?.ring_identity_number ?? null,
         font_style: r.data?.font_style ?? null,
@@ -417,26 +421,26 @@ export async function GET(request?: NextRequest) {
 
     // Filter to last 7 days in JS
     const sevenDaysAgoMs = sevenDaysAgo.getTime();
-    const filteredQcRaw = (qcSummaryRaw as any[]).filter((row: any) => {
+    const _filteredQcRaw = qcSummaryRaw.filter((row) => {
       const rowDate = new Date(row.created_at).getTime();
       return rowDate >= sevenDaysAgoMs;
     });
 
     const srIds = [
       ...new Set(
-        (qcSummaryRaw as any[])
-          .map((r: any) => r.stage_result_id)
+        qcSummaryRaw
+          .map((r) => r.stage_result_id)
           .filter(Boolean),
       ),
     ];
 
-    let stageMap = new Map<string, { stage: string; finished_at: string }>();
+    const stageMap = new Map<string, { stage: string; finished_at: string }>();
     if (srIds.length > 0) {
       const { data: srData } = await admin
         .from("stage_results")
         .select("id, stage, finished_at")
         .in("id", srIds);
-      (srData || []).forEach((sr: any) => {
+      (srData || []).forEach((sr) => {
         stageMap.set(sr.id, { stage: sr.stage, finished_at: sr.finished_at });
       });
     }
@@ -445,7 +449,7 @@ export async function GET(request?: NextRequest) {
       string,
       { total: number; passed: number; failed: number; date: string }
     >();
-    (qcSummaryRaw as any[]).forEach((row: any) => {
+    qcSummaryRaw.forEach((row) => {
       const sr = stageMap.get(row.stage_result_id);
       if (!sr) return;
       const stage = sr.stage;
@@ -476,11 +480,11 @@ export async function GET(request?: NextRequest) {
         ? qcActivityResult.value.data || []
         : [];
 
-    const qcActivity = (qcActivityRaw as any[]).map((row) => ({
-      order_number: row.orders?.order_number ?? null,
+    const qcActivity = qcActivityRaw.map((row) => ({
+      order_number: (row as any).orders?.order_number ?? null,
       stage: row.stage,
       result: row.data?.overall_result ?? null,
-      executed_by: row.users?.full_name ?? null,
+      executed_by: (row as any).users?.full_name ?? null,
       finished_at: row.finished_at,
       notes: row.notes,
       issues_found: row.data?.issues_found ?? null,

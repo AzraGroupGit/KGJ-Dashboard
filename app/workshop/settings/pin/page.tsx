@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { Loader2, Check, AlertTriangle, Key } from "lucide-react";
 import BrandHeader from "@/components/qr/BrandHeader";
 
 type Step = "loading" | "info" | "current" | "enter" | "confirm" | "success" | "error";
@@ -78,15 +81,10 @@ function Numpad({
                   className="flex h-16 w-16 items-center justify-center rounded-xl bg-stone-800 text-white shadow-sm transition-all hover:bg-stone-900 active:scale-[0.95] disabled:opacity-30"
                 >
                   {disabled ? (
-                    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
-                      <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor" className="opacity-75" />
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                  )}
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Check className="h-5 w-5" strokeWidth={2.5} />
+                    )}
                 </button>
               ) : (
                 <div key="sp" className="h-16 w-16" />
@@ -115,7 +113,6 @@ export default function PinSettingsPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("loading");
   const [mode, setMode] = useState<Mode>("set");
-  const [user, setUser] = useState<UserProfile | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [stepLabel, setStepLabel] = useState("");
   const [pin, setPin] = useState<string>("");
@@ -123,26 +120,30 @@ export default function PinSettingsPage() {
 
   // ── Load user profile ───────────────────────────────────────────────
 
+  const { data: user, error } = useQuery<UserProfile>({
+    queryKey: ["me-workshop-pin"],
+    queryFn: async () => {
+      const res = await fetcher<{ data: UserProfile }>("/api/me");
+      return res.data;
+    },
+  });
+
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/me");
-        if (!res.ok) throw new Error("Sesi tidak valid");
-        const json = await res.json();
-        const p: UserProfile = json.data;
-        const rg = p.role?.role_group;
-        if (rg !== "production" && rg !== "operational") {
-          throw new Error("Fitur ini hanya untuk pekerja workshop");
-        }
-        setUser(p);
-        setMode(p.pin_hash ? "change" : "set");
-        setStep("info");
-      } catch (err) {
-        setErrMsg(err instanceof Error ? err.message : "Gagal memuat data");
-        setStep("error");
-      }
-    })();
-  }, []);
+    if (error) {
+      setErrMsg(error instanceof Error ? error.message : "Gagal memuat data");
+      setStep("error");
+      return;
+    }
+    if (!user) return;
+    const rg = user.role?.role_group;
+    if (rg !== "production" && rg !== "operational") {
+      setErrMsg("Fitur ini hanya untuk pekerja workshop");
+      setStep("error");
+      return;
+    }
+    setMode(user.pin_hash ? "change" : "set");
+    setStep("info");
+  }, [user, error]);
 
   // ── PIN input helpers ───────────────────────────────────────────────
 
@@ -370,10 +371,8 @@ export default function PinSettingsPage() {
         <BrandHeader subtitle="PIN Settings" />
         <div className="rounded-2xl border border-red-100 bg-white/90 p-7 shadow-sm">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-7 w-7 text-red-400">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-            </svg>
-          </div>
+              <AlertTriangle className="h-7 w-7 text-red-400" strokeWidth={1.5} />
+            </div>
           <p className="text-[14px] text-stone-600 mb-5">{errMsg}</p>
           <button
             onClick={() => router.push("/workshop/input")}
@@ -394,10 +393,8 @@ export default function PinSettingsPage() {
         <BrandHeader subtitle="PIN Settings" />
         <div className="rounded-2xl border border-emerald-100 bg-white/90 p-8 shadow-sm">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-8 w-8 text-emerald-500">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-            </svg>
-          </div>
+              <Check className="h-8 w-8 text-emerald-500" strokeWidth={2.5} />
+            </div>
           <p className="text-[16px] font-semibold text-stone-800 mb-2">Berhasil!</p>
           <p className="text-[13px] text-stone-500 mb-6">
             {mode === "set"
@@ -423,10 +420,8 @@ export default function PinSettingsPage() {
         <BrandHeader subtitle="PIN Settings" />
         <div className="rounded-2xl border border-stone-200/80 bg-white/90 backdrop-blur-sm shadow-sm p-6 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-stone-50">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-8 w-8 text-stone-500">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
-            </svg>
-          </div>
+              <Key className="h-8 w-8 text-stone-500" strokeWidth={1.5} />
+            </div>
           <p className="text-[15px] font-semibold text-stone-800">{user?.full_name}</p>
           <div className="mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium bg-stone-100 text-stone-600">
             {user?.pin_hash ? (

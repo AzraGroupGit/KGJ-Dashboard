@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { STAGE_SEQUENCE } from "@/lib/stages";
 
 // ─── Type Definitions ─────────────────────────────────────────────────────────
 
@@ -27,24 +28,6 @@ interface OrderWithCustomer {
   customer_name: string;
 }
 
-interface StageResult {
-  id: string;
-  user_id: string;
-  started_at: string;
-}
-
-interface ActiveStageResult extends StageResult {
-  users?: {
-    full_name: string;
-  } | null;
-}
-
-interface UserRole {
-  roles: {
-    name: string;
-  } | null;
-}
-
 interface ScanRequestBody {
   qr_token: string;
   order_number: string;
@@ -67,27 +50,10 @@ const VALID_ACTIONS = [
 ] as const;
 type ValidAction = (typeof VALID_ACTIONS)[number];
 
-const STAGE_FLOW: StageFlow = {
-  penerimaan_order: "approval_penerimaan_order",
-  approval_penerimaan_order: "racik_bahan",
-  racik_bahan: "approval_racik_bahan",
-  approval_racik_bahan: "lebur_bahan",
-  lebur_bahan: "pembentukan_cincin",
-  pembentukan_cincin: "pemasangan_permata",
-  pemasangan_permata: "pemolesan",
-  pemolesan: "cek_kadar",
-  cek_kadar: "qc_1",
-  qc_1: "approval_qc_1",
-  approval_qc_1: "laser",
-  laser: "finishing",
-  finishing: "approval_produksi",
-  approval_produksi: "qc_2",
-  qc_2: "approval_qc_2",
-  approval_qc_2: "konfirmasi",
-  konfirmasi: "packing",
-  packing: "pengiriman",
-  pengiriman: "selesai",
-};
+const STAGE_FLOW: StageFlow = {};
+for (let i = 0; i < STAGE_SEQUENCE.length - 1; i++) {
+  STAGE_FLOW[STAGE_SEQUENCE[i]] = STAGE_SEQUENCE[i + 1];
+}
 
 // ─── Helper Functions ─────────────────────────────────────────────────────────
 
@@ -103,7 +69,7 @@ function getClientIP(request: Request): string | null {
   );
 }
 
-function calculateDuration(startedAt: string, finishedAt: string): number {
+function _calculateDuration(startedAt: string, finishedAt: string): number {
   return (
     (new Date(finishedAt).getTime() - new Date(startedAt).getTime()) / 1000
   );
@@ -435,7 +401,7 @@ export async function POST(request: Request) {
 // ─── Action Handlers ──────────────────────────────────────────────────────────
 
 async function handleStartWork(
-  supabase: any,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   order: OrderWithCustomer,
   qrCode: QRCodeWithRole,
   userId: string,
@@ -476,7 +442,7 @@ async function handleStartWork(
       {
         error: `Order sedang dikerjakan oleh user lain di stage ${currentStage}`,
         code: "WORK_IN_PROGRESS",
-        current_handler: activeStage.users?.full_name,
+        current_handler: (activeStage.users as any)?.full_name,
       },
       { status: 409 },
     );
@@ -552,7 +518,7 @@ async function handleStartWork(
 }
 
 async function handleEditWork(
-  supabase: any,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   order: OrderWithCustomer,
   qrCode: QRCodeWithRole,
   userId: string,
@@ -617,7 +583,7 @@ async function handleEditWork(
 }
 
 async function handleReadOrder(
-  supabase: any,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   order: OrderWithCustomer,
   _qrCode: QRCodeWithRole,
   userId: string,
@@ -650,7 +616,7 @@ async function handleReadOrder(
 }
 
 async function handleDeleteOrder(
-  supabase: any,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   order: OrderWithCustomer,
   _qrCode: QRCodeWithRole,
   userId: string,
@@ -664,7 +630,7 @@ async function handleDeleteOrder(
     .eq("id", userId)
     .single();
 
-  if (roleError || (userRole?.role as any)?.name !== "superadmin") {
+  if (roleError || (userRole?.role as { name?: string })?.name !== "superadmin") {
     return NextResponse.json(
       {
         error: "Hanya superadmin yang bisa menghapus data",
@@ -703,7 +669,7 @@ async function handleDeleteOrder(
 }
 
 async function handleRejectOrder(
-  supabase: any,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   order: OrderWithCustomer,
   _qrCode: QRCodeWithRole,
   userId: string,

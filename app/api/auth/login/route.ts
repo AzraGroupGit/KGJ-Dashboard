@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isAppRole } from "@/lib/routes";
-import { isLoginRole } from "@/lib/auth/session";
+import { getRoleProps, isLoginRole } from "@/lib/auth/session";
 
 export async function POST(request: Request) {
   try {
@@ -101,8 +101,8 @@ export async function POST(request: Request) {
     }
 
     // role dari database = object { id, name, role_group, description, permissions }
-    const roleObj = userData.role as any;
-    const userRoleName = roleObj?.name;
+    const roleProps = getRoleProps(userData);
+    const userRoleName = roleProps.name;
 
     if (!userRoleName) {
       await supabase.auth.signOut();
@@ -168,16 +168,11 @@ export async function POST(request: Request) {
           username: userData.username ?? null,
           role: userRoleName,
           roleDetail: {
-            id: roleObj.id,
-            name: roleObj.name,
-            role_group: roleObj.role_group,
-            description: roleObj.description ?? null,
-            permissions: roleObj.permissions ?? {
-              can_read: false,
-              can_insert: false,
-              can_update: false,
-              can_delete: false,
-            },
+            id: roleProps.id,
+            name: roleProps.name,
+            role_group: roleProps.role_group,
+            description: roleProps.description,
+            permissions: roleProps.permissions,
           },
           branch: userData.branches ?? null,
         },

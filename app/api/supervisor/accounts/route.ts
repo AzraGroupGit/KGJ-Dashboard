@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
 // ════════════════════════════════════════════════════════════════════════════
 // HELPERS
@@ -19,8 +20,8 @@ async function verifySupervisorScope(userId: string) {
 
   if (error || !data) return null;
 
-  const roleName: string = (data.role as any)?.name ?? "";
-  const roleGroup: string = (data.role as any)?.role_group ?? "";
+  const roleName: string = getRoleProps(data).name;
+  const _roleGroup: string = getRoleProps(data).role_group;
 
   if (roleName === "operational_supervisor") {
     return { supervisorId: userId, scopedGroup: "operational" as const, roleName };
@@ -32,7 +33,7 @@ async function verifySupervisorScope(userId: string) {
   return null;
 }
 
-function mapAccount(u: any) {
+function mapAccount(u: { id: string; full_name: string; username: string; email: string; phone: string; status: string; last_login: string; created_at: string; role_id: string; role: unknown; pin_hash: string | null }) {
   return {
     id: u.id,
     full_name: u.full_name,
@@ -43,7 +44,7 @@ function mapAccount(u: any) {
     last_login: u.last_login,
     created_at: u.created_at,
     role_id: u.role_id,
-    role: (u.role as any) ?? null,
+    role: u.role as Record<string, unknown> | null,
     pin_hash: u.pin_hash ?? null,
   };
 }
@@ -91,7 +92,7 @@ export async function GET() {
 
     // Filter by scoped role_group in application code
     const accounts = allAccounts.filter(
-      (u: any) => (u.role as any)?.role_group === scope.scopedGroup,
+      (u) => getRoleProps(u).role_group === scope.scopedGroup,
     );
 
     const roles =
@@ -256,7 +257,7 @@ export async function POST(request: Request) {
       });
     } catch (e) { console.warn("[POST /api/supervisor/accounts] activity_log failed:", e); }
 
-    return NextResponse.json({ success: true, account: mapAccount(newUser) }, { status: 201 });
+    return NextResponse.json({ success: true, account: mapAccount(newUser as any) }, { status: 201 });
   } catch (err) {
     console.error("[POST /api/supervisor/accounts]", err);
     return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });

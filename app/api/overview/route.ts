@@ -3,6 +3,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { STAGE_SEQUENCE } from "@/lib/stages";
+import { getRoleProps } from "@/lib/auth/session";
 
 function prevDay(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
@@ -64,7 +66,7 @@ export async function GET(request: Request) {
       .eq("id", user.id)
       .single();
 
-    if ((currentUser?.role as any)?.name !== "superadmin") {
+    if (getRoleProps(currentUser).name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -110,19 +112,7 @@ export async function GET(request: Request) {
       admin
         .from("cs_orders")
         .select("id", { count: "exact" })
-        .in("current_stage", [
-          "racik_bahan",
-          "lebur_bahan",
-          "pembentukan_cincin",
-          "pemasangan_permata",
-          "pemolesan",
-          "qc_1",
-          "finishing",
-          "laser",
-          "qc_2",
-          "packing",
-          "pengiriman",
-        ])
+        .in("current_stage", STAGE_SEQUENCE.filter(s => !s.startsWith("approval_") && s !== "penerimaan_order" && s !== "selesai"))
         .not("status", "in", "(completed,cancelled)")
         .is("deleted_at", null),
 
@@ -138,11 +128,7 @@ export async function GET(request: Request) {
       admin
         .from("cs_orders")
         .select("id", { count: "exact" })
-        .in("current_stage", [
-          "approval_penerimaan_order",
-          "approval_qc_1",
-          "approval_qc_2",
-        ])
+        .in("current_stage", STAGE_SEQUENCE.filter(s => s.startsWith("approval_") && s !== "approval_racik_bahan" && s !== "approval_produksi"))
         .is("deleted_at", null),
     ]);
 
@@ -172,7 +158,7 @@ export async function GET(request: Request) {
     // On-time calculation
     const completedOrders = completedOrdersRes.data || [];
     let onTimeCount = 0;
-    completedOrders.forEach((o: any) => {
+    for (const o of completedOrders) {
       if (
         o.deadline &&
         o.completed_at &&
@@ -180,7 +166,7 @@ export async function GET(request: Request) {
       ) {
         onTimeCount++;
       }
-    });
+    }
     const onTimePct =
       completedOrders.length > 0
         ? Math.round((onTimeCount / completedOrders.length) * 100)
@@ -191,7 +177,7 @@ export async function GET(request: Request) {
       approvalOrdersRes.data?.length ?? approvalOrdersRes.count ?? 0;
 
     // ── Activity ─────────────────────────────────────────────────────────────
-    const activity = (activityRes.data ?? []).map((row: any) => {
+    const activity = (activityRes.data ?? []).map((row) => {
       const u = Array.isArray(row.users) ? row.users[0] : row.users;
       const name = u?.full_name ?? u?.email?.split("@")[0] ?? "Sistem";
       return {

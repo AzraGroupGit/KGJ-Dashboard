@@ -22,7 +22,8 @@ export async function GET(_request: Request) {
       stageDurations[stage] = [];
     }
 
-    const orderGroups: Record<string, any[]> = {};
+    type Txn = { order_id: string; from_stage: string; to_stage: string; transitioned_at: string };
+    const orderGroups: Record<string, Txn[]> = {};
     for (const t of transitions) {
       if (!orderGroups[t.order_id]) orderGroups[t.order_id] = [];
       orderGroups[t.order_id].push(t);

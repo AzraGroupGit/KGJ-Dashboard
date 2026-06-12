@@ -2,15 +2,28 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import StatCard from "@/components/dashboard/StatCard";
-import ChartCard from "@/components/dashboard/ChartCard";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
 import DataTable from "@/components/dashboard/DataTable";
 import Loading from "@/components/ui/Loading";
 import Alert from "@/components/ui/Alert";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
+import { CalendarDays } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,7 +66,7 @@ interface Totals {
   closing_cs: number;
 }
 
-interface StatsData {
+interface BMSStatsData {
   monthly: MonthlyRow[];
   channels: ChannelRow[];
   branches: BranchRow[];
@@ -144,8 +157,6 @@ const MONTH_ABBR = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function StatistikPage() {
-  const [stats, setStats] = useState<StatsData | null>(null);
-  const [prevStats, setPrevStats] = useState<StatsData | null>(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("none");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -161,73 +172,49 @@ export default function StatistikPage() {
     return d.toISOString().slice(0, 10);
   });
 
-  const [dailyStatsA, setDailyStatsA] = useState<DailyStats | null>(null);
-  const [dailyStatsB, setDailyStatsB] = useState<DailyStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [alert, setAlert] = useState<{ type: "error"; message: string } | null>(
-    null,
-  );
-  const [clientUser, setClientUser] = useState<ClientUser | null>(null);
+  const [dismissedError, setDismissedError] = useState<string | null>(null);
+  const [clientUser] = useState<ClientUser | null>(() => {
+    if (typeof window === "undefined") return null;
+    return getClientUser();
+  });
 
-  useEffect(() => {
-    setClientUser(getClientUser());
-  }, []);
+  const isDod = comparisonMode === "dod";
 
-  const fetchStats = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      if (comparisonMode === "dod") {
-        // Fetch data untuk kedua tanggal
-        const [resA, resB] = await Promise.all([
-          fetch(`/api/daily-stats-1?date=${dateA}`),
-          fetch(`/api/daily-stats-1?date=${dateB}`),
-        ]);
+  const dailyAQuery = useQuery({
+    queryKey: ["daily-stats", dateA],
+    queryFn: () => fetcher<DailyStats>(`/api/daily-stats-1?date=${dateA}`),
+    enabled: isDod,
+  });
 
-        const jsonA = await resA.json();
-        const jsonB = await resB.json();
+  const dailyBQuery = useQuery({
+    queryKey: ["daily-stats", dateB],
+    queryFn: () => fetcher<DailyStats>(`/api/daily-stats-1?date=${dateB}`),
+    enabled: isDod,
+  });
 
-        if (!resA.ok || !resB.ok) {
-          setAlert({ type: "error", message: "Gagal memuat data harian" });
-          return;
-        }
+  const statsQuery = useQuery({
+    queryKey: ["stats", selectedYear],
+    queryFn: () => fetcher<BMSStatsData>(`/api/stats?year=${selectedYear}`),
+    enabled: !isDod,
+  });
 
-        setDailyStatsA(jsonA);
-        setDailyStatsB(jsonB);
-        setIsLoading(false);
-        return;
-      }
+  const prevStatsQuery = useQuery({
+    queryKey: ["stats", selectedYear - 1],
+    queryFn: () => fetcher<BMSStatsData>(`/api/stats?year=${selectedYear - 1}`),
+    enabled: !isDod && (comparisonMode === "yoy" || comparisonMode === "mom"),
+  });
 
-      const [resA, resB] = await Promise.all([
-        fetch(`/api/stats?year=${selectedYear}`),
-        comparisonMode === "yoy" || comparisonMode === "mom"
-          ? fetch(`/api/stats?year=${selectedYear - 1}`)
-          : Promise.resolve(null),
-      ]);
+  const stats = statsQuery.data ?? null;
+  const prevStats = prevStatsQuery.data ?? null;
+  const dailyStatsA = dailyAQuery.data ?? null;
+  const dailyStatsB = dailyBQuery.data ?? null;
+  const isLoading = isDod
+    ? dailyAQuery.isLoading || dailyBQuery.isLoading
+    : statsQuery.isLoading || prevStatsQuery.isLoading;
 
-      const jsonA = await resA.json();
-      if (!resA.ok) {
-        setAlert({
-          type: "error",
-          message: jsonA.error || "Gagal memuat data statistik",
-        });
-        return;
-      }
-      setStats(jsonA);
-
-      if (resB) {
-        const jsonB = await resB.json();
-        if (resB.ok) setPrevStats(jsonB);
-      } else {
-        setPrevStats(null);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedYear, comparisonMode, dateA, dateB]);
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+  const queryErrors = isDod ? [dailyAQuery.error, dailyBQuery.error] : [statsQuery.error, prevStatsQuery.error];
+  const currentError = queryErrors.find(Boolean)?.message ?? null;
+  const alert = currentError && currentError !== dismissedError ? { type: "error" as const, message: currentError } : null;
 
   // ─── Current-period metrics ─────────────────────────────────────────────────
 
@@ -473,19 +460,7 @@ export default function StatistikPage() {
             {/* Year filter */}
             {comparisonMode !== "dod" && (
               <div className="flex items-center gap-3 bg-white rounded-xl shadow-sm px-4 py-3">
-                <svg
-                  className="w-4 h-4 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
+                <CalendarDays className="w-4 h-4 text-gray-400" />
                 <label className="text-sm text-gray-600 font-medium">
                   Tahun
                 </label>
@@ -633,7 +608,7 @@ export default function StatistikPage() {
               <Alert
                 type={alert.type}
                 message={alert.message}
-                onClose={() => setAlert(null)}
+                onClose={() => setDismissedError(currentError)}
               />
             </div>
           )}
@@ -1054,112 +1029,149 @@ export default function StatistikPage() {
 
               {/* ── Charts ── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <ChartCard
-                  title="Trend Omzet & Gross Profit"
-                  type="line"
-                  labels={chartLabels}
-                  datasets={[
-                    {
-                      label: `Omzet ${selectedYear}`,
-                      data: omsetData,
-                      color: "#6366f1",
-                    },
-                    {
-                      label: `Gross Profit ${selectedYear}`,
-                      data: gpData,
-                      color: "#10b981",
-                    },
-                    ...(comparisonMode === "yoy" && prevOmsetData.length
-                      ? [
-                          {
-                            label: `Omzet ${selectedYear - 1}`,
-                            data: prevOmsetData,
-                            color: "#a5b4fc",
-                          },
-                        ]
-                      : []),
-                    ...(comparisonMode === "yoy" && prevGpData.length
-                      ? [
-                          {
-                            label: `GP ${selectedYear - 1}`,
-                            data: prevGpData,
-                            color: "#6ee7b7",
-                          },
-                        ]
-                      : []),
-                  ]}
-                  period={
-                    comparisonMode === "yoy"
-                      ? `${selectedYear} vs ${selectedYear - 1}`
-                      : `Tahun ${selectedYear}`
-                  }
-                  formatValue={(v) =>
-                    v >= 1_000_000
-                      ? `${(v / 1_000_000).toFixed(0)}Jt`
-                      : String(Math.round(v))
-                  }
-                />
-                <ChartCard
-                  title="Biaya Marketing per Bulan"
-                  type="bar"
-                  labels={chartLabels}
-                  datasets={[
-                    {
-                      label: `${selectedYear}`,
-                      data: bmData,
-                      color: "#f59e0b",
-                    },
-                    ...(comparisonMode === "yoy" && prevBmData.length
-                      ? [
-                          {
-                            label: `${selectedYear - 1}`,
-                            data: prevBmData,
-                            color: "#fcd34d",
-                          },
-                        ]
-                      : []),
-                  ]}
-                  period={
-                    comparisonMode === "yoy"
-                      ? `${selectedYear} vs ${selectedYear - 1}`
-                      : `Tahun ${selectedYear}`
-                  }
-                  formatValue={(v) =>
-                    v >= 1_000_000
-                      ? `${(v / 1_000_000).toFixed(0)}Jt`
-                      : String(Math.round(v))
-                  }
-                />
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-semibold text-gray-800">Trend Omzet & Gross Profit</h3>
+                    <div className="flex gap-3">
+                      <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span className="w-3 h-0.5 rounded inline-block bg-indigo-500" />
+                        Omzet {selectedYear}
+                      </span>
+                      <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span className="w-3 h-0.5 rounded inline-block bg-emerald-500" />
+                        GP {selectedYear}
+                      </span>
+                      {comparisonMode === "yoy" && prevOmsetData.length > 0 && (
+                        <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <span className="w-3 h-0.5 rounded inline-block bg-indigo-300" />
+                          Omzet {selectedYear - 1}
+                        </span>
+                      )}
+                      {comparisonMode === "yoy" && prevGpData.length > 0 && (
+                        <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <span className="w-3 h-0.5 rounded inline-block bg-emerald-300" />
+                          GP {selectedYear - 1}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={224}>
+                    <LineChart
+                      data={chartLabels.map((l, i) => ({
+                        bulan: l,
+                        omzet: omsetData[i] ?? 0,
+                        gp: gpData[i] ?? 0,
+                        ...(prevOmsetData.length ? { prevOmzet: prevOmsetData[i] ?? 0 } : {}),
+                        ...(prevGpData.length ? { prevGp: prevGpData[i] ?? 0 } : {}),
+                      }))}
+                      margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                      <XAxis dataKey="bulan" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                      <YAxis
+                        tick={{ fontSize: 10, fill: "#9ca3af" }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v: number) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)}Jt` : String(Math.round(v))}
+                        width={50}
+                      />
+                      <Tooltip
+                        contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                        formatter={(value: unknown) => {
+                          const v = value as number;
+                          return v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)} Jt` : `Rp ${v.toLocaleString("id-ID")}`;
+                        }}
+                      />
+                      <Line type="monotone" dataKey="omzet" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 3, fill: "#6366f1", strokeWidth: 0 }} activeDot={{ r: 5 }} connectNulls />
+                      <Line type="monotone" dataKey="gp" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3, fill: "#10b981", strokeWidth: 0 }} activeDot={{ r: 5 }} connectNulls />
+                      {comparisonMode === "yoy" && prevOmsetData.length > 0 && (
+                        <Line type="monotone" dataKey="prevOmzet" stroke="#a5b4fc" strokeWidth={2} strokeDasharray="4 3" dot={{ r: 2, fill: "#a5b4fc", strokeWidth: 0 }} connectNulls />
+                      )}
+                      {comparisonMode === "yoy" && prevGpData.length > 0 && (
+                        <Line type="monotone" dataKey="prevGp" stroke="#6ee7b7" strokeWidth={2} strokeDasharray="4 3" dot={{ r: 2, fill: "#6ee7b7", strokeWidth: 0 }} connectNulls />
+                      )}
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <p className="mt-3 text-center text-xs text-gray-400">{comparisonMode === "yoy" ? `${selectedYear} vs ${selectedYear - 1}` : `Tahun ${selectedYear}`}</p>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-base font-semibold text-gray-800 mb-4">Biaya Marketing per Bulan</h3>
+                  <ResponsiveContainer width="100%" height={224}>
+                    <BarChart
+                      data={chartLabels.map((l, i) => ({
+                        bulan: l,
+                        bm: bmData[i] ?? 0,
+                        ...(prevBmData.length ? { prevBm: prevBmData[i] ?? 0 } : {}),
+                      }))}
+                      margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                      <XAxis dataKey="bulan" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                      <YAxis
+                        tick={{ fontSize: 10, fill: "#9ca3af" }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v: number) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)}Jt` : String(Math.round(v))}
+                        width={50}
+                      />
+                      <Tooltip
+                        contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                        formatter={(value: unknown) => {
+                          const v = value as number;
+                          return v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)} Jt` : `Rp ${v.toLocaleString("id-ID")}`;
+                        }}
+                      />
+                      <Bar dataKey="bm" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      {comparisonMode === "yoy" && prevBmData.length > 0 && (
+                        <Bar dataKey="prevBm" fill="#fcd34d" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      )}
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <p className="mt-3 text-center text-xs text-gray-400">{comparisonMode === "yoy" ? `${selectedYear} vs ${selectedYear - 1}` : `Tahun ${selectedYear}`}</p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <ChartCard
-                  title="Closing per Channel"
-                  type="bar"
-                  labels={channelLabels}
-                  datasets={[
-                    {
-                      label: "Closing",
-                      data: channelClosing,
-                      color: "#8b5cf6",
-                    },
-                  ]}
-                  period={`Tahun ${selectedYear}`}
-                />
-                <ChartCard
-                  title="CPLS per Channel"
-                  type="bar"
-                  labels={channelLabels}
-                  datasets={[
-                    { label: "CPLS", data: channelCpls, color: "#06b6d4" },
-                  ]}
-                  period={`Tahun ${selectedYear}`}
-                  formatValue={(v) =>
-                    v >= 1_000_000
-                      ? `${(v / 1_000_000).toFixed(0)}Jt`
-                      : String(Math.round(v))
-                  }
-                />
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-base font-semibold text-gray-800 mb-4">Closing per Channel</h3>
+                  <ResponsiveContainer width="100%" height={224}>
+                    <BarChart
+                      data={channelLabels.map((l, i) => ({ channel: l, closing: channelClosing[i] ?? 0 }))}
+                      margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                      layout="vertical"
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                      <YAxis type="category" dataKey="channel" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} width={90} />
+                      <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" }} />
+                      <Bar dataKey="closing" fill="#8b5cf6" radius={[0, 4, 4, 0]} maxBarSize={20} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <p className="mt-3 text-center text-xs text-gray-400">Tahun {selectedYear}</p>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-base font-semibold text-gray-800 mb-4">CPLS per Channel</h3>
+                  <ResponsiveContainer width="100%" height={224}>
+                    <BarChart
+                      data={channelLabels.map((l, i) => ({ channel: l, cpls: channelCpls[i] ?? 0 }))}
+                      margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                      layout="vertical"
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)}Jt` : String(Math.round(v))} />
+                      <YAxis type="category" dataKey="channel" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} width={90} />
+                      <Tooltip
+                        contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                        formatter={(value: unknown) => {
+                          const v = value as number;
+                          return v >= 1_000_000 ? `${(v / 1_000_000).toFixed(0)} Jt` : `Rp ${v.toLocaleString("id-ID")}`;
+                        }}
+                      />
+                      <Bar dataKey="cpls" fill="#06b6d4" radius={[0, 4, 4, 0]} maxBarSize={20} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <p className="mt-3 text-center text-xs text-gray-400">Tahun {selectedYear}</p>
+                </div>
               </div>
 
               {/* ── Data Tables ── */}
@@ -1167,21 +1179,21 @@ export default function StatistikPage() {
                 <DataTable
                   title={`Data Statistik Bulanan ${selectedYear}`}
                   data={
-                    stats?.monthly.filter(
+                    (stats?.monthly.filter(
                       (m) => m.omset > 0 || m.lead_serius > 0,
-                    ) ?? []
+                    ) ?? []) as any
                   }
-                  columns={monthlyColumns}
+                  columns={monthlyColumns as any}
                 />
                 <DataTable
                   title={`Performa Channel Marketing ${selectedYear}`}
-                  data={stats?.channels ?? []}
-                  columns={channelColumns}
+                  data={stats?.channels as any ?? []}
+                  columns={channelColumns as any}
                 />
                 <DataTable
                   title={`Performa Cabang CS ${selectedYear}`}
-                  data={stats?.branches ?? []}
-                  columns={branchColumns}
+                  data={stats?.branches as any ?? []}
+                  columns={branchColumns as any}
                 />
               </div>
             </>

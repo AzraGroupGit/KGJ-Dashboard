@@ -1,5 +1,7 @@
 // components/dashboard/StatCard.tsx
 
+import { ChevronUp, ChevronDown } from "lucide-react";
+
 interface StatCardProps {
   title: string;
   value: string | number;
@@ -49,13 +51,9 @@ export default function StatCard({
             }`}
           >
             {delta >= 0 ? (
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
-              </svg>
+              <ChevronUp className="w-3 h-3" strokeWidth={2.5} />
             ) : (
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-              </svg>
+              <ChevronDown className="w-3 h-3" strokeWidth={2.5} />
             )}
             {Math.abs(delta).toFixed(1)}%
           </span>

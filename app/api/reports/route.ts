@@ -2,12 +2,13 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getRoleProps } from "@/lib/auth/session";
 
 /**
  * Helper untuk generate CSV content berdasarkan tipe laporan
  */
 async function generateReportContent(
-  supabase: any,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   type: string,
   period: string,
 ): Promise<{ content: string; filename: string } | null> {
@@ -127,11 +128,11 @@ async function generateReportContent(
 }
 
 function generateMonthlyCSV(
-  csData: any[],
-  mktData: any[],
+  csData: Record<string, unknown>[],
+  mktData: Record<string, unknown>[],
   period: string,
 ): string {
-  const escape = (v: any) => {
+  const escape = (v: unknown) => {
     if (v === null || v === undefined) return "";
     const s = String(v);
     return s.includes(",") || s.includes('"') || s.includes("\n")
@@ -161,16 +162,16 @@ function generateMonthlyCSV(
   // CS Rows
   csData.forEach((row) => {
     const cr =
-      row.closing > 0 && row.lead_masuk > 0
-        ? ((row.closing / row.lead_masuk) * 100).toFixed(1) + "%"
+      (row.closing as number) > 0 && (row.lead_masuk as number) > 0
+        ? (((row.closing as number) / (row.lead_masuk as number)) * 100).toFixed(1) + "%"
         : "0%";
 
     csv +=
       [
         row.input_date,
-        row.branches?.name || "",
-        row.branches?.code || "",
-        row.users?.full_name || "",
+        (row.branches as any)?.name || "",
+        (row.branches as any)?.code || "",
+        (row.users as any)?.full_name || "",
         row.lead_masuk,
         row.closing,
         cr,
@@ -201,7 +202,7 @@ function generateMonthlyCSV(
       [
         row.input_date,
         row.channel,
-        row.users?.full_name || "",
+        (row.users as any)?.full_name || "",
         row.biaya_marketing,
         row.lead_all,
         row.lead_serius,
@@ -213,16 +214,16 @@ function generateMonthlyCSV(
   });
 
   // Summary
-  const totalOmset = csData.reduce((sum, r) => sum + (r.omset || 0), 0);
+  const totalOmset = csData.reduce((sum, r) => sum + ((r.omset as number) || 0), 0);
   const totalBiaya = mktData.reduce(
-    (sum, r) => sum + (r.biaya_marketing || 0),
+    (sum, r) => sum + ((r.biaya_marketing as number) || 0),
     0,
   );
   const totalLeadMasuk = csData.reduce(
-    (sum, r) => sum + (r.lead_masuk || 0),
+    (sum, r) => sum + ((r.lead_masuk as number) || 0),
     0,
   );
-  const totalClosing = csData.reduce((sum, r) => sum + (r.closing || 0), 0);
+  const totalClosing = csData.reduce((sum, r) => sum + ((r.closing as number) || 0), 0);
 
   csv += `\n=== RINGKASAN ===\n`;
   csv += `Total Omset,${totalOmset}\n`;
@@ -254,7 +255,7 @@ export async function GET(request: Request) {
       .eq("id", user.id)
       .single();
 
-    if ((currentUser?.role as any)?.name !== "superadmin") {
+    if (getRoleProps(currentUser).name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -322,7 +323,7 @@ export async function POST(request: Request) {
       .eq("id", user.id)
       .single();
 
-    if ((currentUser?.role as any)?.name !== "superadmin") {
+    if (getRoleProps(currentUser).name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

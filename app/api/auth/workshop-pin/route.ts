@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
 export async function POST(request: Request) {
   try {
@@ -66,8 +67,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const roleObj = userData.role as any;
-    const roleGroup = roleObj?.role_group;
+    const roleGroup = getRoleProps(userData).role_group;
 
     // Only allow workshop roles (production, operational)
     if (roleGroup !== "production" && roleGroup !== "operational") {

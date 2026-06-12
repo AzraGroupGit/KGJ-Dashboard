@@ -3,7 +3,9 @@
 
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetcher, ApiError } from "@/lib/api";
 import { useParams } from "next/navigation";
 import {
   countWorkingDays,
@@ -18,103 +20,10 @@ import MaterialSelect from "@/components/order/MaterialSelect";
 import EngravingSelect from "@/components/order/EngravingSelect";
 import AddsOnAccordion from "@/components/order/AddsOnAccordion";
 import CustomerTimeline from "@/components/orders/CustomerTimeline";
-
-interface OrderFormData {
-  tglChat: string;
-  tglOrder: string;
-  tglAcara: string;
-  kategori: string;
-  acara: string;
-  deadline: string;
-  orderVia: string;
-  sumber: string;
-  sumberMedia: string;
-  dariArtis: string;
-  dariArtisDetail: string;
-  harga: string;
-  dpPercent: string;
-  dp: string;
-  namaLengkap: string;
-  alamatPengiriman: string;
-  kelurahan: string;
-  kecamatan: string;
-  kabupatenKota: string;
-  provinsi: string;
-  kodepos: string;
-  noWA: string;
-  email: string;
-  instagram: string;
-  ukuranPria: string;
-  ukuranWanita: string;
-  alatUkur: string;
-  ukiranPria: string;
-  ukiranWanita: string;
-  ukiranCincinPria: string;
-  ukiranCincinWanita: string;
-  font: string;
-  laserPosition: string;
-  jenisCincinPria: string;
-  jenisCincinWanita: string;
-  gramasiPria: string;
-  gramasiWanita: string;
-  jenisCincinFeatures: string[];
-  modelBentukPria: string[];
-  microsettingPria: string[];
-  detailLaserPria: string[];
-  detailFinishingPria: string[];
-  modelBentukWanita: string[];
-  microsettingWanita: string[];
-  detailLaserWanita: string[];
-  detailFinishingWanita: string[];
-  pengiriman: string;
-  box: string;
-  transferKeBank: string;
-}
-
-interface OrderInfo {
-  order_number: string;
-  customer_name: string;
-  form_status: string;
-  tgl_acara: string | null;
-  deadline: string | null;
-  acara: string | null;
-  kebutuhan_acara: string | null;
-  kategori: string | null;
-  order_via: string | null;
-  order_via_channel: string | null;
-  sumber_media: string | null;
-  sumber_detail: string | null;
-  kgj_instagram_account: string | null;
-  kgj_instagram_account_custom: string | null;
-  dari_artis: boolean | null;
-  dari_artis_detail: string | null;
-  harga: number | null;
-  dp_amount: number | null;
-  customer_wa: string | null;
-  customer_email: string | null;
-  customer_instagram: string | null;
-  alamat_pengiriman: string | null;
-  kelurahan: string | null;
-  kecamatan: string | null;
-  kabupaten_kota: string | null;
-  provinsi: string | null;
-  kodepos: string | null;
-  alat_ukur: string | null;
-  ukuran_pria: string | null;
-  ukiran_pria: string | null;
-  jenis_cincin_pria: string | null;
-  ukuran_wanita: string | null;
-  ukiran_wanita: string | null;
-  jenis_cincin_wanita: string | null;
-  jenis_cincin_features: string[];
-  font: string | null;
-  laser_position: string | null;
-  pengiriman: string | null;
-  box: string | null;
-  transfer_ke_bank: string | null;
-  current_stage: string | null;
-  status: string | null;
-}
+import type { StageResult, Transition, Delivery } from "@/types/order-timeline";
+import { X, Check, ChevronRight, Plus } from "lucide-react";
+import { OrderFormDataPublicSchema, type OrderFormData, getOrderFormErrors } from "@/lib/schemas/cs-order";
+import type { OrderInfo } from "@/types/order-info";
 
 type PageState = "loading" | "not_found" | "ready" | "submitted" | "error";
 
@@ -168,6 +77,7 @@ const emptyFormData = (): OrderFormData => ({
   pengiriman: "",
   box: "",
   transferKeBank: "",
+  keteranganTambahan: "",
 });
 
 function formatRupiah(raw: string): string {
@@ -176,7 +86,7 @@ function formatRupiah(raw: string): string {
   return n.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
-function parseRupiah(display: string): string {
+function _parseRupiah(display: string): string {
   return display.replace(/\./g, "");
 }
 
@@ -230,7 +140,7 @@ function paymentCategory(v: string): "ke_pt" | "non_pt_cash" | "" {
 const GOLD = "#C8A951";
 
 const inputCls =
-  "w-full px-4 py-2.5 border border-zinc-200 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#C8A951] focus:border-[#C8A951] bg-white outline-none transition-colors";
+  "w-full px-4 py-3 border border-zinc-300 rounded-xl text-sm text-gray-800 bg-white outline-none transition-all hover:border-zinc-400 focus:ring-2 focus:ring-[#C8A951]/30 focus:border-[#C8A951]";
 
 const labelCls = "block text-sm font-medium text-zinc-700 mb-1";
 
@@ -249,7 +159,7 @@ function SectionDivider({ title }: { title: string }) {
         <div className="flex-1 h-px" style={{ backgroundColor: `${GOLD}40` }} />
         <span
           className="text-[10px] font-bold tracking-widest uppercase whitespace-nowrap"
-          style={{ color: GOLD }}
+          style={{ color: GOLD, fontFamily: "var(--font-playfair)" }}
         >
           {title}
         </span>
@@ -268,7 +178,7 @@ const STORAGE_KEY = (t: string) => `order-form-draft-${t}`;
 
 export default function OrderFormPage() {
   const { token } = useParams<{ token: string }>();
-  const [pageState, setPageState] = useState<PageState>("loading");
+  const queryClient = useQueryClient();
   const [orderInfo, setOrderInfo] = useState<OrderInfo | null>(null);
   const [formData, setFormData] = useState<OrderFormData>(emptyFormData());
   const [errors, setErrors] = useState<
@@ -280,16 +190,12 @@ export default function OrderFormPage() {
   const [slotInfo, setSlotInfo] = useState<SlotCheckResult | null>(null);
   const [slotLoading, setSlotLoading] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
-  const [stageResults, setStageResults] = useState<
-    Array<Record<string, unknown>>
-  >([]);
-  const [transitions, setTransitions] = useState<
-    Array<Record<string, unknown>>
-  >([]);
-  const [deliveries, setDeliveries] = useState<Array<Record<string, unknown>>>(
-    [],
-  );
+  const [stageResults, setStageResults] = useState<StageResult[]>([]);
+  const [transitions, setTransitions] = useState<Transition[]>([]);
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [showInstructions, setShowInstructions] = useState(true);
+  const [isFormReady, setIsFormReady] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const saveDraft = useCallback(
     (data: OrderFormData) => {
@@ -337,125 +243,156 @@ export default function OrderFormPage() {
     } catch {}
   }, [token]);
 
+  interface OrderFormResponse {
+    data: OrderInfo;
+    stageResults?: StageResult[];
+    transitions?: Transition[];
+    deliveries?: Delivery[];
+  }
+
+  const {
+    data: orderResponse,
+    isLoading: orderLoading,
+    error: orderError,
+  } = useQuery<OrderFormResponse>({
+    queryKey: ["order-form", token],
+    queryFn: () => fetcher<OrderFormResponse>(`/api/order-form/${token}`),
+    refetchInterval: 30_000,
+  });
+
+  const pageState: PageState = orderLoading
+    ? "loading"
+    : orderError
+      ? orderError instanceof ApiError && orderError.status === 404
+        ? "not_found"
+        : "error"
+      : !orderResponse
+        ? "loading"
+        : orderResponse.data.form_status !== "pending"
+          ? "submitted"
+          : isFormReady
+            ? "ready"
+            : "loading";
+
+  // Process order response into form state
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch(`/api/order-form/${token}`);
-        if (res.status === 404) {
-          setPageState("not_found");
-          return;
-        }
-        if (!res.ok) {
-          setPageState("error");
-          return;
-        }
-        const json = await res.json();
-        const { data } = json;
-        setOrderInfo(data);
-        if (json.stageResults) setStageResults(json.stageResults);
-        if (json.transitions) setTransitions(json.transitions);
-        if (json.deliveries) setDeliveries(json.deliveries);
+    if (!orderResponse) return;
+    const data = orderResponse.data;
+    setOrderInfo(data);
+    if (orderResponse.stageResults) setStageResults(orderResponse.stageResults);
+    if (orderResponse.transitions) setTransitions(orderResponse.transitions);
+    if (orderResponse.deliveries) setDeliveries(orderResponse.deliveries);
 
-        if (data.form_status !== "pending") {
-          setPageState("submitted");
-          return;
-        }
+    if (data.form_status !== "pending") return;
 
-        const saved = loadDraft();
-        if (saved) {
-          setFormData(saved);
-          if (saved.harga) setHargaDisplay(formatRupiah(saved.harga));
-          setPageState("ready");
-          return;
-        }
+    const saved = loadDraft();
+    const today = new Date().toISOString().split("T")[0];
+    if (saved) {
+      setFormData({
+        ...saved,
+        tglChat: saved.tglChat || (data.tgl_chat ?? today),
+        tglOrder: saved.tglOrder || (data.tgl_order || today),
+        namaLengkap: saved.namaLengkap || (data.customer_name ?? ""),
+      });
+      if (saved.harga) setHargaDisplay(formatRupiah(saved.harga));
+      setIsFormReady(true);
+      return;
+    }
 
-        const rawHarga = String(data.harga ?? "");
-        const today = new Date().toISOString().split("T")[0];
-        setFormData({
-          ...emptyFormData(),
-          tglOrder: data.tgl_order || today,
-          tglAcara: data.tgl_acara ?? "",
-          deadline: data.deadline ?? "",
-          kategori: data.kategori ?? "",
-          acara: data.acara ?? data.kebutuhan_acara ?? "",
-          orderVia: data.order_via ?? "",
-          sumberMedia: data.sumber_media
-            ? (LABELS[data.sumber_media] ?? data.sumber_media)
+    const rawHarga = String(data.harga ?? "");
+    setFormData({
+      ...emptyFormData(),
+      tglChat: data.tgl_chat ?? today,
+      tglOrder: data.tgl_order || today,
+      tglAcara: data.tgl_acara ?? "",
+      deadline: data.deadline ?? "",
+      kategori: data.kategori ?? "",
+      acara: data.acara ?? data.kebutuhan_acara ?? "",
+      orderVia: data.order_via ?? "",
+      sumberMedia: data.sumber_media
+        ? (LABELS[data.sumber_media] ?? data.sumber_media)
+        : "",
+      sumber: data.sumber_detail ?? "",
+      dariArtis:
+        data.dari_artis === true
+          ? "Iya"
+          : data.dari_artis === false
+            ? "Tidak"
             : "",
-          sumber: data.sumber_detail ?? "",
-          dariArtis:
-            data.dari_artis === true
-              ? "Iya"
-              : data.dari_artis === false
-                ? "Tidak"
-                : "",
-          dariArtisDetail: data.dari_artis_detail ?? "",
-          harga: rawHarga,
-          dpPercent:
-            data.harga && data.dp_amount
-              ? String(Math.round((data.dp_amount / data.harga) * 100))
-              : "80",
-          dp: data.dp_amount != null ? data.dp_amount.toString() : "",
-          namaLengkap: data.customer_name ?? "",
-          noWA: data.customer_wa ?? "",
-          email: data.customer_email ?? "",
-          instagram: data.customer_instagram ?? "",
-          alamatPengiriman: data.alamat_pengiriman ?? "",
-          kelurahan: data.kelurahan ?? "",
-          kecamatan: data.kecamatan ?? "",
-          kabupatenKota: data.kabupaten_kota ?? "",
-          provinsi: data.provinsi ?? "",
-          kodepos: data.kodepos ?? "",
-          alatUkur: data.alat_ukur ?? "",
-          ukuranPria: data.ukuran_pria ?? "",
-          ukiranPria: data.ukiran_pria ?? "",
-          ukiranCincinPria: data.ukiran_cincin_pria ?? "",
-          jenisCincinPria: data.jenis_cincin_pria ?? "",
-          gramasiPria: data.gramasi_pria ? String(data.gramasi_pria) : "",
-          ukuranWanita: data.ukuran_wanita ?? "",
-          ukiranCincinWanita: data.ukiran_cincin_wanita ?? "",
-          gramasiWanita: data.gramasi_wanita ? String(data.gramasi_wanita) : "",
-          ukiranWanita: data.ukiran_wanita ?? "",
-          jenisCincinWanita: data.jenis_cincin_wanita ?? "",
-          jenisCincinFeatures: data.jenis_cincin_features ?? [],
-          modelBentukPria: data.model_bentuk_pria?.length
-            ? data.model_bentuk_pria
-            : [""],
-          microsettingPria: data.microsetting_pria?.length
-            ? data.microsetting_pria
-            : [""],
-          detailLaserPria: data.detail_laser_pria?.length
-            ? data.detail_laser_pria
-            : [""],
-          detailFinishingPria: data.detail_finishing_pria?.length
-            ? data.detail_finishing_pria
-            : [""],
-          modelBentukWanita: data.model_bentuk_wanita?.length
-            ? data.model_bentuk_wanita
-            : [""],
-          microsettingWanita: data.microsetting_wanita?.length
-            ? data.microsetting_wanita
-            : [""],
-          detailLaserWanita: data.detail_laser_wanita?.length
-            ? data.detail_laser_wanita
-            : [""],
-          detailFinishingWanita: data.detail_finishing_wanita?.length
-            ? data.detail_finishing_wanita
-            : [""],
-          font: data.font ?? "",
-          laserPosition: data.laser_position ?? "",
-          pengiriman: data.pengiriman ?? "",
-          box: data.box ?? "",
-          transferKeBank: data.transfer_ke_bank ?? "",
-        });
-        if (rawHarga) setHargaDisplay(formatRupiah(rawHarga));
-        setPageState("ready");
-      } catch {
-        setPageState("error");
-      }
-    };
-    load();
-  }, [token, loadDraft]);
+      dariArtisDetail: data.dari_artis_detail ?? "",
+      harga: rawHarga,
+      dpPercent:
+        data.harga && data.dp_amount
+          ? String(Math.round((data.dp_amount / data.harga) * 100))
+          : "80",
+      dp: data.dp_amount != null ? data.dp_amount.toString() : "",
+      namaLengkap: data.customer_name ?? "",
+      noWA: data.customer_wa ?? "",
+      email: data.customer_email ?? "",
+      instagram: data.customer_instagram ?? "",
+      alamatPengiriman: data.alamat_pengiriman ?? "",
+      kelurahan: data.kelurahan ?? "",
+      kecamatan: data.kecamatan ?? "",
+      kabupatenKota: data.kabupaten_kota ?? "",
+      provinsi: data.provinsi ?? "",
+      kodepos: data.kodepos ?? "",
+      alatUkur: data.alat_ukur ?? "",
+      ukuranPria: data.ukuran_pria ?? "",
+      ukiranPria: data.ukiran_pria ?? "",
+      ukiranCincinPria: data.ukiran_cincin_pria ?? "",
+      jenisCincinPria: data.jenis_cincin_pria ?? "",
+      gramasiPria: data.gramasi_pria ? String(data.gramasi_pria) : "",
+      ukuranWanita: data.ukuran_wanita ?? "",
+      ukiranCincinWanita: data.ukiran_cincin_wanita ?? "",
+      gramasiWanita: data.gramasi_wanita ? String(data.gramasi_wanita) : "",
+      ukiranWanita: data.ukiran_wanita ?? "",
+      jenisCincinWanita: data.jenis_cincin_wanita ?? "",
+      jenisCincinFeatures: data.jenis_cincin_features ?? [],
+      modelBentukPria: data.model_bentuk_pria?.length
+        ? data.model_bentuk_pria
+        : [""],
+      microsettingPria: data.microsetting_pria?.length
+        ? data.microsetting_pria
+        : [""],
+      detailLaserPria: data.detail_laser_pria?.length
+        ? data.detail_laser_pria
+        : [""],
+      detailFinishingPria: data.detail_finishing_pria?.length
+        ? data.detail_finishing_pria
+        : [""],
+      modelBentukWanita: data.model_bentuk_wanita?.length
+        ? data.model_bentuk_wanita
+        : [""],
+      microsettingWanita: data.microsetting_wanita?.length
+        ? data.microsetting_wanita
+        : [""],
+      detailLaserWanita: data.detail_laser_wanita?.length
+        ? data.detail_laser_wanita
+        : [""],
+      detailFinishingWanita: data.detail_finishing_wanita?.length
+        ? data.detail_finishing_wanita
+        : [""],
+      font: data.font ?? "",
+      laserPosition: data.laser_position ?? "",
+      pengiriman: data.pengiriman ?? "",
+      box: data.box ?? "",
+      transferKeBank: data.transfer_ke_bank ?? "",
+    });
+    if (rawHarga) setHargaDisplay(formatRupiah(rawHarga));
+    setIsFormReady(true);
+  }, [orderResponse, loadDraft]);
+
+  const setField = useCallback(<K extends keyof OrderFormData>(
+    key: K,
+    val: OrderFormData[K],
+  ) => {
+    setFormData((prev) => {
+      const next = { ...prev, [key]: val };
+      saveDraft(next);
+      return next;
+    });
+    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
+  }, [saveDraft, errors]);
 
   useEffect(() => {
     if (formData.tglOrder && formData.deadline) {
@@ -475,7 +412,7 @@ export default function OrderFormPage() {
     } else {
       setWorkingDays(null);
     }
-  }, [formData.tglOrder, formData.deadline]);
+  }, [formData.tglOrder, formData.deadline, formData.kategori, setField]);
 
   useEffect(() => {
     if (formData.kategori && formData.tglOrder) {
@@ -492,7 +429,7 @@ export default function OrderFormPage() {
         }
       }
     }
-  }, [formData.kategori]);
+  }, [formData.kategori, formData.tglOrder, formData.deadline, setField]);
 
   useEffect(() => {
     if (formData.kategori && formData.tglOrder) {
@@ -507,18 +444,6 @@ export default function OrderFormPage() {
       setSlotInfo(null);
     }
   }, [formData.kategori, formData.tglOrder]);
-
-  const setField = <K extends keyof OrderFormData>(
-    key: K,
-    val: OrderFormData[K],
-  ) => {
-    setFormData((prev) => {
-      const next = { ...prev, [key]: val };
-      saveDraft(next);
-      return next;
-    });
-    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
-  };
 
   const handleHargaChange = (val: string) => {
     const raw = val.replace(/[^\d]/g, "");
@@ -543,7 +468,7 @@ export default function OrderFormPage() {
   };
 
   // ── Detail handlers ──────────────────────────────────────────────
-  const detailFields = [
+  const _detailFields = [
     "modelBentukPria",
     "microsettingPria",
     "detailLaserPria",
@@ -553,7 +478,7 @@ export default function OrderFormPage() {
     "detailLaserWanita",
     "detailFinishingWanita",
   ] as const;
-  type DetailField = (typeof detailFields)[number];
+  type DetailField = (typeof _detailFields)[number];
 
   const addDetailRow = (field: DetailField) => {
     const arr = [...(formData[field] as string[]), ""];
@@ -570,20 +495,22 @@ export default function OrderFormPage() {
   };
 
   const validate = (): boolean => {
-    const errs: Partial<Record<keyof OrderFormData, string>> = {};
-    if (!formData.namaLengkap.trim())
-      errs.namaLengkap = "Nama lengkap wajib diisi";
-    if (!formData.noWA.trim()) errs.noWA = "Nomor WhatsApp wajib diisi";
-    if (!formData.alamatPengiriman.trim())
-      errs.alamatPengiriman = "Alamat pengiriman wajib diisi";
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+    const result = OrderFormDataPublicSchema.safeParse(formData);
+    if (!result.success) {
+      const fieldErrors = getOrderFormErrors(result.error);
+      setErrors(fieldErrors);
+      return false;
+    }
+    setErrors({});
+    return true;
   };
 
   const handleSubmit = async () => {
+    setSubmitError(null);
     if (!validate()) {
       const firstErrEl = document.querySelector("[data-error]");
       firstErrEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setSubmitError("Mohon lengkapi semua field yang wajib diisi (ditandai dengan bintang).");
       return;
     }
     setIsSubmitting(true);
@@ -598,9 +525,9 @@ export default function OrderFormPage() {
         throw new Error(body.error || "Gagal menyimpan");
       }
       clearDraft();
-      setPageState("submitted");
+      queryClient.invalidateQueries({ queryKey: ["order-form", token] });
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Terjadi kesalahan. Coba lagi.");
+      setSubmitError(e instanceof Error ? e.message : "Terjadi kesalahan. Coba lagi.");
     } finally {
       setIsSubmitting(false);
     }
@@ -647,19 +574,7 @@ export default function OrderFormPage() {
           style={{ boxShadow: `0 0 40px rgba(200,169,81,0.08)` }}
         >
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg
-              className="w-8 h-8 text-red-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X className="w-8 h-8 text-red-500" />
           </div>
           <h2 className="text-xl font-bold text-zinc-900 mb-2">
             Link Tidak Valid
@@ -710,19 +625,7 @@ export default function OrderFormPage() {
             style={{ boxShadow: `0 0 40px rgba(200,169,81,0.12)` }}
           >
             <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5 border-2 border-emerald-200">
-              <svg
-                className="w-10 h-10 text-emerald-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+              <Check className="w-10 h-10 text-emerald-500" />
             </div>
             <h2 className="text-2xl font-bold text-zinc-900 mb-2">
               Terima Kasih!
@@ -755,19 +658,7 @@ export default function OrderFormPage() {
             className="w-full rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-zinc-800 shadow-lg hover:bg-zinc-50 transition-all flex items-center justify-center gap-2"
             style={{ boxShadow: `0 4px 20px rgba(200,169,81,0.12)` }}
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
+            <ChevronRight className="h-4 w-4" />
             {showTimeline ? "Sembunyikan Status" : "Lacak Status Pesanan"}
           </button>
 
@@ -778,9 +669,9 @@ export default function OrderFormPage() {
                 status={
                   orderInfo?.status ?? orderInfo?.form_status ?? "submitted"
                 }
-                stageResults={stageResults as any}
-                transitions={transitions as any}
-                deliveries={deliveries as any}
+                stageResults={stageResults}
+                transitions={transitions}
+                deliveries={deliveries}
                 deadline={orderInfo?.deadline ?? null}
                 referenceImagePria={null}
                 referenceImageWanita={null}
@@ -880,7 +771,7 @@ export default function OrderFormPage() {
 
       <div
         className="min-h-screen py-8 px-4 relative"
-        style={{ backgroundColor: "#F2E4C0" }}
+        style={{ backgroundColor: "#F2E4C0", fontFamily: "var(--font-inter)" }}
       >
       {/* Watermark */}
       <div
@@ -899,12 +790,15 @@ export default function OrderFormPage() {
               className="h-40 w-auto object-contain drop-shadow-md"
             />
           </div>
-          <h1 className="text-xl font-bold tracking-widest text-zinc-900 uppercase">
+          <h1
+            className="text-xl font-bold tracking-widest text-zinc-900 uppercase"
+            style={{ fontFamily: "var(--font-playfair)" }}
+          >
             PT. Kotagede Jewellery
           </h1>
           <p
             className="text-xs font-semibold tracking-[0.25em] mt-1 uppercase"
-            style={{ color: GOLD }}
+            style={{ color: GOLD, fontFamily: "var(--font-playfair)" }}
           >
             Formulir Order Cincin
           </p>
@@ -988,7 +882,7 @@ export default function OrderFormPage() {
                 <select
                   value={formData.kategori}
                   onChange={(e) => setField("kategori", e.target.value)}
-                  className={inputCls}
+                  className={`${inputCls} select-chevron`}
                 >
                   <option value="">Pilih kategori</option>
                   {KATEGORI_THRESHOLDS.map((k) => (
@@ -1040,7 +934,7 @@ export default function OrderFormPage() {
                 <select
                   value={formData.acara}
                   onChange={(e) => setField("acara", e.target.value)}
-                  className={inputCls}
+                  className={`${inputCls} select-chevron`}
                 >
                   <option value="">Pilih acara</option>
                   {[
@@ -1062,7 +956,7 @@ export default function OrderFormPage() {
                 <select
                   value={formData.orderVia}
                   onChange={(e) => setField("orderVia", e.target.value)}
-                  className={inputCls}
+                  className={`${inputCls} select-chevron`}
                 >
                   <option value="">Pilih cara order</option>
                   <option value="Offline">Offline</option>
@@ -1085,7 +979,7 @@ export default function OrderFormPage() {
                       setField("sumberMedia", e.target.value);
                       setField("sumber", "");
                     }}
-                    className={inputCls}
+                    className={`${inputCls} select-chevron`}
                   >
                     <option value="">Pilih sumber</option>
                     <option value="Instagram">Instagram</option>
@@ -1118,7 +1012,7 @@ export default function OrderFormPage() {
                               onChange={(e) =>
                                 setField("sumber", e.target.value)
                               }
-                              className={inputCls}
+                              className={`${inputCls} select-chevron`}
                             >
                               <option value="">Pilih detail</option>
                               {(
@@ -1565,7 +1459,7 @@ export default function OrderFormPage() {
                 <select
                   value={formData.laserPosition}
                   onChange={(e) => setField("laserPosition", e.target.value)}
-                  className={inputCls}
+                  className={`${inputCls} select-chevron`}
                 >
                   <option value="">Pilih posisi</option>
                   <option value="dalam">Dalam cincin</option>
@@ -1747,21 +1641,13 @@ export default function OrderFormPage() {
                                 className={inputCls}
                               />
                               {arr.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeDetailRow(field, i)}
-                                  className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                                >
-                                  <svg
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth={2}
-                                    className="w-4 h-4"
+                                  <button
+                                    type="button"
+                                    onClick={() => removeDetailRow(field, i)}
+                                    className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                                   >
-                                    <path d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
-                                </button>
+                                    <X className="w-4 h-4" />
+                                  </button>
                               )}
                             </div>
                           ))}
@@ -1771,15 +1657,7 @@ export default function OrderFormPage() {
                             className="flex items-center gap-1 text-xs font-medium mt-0.5 transition-colors"
                             style={{ color: GOLD }}
                           >
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                              className="w-3.5 h-3.5"
-                            >
-                              <path d="M12 4v16m8-8H4" />
-                            </svg>
+                            <Plus className="w-3.5 h-3.5" />
                             Tambah
                           </button>
                         </div>
@@ -1799,7 +1677,7 @@ export default function OrderFormPage() {
                 <select
                   value={formData.pengiriman}
                   onChange={(e) => setField("pengiriman", e.target.value)}
-                  className={inputCls}
+                  className={`${inputCls} select-chevron`}
                 >
                   <option value="">Pilih pengiriman</option>
                   <option value="Alamat Customer">Alamat Customer</option>
@@ -1815,7 +1693,7 @@ export default function OrderFormPage() {
                 <select
                   value={formData.box}
                   onChange={(e) => setField("box", e.target.value)}
-                  className={inputCls}
+                  className={`${inputCls} select-chevron`}
                 >
                   <option value="">Pilih kemasan</option>
                   <option value="Standart">Standart</option>
@@ -1836,7 +1714,7 @@ export default function OrderFormPage() {
                 <select
                   value={formData.transferKeBank === "Ke PT" ? "" : formData.transferKeBank}
                   onChange={(e) => setField("transferKeBank", e.target.value)}
-                  className={inputCls}
+                  className={`${inputCls} select-chevron`}
                 >
                   <option value="">Pilih bank</option>
                   {BANKS.map((b) => (
@@ -1854,7 +1732,7 @@ export default function OrderFormPage() {
                 <select
                   value={formData.transferKeBank === "Non PT / Cash" ? "" : formData.transferKeBank}
                   onChange={(e) => setField("transferKeBank", e.target.value)}
-                  className={inputCls}
+                  className={`${inputCls} select-chevron`}
                 >
                   <option value="">Pilih metode</option>
                   <option value="Non PT">Non PT</option>
@@ -1867,7 +1745,7 @@ export default function OrderFormPage() {
                 <select
                   value={formData.transferKeBank}
                   onChange={(e) => setField("transferKeBank", e.target.value)}
-                  className={inputCls}
+                  className={`${inputCls} select-chevron`}
                 >
                   <option value="">Pilih metode</option>
                   <option value="Pembayaran Ke PT">Pembayaran Ke PT</option>
@@ -1882,7 +1760,7 @@ export default function OrderFormPage() {
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="w-full py-4 font-bold text-base rounded-xl shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-zinc-950"
+                className="w-full py-4 font-bold text-base rounded-xl shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-zinc-950 cursor-pointer hover:scale-[1.01] hover:shadow-xl active:scale-[0.99]"
                 style={{
                   backgroundImage: isSubmitting
                     ? "none"
@@ -1901,6 +1779,11 @@ export default function OrderFormPage() {
                   <>Kirim Formulir</>
                 )}
               </button>
+              {submitError && (
+                <p className="text-center text-sm text-red-400 mt-3 bg-red-500/10 rounded-lg py-2 px-4">
+                  {submitError}
+                </p>
+              )}
               <p className="text-center text-xs text-zinc-400 mt-3">
                 Dengan mengirim formulir ini, Anda menyetujui ketentuan order
                 PT. Kotagede Jewellery.

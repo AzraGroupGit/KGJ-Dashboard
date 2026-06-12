@@ -126,22 +126,12 @@ The system uses **Tailwind CSS v4** for all styling with a hand-crafted componen
 
 ### Data Fetching Pattern
 
-```typescript
-useEffect(() => {
-  (async () => {
-    setIsLoading(true);
-    const res = await fetch("/api/...");
-    const json = await res.json();
-    if (json.success) setData(json.data);
-    setIsLoading(false);
-  })();
-}, []);
-```
-
-- Manual `fetch()` + `useEffect` — no React Query, SWR, or similar
-- Auto-refresh intervals: 30s (KpiCards), 60s (notifications)
-- Loading: skeleton states for data views
-- Error: retry buttons with error messages
+- **Primary:** `@tanstack/react-query` `useQuery` + `fetcher` from `@/lib/api` for all GET data fetching across 23 pages/components
+- **Mutation:** Raw `fetch()` POST/PUT/DELETE for writes; `refetch()` or `queryClient.invalidateQueries()` after success for instant revalidation
+- **Auto-refresh:** `refetchInterval`: 30s (KpiCards, monitoring, approval), 60s (bottleneck, notifications fallback)
+- **Realtime:** Pusher `private-user-{userId}` channel for instant notifications
+- **Loading:** Skeleton states for data views
+- **Error:** Retry buttons with error messages
 
 ### Component Patterns
 
@@ -178,7 +168,6 @@ useEffect(() => {
 
 ## Charts & Data Visualization
 
-- **`ChartCard`** (`components/dashboard/ChartCard.tsx`): Raw Canvas 2D API, bar and line charts, HiDPI-aware (`devicePixelRatio`)
 - **`recharts`**: Used in analytics pages (BMS Statistics, OPRPRD Analysis) for BarChart, ResponsiveContainer, Tooltip
 - **Analytics components** (`components/analytics/`): WorkerProductivityTab, CycleTimeTab, BottleneckHeatmap, EstimatedCompletion — all use `recharts` + `lucide-react`
 

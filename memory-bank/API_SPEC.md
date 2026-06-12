@@ -384,9 +384,16 @@ Per-stage duration averages.
 ## Supervisor
 
 ### `GET /api/supervisor`
-Supervisor monitoring data.
+Supervisor monitoring data. Returns active orders, completed orders, and today's submission count.
 
-**Response 200:** `{ data: { active_orders, stats, ... } }`
+| Query | Type | Description |
+|-------|------|-------------|
+| `from` | string | Date range start for completed orders filter |
+| `to` | string | Date range end for completed orders filter |
+
+**Response 200:** `{ data: { orders, completedOrders, submissionsToday } }`
+
+- `completedOrders`: Returns 50 most recent completions (all time). Date filter via `from`/`to` only applies when both params are passed.
 
 ### `GET /api/supervisor/pending`
 Pending approval submissions.

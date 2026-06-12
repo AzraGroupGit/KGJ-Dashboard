@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
 const PRODUCTION_ROLES = [
   "jewelry_expert_lebur_bahan",
@@ -15,21 +16,21 @@ const PRODUCTION_ROLES = [
 const SUSUT_STAGES = ["lebur_bahan", "pembentukan_cincin", "pemolesan"];
 const QC_STAGES = ["qc_1", "qc_2", "qc_3"];
 
-function computeSusut(stage: string, data: any): number | null {
+function computeSusut(stage: string, data: Record<string, unknown> | null): number | null {
   if (stage === "lebur_bahan") {
-    const v = parseFloat(data?.shrinkage_percent);
+    const v = parseFloat(data?.shrinkage_percent as string);
     return isNaN(v) ? null : v;
   }
   if (stage === "pembentukan_cincin") {
-    const lost = parseFloat(data?.weight_lost);
-    const input = parseFloat(data?.weight_input);
+    const lost = parseFloat(data?.weight_lost as string);
+    const input = parseFloat(data?.weight_input as string);
     return !isNaN(lost) && !isNaN(input) && input > 0
       ? (lost / input) * 100
       : null;
   }
   if (stage === "pemolesan") {
-    const lost = parseFloat(data?.weight_lost);
-    const before = parseFloat(data?.weight_before_polish);
+    const lost = parseFloat(data?.weight_lost as string);
+    const before = parseFloat(data?.weight_before_polish as string);
     return !isNaN(lost) && !isNaN(before) && before > 0
       ? (lost / before) * 100
       : null;
@@ -54,7 +55,7 @@ export async function GET(request: Request) {
       .eq("id", user.id)
       .single();
 
-    if ((profile?.role as any)?.name !== "superadmin")
+    if (getRoleProps(profile).name !== "superadmin")
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     // ── Period ──────────────────────────────────────────────────────────────
@@ -154,10 +155,10 @@ export async function GET(request: Request) {
         "completed_orders",
         "qc_checklist",
       ];
-      if (r.status === "fulfilled" && (r.value as any).error) {
+      if (r.status === "fulfilled" && r.value.error) {
         console.error(
           `[analyst-oprprd] ${labels[i]}:`,
-          (r.value as any).error.message,
+          r.value.error.message,
         );
       }
     });
@@ -165,12 +166,12 @@ export async function GET(request: Request) {
     // ── Fetch stage_results for QC checklist mapping ─────────────────────────
     const srIds = [
       ...new Set(
-        (qcChecklistRaw as any[])
-          .map((r: any) => r.stage_result_id)
+        qcChecklistRaw
+          .map((r) => r.stage_result_id)
           .filter(Boolean),
       ),
     ];
-    let stageMap = new Map<string, { stage: string; finished_at: string }>();
+    const stageMap = new Map<string, { stage: string; finished_at: string }>();
 
     if (srIds.length > 0) {
       const { data: srData } = await admin
@@ -178,21 +179,21 @@ export async function GET(request: Request) {
         .select("id, stage, finished_at")
         .in("id", srIds);
 
-      (srData || []).forEach((sr: any) => {
+      (srData || []).forEach((sr) => {
         stageMap.set(sr.id, { stage: sr.stage, finished_at: sr.finished_at });
       });
     }
 
     // ── Expert Performance ──────────────────────────────────────────────────
-    const productionStaff = (allStaff as any[]).filter((u) =>
-      PRODUCTION_ROLES.includes((u.role as any)?.name),
+    const productionStaff = allStaff.filter((u) =>
+      PRODUCTION_ROLES.includes(getRoleProps(u).name),
     );
 
     const scanByUser = new Map<
       string,
       { scans: number; orders: Set<string> }
     >();
-    (scanEvents as any[]).forEach((s) => {
+    scanEvents.forEach((s) => {
       const entry = scanByUser.get(s.user_id) ?? {
         scans: 0,
         orders: new Set<string>(),
@@ -205,7 +206,7 @@ export async function GET(request: Request) {
     const stagesByUser = new Map<string, number>();
     const susutByUser = new Map<string, { sum: number; count: number }>();
 
-    (stageResults as any[]).forEach((sr) => {
+    stageResults.forEach((sr) => {
       stagesByUser.set(sr.user_id, (stagesByUser.get(sr.user_id) ?? 0) + 1);
       if (SUSUT_STAGES.includes(sr.stage)) {
         const susut = computeSusut(sr.stage, sr.data);
@@ -219,13 +220,13 @@ export async function GET(request: Request) {
     });
 
     const expertPerformance = productionStaff
-      .map((u: any) => {
+      .map((u) => {
         const scan = scanByUser.get(u.id);
         const susutAcc = susutByUser.get(u.id);
         return {
           userId: u.id,
           fullName: u.full_name,
-          roleName: (u.role as any)?.name ?? "-",
+          roleName: getRoleProps(u).name || "-",
           totalScans: scan?.scans ?? 0,
           totalOrders: scan?.orders.size ?? 0,
           stagesCompleted: stagesByUser.get(u.id) ?? 0,
@@ -242,7 +243,7 @@ export async function GET(request: Request) {
       string,
       { totalMin: number; count: number; mins: number[] }
     >();
-    (stageResults as any[]).forEach((sr: any) => {
+    stageResults.forEach((sr) => {
       if (!sr.finished_at || !sr.started_at) return;
       const durMs =
         new Date(sr.finished_at).getTime() - new Date(sr.started_at).getTime();
@@ -283,7 +284,7 @@ export async function GET(request: Request) {
       { total: number; passed: number; failed: number }
     >();
 
-    (qcChecklistRaw as any[]).forEach((row: any) => {
+    qcChecklistRaw.forEach((row) => {
       const sr = stageMap.get(row.stage_result_id);
       if (!sr || !QC_STAGES.includes(sr.stage)) return;
       const entry = qcByStage.get(sr.stage) ?? {
@@ -311,7 +312,7 @@ export async function GET(request: Request) {
 
     // ── Order Flow (daily completions) ──────────────────────────────────────
     const flowMap = new Map<string, number>();
-    (completedOrders as any[]).forEach((o) => {
+    completedOrders.forEach((o) => {
       const day = (o.completed_at as string).split("T")[0];
       flowMap.set(day, (flowMap.get(day) ?? 0) + 1);
     });
@@ -332,14 +333,14 @@ export async function GET(request: Request) {
     const totalQCPassed = qcMetrics.reduce((s, q) => s + q.passed, 0);
 
     const summary = {
-      totalOrdersCompleted: (completedOrders as any[]).length,
-      totalStagesCompleted: (stageResults as any[]).length,
+      totalOrdersCompleted: completedOrders.length,
+      totalStagesCompleted: stageResults.length,
       overallQCPassRate:
         totalQCChecks > 0
           ? Math.round((totalQCPassed / totalQCChecks) * 1000) / 10
           : 0,
       activeProductionStaff: productionStaff.filter(
-        (u: any) =>
+        (u) =>
           (scanByUser.get(u.id)?.scans ?? 0) > 0 ||
           (stagesByUser.get(u.id) ?? 0) > 0,
       ).length,

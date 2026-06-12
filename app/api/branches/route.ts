@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getRoleProps } from "@/lib/auth/session";
 
 /**
  * GET /api/branches
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
       .eq("id", user.id)
       .single();
 
-    if ((currentUser?.role as any)?.name !== "superadmin") {
+    if (getRoleProps(currentUser).name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

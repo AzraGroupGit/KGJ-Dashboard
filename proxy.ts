@@ -3,6 +3,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getRoleProps } from "@/lib/auth/session";
 import {
   ROUTES,
   getDashboardPath,
@@ -102,7 +103,7 @@ export async function proxy(req: NextRequest) {
     }
 
     // Cek akses path — kalau tidak punya akses, redirect ke dashboard sendiri
-    if (!canAccessPath(roleName as any, pathname)) {
+    if (!canAccessPath(roleName, pathname)) {
       const ownDashboard = getDashboardPath(roleName);
       if (ownDashboard) {
         return NextResponse.redirect(new URL(ownDashboard, req.url));
@@ -153,7 +154,7 @@ async function fetchUserRoleName(
   // Tolak user yang statusnya bukan active
   if (data.status !== "active") return null;
 
-  const roleName = (data.role as any)?.name;
+  const roleName = getRoleProps(data).name;
   if (!roleName || typeof roleName !== "string") return null;
 
   return roleName;

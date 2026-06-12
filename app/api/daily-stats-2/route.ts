@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
 // ============================================================
 // Config & Initialization
@@ -129,9 +130,9 @@ async function calculateAverageCycleTime(
 
   if (error || !data || data.length === 0) return 0;
 
-  const totalDays = data.reduce((sum: number, order: any) => {
-    const start = new Date(order.tgl_order);
-    const end = new Date(order.completed_at);
+  const totalDays = data.reduce((sum: number, order: Record<string, unknown>) => {
+    const start = new Date(order.tgl_order as string);
+    const end = new Date(order.completed_at as string);
     return sum + (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
   }, 0);
 
@@ -154,7 +155,7 @@ function mapStageToActivityType(
 // Main API Handler
 // ============================================================
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const supabase = await createClient();
   const admin = createAdminClient();
 
@@ -170,7 +171,7 @@ export async function GET(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  if ((currentUser?.role as any)?.name !== "superadmin") {
+  if (getRoleProps(currentUser).name !== "superadmin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -336,12 +337,12 @@ export async function GET(request: NextRequest) {
     const totalOrdersAktif = activeOrdersQuery.count || 0;
     const potensiKeterlambatan = potentiallyLateQuery.count || 0;
 
-    let totalBeratEmas = 0,
+    const totalBeratEmas = 0,
       totalPermata = 0,
       totalKarat = 0,
       karatCount = 0;
     const processedOrders = new Set<string>();
-    (wipMaterialsQuery.data || []).forEach((record: any) => {
+    (wipMaterialsQuery.data || []).forEach((record) => {
       if (processedOrders.has(record.order_id)) return;
       processedOrders.add(record.order_id);
     });
@@ -353,7 +354,7 @@ export async function GET(request: NextRequest) {
     const reworkData = reworkStatsQuery.data || [];
     const totalRework = reworkData.length;
     const criticalRework = reworkData.filter(
-      (r: any) => r.severity === "critical",
+      (r) => r.severity === "critical",
     ).length;
 
     const currentWeekOrders = thisWeekOrdersQuery.count || 0;
@@ -371,7 +372,7 @@ export async function GET(request: NextRequest) {
       totalPelunasan = 0,
       totalDelivery = 0,
       urgentCount = 0;
-    afterSalesData.forEach((record: any) => {
+    afterSalesData.forEach((record) => {
       if (
         record.current_stage === "approval_penerimaan_order" ||
         record.current_stage === "approval_qc_1"
@@ -393,7 +394,7 @@ export async function GET(request: NextRequest) {
     let totalShrinkage = 0,
       shrinkCount = 0,
       totalRacikBerat = 0;
-    (racikStatsQuery.data || []).forEach((record: any) => {
+    (racikStatsQuery.data || []).forEach((record) => {
       const d = record.data;
       if (d?.actual_weight && d?.target_weight) {
         totalShrinkage +=
@@ -408,8 +409,8 @@ export async function GET(request: NextRequest) {
     // Laser
     // ============================================================
     const laserData = laserStatsQuery.data || [];
-    const antrianLaser = laserData.filter((l: any) => !l.finished_at).length;
-    const mesinAktifLaser = laserData.filter((l: any) => l.finished_at).length;
+    const antrianLaser = laserData.filter((l) => !l.finished_at).length;
+    const mesinAktifLaser = laserData.filter((l) => l.finished_at).length;
 
     // ============================================================
     // QC
@@ -418,7 +419,7 @@ export async function GET(request: NextRequest) {
     let totalPassRate = 0,
       passCount = 0,
       failedToday = 0;
-    qcData.forEach((record: any) => {
+    qcData.forEach((record) => {
       if (record.data?.overall_result) {
         passCount++;
         if (record.data.overall_result === "passed") totalPassRate++;
@@ -431,12 +432,12 @@ export async function GET(request: NextRequest) {
     // Experts
     // ============================================================
     const allUsers = expertUsersQuery.data || [];
-    const expertData = allUsers.filter((u: any) =>
-      PRODUCTION_ROLES.includes((u.role as any)?.name),
+    const expertData = allUsers.filter((u) =>
+      PRODUCTION_ROLES.includes(getRoleProps(u).name),
     );
     const totalExperts = expertData.length;
     const activeExperts = expertData.filter(
-      (e: any) => e.status === "active",
+      (e) => e.status === "active",
     ).length;
 
     const { count: totalExpertOrders } = await admin
@@ -446,8 +447,8 @@ export async function GET(request: NextRequest) {
       .in(
         "user_id",
         expertData
-          .filter((e: any) => e.status === "active")
-          .map((e: any) => e.id),
+          .filter((e) => e.status === "active")
+          .map((e) => e.id),
       )
       .gte("scanned_at", todayISO);
 
@@ -455,12 +456,12 @@ export async function GET(request: NextRequest) {
     // Micro Setting
     // ============================================================
     const microData = microSettingQuery.data || [];
-    const microSettingTotal = microData.filter((m: any) => {
-      const order = m.orders;
+    const microSettingTotal = microData.filter((m) => {
+      const order = (m as any).orders;
       return order?.has_gemstone;
     }).length;
-    const microInProgress = microData.filter((m: any) => {
-      const order = m.orders;
+    const microInProgress = microData.filter((m) => {
+      const order = (m as any).orders;
       return !m.finished_at && order?.has_gemstone;
     }).length;
 
@@ -469,10 +470,10 @@ export async function GET(request: NextRequest) {
     // ============================================================
     const adminTasksRaw = adminTasksQuery.data || [];
     const adminTotal = adminTasksRaw.length;
-    const adminActive = adminTasksRaw.filter((t: any) => !t.finished_at).length;
+    const adminActive = adminTasksRaw.filter((t) => !t.finished_at).length;
     const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
     const adminDelayed = adminTasksRaw.filter(
-      (t: any) => !t.finished_at && new Date(t.started_at) < fourHoursAgo,
+      (t) => !t.finished_at && new Date(t.started_at) < fourHoursAgo,
     ).length;
 
     // ============================================================
@@ -482,7 +483,7 @@ export async function GET(request: NextRequest) {
     STAGE_ORDER.forEach((s) => {
       stageCounts[s] = 0;
     });
-    (stageDistributionQuery.data || []).forEach((order: any) => {
+    (stageDistributionQuery.data || []).forEach((order) => {
       if (
         order.current_stage &&
         stageCounts.hasOwnProperty(order.current_stage)
@@ -498,12 +499,12 @@ export async function GET(request: NextRequest) {
     // Recent Activities
     // ============================================================
     const recentActivities = (recentActivitiesQuery.data || []).map(
-      (activity: any) => ({
+      (activity) => ({
         id: activity.id,
         type: mapStageToActivityType(activity.stage),
-        orderNumber: activity.orders?.order_number || "-",
+        orderNumber: (activity as any).orders?.order_number || "-",
         stage: activity.stage,
-        user: activity.users?.full_name || "Unknown",
+        user: (activity as any).users?.full_name || "Unknown",
         timestamp: activity.scanned_at,
         status: (activity.action === "reject"
           ? "error"
@@ -534,12 +535,12 @@ export async function GET(request: NextRequest) {
       string,
       { name: string; role: string; count: number }
     >();
-    (performerData || []).forEach((r: any) => {
+    (performerData || []).forEach((r) => {
       const uid = r.user_id;
       if (!performerMap.has(uid)) {
         performerMap.set(uid, {
-          name: r.users?.full_name || "Unknown",
-          role: (r.users?.role as any)?.name || "-",
+          name: (r as any).users?.full_name || "Unknown",
+          role: getRoleProps((r as any).users).name || "-",
           count: 0,
         });
       }

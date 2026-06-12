@@ -2,7 +2,9 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Button from "@/components/ui/Button";
@@ -12,6 +14,20 @@ import Alert from "@/components/ui/Alert";
 import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import {
+  ArrowLeft,
+  Building2,
+  MapPin,
+  Pencil,
+  Phone,
+  Plus,
+  Power,
+  Settings,
+  Shield,
+  Trash2,
+  User,
+  Users,
+} from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -141,7 +157,6 @@ const EMPTY_BRANCH_FORM = {
 export default function KelolaAkunPage() {
   const [activeTab, setActiveTab] = useState<"users" | "branches">("users");
   const [clientUser, setClientUser] = useState<ClientUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [alert, setAlert] = useState<AlertState>(null);
 
   const [allUsers, setAllUsers] = useState<UnifiedUser[]>([]);
@@ -162,10 +177,13 @@ export default function KelolaAkunPage() {
   const [userToDelete, setUserToDelete] = useState<UnifiedUser | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
 
+  const [userToToggle, setUserToToggle] = useState<UnifiedUser | null>(null);
+
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [branchForm, setBranchForm] = useState(EMPTY_BRANCH_FORM);
   const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
+  const [branchToToggle, setBranchToToggle] = useState<Branch | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -240,7 +258,7 @@ export default function KelolaAkunPage() {
     return raw;
   };
 
-  const resolveUserType = (u: any): "bms" | "supervisor" | "oprprd" => {
+  const resolveUserType = (u: { role?: string; roles?: { name?: string; role_group?: string } | null; username?: string; email?: string }): "bms" | "supervisor" | "oprprd" => {
     if (u.role && (BMS_ROLES as readonly string[]).includes(u.role))
       return "bms";
     const roleName = u.roles?.name;
@@ -254,54 +272,58 @@ export default function KelolaAkunPage() {
 
   // ─── Data fetching ─────────────────────────────────────────────────────────
 
-  const fetchAllUsers = useCallback(async () => {
-    const params = new URLSearchParams({ limit: "500" });
-    if (!showInactive) params.append("status", "active");
-    const res = await fetch(`/api/users?${params.toString()}`);
-    const json = await res.json();
-    if (!res.ok) {
-      showAlert("error", parseApiError(json.error, res.status));
-      return;
-    }
-    setAllUsers(
-      (json.data ?? []).map((u: any) => ({
-        ...u,
-        userType: resolveUserType(u),
-      })),
-    );
-  }, [showInactive]);
+  interface UsersResponse { data: Record<string, unknown>[]; }
+  interface RolesResponse { data: Record<string, unknown>[]; }
+  interface BranchesResponse { data: Record<string, unknown>[]; }
 
-  const fetchRoles = useCallback(async () => {
-    const res = await fetch("/api/roles");
-    const json = await res.json();
-    if (!res.ok) return;
-    // Exclude only the three BMS roles — supervisor stays in regardless of role_group
-    const BMS_NAMES = new Set(["superadmin", "customer_service", "marketing"]);
-    setRoles(
-      (json.data ?? []).filter(
-        (r: RoleOPRPRD) => !BMS_NAMES.has(r.name),
-      ),
-    );
-  }, []);
+  const { data: usersData, isLoading: usersLoading, refetch: refetchUsers } = useQuery<UsersResponse>({
+    queryKey: ["users", showInactive],
+    queryFn: () => {
+      const params = new URLSearchParams({ limit: "500" });
+      if (!showInactive) params.append("status", "active");
+      return fetcher(`/api/users?${params.toString()}`);
+    },
+  });
 
-  const fetchBranches = useCallback(async () => {
-    const res = await fetch("/api/branches");
-    const json = await res.json();
-    if (!res.ok) {
-      showAlert("error", parseApiError(json.error, res.status));
-      return;
-    }
-    setBranches(json.data ?? []);
-  }, []);
+  const { data: rolesData, isLoading: rolesLoading } = useQuery<RolesResponse>({
+    queryKey: ["roles"],
+    queryFn: () => fetcher("/api/roles"),
+  });
+
+  const { data: branchesData, isLoading: branchesLoading, refetch: refetchBranches } = useQuery<BranchesResponse>({
+    queryKey: ["branches"],
+    queryFn: () => fetcher("/api/branches"),
+  });
+
+  const isQueriesLoading = usersLoading || rolesLoading || branchesLoading;
 
   useEffect(() => {
-    const load = async () => {
-      setIsLoading(true);
-      await Promise.all([fetchAllUsers(), fetchRoles(), fetchBranches()]);
-      setIsLoading(false);
-    };
-    load();
-  }, [fetchAllUsers, fetchRoles, fetchBranches]);
+    if (usersData?.data) {
+      setAllUsers(
+        ((usersData.data ?? []) as any[]).map((u) => ({
+          ...u,
+          userType: resolveUserType(u),
+        })),
+      );
+    }
+  }, [usersData]);
+
+  useEffect(() => {
+    if (rolesData?.data) {
+      const BMS_NAMES = new Set(["superadmin", "customer_service", "marketing"]);
+      setRoles(
+        ((rolesData.data ?? []) as any[]).filter(
+          (r: RoleOPRPRD) => !BMS_NAMES.has(r.name),
+        ),
+      );
+    }
+  }, [rolesData]);
+
+  useEffect(() => {
+    if (branchesData?.data) {
+      setBranches((branchesData.data ?? []) as any);
+    }
+  }, [branchesData]);
 
   // ─── Filtered & stats ──────────────────────────────────────────────────────
 
@@ -436,7 +458,7 @@ export default function KelolaAkunPage() {
       setIsModalOpen(false);
 
       setTimeout(() => {
-        fetchAllUsers();
+        refetchUsers();
       }, 500);
     } finally {
       setIsSaving(false);
@@ -503,7 +525,7 @@ export default function KelolaAkunPage() {
       setIsModalOpen(false);
 
       setTimeout(() => {
-        fetchAllUsers();
+        refetchUsers();
       }, 500);
     } finally {
       setIsSaving(false);
@@ -566,7 +588,7 @@ export default function KelolaAkunPage() {
           : "Akun supervisor baru berhasil dibuat!",
       );
       setIsModalOpen(false);
-      setTimeout(() => fetchAllUsers(), 500);
+      setTimeout(() => refetchUsers(), 500);
     } finally {
       setIsSaving(false);
     }
@@ -596,7 +618,7 @@ export default function KelolaAkunPage() {
       "success",
       `Akun ${user.full_name} berhasil ${isNowActive ? "diaktifkan" : "dinonaktifkan"}.`,
     );
-    await fetchAllUsers();
+    await refetchUsers();
   };
 
   // ─── Delete user ───────────────────────────────────────────────────────────
@@ -614,7 +636,7 @@ export default function KelolaAkunPage() {
         return;
       }
       showAlert("success", `Akun ${userToDelete.full_name} berhasil dihapus.`);
-      await fetchAllUsers();
+      await refetchUsers();
     } finally {
       setIsDeletingUser(false);
       setUserToDelete(null);
@@ -692,7 +714,7 @@ export default function KelolaAkunPage() {
       setIsModalOpen(false);
 
       setTimeout(() => {
-        fetchBranches();
+        refetchBranches();
       }, 500);
     } finally {
       setIsSaving(false);
@@ -715,7 +737,7 @@ export default function KelolaAkunPage() {
       "success",
       `Cabang ${branch.name} berhasil ${newStatus === "active" ? "diaktifkan" : "dinonaktifkan"}.`,
     );
-    await fetchBranches();
+    await refetchBranches();
   };
 
   const handleDeleteBranch = async () => {
@@ -731,7 +753,7 @@ export default function KelolaAkunPage() {
         return;
       }
       showAlert("success", `Cabang ${branchToDelete.name} berhasil dihapus.`);
-      await fetchBranches();
+      await refetchBranches();
     } finally {
       setIsDeleting(false);
       setBranchToDelete(null);
@@ -853,7 +875,7 @@ export default function KelolaAkunPage() {
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
-  if (isLoading) {
+  if (isQueriesLoading) {
     return (
       <div className="flex h-screen bg-gray-50">
         <Sidebar role="superadmin" />
@@ -891,21 +913,7 @@ export default function KelolaAkunPage() {
                     ? handleOpenCreateModal()
                     : handleOpenBranchModal()
                 }
-                leftIcon={
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                }
+                leftIcon={<Plus className="w-4 h-4" />}
               >
                 {activeTab === "users" ? "Buat Akun Baru" : "Tambah Cabang"}
               </Button>
@@ -935,33 +943,9 @@ export default function KelolaAkunPage() {
                   >
                     <div className="flex items-center gap-2">
                       {tab === "users" ? (
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                          />
-                        </svg>
+                        <Users className="w-4 h-4" />
                       ) : (
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                          />
-                        </svg>
+                        <Building2 className="w-4 h-4" />
                       )}
                       {tab === "users" ? "Manajemen User" : "Data Cabang"}
                     </div>
@@ -1125,22 +1109,10 @@ export default function KelolaAkunPage() {
                                     className="text-indigo-600 hover:text-indigo-900 transition-colors"
                                     title="Edit"
                                   >
-                                    <svg
-                                      className="w-5 h-5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                      />
-                                    </svg>
+                                    <Pencil className="w-5 h-5" />
                                   </button>
                                   <button
-                                    onClick={() => handleToggleUserStatus(user)}
+                                    onClick={() => setUserToToggle(user)}
                                     className={`${currentUserIsActive(user) ? "text-yellow-600 hover:text-yellow-900" : "text-green-600 hover:text-green-900"} transition-colors`}
                                     title={
                                       currentUserIsActive(user)
@@ -1148,38 +1120,14 @@ export default function KelolaAkunPage() {
                                         : "Aktifkan"
                                     }
                                   >
-                                    <svg
-                                      className="w-5 h-5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                      />
-                                    </svg>
+                                    <Power className="w-5 h-5" />
                                   </button>
                                   <button
                                     onClick={() => setUserToDelete(user)}
                                     className="text-red-600 hover:text-red-900 transition-colors"
                                     title="Hapus"
                                   >
-                                    <svg
-                                      className="w-5 h-5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                      />
-                                    </svg>
+                                    <Trash2 className="w-5 h-5" />
                                   </button>
                                 </div>
                               </td>
@@ -1258,25 +1206,7 @@ export default function KelolaAkunPage() {
                         <div className="p-6">
                           <div className="space-y-3">
                             <div className="flex items-start gap-3">
-                              <svg
-                                className="w-5 h-5 text-gray-400 mt-0.5 shrink-0"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                />
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                />
-                              </svg>
+                              <MapPin className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" />
                               <div>
                                 <p className="text-xs text-gray-500">Alamat</p>
                                 <p className="text-sm text-gray-800">
@@ -1286,19 +1216,7 @@ export default function KelolaAkunPage() {
                             </div>
                             {branch.phone && (
                               <div className="flex items-center gap-3">
-                                <svg
-                                  className="w-5 h-5 text-gray-400 shrink-0"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                                  />
-                                </svg>
+                                <Phone className="w-5 h-5 text-gray-400 shrink-0" />
                                 <div>
                                   <p className="text-xs text-gray-500">
                                     Telepon
@@ -1311,19 +1229,7 @@ export default function KelolaAkunPage() {
                             )}
                             {branch.pic && (
                               <div className="flex items-center gap-3">
-                                <svg
-                                  className="w-5 h-5 text-gray-400 shrink-0"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                  />
-                                </svg>
+                                <User className="w-5 h-5 text-gray-400 shrink-0" />
                                 <div>
                                   <p className="text-xs text-gray-500">PIC</p>
                                   <p className="text-sm text-gray-800">
@@ -1364,7 +1270,7 @@ export default function KelolaAkunPage() {
                                     ? "warning"
                                     : "success"
                                 }
-                                onClick={() => handleToggleBranchStatus(branch)}
+                                onClick={() => setBranchToToggle(branch)}
                                 className="flex-1"
                               >
                                 {branch.status === "active"
@@ -1376,19 +1282,7 @@ export default function KelolaAkunPage() {
                                 className="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
                                 title="Hapus cabang"
                               >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </div>
@@ -1555,19 +1449,7 @@ export default function KelolaAkunPage() {
                     className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left"
                   >
                     <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
-                      <svg
-                        className="w-5 h-5 text-purple-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                        />
-                      </svg>
+                      <Shield className="w-5 h-5 text-purple-600" />
                     </div>
                     <div>
                       <p className="font-semibold text-gray-800">Akun BMS</p>
@@ -1582,19 +1464,7 @@ export default function KelolaAkunPage() {
                     className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-rose-400 hover:bg-rose-50 transition-all text-left"
                   >
                     <div className="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center shrink-0">
-                      <svg
-                        className="w-5 h-5 text-rose-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-                        />
-                      </svg>
+                      <Settings className="w-5 h-5 text-rose-600" />
                     </div>
                     <div>
                       <p className="font-semibold text-gray-800">
@@ -1610,19 +1480,7 @@ export default function KelolaAkunPage() {
                     className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-orange-400 hover:bg-orange-50 transition-all text-left"
                   >
                     <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
-                      <svg
-                        className="w-5 h-5 text-orange-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
+                      <Users className="w-5 h-5 text-orange-600" />
                     </div>
                     <div>
                       <p className="font-semibold text-gray-800">
@@ -1647,19 +1505,7 @@ export default function KelolaAkunPage() {
                         onClick={() => setNewUserType(null)}
                         className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 mb-2"
                       >
-                        <svg
-                          className="w-3.5 h-3.5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 19l-7-7 7-7"
-                          />
-                        </svg>
+                        <ArrowLeft className="w-3.5 h-3.5" />
                         Ganti tipe akun
                       </button>
                     )}
@@ -1774,9 +1620,7 @@ export default function KelolaAkunPage() {
                         onClick={() => setNewUserType(null)}
                         className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 mb-2"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
+                        <ArrowLeft className="w-3.5 h-3.5" />
                         Ganti tipe akun
                       </button>
                     )}
@@ -1869,19 +1713,7 @@ export default function KelolaAkunPage() {
                         onClick={() => setNewUserType(null)}
                         className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 mb-2"
                       >
-                        <svg
-                          className="w-3.5 h-3.5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 19l-7-7 7-7"
-                          />
-                        </svg>
+                        <ArrowLeft className="w-3.5 h-3.5" />
                         Ganti tipe akun
                       </button>
                     )}
@@ -2055,6 +1887,40 @@ export default function KelolaAkunPage() {
         isLoading={isDeletingUser}
         onConfirm={handleDeleteUser}
         onCancel={() => !isDeletingUser && setUserToDelete(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={!!userToToggle}
+        variant="warning"
+        title={userToToggle?.status === "active" ? "Nonaktifkan akun?" : "Aktifkan akun?"}
+        message={
+          userToToggle
+            ? userToToggle.status === "active"
+              ? `Akun "${userToToggle.full_name}" akan dinonaktifkan. Pengguna tidak dapat login sampai diaktifkan kembali.`
+              : `Akun "${userToToggle.full_name}" akan diaktifkan kembali. Pengguna dapat login seperti biasa.`
+            : ""
+        }
+        confirmText={userToToggle?.status === "active" ? "Ya, Nonaktifkan" : "Ya, Aktifkan"}
+        cancelText="Batal"
+        onConfirm={() => { handleToggleUserStatus(userToToggle!); setUserToToggle(null); }}
+        onCancel={() => setUserToToggle(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={!!branchToToggle}
+        variant="warning"
+        title={branchToToggle?.status === "active" ? "Nonaktifkan cabang?" : "Aktifkan cabang?"}
+        message={
+          branchToToggle
+            ? branchToToggle.status === "active"
+              ? `Cabang "${branchToToggle.name}" akan dinonaktifkan. Data cabang tetap tersimpan.`
+              : `Cabang "${branchToToggle.name}" akan diaktifkan kembali.`
+            : ""
+        }
+        confirmText={branchToToggle?.status === "active" ? "Ya, Nonaktifkan" : "Ya, Aktifkan"}
+        cancelText="Batal"
+        onConfirm={() => { handleToggleBranchStatus(branchToToggle!); setBranchToToggle(null); }}
+        onCancel={() => setBranchToToggle(null)}
       />
     </>
   );

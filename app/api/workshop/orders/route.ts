@@ -3,16 +3,13 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
-// Approval stages — orders at these stages wait for supervisor action
-const APPROVAL_STAGES = new Set([
-  "approval_penerimaan_order",
-  "approval_racik_bahan",
-  "approval_qc_1",
-  "approval_produksi",
-  "approval_qc_2",
-]);
+
+import { createAdminClient } from "@/lib/supabase/admin";
+import { STAGE_SEQUENCE } from "@/lib/stages";
+
+const APPROVAL_STAGES = new Set<string>(STAGE_SEQUENCE.filter(s => s.startsWith("approval_")));
 
 export async function GET(request: Request) {
   try {
@@ -41,10 +38,9 @@ export async function GET(request: Request) {
         { status: 404 },
       );
 
-    const roleName: string = (userData.role as any)?.name ?? "";
-    const roleGroup: string = (userData.role as any)?.role_group ?? "";
-    const dbAllowedStages: string[] =
-      (userData.role as any)?.allowed_stages ?? [];
+    const roleName: string = getRoleProps(userData).name;
+    const roleGroup: string = getRoleProps(userData).role_group;
+    const dbAllowedStages: string[] = getRoleProps(userData).allowed_stages;
 
     // Resolve which stages this worker can process
     let workerStages: string[];
@@ -105,7 +101,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const result = (orders ?? []).map((o: any) => ({
+    const result = (orders ?? []).map((o) => ({
       id: o.id,
       order_number: o.order_number,
       current_stage: o.current_stage,

@@ -54,7 +54,7 @@ export default function FontPicker({
             e.target.value === CUSTOM_VALUE ? CUSTOM_VALUE : e.target.value,
           )
         }
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
       >
         <option value="" disabled>
           Pilih font
@@ -84,7 +84,7 @@ export default function FontPicker({
             value={customText}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Masukkan nama font..."
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
           />
         </div>
       )}
@@ -96,7 +96,7 @@ export default function FontPicker({
             value={previewText}
             onChange={(e) => setPreviewText(e.target.value)}
             placeholder="Ketik sesuatu untuk preview font..."
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
           />
           {previewText && (
             <div

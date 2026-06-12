@@ -3,7 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireCsOrAdmin } from "@/app/api/cs/orders/route";
 
-function groupOrders(orders: any[]) {
+function groupOrders(orders: Array<{
+  id: unknown; order_number: string; customer_wa: string | null; customer_name: string;
+  customer_email: string | null; customer_instagram: string | null; alamat_pengiriman: string | null;
+  kelurahan: string | null; kecamatan: string | null; kabupaten_kota: string | null;
+  provinsi: string | null; kodepos: string | null; harga: number; status: string;
+  current_stage: string; created_at: string; tgl_order: string | null; tgl_acara: string | null;
+  acara: string | null; kategori: string | null; transfer_ke_bank: string | null;
+}>) {
   const groups = new Map<string, {
     customer_wa: string | null;
     customer_name: string;

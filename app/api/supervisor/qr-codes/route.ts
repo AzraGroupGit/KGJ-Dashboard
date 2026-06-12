@@ -34,7 +34,7 @@ interface UserWithRole {
   } | null;
 }
 
-async function checkAuth(request: Request): Promise<{ user: any; error?: NextResponse }> {
+async function checkAuth(_request: Request): Promise<{ user: UserWithRole | null; error?: NextResponse }> {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
@@ -187,7 +187,7 @@ export async function POST(request: Request) {
     const qrCodeData = newQR as unknown as QRCode;
 
     await admin.from("activity_logs").insert({
-      user_id: user.id,
+      user_id: user!.id,
       action: "CREATE_QR_CODE",
       entity_type: "qr_codes",
       entity_id: qrCodeData.id,
@@ -251,7 +251,7 @@ export async function PATCH(request: Request) {
     }
 
     await admin.from("activity_logs").insert({
-      user_id: user.id,
+      user_id: user!.id,
       action: is_active ? "ACTIVATE_QR_CODE" : "DEACTIVATE_QR_CODE",
       entity_type: "qr_codes",
       entity_id: id,
@@ -297,7 +297,7 @@ export async function DELETE(request: Request) {
     }
 
     await admin.from("activity_logs").insert({
-      user_id: user.id,
+      user_id: user!.id,
       action: "DELETE_QR_CODE",
       entity_type: "qr_codes",
       entity_id: id,

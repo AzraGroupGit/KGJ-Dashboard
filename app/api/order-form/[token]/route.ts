@@ -96,7 +96,7 @@ export async function GET(
       );
     }
 
-    const orderId = (data as any).id;
+      const orderId = (data as any).id;
 
     const [stageResultsRes, transitionsRes, deliveriesRes] =
       await Promise.allSettled([

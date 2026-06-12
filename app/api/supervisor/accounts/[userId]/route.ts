@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRoleProps } from "@/lib/auth/session";
 
 async function verifySupervisorScope(userId: string) {
   const admin = createAdminClient();
@@ -15,7 +16,7 @@ async function verifySupervisorScope(userId: string) {
 
   if (error || !data) return null;
 
-  const roleName: string = (data.role as any)?.name ?? "";
+  const roleName: string = getRoleProps(data).name;
 
   if (roleName === "operational_supervisor") {
     return { supervisorId: userId, scopedGroup: "operational" as const, roleName };
@@ -40,7 +41,7 @@ async function loadTargetUser(targetId: string, scopedGroup: string) {
 
   if (error || !data) return null;
 
-  const roleGroup: string = (data.role as any)?.role_group ?? "";
+  const roleGroup: string = getRoleProps(data).role_group;
   if (roleGroup !== scopedGroup) return null; // outside supervisor's scope
 
   return data;

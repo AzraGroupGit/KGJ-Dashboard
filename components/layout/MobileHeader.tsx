@@ -2,7 +2,9 @@
 
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import {
   Menu,
@@ -12,20 +14,17 @@ import {
   User,
   Settings,
   RefreshCw,
+  CheckCircle,
+  AlertTriangle,
+  Info,
+  XCircle,
 } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
 import { clearClientUser } from "@/lib/auth/session";
+import type { Channel } from "pusher-js";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: "info" | "success" | "warning" | "error";
-  is_read: boolean;
-  link: string | null;
-  created_at: string;
-}
+import type { Notification } from "@/types/layout";
 
 interface HeaderProps {
   userEmail: string;
@@ -55,17 +54,21 @@ export default function Header({
 
   // ─── Fetch notifications ─────────────────────────────────────────────────
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const res = await fetch("/api/notifications?limit=20");
-      if (!res.ok) return;
-      const json = await res.json();
-      setNotifications(json.data ?? []);
-      setUnreadCount(json.unread_count ?? 0);
-    } catch {
-      // silently fail — notifications are non-critical
+  const {
+    data: notifData,
+    refetch,
+  } = useQuery<{ data: Notification[]; unread_count: number }>({
+    queryKey: ["notifications"],
+    queryFn: () => fetcher("/api/notifications?limit=20"),
+  });
+
+  // Sync query data to local state (for Pusher compatibility)
+  useEffect(() => {
+    if (notifData) {
+      setNotifications(notifData.data ?? []);
+      setUnreadCount(notifData.unread_count ?? 0);
     }
-  }, []);
+  }, [notifData]);
 
   useEffect(() => {
     const h = new Date().getHours();
@@ -79,9 +82,7 @@ export default function Header({
             : "Selamat malam",
     );
 
-    fetchNotifications();
-
-    let channel: any = null;
+    let channel: Channel | null = null;
     let timer: NodeJS.Timeout;
 
     (async () => {
@@ -99,12 +100,12 @@ export default function Header({
         });
 
         channel = pusher.subscribe(`private-user-${userId}`);
-        channel.bind("new-notification", (data: any) => {
+        channel.bind("new-notification", (data: Notification) => {
           setNotifications((prev) => [data, ...prev]);
           setUnreadCount((prev) => prev + 1);
         });
       } catch {
-        timer = setInterval(fetchNotifications, POLL_INTERVAL);
+        timer = setInterval(() => { refetch(); }, POLL_INTERVAL);
       }
     })();
 
@@ -112,7 +113,7 @@ export default function Header({
       if (channel) channel.unsubscribe();
       if (timer) clearInterval(timer);
     };
-  }, [fetchNotifications]);
+  }, [refetch]);
 
   // ─── Click outside to close dropdowns ────────────────────────────────────
 
@@ -248,46 +249,34 @@ export default function Header({
   };
 
   const getNotificationIcon = (type: Notification["type"]) => {
-    const map = {
+    const iconMap: Record<string, { bg: string; color: string; icon: React.ReactNode }> = {
       success: {
         bg: "bg-green-100",
         color: "text-green-600",
-        path: "M5 13l4 4L19 7",
+        icon: <CheckCircle className="w-4 h-4" />,
       },
       warning: {
         bg: "bg-yellow-100",
         color: "text-yellow-600",
-        path: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
+        icon: <AlertTriangle className="w-4 h-4" />,
       },
       error: {
         bg: "bg-red-100",
         color: "text-red-600",
-        path: "M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+        icon: <XCircle className="w-4 h-4" />,
       },
       info: {
         bg: "bg-blue-100",
         color: "text-blue-600",
-        path: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+        icon: <Info className="w-4 h-4" />,
       },
     };
-    const { bg, color, path } = map[type] ?? map.info;
+    const { bg, color, icon } = iconMap[type] ?? iconMap.info;
     return (
       <div
         className={`w-8 h-8 ${bg} rounded-full flex items-center justify-center flex-shrink-0`}
       >
-        <svg
-          className={`w-4 h-4 ${color}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d={path}
-          />
-        </svg>
+        <div className={color}>{icon}</div>
       </div>
     );
   };
@@ -429,7 +418,7 @@ export default function Header({
                       <div className="px-4 py-2.5 border-t border-gray-100 text-center">
                         <button
                           onClick={() => {
-                            fetchNotifications();
+                            refetch();
                           }}
                           className="text-xs text-gray-400 hover:text-indigo-600 transition-colors inline-flex items-center gap-1"
                         >

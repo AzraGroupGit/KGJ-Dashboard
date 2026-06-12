@@ -269,7 +269,7 @@ function TimelineContent({ item }: { item: TimelineItem }) {
           </div>
           {item.reason && (
             <p className="text-[11px] text-stone-500 mt-1 italic">
-              "{item.reason}"
+              &ldquo;{item.reason}&rdquo;
             </p>
           )}
         </>
@@ -299,7 +299,7 @@ function TimelineContent({ item }: { item: TimelineItem }) {
           </div>
           {item.notes && (
             <p className="text-[11px] text-stone-500 mt-1 italic">
-              "{item.notes}"
+              &ldquo;{item.notes}&rdquo;
             </p>
           )}
         </>
@@ -349,7 +349,7 @@ function TimelineContent({ item }: { item: TimelineItem }) {
           </div>
           {item.remarks && (
             <p className="text-[11px] text-stone-500 mt-1 italic">
-              "{item.remarks}"
+              &ldquo;{item.remarks}&rdquo;
             </p>
           )}
         </>

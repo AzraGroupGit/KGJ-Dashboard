@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef, startTransition } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/Header";
-import { Loader2, Plus, Trash2, Calendar, AlertTriangle } from "lucide-react";
+import { Loader2, Plus, Trash2, Calendar, AlertTriangle, Pencil } from "lucide-react";
 
 interface SlotCategory {
   id: string;
@@ -54,36 +56,6 @@ export default function SlotManagementPage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const hasAutoSwitched = useRef(false);
 
-  const fetchCategories = useCallback(async (date: string) => {
-    try {
-      const res = await fetch(`/api/slots/slot-categories?date=${date}`);
-      const json = await res.json();
-      if (json.success) {
-        setCategories(json.data);
-        if (json.nearest_date && !hasAutoSwitched.current && json.nearest_date !== date) {
-          hasAutoSwitched.current = true;
-          setSelectedDate(json.nearest_date);
-          setMessage({
-            type: "success",
-            text: `Menampilkan slot untuk tanggal ${new Date(json.nearest_date).toLocaleDateString("id-ID")} (tanggal order terdekat)`,
-          });
-        }
-      }
-    } catch (err) {
-      console.error("fetch categories error:", err);
-    }
-  }, []);
-
-  const fetchOverrides = useCallback(async (date: string) => {
-    try {
-      const res = await fetch(`/api/slots/slot-overrides?date=${date}`);
-      const json = await res.json();
-      if (json.success) setOverrides(json.data);
-    } catch (err) {
-      console.error("fetch overrides error:", err);
-    }
-  }, []);
-
   useEffect(() => {
     async function init() {
       try {
@@ -105,12 +77,50 @@ export default function SlotManagementPage() {
     init();
   }, []);
 
+  interface CategoriesResponse { success: boolean; data: Record<string, unknown>[]; nearest_date?: string; }
+  interface OverridesResponse { success: boolean; data: Record<string, unknown>[]; }
+
+  const {
+    data: categoriesData,
+    refetch: refetchCategories,
+  } = useQuery<CategoriesResponse>({
+    queryKey: ["slot-categories", selectedDate],
+    queryFn: () => fetcher(`/api/slots/slot-categories?date=${selectedDate}`),
+    enabled: !!userInfo,
+  });
+
+  const {
+    data: overridesData,
+    refetch: refetchOverrides,
+  } = useQuery<OverridesResponse>({
+    queryKey: ["slot-overrides", selectedDate],
+    queryFn: () => fetcher(`/api/slots/slot-overrides?date=${selectedDate}`),
+    enabled: !!userInfo,
+  });
+
   useEffect(() => {
-    if (userInfo) {
-      fetchCategories(selectedDate);
-      fetchOverrides(selectedDate);
+    if (categoriesData?.success) {
+      startTransition(() => {
+        setCategories(categoriesData.data as any);
+        if (categoriesData.nearest_date && !hasAutoSwitched.current && categoriesData.nearest_date !== selectedDate) {
+          hasAutoSwitched.current = true;
+          setSelectedDate(categoriesData.nearest_date);
+          setMessage({
+            type: "success",
+            text: `Menampilkan slot untuk tanggal ${new Date(categoriesData.nearest_date).toLocaleDateString("id-ID")} (tanggal order terdekat)`,
+          });
+        }
+      });
     }
-  }, [userInfo, selectedDate, fetchCategories, fetchOverrides]);
+  }, [categoriesData, selectedDate]);
+
+  useEffect(() => {
+    if (overridesData?.success) {
+      startTransition(() => {
+        setOverrides(overridesData.data as any);
+      });
+    }
+  }, [overridesData]);
 
   if (loading) {
     return (
@@ -157,7 +167,7 @@ export default function SlotManagementPage() {
       if (json.success) {
         setMessage({ type: "success", text: "Kategori berhasil diperbarui" });
         setEditModal(null);
-        fetchCategories(selectedDate);
+        refetchCategories();
       } else {
         setMessage({ type: "error", text: json.error || "Gagal menyimpan" });
       }
@@ -185,8 +195,8 @@ export default function SlotManagementPage() {
         setMessage({ type: "success", text: `Slot tambahan berhasil ditambahkan` });
         setForceModal(null);
         setForceNote("");
-        fetchCategories(selectedDate);
-        fetchOverrides(selectedDate);
+        refetchCategories();
+        refetchOverrides();
       } else {
         setMessage({ type: "error", text: json.error || "Gagal menambah slot" });
       }
@@ -202,8 +212,8 @@ export default function SlotManagementPage() {
       const json = await res.json();
       if (json.success) {
         setMessage({ type: "success", text: "Override berhasil dihapus" });
-        fetchCategories(selectedDate);
-        fetchOverrides(selectedDate);
+        refetchCategories();
+        refetchOverrides();
       }
     } catch {
       setMessage({ type: "error", text: "Gagal menghapus override" });
@@ -330,9 +340,7 @@ export default function SlotManagementPage() {
                               className="p-1.5 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors"
                               title="Edit kategori"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
+                              <Pencil className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => setForceModal({ category: cat })}

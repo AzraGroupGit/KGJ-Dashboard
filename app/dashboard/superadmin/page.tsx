@@ -3,11 +3,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import { useRouter } from "next/navigation";
+import {
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  BarChart3,
+  Info,
+  Settings,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,144 +71,14 @@ const formatFullDate = () =>
     year: "numeric",
   });
 
-// ─── SVG Icon set (custom, tidak pakai library) ───────────────────────────────
-
-const IcTrendUp = () => (
-  <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-    <path
-      d="M1 8.5L4 5.5L6.5 8L10 3"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M7.5 3H10V5.5"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const IcTrendDown = () => (
-  <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-    <path
-      d="M1 2.5L4 5.5L6.5 3L10 8"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M7.5 8H10V5.5"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const IcArrowRight = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <path
-      d="M2 6.5H11M7.5 3L11 6.5L7.5 10"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const IcAlert = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <path
-      d="M6.5 1.5L12 11.5H1L6.5 1.5Z"
-      stroke="currentColor"
-      strokeWidth="1.2"
-      strokeLinejoin="round"
-    />
-    <line
-      x1="6.5"
-      y1="5.5"
-      x2="6.5"
-      y2="8"
-      stroke="currentColor"
-      strokeWidth="1.2"
-      strokeLinecap="round"
-    />
-    <circle cx="6.5" cy="9.5" r="0.55" fill="currentColor" />
-  </svg>
-);
-
-const IcInfo = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" strokeWidth="1.2" />
-    <line
-      x1="6.5"
-      y1="6"
-      x2="6.5"
-      y2="9.5"
-      stroke="currentColor"
-      strokeWidth="1.2"
-      strokeLinecap="round"
-    />
-    <circle cx="6.5" cy="4" r="0.55" fill="currentColor" />
-  </svg>
-);
-
-const IcBarChart = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <rect
-      x="1"
-      y="6"
-      width="3.5"
-      height="9"
-      rx="0.8"
-      stroke="currentColor"
-      strokeWidth="1.2"
-    />
-    <rect
-      x="6.25"
-      y="2"
-      width="3.5"
-      height="13"
-      rx="0.8"
-      stroke="currentColor"
-      strokeWidth="1.2"
-    />
-    <rect
-      x="11.5"
-      y="9"
-      width="3.5"
-      height="6"
-      rx="0.8"
-      stroke="currentColor"
-      strokeWidth="1.2"
-    />
-  </svg>
-);
-
-const IcGear = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.2" />
-    <path
-      d="M8 1.5V3M8 13V14.5M1.5 8H3M13 8H14.5M3.05 3.05L4.11 4.11M11.89 11.89L12.95 12.95M12.95 3.05L11.89 4.11M4.11 11.89L3.05 12.95"
-      stroke="currentColor"
-      strokeWidth="1.2"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-
-const IcPulse = () => (
-  <svg width="6" height="6" viewBox="0 0 6 6">
-    <circle cx="3" cy="3" r="3" fill="currentColor" />
-  </svg>
-);
+const IcTrendUp = () => <TrendingUp size={11} />;
+const IcTrendDown = () => <TrendingDown size={11} />;
+const IcArrowRight = () => <ArrowRight size={13} />;
+const IcAlert = () => <AlertTriangle size={13} />;
+const IcInfo = () => <Info size={13} />;
+const IcBarChart = () => <BarChart3 size={16} />;
+const IcGear = () => <Settings size={16} />;
+const IcPulse = () => <Activity size={6} />;
 
 // ─── Progress Ring ────────────────────────────────────────────────────────────
 
@@ -344,38 +226,26 @@ function ModuleCard({
 
 export default function SuperadminDashboard() {
   const router = useRouter();
-  const [clientUser, setClientUser] = useState<ClientUser | null>(null);
-  const [data, setData] = useState<DashboardSnapshot | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [clientUser] = useState<ClientUser | null>(() => {
+    if (typeof window === "undefined") return null;
+    return getClientUser();
+  });
   const [now, setNow] = useState(new Date());
   const [mounted, setMounted] = useState(false);
 
+  const { data, isLoading } = useQuery({
+    queryKey: ["overview"],
+    queryFn: () => fetcher<DashboardSnapshot>("/api/overview"),
+  });
+
   useEffect(() => {
-    const cu = getClientUser();
-    if (!cu) {
-      router.push("/login");
-      return;
-    }
-    setClientUser(cu);
+    if (!clientUser) router.push("/login");
+  }, [clientUser, router]);
 
+  useEffect(() => {
     const t = setTimeout(() => setMounted(true), 50);
-
-    const fetchSnapshot = async () => {
-      setIsLoading(true);
-      try {
-        const res = await fetch("/api/overview");
-        if (res.ok) {
-          const json = await res.json();
-          setData(json);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchSnapshot();
-
     return () => clearTimeout(t);
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30_000);

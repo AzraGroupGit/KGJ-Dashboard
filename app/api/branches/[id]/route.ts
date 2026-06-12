@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getRoleProps } from "@/lib/auth/session";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -20,7 +21,7 @@ async function requireSuperadmin(
     .eq("id", user.id)
     .single();
 
-  if ((data?.role as any)?.name !== "superadmin") return null;
+  if (getRoleProps(data).name !== "superadmin") return null;
   return { id: data!.id };
 }
 

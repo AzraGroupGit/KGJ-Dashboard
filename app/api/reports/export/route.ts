@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getRoleProps } from "@/lib/auth/session";
 
 function formatDate(date: string): string {
   const d = new Date(date);
@@ -68,7 +69,7 @@ export async function GET(request: Request) {
       .eq("id", user.id)
       .single();
 
-    if ((currentUser?.role as any)?.name !== "superadmin") {
+    if (getRoleProps(currentUser).name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -118,9 +119,9 @@ export async function GET(request: Request) {
         data?.map((r, index) => [
           index + 1, // No
           formatDate(r.input_date),
-          (r.branches as any)?.name ?? "-",
-          (r.branches as any)?.code ?? "-",
-          (r.users as any)?.full_name ?? "-",
+          (r.branches as unknown as Record<string, unknown>)?.name ?? "-",
+          (r.branches as unknown as Record<string, unknown>)?.code ?? "-",
+          (r.users as unknown as Record<string, unknown>)?.full_name ?? "-",
           formatNumber(r.lead_masuk),
           formatNumber(r.closing),
           formatPercentage(r.closing, r.lead_masuk),
@@ -202,7 +203,7 @@ export async function GET(request: Request) {
           index + 1, // No
           formatDate(r.input_date),
           r.channel,
-          (r.users as any)?.full_name ?? "-",
+          (r.users as unknown as Record<string, unknown>)?.full_name ?? "-",
           formatCurrency(r.biaya_marketing),
           formatNumber(r.lead_all),
           formatNumber(r.lead_serius),
@@ -275,9 +276,9 @@ export async function GET(request: Request) {
         csResult.data?.map((r, index) => [
           index + 1,
           formatDate(r.input_date),
-          (r.branches as any)?.name ?? "-",
-          (r.branches as any)?.code ?? "-",
-          (r.users as any)?.full_name ?? "-",
+          (r.branches as unknown as Record<string, unknown>)?.name ?? "-",
+          (r.branches as unknown as Record<string, unknown>)?.code ?? "-",
+          (r.users as unknown as Record<string, unknown>)?.full_name ?? "-",
           formatNumber(r.lead_masuk),
           formatNumber(r.closing),
           formatPercentage(r.closing, r.lead_masuk),
@@ -315,7 +316,7 @@ export async function GET(request: Request) {
           index + 1,
           formatDate(r.input_date),
           r.channel,
-          (r.users as any)?.full_name ?? "-",
+          (r.users as unknown as Record<string, unknown>)?.full_name ?? "-",
           formatCurrency(r.biaya_marketing),
           formatNumber(r.lead_all),
           formatNumber(r.lead_serius),

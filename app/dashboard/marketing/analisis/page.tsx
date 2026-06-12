@@ -2,23 +2,16 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Button from "@/components/ui/Button";
 import Loading from "@/components/ui/Loading";
 import Alert from "@/components/ui/Alert";
-
-interface ChannelAnalysis {
-  channel: string;
-  biayaMarketing: number;
-  leadSerius: number;
-  leadAll: number;
-  closing: number;
-  roi: number;
-  crSerius: number;
-  cac: number;
-}
+import { Download, Lightbulb, Info } from "lucide-react";
+import type { AnalyticsData } from "@/types/marketing";
 
 interface MarketingChannel {
   id: string;
@@ -27,72 +20,27 @@ interface MarketingChannel {
   is_active: boolean;
 }
 
-interface AnalyticsData {
-  summary: {
-    totalBiayaMarketing: number;
-    totalLeadSerius: number;
-    totalLeadAll: number;
-    totalClosing: number;
-    roi: number;
-    crSerius: number;
-    crAll: number;
-    cpls: number;
-    cpla: number;
-    cac: number;
-    totalInputs: number;
-  };
-  channelMetrics: ChannelAnalysis[];
-  recommendations: Array<{
-    type: "increase" | "decrease" | "warning" | "improve";
-    channel: string;
-    reason: string;
-    action: string;
-  }>;
-}
-
 export default function AnalisisChannelPage() {
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [channels, setChannels] = useState<MarketingChannel[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState("monthly");
   const [selectedChannel, setSelectedChannel] = useState<string>("all");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingChannels, setIsLoadingChannels] = useState(true);
   const [alert, setAlert] = useState<{
     type: "success" | "error" | "warning" | "info";
     message: string;
   } | null>(null);
 
-  // Fetch marketing channels dari database
-  const fetchChannels = async () => {
-    setIsLoadingChannels(true);
-    try {
-      const response = await fetch("/api/marketing/channels?activeOnly=true");
-      const data = await response.json();
+  const channelsQuery = useQuery({
+    queryKey: ["marketing-channels"],
+    queryFn: () => fetcher<{ data: MarketingChannel[] } | MarketingChannel[]>("/api/marketing/channels?activeOnly=true"),
+  });
 
-      if (data.data) {
-        setChannels(data.data);
-      } else if (Array.isArray(data)) {
-        setChannels(data);
-      }
-    } catch (error) {
-      console.error("Error fetching channels:", error);
-      // Fallback ke channel dari analytics jika API gagal
-    } finally {
-      setIsLoadingChannels(false);
-    }
-  };
-
-  // Fetch analytics data
-  const fetchAnalytics = async () => {
-    setIsLoading(true);
-    try {
-      // Hitung tanggal berdasarkan periode (gunakan tanggal lokal, bukan UTC)
+  const analyticsQuery = useQuery({
+    queryKey: ["marketing-analytics", selectedPeriod],
+    queryFn: () => {
       const today = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
       const fmtLocal = (d: Date) =>
         `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
       let fromDate = "";
-
       if (selectedPeriod === "monthly") {
         fromDate = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
       } else if (selectedPeriod === "quarterly") {
@@ -102,37 +50,16 @@ export default function AnalisisChannelPage() {
       } else if (selectedPeriod === "yearly") {
         fromDate = `${today.getFullYear()}-01-01`;
       }
-
       const toDate = fmtLocal(today);
-      const url = `/api/marketing/analytics?from=${fromDate}&to=${toDate}`;
+      return fetcher<{ data: AnalyticsData }>(`/api/marketing/analytics?from=${fromDate}&to=${toDate}`);
+    },
+  });
 
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.data) {
-        setAnalytics(data.data);
-      } else {
-        throw new Error(data.error || "Gagal memuat data analisis");
-      }
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
-      setAlert({
-        type: "error",
-        message: "Gagal memuat data analisis",
-      });
-      setTimeout(() => setAlert(null), 3000);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchChannels();
-  }, []);
-
-  useEffect(() => {
-    fetchAnalytics();
-  }, [selectedPeriod]);
+  const channelsRaw = channelsQuery.data;
+  const channels = Array.isArray(channelsRaw) ? channelsRaw : (channelsRaw?.data ?? []);
+  const isLoadingChannels = channelsQuery.isLoading;
+  const isLoading = analyticsQuery.isLoading;
+  const analytics = analyticsQuery.data?.data ?? null;
 
   const formatRupiah = (value: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -213,9 +140,10 @@ export default function AnalisisChannelPage() {
           "Closing",
           "CR Serius (%)",
         ];
-        const csvData = data.data.map((item: any) => {
+         
+        const csvData = data.data.map((item: Record<string, unknown>) => {
           const crSerius =
-            item.lead_serius > 0 ? (item.closing / item.lead_serius) * 100 : 0;
+            (item.lead_serius as number) > 0 ? ((item.closing as number) / (item.lead_serius as number)) * 100 : 0;
 
           return [
             item.input_date,
@@ -393,21 +321,7 @@ export default function AnalisisChannelPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleExport}
-                leftIcon={
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                    />
-                  </svg>
-                }
+                leftIcon={<Download className="w-4 h-4" />}
               >
                 Ekspor Laporan
               </Button>
@@ -655,19 +569,7 @@ export default function AnalisisChannelPage() {
             <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg
-                    className="w-6 h-6 text-indigo-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                    />
-                  </svg>
+                  <Lightbulb className="w-6 h-6 text-indigo-600" />
                 </div>
                 <div className="flex-1">
                   <h4 className="text-lg font-semibold text-gray-800 mb-3">
@@ -709,19 +611,7 @@ export default function AnalisisChannelPage() {
           {/* Info Box when no data */}
           {channelMetrics.length === 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-              <svg
-                className="w-12 h-12 text-blue-400 mx-auto mb-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <Info className="w-12 h-12 text-blue-400 mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-gray-800 mb-2">
                 Belum Ada Data
               </h3>

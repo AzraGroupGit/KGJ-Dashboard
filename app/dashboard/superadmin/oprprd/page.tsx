@@ -2,7 +2,9 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
@@ -203,7 +205,7 @@ const ACTIVITY_ICON: Record<string, LucideIcon> = {
 // Formatters
 // ============================================================
 
-function formatRupiah(value: number): string {
+function _formatRupiah(value: number): string {
   if (value >= 1_000_000_000) {
     return `Rp ${(value / 1_000_000_000).toFixed(1)}M`;
   }
@@ -235,47 +237,32 @@ function formatRelativeTime(timestamp: string): string {
 
 export default function OwnerDashboardPage() {
   const router = useRouter();
-  const [clientUser, setClientUser] = useState<ClientUser | null>(null);
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [clientUser] = useState<ClientUser | null>(() => getClientUser() ?? null);
 
   useEffect(() => {
-    const cu = getClientUser();
-    if (!cu) {
+    if (!clientUser) {
       router.push("/login");
-      return;
     }
-    setClientUser(cu);
-  }, [router]);
+  }, [clientUser, router]);
 
-  const fetchData = useCallback(async (isManualRefresh = false) => {
-    try {
-      if (isManualRefresh) setRefreshing(true);
-      setError(null);
-      const res = await fetch(API_ENDPOINT);
-      if (!res.ok) {
-        if (res.status === 401) throw new Error("Sesi Anda telah habis");
-        throw new Error("Gagal mengambil data dashboard");
-      }
-      const json = await res.json();
-      setData(json.data ?? json);
-      setLastUpdated(new Date());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const {
+    data: rawData,
+    isLoading: loading,
+    error,
+    dataUpdatedAt,
+    refetch,
+    isRefetching,
+  } = useQuery<DashboardData>({
+    queryKey: ["oprprd-dashboard"],
+    queryFn: async () => {
+      const res = await fetcher<{ data: DashboardData }>(API_ENDPOINT);
+      return res.data;
+    },
+    refetchInterval: 30_000,
+  });
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(() => fetchData(false), 30_000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+  const data = rawData ?? null;
+  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
 
   const isOverCycle = data?.kpi.rataCycleTime
     ? data.kpi.rataCycleTime > data.kpi.targetCycleTime
@@ -300,12 +287,12 @@ export default function OwnerDashboardPage() {
                 </span>
               )}
               <button
-                onClick={() => fetchData(true)}
-                disabled={refreshing}
+                onClick={() => refetch()}
+                disabled={isRefetching}
                 className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <RefreshCw
-                  className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
+                  className={`h-3.5 w-3.5 ${isRefetching ? "animate-spin" : ""}`}
                 />
                 Refresh
               </button>
@@ -316,7 +303,7 @@ export default function OwnerDashboardPage() {
           {loading ? (
             <Loading variant="skeleton" text="Memuat data dashboard..." />
           ) : error ? (
-            <DashboardError error={error} onRetry={() => fetchData(true)} />
+            <DashboardError error={error instanceof Error ? error.message : "Terjadi kesalahan"} onRetry={() => refetch()} />
           ) : !data ? null : (
             <div className="space-y-6">
               {/* ========== ROW 1: MAIN KPI CARDS ========== */}
@@ -1127,7 +1114,7 @@ function QuickLink({
 // Skeleton
 // ============================================================
 
-function DashboardSkeleton() {
+function _DashboardSkeleton() {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">

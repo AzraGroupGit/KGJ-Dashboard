@@ -2,7 +2,9 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Sidebar from "@/components/layout/Sidebar";
@@ -146,13 +148,17 @@ function getRoleConfig(name: string) {
 
 export default function AnalisisPage() {
   const router = useRouter();
-  const [clientUser, setClientUser] = useState<ClientUser | null>(null);
-  const [data, setData] = useState<AnalystData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [clientUser] = useState<ClientUser | null>(() => {
+    if (typeof window === "undefined") return null;
+    return getClientUser();
+  });
   const [period, setPeriod] = useState<string>(currentPeriod());
   const [activeTab, setActiveTab] = useState<TabId>("overview");
+
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
+    queryKey: ["analyst-oprprd", period],
+    queryFn: () => fetcher<AnalystData>(`/api/analyst-oprprd?period=${period}`),
+  });
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "overview", label: "Overview" },
@@ -161,34 +167,8 @@ export default function AnalisisPage() {
   ];
 
   useEffect(() => {
-    const cu = getClientUser();
-    if (!cu) {
-      router.push("/login");
-      return;
-    }
-    setClientUser(cu);
-  }, [router]);
-
-  const fetchData = useCallback(async (p: string, isRefresh = false) => {
-    try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      setError(null);
-      const res = await fetch(`/api/analyst-oprprd?period=${p}`);
-      if (!res.ok) throw new Error("Gagal mengambil data analisis");
-      const json = await res.json();
-      setData(json);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData(period);
-  }, [fetchData, period]);
+    if (!clientUser) router.push("/login");
+  }, [clientUser, router]);
 
   const handlePeriodChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value; // YYYY-MM
@@ -233,12 +213,12 @@ export default function AnalisisPage() {
                 className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-200"
               />
               <button
-                onClick={() => fetchData(period, true)}
-                disabled={refreshing}
+                onClick={() => refetch()}
+                disabled={isFetching}
                 className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
               >
                 <RefreshCw
-                  className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
+                  className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`}
                 />
                 Refresh
               </button>
@@ -269,10 +249,10 @@ export default function AnalisisPage() {
             <CycleTimeTab />
           ) : activeTab === "worker-productivity" ? (
             <WorkerProductivityTab />
-          ) : loading ? (
+          ) : isLoading ? (
             <Loading variant="skeleton" text="Memuat data analisis..." />
           ) : error ? (
-            <ErrorState error={error} onRetry={() => fetchData(period, true)} />
+            <ErrorState error={error?.message ?? "Terjadi kesalahan"} onRetry={() => refetch()} />
           ) : !data ? null : (
             <div className="space-y-6">
               {/* ── Summary KPI ── */}

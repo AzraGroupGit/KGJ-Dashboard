@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getRoleProps } from "@/lib/auth/session";
 
 /**
  * GET /api/marketing/inputs
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if ((profile.role as any)?.name !== "marketing") {
+    if (getRoleProps(profile).name !== "marketing") {
       return NextResponse.json(
         { error: "Hanya marketing yang dapat input data" },
         { status: 403 },
@@ -220,12 +221,12 @@ export async function POST(request: Request) {
       }
 
       // Simpan nilai csInput yang dibutuhkan setelah blok ini berakhir.
-      resolvedCsOmset = (csInput as any).omset || 0;
-      resolvedCsBranchName = (csInput as any).branches?.name || null;
+        resolvedCsOmset = (csInput as { omset?: number }).omset || 0;
+        resolvedCsBranchName = (csInput as { branches?: { name?: string } }).branches?.name || null;
       resolvedCsUserId = csUserId || csInput.user_id;
 
       // 2. Cek apakah data CS SUDAH DIGUNAKAN oleh marketing input lain
-      const { data: existingMktInput, error: existingError } = await supabase
+      const { data: existingMktInput, error: _existingError } = await supabase
         .from("marketing_inputs")
         .select("id, channel, input_date, created_at")
         .eq("cs_input_id", csInputId)
@@ -308,7 +309,7 @@ export async function POST(request: Request) {
 
     // ─── CEK DUPLIKAT CHANNEL + TANGGAL ─────────────────────────────────
 
-    const { data: existingChannel, error: channelError } = await supabase
+    const { data: existingChannel, error: _channelError } = await supabase
       .from("marketing_inputs")
       .select("id, channel, input_date")
       .eq("channel", channel)
@@ -469,7 +470,7 @@ export async function PUT(request: Request) {
       );
     }
 
-    if ((profile.role as any)?.name !== "marketing") {
+    if (getRoleProps(profile).name !== "marketing") {
       return NextResponse.json(
         { error: "Hanya marketing yang dapat update data" },
         { status: 403 },
@@ -511,7 +512,7 @@ export async function PUT(request: Request) {
 
     if (updates.cs_input_id && updates.cs_input_id !== existing.cs_input_id) {
       // Cek apakah CS input baru sudah digunakan oleh marketing input lain
-      const { data: usedCsInput, error: usedCsError } = await supabase
+      const { data: usedCsInput, error: _usedCsError } = await supabase
         .from("marketing_inputs")
         .select("id, channel, input_date")
         .eq("cs_input_id", updates.cs_input_id)

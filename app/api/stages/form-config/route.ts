@@ -3,6 +3,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { STAGE_SEQUENCE, STAGE_GROUP } from "@/lib/stages";
+import { getRoleProps } from "@/lib/auth/session";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -32,7 +34,7 @@ interface FieldConfig {
   required: boolean;
   options?: { value: string; label: string; group?: string }[];
   placeholder?: string;
-  items?: { key: string; label: string; reworkStage?: string }[];
+  items?: { key: string; label: string; reworkStage?: string; required?: boolean }[];
   accept?: string;
   maxSize?: number;
 }
@@ -155,7 +157,7 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
           { key: "permukaan_bersih", label: "Permukaan bersih, tidak ada cacat", reworkStage: "pemolesan" },
           { key: "pemasangan_permata", label: "Pemasangan permata sesuai atau belum?", reworkStage: "pemasangan_permata" },
           { key: "cek_kadar", label: "Cek kadar sudah sesuai atau belum?", reworkStage: "cek_kadar" },
-          { key: "sertifikat_berlian", label: "Sertifikat berlian tersedia", reworkStage: "" },
+          { key: "sertifikat_berlian", label: "Sertifikat berlian tersedia", reworkStage: "", required: false },
         ],
       },
       { ...NOTES, placeholder: "Temuan QC, catatan perbaikan..." },
@@ -251,7 +253,7 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
           { key: "teks_ukiran_benar", label: "Teks ukiran sesuai order (cek ejaan)", reworkStage: "finishing" },
           { key: "bentuk_final_sesuai", label: "Bentuk final sesuai order", reworkStage: "finishing" },
           { key: "produk_bersih", label: "Produk bersih, siap serah terima", reworkStage: "pembentukan_cincin" },
-          { key: "permata_sesuai_bentuk", label: "Permata sesuai bentuk", reworkStage: "" },
+          { key: "permata_sesuai_bentuk", label: "Permata sesuai bentuk", reworkStage: "", required: false },
         ],
       },
       { ...NOTES, placeholder: "Temuan QC akhir..." },
@@ -350,33 +352,17 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
 
 // ── Role access ────────────────────────────────────────────────────────────────
 
-const GROUP_STAGES: Record<string, Set<string>> = {
-  operational: new Set([
-    "racik_bahan",
-    "qc_1",
-    "qc_2",
-    "laser",
-    "konfirmasi",
-    "packing",
-    "pengiriman",
-  ]),
-  production: new Set([
-    "lebur_bahan",
-    "cek_kadar",
-    "pembentukan_cincin",
-    "pemasangan_permata",
-    "pemolesan",
-    "finishing",
-  ]),
-};
+const TUKANG_STAGES = new Set([
+  "pembentukan_cincin",
+  "pemasangan_permata",
+  "laser",
+  "finishing",
+]);
 
 const ROLE_STAGES: Record<string, Set<string>> = {
-  operational_supervisor: new Set([
-    "approval_penerimaan_order",
-    "approval_racik_bahan",
-    "approval_qc_1",
-    "approval_qc_2",
-  ]),
+  operational_supervisor: new Set(
+    STAGE_SEQUENCE.filter(s => s.startsWith("approval_") && !s.includes("produksi"))
+  ),
   production_supervisor: new Set(["approval_produksi"]),
   customer_care: new Set(["konfirmasi"]),
 };
@@ -390,19 +376,12 @@ function hasAccess(
   if (roleName === "superadmin") return true;
   if (allowedStages.includes(stage)) return true;
   if (ROLE_STAGES[roleName]?.has(stage)) return true;
-  if (GROUP_STAGES[roleGroup]?.has(stage)) return true;
+  if (STAGE_GROUP[stage] === roleGroup) return true;
   if (roleGroup === "management" && stage.startsWith("approval_")) return true;
   return false;
 }
 
 // ── Get personnel-backed options ────────────────────────────────────────────────
-
-const TUKANG_STAGES = new Set([
-  "pembentukan_cincin",
-  "pemasangan_permata",
-  "laser",
-  "finishing",
-]);
 
 async function enrichTukangOptions(
   admin: ReturnType<typeof createAdminClient>,
@@ -492,11 +471,10 @@ export async function GET(request: Request) {
         { status: 404 },
       );
 
-    const roleName: string = (userData.role as any)?.name ?? "";
-    const roleGroup: string = (userData.role as any)?.role_group ?? "";
-    const allowedStages: string[] =
-      (userData.role as any)?.allowed_stages ?? [];
-    const permissions = (userData.role as any)?.permissions ?? {};
+    const roleName: string = getRoleProps(userData).name;
+    const roleGroup: string = getRoleProps(userData).role_group;
+    const allowedStages: string[] = getRoleProps(userData).allowed_stages;
+    const permissions = getRoleProps(userData).permissions;
 
     if (!hasAccess(roleName, roleGroup, allowedStages, stage)) {
       return NextResponse.json(

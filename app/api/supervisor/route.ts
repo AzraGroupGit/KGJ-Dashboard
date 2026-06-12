@@ -3,52 +3,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { STAGE_LABELS } from "@/lib/stages";
+import { getRoleProps } from "@/lib/auth/session";
+import { STAGE_SEQUENCE, STAGE_GROUP, STAGE_LABELS } from "@/lib/stages";
 
-const PRODUCTION_STAGES = new Set([
-  "lebur_bahan",
-  "pembentukan_cincin",
-  "cek_kadar",
-  "pemasangan_permata",
-  "pemolesan",
-  "finishing",
-]);
+const APPROVAL_STAGES = STAGE_SEQUENCE.filter((s) => s.startsWith("approval_"));
 
-const OPERATIONAL_STAGES = new Set([
-  "penerimaan_order",
-  "racik_bahan",
-  "qc_1",
-  "qc_2",
-  "laser",
-  "konfirmasi",
-  "packing",
-  "pengiriman",
-]);
+const OPERATIONAL_APPROVAL_STAGES = new Set(
+  APPROVAL_STAGES.filter((s) => {
+    const prodStage = STAGE_SEQUENCE[STAGE_SEQUENCE.indexOf(s) - 1];
+    return prodStage ? STAGE_GROUP[prodStage] === "operational" : false;
+  }),
+);
 
-const APPROVAL_STAGES = new Set([
-  "approval_penerimaan_order",
-  "approval_racik_bahan",
-  "approval_qc_1",
-  "approval_produksi",
-  "approval_qc_2",
-]);
+const PRODUCTION_APPROVAL_STAGES = new Set(
+  APPROVAL_STAGES.filter((s) => {
+    const prodStage = STAGE_SEQUENCE[STAGE_SEQUENCE.indexOf(s) - 1];
+    return prodStage ? STAGE_GROUP[prodStage] === "production" : false;
+  }),
+);
 
-const OPERATIONAL_APPROVAL_STAGES = new Set([
-  "approval_penerimaan_order",
-  "approval_racik_bahan",
-  "approval_qc_1",
-  "approval_qc_2",
-]);
-
-const PRODUCTION_APPROVAL_STAGES = new Set(["approval_produksi"]);
-
-const APPROVAL_TO_PRODUCTION_STAGE: Record<string, string> = {
-  approval_penerimaan_order: "penerimaan_order",
-  approval_racik_bahan: "racik_bahan",
-  approval_qc_1: "qc_1",
-  approval_produksi: "finishing",
-  approval_qc_2: "qc_2",
-};
+const APPROVAL_TO_PRODUCTION_STAGE: Record<string, string> = {};
+APPROVAL_STAGES.forEach((approvalStage) => {
+  const idx = STAGE_SEQUENCE.indexOf(approvalStage);
+  if (idx > 0) {
+    APPROVAL_TO_PRODUCTION_STAGE[approvalStage] = STAGE_SEQUENCE[idx - 1];
+  }
+});
 
 async function verifySupervisor(userId: string) {
   const admin = createAdminClient();
@@ -63,9 +43,9 @@ async function verifySupervisor(userId: string) {
 
   if (error || !data) return null;
 
-  const roleName = (data.role as any)?.name;
-  const roleGroup = (data.role as any)?.role_group;
-  const allowedStages: string[] = (data.role as any)?.allowed_stages ?? [];
+  const roleName = getRoleProps(data).name;
+  const roleGroup = getRoleProps(data).role_group;
+  const allowedStages: string[] = getRoleProps(data).allowed_stages;
 
   if (
     roleName === "superadmin" ||
@@ -91,10 +71,9 @@ export async function GET(request?: NextRequest) {
     if (!supervisor)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const svRoleName: string = (supervisor.role as any)?.name ?? "";
-    const svRoleGroup: string = (supervisor.role as any)?.role_group ?? "";
-    const svAllowedStages: string[] =
-      (supervisor.role as any)?.allowed_stages ?? [];
+    const svRoleName: string = getRoleProps(supervisor).name;
+    const svRoleGroup: string = getRoleProps(supervisor).role_group;
+    const svAllowedStages: string[] = getRoleProps(supervisor).allowed_stages;
 
     let supervisorApprovalStages: Set<string>;
     if (svRoleName === "production_supervisor") {
@@ -102,13 +81,13 @@ export async function GET(request?: NextRequest) {
     } else if (svRoleName === "operational_supervisor") {
       supervisorApprovalStages = OPERATIONAL_APPROVAL_STAGES;
     } else if (svRoleGroup === "management") {
-      supervisorApprovalStages = APPROVAL_STAGES;
+      supervisorApprovalStages = new Set(APPROVAL_STAGES);
     } else {
       const fromAllowed = new Set(
         svAllowedStages.filter((s) => s.startsWith("approval_")),
       );
       supervisorApprovalStages =
-        fromAllowed.size > 0 ? fromAllowed : APPROVAL_STAGES;
+        fromAllowed.size > 0 ? fromAllowed : new Set(APPROVAL_STAGES);
     }
 
     const admin = createAdminClient();
@@ -134,17 +113,19 @@ export async function GET(request?: NextRequest) {
         .order("updated_at", { ascending: false })
         .limit(200),
 
-      admin
-        .from("cs_orders")
-        .select(
-          "id, order_number, customer_name, current_stage, status, created_at, updated_at, deadline, completed_at",
-        )
-        .eq("status", "completed")
-        .is("deleted_at", null)
-        .gte("completed_at", fromISO)
-        .lte("completed_at", toISO)
-        .order("completed_at", { ascending: false })
-        .limit(50),
+      (() => {
+        let q = admin
+          .from("cs_orders")
+          .select(
+            "id, order_number, customer_name, current_stage, status, created_at, updated_at, deadline, completed_at",
+          )
+          .eq("status", "completed")
+          .is("deleted_at", null);
+        if (fromParam || toParam) {
+          q = q.gte("completed_at", fromISO).lte("completed_at", toISO);
+        }
+        return q.order("completed_at", { ascending: false }).limit(50);
+      })(),
 
       admin
         .from("stage_results")
@@ -165,8 +146,8 @@ export async function GET(request?: NextRequest) {
         : 0;
 
     // ── Cumulative processing time for completed orders ─────────────────────────
-    const completedOrderIds = completedOrdersRaw.map((o: any) => o.id);
-    let transitionsByOrder = new Map<string, any[]>();
+    const completedOrderIds = completedOrdersRaw.map((o) => o.id);
+    const transitionsByOrder = new Map<string, { order_id: string; transitioned_at: string }[]>();
     if (completedOrderIds.length > 0) {
       const { data: transitions } = await admin
         .from("order_stage_transitions")
@@ -180,7 +161,7 @@ export async function GET(request?: NextRequest) {
       }
     }
 
-    const completedOrders = completedOrdersRaw.map((o: any) => {
+    const completedOrders = completedOrdersRaw.map((o) => {
       const tx = transitionsByOrder.get(o.id) || [];
       let totalMs = 0;
       for (let i = 1; i < tx.length; i++) {
@@ -202,12 +183,12 @@ export async function GET(request?: NextRequest) {
 
     if (waitingOrders && waitingOrders.length > 0) {
       pendingCount += waitingOrders.filter(
-        (o: any) => o.current_stage === "approval_penerimaan_order",
+        (o) => o.current_stage === "approval_penerimaan_order",
       ).length;
 
       const otherIds = waitingOrders
-        .filter((o: any) => o.current_stage !== "approval_penerimaan_order")
-        .map((o: any) => o.id);
+        .filter((o) => o.current_stage !== "approval_penerimaan_order")
+        .map((o) => o.id);
 
       if (otherIds.length > 0) {
         const orderExpectedStage = new Map<string, string>();
@@ -237,8 +218,8 @@ export async function GET(request?: NextRequest) {
     }
 
     // ── Latest stage_results per order ─────────────────────────────────────────
-    const orderIds = orders.map((o: any) => o.id);
-    let latestResults: any[] = [];
+    const orderIds = orders.map((o) => o.id);
+    let latestResults: unknown[] = [];
     if (orderIds.length > 0) {
       const { data: results } = await admin
         .from("stage_results")
@@ -251,22 +232,23 @@ export async function GET(request?: NextRequest) {
       latestResults = results || [];
     }
 
-    const latestByOrder = new Map<string, any>();
-    for (const r of latestResults) {
+    type LatestRec = { order_id: string; stage: string; finished_at: string; users?: { full_name: string | null } | null };
+    const latestByOrder = new Map<string, LatestRec>();
+    for (const r of latestResults as LatestRec[]) {
       if (!latestByOrder.has(r.order_id)) latestByOrder.set(r.order_id, r);
     }
 
     // ── Enrich orders ──────────────────────────────────────────────────────────
-    const enrichedOrders = orders.map((o: any) => {
+    const enrichedOrders = orders.map((o) => {
       const latest = latestByOrder.get(o.id);
 
       let group: string;
-      if (PRODUCTION_STAGES.has(o.current_stage)) group = "production";
-      else if (OPERATIONAL_STAGES.has(o.current_stage)) group = "operational";
-      else if (APPROVAL_STAGES.has(o.current_stage)) {
+      if (STAGE_GROUP[o.current_stage] === "production") group = "production";
+      else if (STAGE_GROUP[o.current_stage] === "operational") group = "operational";
+      else if (APPROVAL_STAGES.includes(o.current_stage)) {
         const prodStage = APPROVAL_TO_PRODUCTION_STAGE[o.current_stage];
         group =
-          prodStage && PRODUCTION_STAGES.has(prodStage)
+          prodStage && STAGE_GROUP[prodStage] === "production"
             ? "production"
             : "operational";
       } else group = "other";
@@ -287,7 +269,7 @@ export async function GET(request?: NextRequest) {
         stage_group: group,
         status: o.status,
         deadline: o.deadline,
-        last_worker: (latest?.users as any)?.full_name || null,
+        last_worker: latest?.users?.full_name || null,
         last_submission_at: latest?.finished_at || null,
         hours_at_stage: hoursAtStage,
         last_stage: latest ? STAGE_LABELS[latest.stage] || latest.stage : null,
@@ -298,11 +280,11 @@ export async function GET(request?: NextRequest) {
     let scopedOrders = enrichedOrders;
     if (svRoleName === "production_supervisor") {
       scopedOrders = enrichedOrders.filter(
-        (o: any) => o.stage_group === "production",
+        (o) => o.stage_group === "production",
       );
     } else if (svRoleName === "operational_supervisor") {
       scopedOrders = enrichedOrders.filter(
-        (o: any) => o.stage_group === "operational",
+        (o) => o.stage_group === "operational",
       );
     }
 
@@ -317,12 +299,12 @@ export async function GET(request?: NextRequest) {
         stats: {
           totalActive: scopedOrders.length,
           productionCount: scopedOrders.filter(
-            (o: any) => o.stage_group === "production",
+            (o) => o.stage_group === "production",
           ).length,
           operationalCount: scopedOrders.filter(
-            (o: any) => o.stage_group === "operational",
+            (o) => o.stage_group === "operational",
           ).length,
-          approvalCount: scopedOrders.filter((o: any) =>
+          approvalCount: scopedOrders.filter((o) =>
             supervisorApprovalStages.has(o.current_stage),
           ).length,
           submissionsToday,

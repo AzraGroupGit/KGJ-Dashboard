@@ -463,7 +463,7 @@ function generateInsights({
 /**
  * Mendapatkan history 7 hari terakhir
  */
-function getLast7DaysHistory(monthData: any[], today: string) {
+function getLast7DaysHistory(monthData: { input_date?: string; lead_masuk?: number; closing?: number; omset?: number }[], today: string) {
   const last7Days = [];
   const todayDate = new Date(today);
 

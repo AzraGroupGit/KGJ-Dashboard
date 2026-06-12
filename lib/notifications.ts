@@ -79,7 +79,7 @@ export async function findSupervisorIds(
     .eq("deleted_at", null)
     .in("status", ["active", null]);
 
-  return (supervisors || []).map((s: any) => s.id);
+  return (supervisors || []).map((s) => s.id);
 }
 
 export async function notifySupervisors(

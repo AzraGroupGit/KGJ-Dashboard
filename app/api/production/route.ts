@@ -3,6 +3,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { STAGE_GROUP } from "@/lib/stages";
+import { getRoleProps } from "@/lib/auth/session";
 
 // Role yang termasuk "Jewelry Expert"
 const EXPERT_ROLES = [
@@ -20,15 +22,9 @@ const ROLE_DEFAULT_STAGE: Record<string, string> = {
   micro_setting: "pemasangan_permata",
 };
 
-// Stage yang dipakai untuk deteksi "active order" per expert
-const EXPERT_STAGES = [
-  "lebur_bahan",
-  "pembentukan_cincin",
-  "pemasangan_permata",
-  "pemolesan",
-  "laser",
-  "finishing",
-] as const;
+const EXPERT_STAGES = Object.entries(STAGE_GROUP)
+  .filter(([_, group]) => group === "production")
+  .map(([stage]) => stage);
 
 export async function GET(request?: NextRequest) {
   try {
@@ -57,7 +53,7 @@ export async function GET(request?: NextRequest) {
       );
     }
 
-    if ((profile?.role as any)?.name !== "superadmin") {
+    if (getRoleProps(profile).name !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -79,7 +75,7 @@ export async function GET(request?: NextRequest) {
     const thirtyDaysAgo = new Date(now);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const thirtyDaysAgoISO = fromParam ? new Date(fromParam).toISOString() : thirtyDaysAgo.toISOString();
-    const toDateISO = toParam ? new Date(toParam + "T23:59:59").toISOString() : now.toISOString();
+    const _toDateISO = toParam ? new Date(toParam + "T23:59:59").toISOString() : now.toISOString();
 
     // ========== 1. DAFTAR EXPERT USERS ==========
     const { data: expertUsers, error: expertUsersError } = await admin
@@ -107,11 +103,11 @@ export async function GET(request?: NextRequest) {
     }
 
     const expertUserList = (expertUsers || [])
-      .filter((u: any) => EXPERT_ROLES.includes((u.role as any)?.name))
-      .map((u: any) => ({
+      .filter((u) => EXPERT_ROLES.includes(getRoleProps(u).name as typeof EXPERT_ROLES[number]))
+      .map((u) => ({
         id: u.id,
         fullName: u.full_name,
-        roleName: (u.role as any)?.name as string,
+        roleName: getRoleProps(u).name,
       }));
     const expertUserIds = expertUserList.map((u) => u.id);
 
@@ -137,7 +133,7 @@ export async function GET(request?: NextRequest) {
       string,
       { totalScans: number; orderSet: Set<string> }
     >();
-    (todayScans || []).forEach((s: any) => {
+    (todayScans || []).forEach((s) => {
       const stat = scanStats.get(s.user_id) ?? {
         totalScans: 0,
         orderSet: new Set(),
@@ -181,10 +177,10 @@ export async function GET(request?: NextRequest) {
       string,
       { orderNumber: string; startedAt: string; stage: string }
     >();
-    (activeWork || []).forEach((row: any) => {
+    (activeWork || []).forEach((row) => {
       if (!activeByUser.has(row.user_id)) {
         activeByUser.set(row.user_id, {
-          orderNumber: row.orders?.order_number ?? null,
+          orderNumber: (row as any).orders?.order_number ?? null,
           startedAt: row.started_at,
           stage: row.stage,
         });
@@ -215,7 +211,7 @@ export async function GET(request?: NextRequest) {
     }
 
     const susutByUser = new Map<string, { sum: number; count: number }>();
-    (recentResults || []).forEach((row: any) => {
+    (recentResults || []).forEach((row) => {
       const stat = susutByUser.get(row.user_id) ?? { sum: 0, count: 0 };
       let deviation: number | null = null;
 
@@ -251,7 +247,7 @@ export async function GET(request?: NextRequest) {
       .eq("is_active", true);
 
     const targetMap: Record<string, number> = {};
-    (targetRows || []).forEach((row: any) => {
+    (targetRows || []).forEach((row) => {
       const params = row.parameters || {};
       const target =
         parseFloat(params.shrinkage_buffer_percent) ||
@@ -315,7 +311,7 @@ export async function GET(request?: NextRequest) {
       );
     }
 
-    const microOrderIds = (microOrders || []).map((o: any) => o.id);
+    const microOrderIds = (microOrders || []).map((o) => o.id);
 
     const { data: microResults } =
       microOrderIds.length > 0
@@ -336,21 +332,22 @@ export async function GET(request?: NextRequest) {
             .order("attempt_number", { ascending: false })
         : { data: [] };
 
-    const latestMicroByOrder = new Map<string, any>();
-    (microResults || []).forEach((row: any) => {
+    const latestMicroByOrder = new Map<string, Record<string, unknown>>();
+    (microResults || []).forEach((row) => {
       if (!latestMicroByOrder.has(row.order_id)) {
-        latestMicroByOrder.set(row.order_id, row);
+        latestMicroByOrder.set(row.order_id, row as unknown as Record<string, unknown>);
       }
     });
 
     const microSetting = (microOrders || [])
-      .map((o: any) => {
+      .map((o) => {
         const result = latestMicroByOrder.get(o.id);
+        const data = result?.data as Record<string, unknown> | undefined;
         const weightBefore = result
-          ? parseFloat(result.data?.weight_before_setting)
+          ? parseFloat(String(data?.weight_before_setting ?? ""))
           : null;
         const weightAfter = result
-          ? parseFloat(result.data?.weight_after_setting)
+          ? parseFloat(String(data?.weight_after_setting ?? ""))
           : null;
 
         let status: "waiting" | "in_progress" | "completed";
@@ -367,15 +364,15 @@ export async function GET(request?: NextRequest) {
           order_number: o.order_number,
           gemstone_info: null,
           current_stage: o.current_stage,
-          staff_name: result?.users?.full_name ?? null,
-          started_at: result?.started_at ?? null,
-          finished_at: result?.finished_at ?? null,
+          staff_name: (result as any)?.users?.full_name ?? null,
+          started_at: (result as any)?.started_at ?? null,
+          finished_at: (result as any)?.finished_at ?? null,
           weight_before: isNaN(weightBefore as number) ? null : weightBefore,
           weight_after: isNaN(weightAfter as number) ? null : weightAfter,
           status,
         };
       })
-      .sort((a: any, b: any) => {
+      .sort((a, b) => {
         const order = { in_progress: 0, waiting: 1, completed: 2 };
         const ao = order[a.status as keyof typeof order];
         const bo = order[b.status as keyof typeof order];
@@ -406,7 +403,7 @@ export async function GET(request?: NextRequest) {
       );
     }
 
-    const completedOrderIds = (completedOrders || []).map((o: any) => o.id);
+    const completedOrderIds = (completedOrders || []).map((o) => o.id);
 
     const { data: qc2Results } =
       completedOrderIds.length > 0
@@ -419,7 +416,7 @@ export async function GET(request?: NextRequest) {
         : { data: [] };
 
     const qc2ByOrder = new Map<string, number>();
-    (qc2Results || []).forEach((row: any) => {
+    (qc2Results || []).forEach((row) => {
       if (!qc2ByOrder.has(row.order_id)) {
         const weight = parseFloat(row.data?.weight_final_label);
         if (!isNaN(weight)) qc2ByOrder.set(row.order_id, weight);
@@ -427,7 +424,7 @@ export async function GET(request?: NextRequest) {
     });
 
     const yieldData = (completedOrders || [])
-      .map((o: any) => {
+      .map((o) => {
         const actual = qc2ByOrder.get(o.id) ?? null;
 
         return {

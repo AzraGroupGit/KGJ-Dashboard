@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getRoleProps } from "@/lib/auth/session";
 
 /**
  * GET /api/cs/inputs
@@ -86,7 +87,7 @@ export async function GET(request: Request) {
       query = query.eq("branch_id", branchId);
     }
 
-    const currentRoleName = (currentUser.role as any)?.name;
+    const currentRoleName = getRoleProps(currentUser).name;
 
     // Jika user adalah CS, hanya bisa melihat data sendiri
     if (currentRoleName === "customer_service") {
@@ -158,7 +159,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if ((profile.role as any)?.name !== "customer_service") {
+    if (getRoleProps(profile).name !== "customer_service") {
       return NextResponse.json(
         { error: "Hanya Customer Service yang dapat input data" },
         { status: 403 },

@@ -2,12 +2,24 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, startTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Loading from "@/components/ui/Loading";
 import { getDashboardPath, queryParamToAppRole } from "@/lib/routes";
 import { setClientUser, type LoginRole } from "@/lib/auth/session";
+import {
+  Shield,
+  Headphones,
+  BarChart3,
+  ArrowLeft,
+  AlertCircle,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+} from "lucide-react";
 
 // ════════════════════════════════════════════════════════════════════════════
 // ROLE CONFIGS & ICONS
@@ -29,55 +41,7 @@ const ROLE_CONFIGS: RoleConfig[] = [
       bg: "rgba(240,201,107,0.1)",
       text: "#b8860b",
     },
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none">
-        <path
-          d="M12 15L12 18"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-        <path
-          d="M8 11L8 14"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-        <path
-          d="M16 11L16 14"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-        <rect
-          x="3"
-          y="8"
-          width="18"
-          height="12"
-          rx="2"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-        <path
-          d="M7 5L7 8"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-        <path
-          d="M12 3L12 8"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-        <path
-          d="M17 5L17 8"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
+    icon: <Shield className="w-full h-full" />,
   },
   {
     value: "customer_service",
@@ -87,33 +51,7 @@ const ROLE_CONFIGS: RoleConfig[] = [
       bg: "rgba(79,142,247,0.1)",
       text: "#2563eb",
     },
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none">
-        <path
-          d="M3 10C3 7.79086 4.79086 6 7 6H17C19.2091 6 21 7.79086 21 10V14C21 16.2091 19.2091 18 17 18H7C4.79086 18 3 16.2091 3 14V10Z"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-        <circle
-          cx="8"
-          cy="12"
-          r="2"
-          fill="currentColor"
-          fillOpacity="0.15"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-        <circle
-          cx="16"
-          cy="12"
-          r="2"
-          fill="currentColor"
-          fillOpacity="0.15"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-      </svg>
-    ),
+    icon: <Headphones className="w-full h-full" />,
   },
   {
     value: "marketing",
@@ -123,37 +61,7 @@ const ROLE_CONFIGS: RoleConfig[] = [
       bg: "rgba(130,200,130,0.1)",
       text: "#16a34a",
     },
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none">
-        <rect
-          x="3"
-          y="15"
-          width="4"
-          height="6"
-          rx="1"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-        <rect
-          x="10"
-          y="9"
-          width="4"
-          height="12"
-          rx="1"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-        <rect
-          x="17"
-          y="5"
-          width="4"
-          height="16"
-          rx="1"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-      </svg>
-    ),
+    icon: <BarChart3 className="w-full h-full" />,
   },
 ];
 
@@ -175,7 +83,9 @@ export default function LoginPage() {
   useEffect(() => {
     const roleFromParam = queryParamToAppRole(searchParams.get("role"));
     if (roleFromParam) {
-      setRole(roleFromParam);
+      startTransition(() => {
+        setRole(roleFromParam);
+      });
     }
   }, [searchParams]);
 
@@ -747,20 +657,7 @@ export default function LoginPage() {
         {/* === LOGIN CARD === */}
         <div className="login-card">
           <Link href="/" className="back-link">
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                d="M19 12H5M12 19l-7-7 7-7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <ArrowLeft className="w-3.5 h-3.5" />
             Kembali ke Beranda
           </Link>
 
@@ -798,18 +695,7 @@ export default function LoginPage() {
 
           {error && (
             <div className="alert-error">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
               {error}
             </div>
           )}
@@ -835,17 +721,7 @@ export default function LoginPage() {
               <label className="input-label">Email</label>
               <div className="input-wrapper">
                 <span className="input-icon">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                    <polyline points="22,6 12,13 2,6" />
-                  </svg>
+                  <Mail className="w-3.5 h-3.5" />
                 </span>
                 <input
                   type="email"
@@ -863,17 +739,7 @@ export default function LoginPage() {
               <label className="input-label">Password</label>
               <div className="input-wrapper">
                 <span className="input-icon">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
+                  <Lock className="w-3.5 h-3.5" />
                 </span>
                 <input
                   type={showPassword ? "text" : "password"}
@@ -891,29 +757,9 @@ export default function LoginPage() {
                   disabled={isLoading}
                 >
                   {showPassword ? (
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    </svg>
+                    <EyeOff className="w-3.5 h-3.5" />
                   ) : (
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
+                    <Eye className="w-3.5 h-3.5" />
                   )}
                 </button>
               </div>
@@ -928,20 +774,7 @@ export default function LoginPage() {
               ) : (
                 <>
                   <span>Masuk ke Dashboard</span>
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                  >
-                    <path
-                      d="M5 12h14M12 5l7 7-7 7"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </>
               )}
             </button>

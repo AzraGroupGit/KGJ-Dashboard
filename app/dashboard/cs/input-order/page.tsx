@@ -2,7 +2,9 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef, startTransition } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
@@ -22,6 +24,8 @@ import {
 import { checkSlotAvailability, type SlotCheckResult } from "@/lib/slot-check";
 import AddressAutocomplete from "@/components/order/AddressAutocomplete";
 import FontPicker from "@/components/order/FontPicker";
+import { Plus, ClipboardList, Eye, Pencil, Trash2, CheckCircle, Download, Check, AlertTriangle, Image, Link, X } from "lucide-react";
+import { OrderFormDataSchema, type OrderFormData, getOrderFormErrors } from "@/lib/schemas/cs-order";
 import MaterialSelect from "@/components/order/MaterialSelect";
 import EngravingSelect from "@/components/order/EngravingSelect";
 import AddsOnAccordion from "@/components/order/AddsOnAccordion";
@@ -32,61 +36,6 @@ const DRAFT_INTERVAL = 5000;
 
 function draftKey(orderId: string) {
   return `${DRAFT_PREFIX}${orderId}`;
-}
-
-// ── Types ──────────────────────────────────────────────────────────────────
-
-interface OrderFormData {
-  tglChat: string;
-  tglOrder: string;
-  tglAcara: string;
-  acara: string;
-  kategori: string;
-  deadline: string;
-  orderVia: string;
-  sumber: string;
-  sumberMedia: string;
-  dariArtis: string;
-  dariArtisDetail: string;
-  harga: string;
-  dpPercent: string;
-  dp: string;
-  namaLengkap: string;
-  alamatPengiriman: string;
-  kelurahan: string;
-  kecamatan: string;
-  kabupatenKota: string;
-  provinsi: string;
-  kodepos: string;
-  noWA: string;
-  email: string;
-  instagram: string;
-  ukuranPria: string;
-  ukuranWanita: string;
-  alatUkur: string;
-  ukiranPria: string;
-  ukiranWanita: string;
-  ukiranCincinPria: string;
-  ukiranCincinWanita: string;
-  font: string;
-  laserPosition: string;
-  jenisCincinPria: string;
-  jenisCincinWanita: string;
-  gramasiPria: string;
-  gramasiWanita: string;
-  jenisCincinFeatures: string[];
-  modelBentukPria: string[];
-  microsettingPria: string[];
-  detailLaserPria: string[];
-  detailFinishingPria: string[];
-  modelBentukWanita: string[];
-  microsettingWanita: string[];
-  detailLaserWanita: string[];
-  detailFinishingWanita: string[];
-  pengiriman: string;
-  box: string;
-  transferKeBank: string;
-  keteranganTambahan: string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -339,9 +288,8 @@ function formDataToPatch(f: OrderFormData) {
 
 export default function InputOrderPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<ClientUser | null>(null);
-  const [orders, setOrders] = useState<CsOrder[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [workingDays, setWorkingDays] = useState<number | null>(null);
@@ -354,6 +302,7 @@ export default function InputOrderPage() {
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [showFormModal, setShowFormModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showClearDraftConfirm, setShowClearDraftConfirm] = useState(false);
 
   // create step 1
   const [newCustomerName, setNewCustomerName] = useState("");
@@ -389,23 +338,6 @@ export default function InputOrderPage() {
 
   // ── Data loading ──────────────────────────────────────────────────────────
 
-  const loadOrders = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/cs/orders");
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Gagal memuat data order");
-      }
-      const { data } = await res.json();
-      setOrders(data || []);
-    } catch (e) {
-      showAlert("error", e instanceof Error ? e.message : "Gagal memuat data");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     const clientUser = getClientUser();
     if (!clientUser) {
@@ -413,20 +345,32 @@ export default function InputOrderPage() {
       return;
     }
     setUser(clientUser);
-    loadOrders();
-  }, [router, loadOrders]);
+  }, [router]);
+
+  const { data: orders = [], isLoading } = useQuery<CsOrder[]>({
+    queryKey: ["cs-orders"],
+    queryFn: async () => {
+      const res = await fetcher<{ data: CsOrder[] }>("/api/cs/orders");
+      return res.data ?? [];
+    },
+    enabled: !!user,
+  });
+
+  const invalidateOrders = () => queryClient.invalidateQueries({ queryKey: ["cs-orders"] });
+
+  const _orders = Array.isArray(orders) ? orders : [];
 
   // ── Stats ──────────────────────────────────────────────────────────────────
 
-  const totalOrders = orders.length;
-  const menunggu = orders.filter((o) => o.form_status === "pending").length;
-  const perluDireview = orders.filter(
+  const totalOrders = _orders.length;
+  const menunggu = _orders.filter((o) => o.form_status === "pending").length;
+  const perluDireview = _orders.filter(
     (o) => o.form_status === "submitted",
   ).length;
-  const sudahDireview = orders.filter(
+  const sudahDireview = _orders.filter(
     (o) => o.form_status === "reviewed" || o.form_status === "converted",
   ).length;
-  const bulanIni = orders.filter((o) =>
+  const bulanIni = _orders.filter((o) =>
     o.tgl_order.startsWith(today.slice(0, 7)),
   ).length;
 
@@ -457,7 +401,7 @@ export default function InputOrderPage() {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Gagal membuat order");
-      await loadOrders();
+      await invalidateOrders();
       setShowCreateModal(false);
       setGeneratedOrder(body.data);
       setLinkCopied(false);
@@ -510,7 +454,7 @@ export default function InputOrderPage() {
     );
   };
 
-  const handleDpPercentChange = (pct: string) => {
+  const _handleDpPercentChange = (pct: string) => {
     setField("dpPercent", pct);
     const p = parseInt(pct, 10);
     setField(
@@ -539,7 +483,7 @@ export default function InputOrderPage() {
     } else {
       setWorkingDays(null);
     }
-  }, [formData.tglOrder, formData.deadline]);
+  }, [formData.tglOrder, formData.deadline, formData.kategori]);
 
   // ── Draft auto-save ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -581,6 +525,13 @@ export default function InputOrderPage() {
 
   const handleSaveForm = async () => {
     if (!selectedOrder) return;
+    const result = OrderFormDataSchema.safeParse(formData);
+    if (!result.success) {
+      const errors = getOrderFormErrors(result.error);
+      const firstError = Object.values(errors).find(Boolean);
+      showAlert("error", firstError || "Lengkapi data yang wajib diisi");
+      return;
+    }
     setIsSaving(true);
     try {
       const patch: Record<string, unknown> = formDataToPatch(formData);
@@ -598,7 +549,7 @@ export default function InputOrderPage() {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Gagal menyimpan");
-      await loadOrders();
+      await invalidateOrders();
       clearDraft();
       setShowFormModal(false);
       showAlert("success", "Data order berhasil disimpan");
@@ -627,7 +578,7 @@ export default function InputOrderPage() {
         const body = await res.json();
         throw new Error(body.error || "Gagal menghapus order");
       }
-      await loadOrders();
+      await invalidateOrders();
       setShowDeleteConfirm(false);
       setOrderToDelete(null);
       showAlert("success", "Order berhasil dihapus");
@@ -654,7 +605,7 @@ export default function InputOrderPage() {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Gagal menandai review");
-      await loadOrders();
+      await invalidateOrders();
       setShowFormModal(false);
       showAlert("success", "Order ditandai sudah direview");
     } catch (e) {
@@ -686,11 +637,7 @@ export default function InputOrderPage() {
       setSelectedOrder((prev) =>
         prev ? { ...prev, [field]: body.url } : prev,
       );
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === selectedOrder.id ? { ...o, [field]: body.url } : o,
-        ),
-      );
+      invalidateOrders();
       showAlert("success", `Foto referensi ${side} berhasil diunggah`);
     } catch (e) {
       showAlert("error", e instanceof Error ? e.message : "Terjadi kesalahan");
@@ -775,21 +722,7 @@ export default function InputOrderPage() {
             <Button
               variant="primary"
               onClick={openCreateModal}
-              leftIcon={
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-              }
+              leftIcon={<Plus className="w-4 h-4" />}
             >
               Buat Order Baru
             </Button>
@@ -841,7 +774,7 @@ export default function InputOrderPage() {
                 Daftar Order
               </h3>
               <p className="text-sm text-gray-500">
-                {orders.length} order · urut dari terbaru
+                {_orders.length} order · urut dari terbaru
               </p>
             </div>
 
@@ -873,26 +806,14 @@ export default function InputOrderPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {orders.length === 0 ? (
+                    {_orders.length === 0 ? (
                       <tr>
                         <td
                           colSpan={7}
                           className="px-6 py-12 text-center text-gray-400"
                         >
                           <div className="flex flex-col items-center gap-2">
-                            <svg
-                              className="w-10 h-10 text-gray-300"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1.5}
-                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                              />
-                            </svg>
+                            <ClipboardList className="w-10 h-10 text-gray-300" />
                             <p>
                               Belum ada order. Klik{" "}
                               <strong>Buat Order Baru</strong> untuk memulai.
@@ -972,44 +893,14 @@ export default function InputOrderPage() {
                                 title="Lihat form"
                                 className="p-1.5 rounded-lg text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
                               >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                  />
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                  />
-                                </svg>
+                                <Eye className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => openForm(order, false)}
                                 title="Edit form"
                                 className="p-1.5 rounded-lg text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
                               >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                  />
-                                </svg>
+                                <Pencil className="w-4 h-4" />
                               </button>
                               <CopyLinkButton
                                 order={order}
@@ -1020,19 +911,7 @@ export default function InputOrderPage() {
                                 title="Hapus order"
                                 className="p-1.5 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
                               >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </td>
@@ -1124,19 +1003,7 @@ export default function InputOrderPage() {
         {generatedOrder && (
           <div className="space-y-4">
             <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg p-4">
-              <svg
-                className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-green-800">
                   Order berhasil dibuat!
@@ -1235,21 +1102,7 @@ export default function InputOrderPage() {
                     variant="primary"
                     onClick={handleMarkReviewed}
                     isLoading={isSaving}
-                    leftIcon={
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    }
+                    leftIcon={<CheckCircle className="w-4 h-4" />}
                   >
                     Tandai Sudah Direview
                   </Button>
@@ -1261,21 +1114,7 @@ export default function InputOrderPage() {
                     variant="outline"
                     onClick={handleDownloadPdf}
                     isLoading={isGeneratingPdf}
-                    leftIcon={
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                    }
+                    leftIcon={<Download className="w-4 h-4" />}
                   >
                     Download PDF
                   </Button>
@@ -1319,30 +1158,40 @@ export default function InputOrderPage() {
           </div>
         </div>
 
-        {!isViewOnly && draftSavedAt && (
+        {!isViewOnly && draftSavedAt && !showClearDraftConfirm && (
           <div className="mb-4 flex items-center justify-between rounded-lg border border-sky-200 bg-sky-50 px-4 py-2.5">
             <div className="flex items-center gap-2 text-xs text-sky-700">
-              <svg
-                className="h-3.5 w-3.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+              <Check className="h-3.5 w-3.5" />
               Draft tersimpan otomatis pukul {draftSavedAt}
             </div>
             <button
-              onClick={clearDraft}
+              onClick={() => setShowClearDraftConfirm(true)}
               className="rounded px-2 py-1 text-[11px] font-medium text-sky-600 hover:bg-sky-100 transition-colors"
             >
               Hapus draft
             </button>
+          </div>
+        )}
+
+        {showClearDraftConfirm && (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 space-y-2.5">
+            <p className="text-xs text-amber-800">
+              Yakin hapus draft? Semua perubahan yang belum disimpan akan hilang.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { clearDraft(); setShowClearDraftConfirm(false); }}
+                className="rounded px-3 py-1.5 text-[11px] font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
+              >
+                Ya, Hapus
+              </button>
+              <button
+                onClick={() => setShowClearDraftConfirm(false)}
+                className="rounded px-3 py-1.5 text-[11px] font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Batal
+              </button>
+            </div>
           </div>
         )}
         <OrderFormFields
@@ -1364,19 +1213,7 @@ export default function InputOrderPage() {
       >
         <div className="space-y-4">
           <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4">
-            <svg
-              className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
+            <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold text-red-800">
                 Yakin ingin menghapus?
@@ -1452,19 +1289,7 @@ function RefImageUpload({
           />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-gray-400">
-            <svg
-              className="w-8 h-8"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
+            <Image aria-hidden="true" className="w-8 h-8" />
             <span className="text-xs">Klik untuk upload foto</span>
             <span className="text-[10px] text-gray-300">
               JPG / PNG / WebP · maks 5 MB
@@ -1564,35 +1389,7 @@ function CopyLinkButton({
       title={copied ? "Tersalin!" : "Salin link form"}
       className={`p-1.5 rounded-lg transition-colors ${copied ? "text-green-600 bg-green-50" : "text-gray-500 hover:bg-indigo-50 hover:text-indigo-600"}`}
     >
-      {copied ? (
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M5 13l4 4L19 7"
-          />
-        </svg>
-      ) : (
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-          />
-        </svg>
-      )}
+      {copied ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
     </button>
   );
 }
@@ -1654,13 +1451,7 @@ function OrderFormFields({
   workingDays,
   onChangeHarga,
 }: FormFieldsProps) {
-  const [hargaDisplay, setHargaDisplay] = useState(() =>
-    formatRupiah(data.harga),
-  );
-
-  useEffect(() => {
-    setHargaDisplay(formatRupiah(data.harga));
-  }, [data.harga]);
+  const [hargaDisplay, setHargaDisplay] = useState<string>(() => formatRupiah(data.harga));
 
   const [slotInfo, setSlotInfo] = useState<SlotCheckResult | null>(null);
   const [slotLoading, setSlotLoading] = useState(false);
@@ -1675,39 +1466,40 @@ function OrderFormFields({
           data.tglOrder,
           threshold.minDays,
         );
-        if (!data.deadline) {
-          onChangeField(
-            "deadline" as keyof OrderFormData,
-            suggestedDeadline as any,
-          );
+        if (!data.deadline && suggestedDeadline) {
+          onChangeField("deadline", suggestedDeadline);
         }
       }
     }
-  }, [data.kategori]);
+  }, [data.kategori, data.tglOrder, data.deadline, onChangeField]);
 
   useEffect(() => {
     if (data.kategori && data.tglOrder) {
-      setSlotLoading(true);
+      startTransition(() => {
+        setSlotLoading(true);
+      });
       checkSlotAvailability(data.kategori, data.tglOrder).then((result) => {
         setSlotInfo(result);
         setSlotLoading(false);
       });
     } else {
-      setSlotInfo(null);
+      startTransition(() => {
+        setSlotInfo(null);
+      });
     }
   }, [data.kategori, data.tglOrder]);
 
-  const detailField = (prefix: string, gender: "Pria" | "Wanita") =>
+  const _detailField = (prefix: string, gender: "Pria" | "Wanita") =>
     `${prefix}${gender}` as keyof OrderFormData;
 
   const addDetailRow = (field: keyof OrderFormData) => {
     const arr = [...(data[field] as string[])];
     arr.push("");
-    onChangeField(field, arr as any);
+    onChangeField(field, arr as string[]);
   };
   const removeDetailRow = (field: keyof OrderFormData, i: number) => {
     const arr = (data[field] as string[]).filter((_, idx) => idx !== i);
-    onChangeField(field, (arr.length ? arr : [""]) as any);
+    onChangeField(field, (arr.length ? arr : [""]) as string[]);
   };
 
   const handleHargaInput = (val: string) => {
@@ -2479,7 +2271,7 @@ function OrderFormFields({
                           onChange={(e) => {
                             const copy = [...arr];
                             copy[i] = e.target.value;
-                            onChangeField(field, copy as any);
+                            onChangeField(field, copy);
                           }}
                           className={inputCls(disabled)}
                           disabled={disabled}
@@ -2491,15 +2283,7 @@ function OrderFormFields({
                             disabled={disabled}
                             className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-30"
                           >
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                              className="w-4 h-4"
-                            >
-                              <path d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            <X className="w-4 h-4" />
                           </button>
                         )}
                       </div>
@@ -2510,15 +2294,7 @@ function OrderFormFields({
                       disabled={disabled}
                       className="flex items-center gap-1 text-xs font-medium mt-0.5 text-indigo-600 hover:text-indigo-800 transition-colors disabled:opacity-30"
                     >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        className="w-3.5 h-3.5"
-                      >
-                        <path d="M12 4v16m8-8H4" />
-                      </svg>
+                      <Plus className="w-3.5 h-3.5" />
                       Tambah
                     </button>
                   </div>
