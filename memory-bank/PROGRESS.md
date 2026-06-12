@@ -134,7 +134,7 @@ The BMS-OPR-PRD ERP system is actively deployed and in daily use at the jewelry 
 | Area | Issue | Priority |
 |------|-------|----------|
 | Database | `stage_personnel` table must be created via Supabase SQL Editor (SQL provided to developer) | ✅ Resolved — full migration files now in `migrations/` directory |
-| Testing | No test framework installed; no test scripts | Low (manual testing only) |
+| Testing | No test framework installed; no test scripts | ✅ Resolved — Vitest for unit/integration tests (20 tests in `lib/__tests__/stages.test.ts`), Playwright for E2E tests (5 tests in `e2e/auth.spec.ts`); scripts: `npm test`, `npm run test:watch`, `npm run test:e2e`; CI includes test job (e2e disabled until Supabase secrets configured) |
 | State management | All state is `useState`/`useEffect`; no global state library | Low |
 | Migrations | No migration files in repository | ✅ Resolved — `migrations/001_initial_schema.sql` (24 tables DDL), `migrations/002_rls_policies.sql` (7 helper functions + policies), `migrations/README.md` created |
 | Data fetching | `@tanstack/react-query` `useQuery` used across all pages for GET data fetching | ✅ Resolved — 8 additional pages migrated (cs/pelanggan, cs/input-order, marketing, superadmin/oprprd, workshop/login, workshop/settings/pin, order-form/[token], workshop/input/PhaseOrderList); remaining raw `useEffect`+`fetch` instances are limited to POST/PUT/DELETE mutations and `/api/me` identity checks in 10 layout/header components |
@@ -160,6 +160,7 @@ The BMS-OPR-PRD ERP system is actively deployed and in daily use at the jewelry 
 | 2026-06-11 | `approval_racik_bahan` and `approval_produksi` StageInfoPopup asked supervisors to verify items with no worker data | Trimmed to only show items backed by actual submitted data |
 | 2026-06-11 | KEY_LABELS missing 8 field labels in DataViewer; `_url` fields silently hidden | Added 8 curated labels; removed `_url` filter so image URLs appear as clickable links |
 | 2026-06-11 | `sampai_expedisi` on pengiriman stage didn't complete the order | Now also sets `current_stage = "selesai"`, same as `sampai_store` |
+| 2026-06-12 | OrderDetailPopup "Pengiriman" info showed both store name AND address combined | Now shows only store name for store deliveries, and only full address when `pengiriman === "Alamat Customer"` |
 
 ## UX Improvements
 
@@ -181,6 +182,6 @@ The BMS-OPR-PRD ERP system is actively deployed and in daily use at the jewelry 
 Env files (`.env*`) are in `.gitignore` and not tracked. All 8 env vars required.
 
 ### CI/CD
-- **CI:** `.github/workflows/ci.yml` — parallel typecheck (`tsc --noEmit`) + lint (`eslint`) on push/PR to main
+- **CI:** `.github/workflows/ci.yml` — parallel typecheck (`tsc --noEmit`) + lint (`eslint`) + unit tests (`npm test`) on push/PR to main; E2E job defined but disabled (`if: false`) pending Supabase env vars as GitHub secrets
 - **Deploy:** Vercel Git integration — auto-deploys on push to `main` (production build + env vars managed in Vercel dashboard)
 - **Quality gates:** `tsc --noEmit` = 0 errors, `eslint` = 0 errors 0 warnings
