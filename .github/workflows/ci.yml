@@ -86,7 +86,7 @@ jobs:
           PUSHER_SECRET=${{ secrets.PUSHER_SECRET }}
           EOF
 
-      - uses: actions/playwright@v2
+      - uses: microsoft/playwright@v2
         with:
           version: latest
 
