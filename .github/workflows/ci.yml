@@ -63,7 +63,6 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: false
     steps:
       - uses: actions/checkout@v4
 
@@ -73,6 +72,19 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - name: Create .env.local
+        run: |
+          cat << EOF > .env.local
+          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
+          NEXT_PUBLIC_PUSHER_KEY=${{ secrets.NEXT_PUBLIC_PUSHER_KEY }}
+          NEXT_PUBLIC_PUSHER_CLUSTER=${{ secrets.NEXT_PUBLIC_PUSHER_CLUSTER }}
+          PUSHER_APP_ID=${{ secrets.PUSHER_APP_ID }}
+          PUSHER_SECRET=${{ secrets.PUSHER_SECRET }}
+          EOF
 
       - uses: actions/playwright@v2
         with:
