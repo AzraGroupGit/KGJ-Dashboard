@@ -101,7 +101,7 @@ export default function SlotManagementPage() {
   useEffect(() => {
     if (categoriesData?.success) {
       startTransition(() => {
-        setCategories(categoriesData.data as any);
+        setCategories(categoriesData.data as unknown as SlotCategory[]);
         if (categoriesData.nearest_date && !hasAutoSwitched.current && categoriesData.nearest_date !== selectedDate) {
           hasAutoSwitched.current = true;
           setSelectedDate(categoriesData.nearest_date);
@@ -117,7 +117,7 @@ export default function SlotManagementPage() {
   useEffect(() => {
     if (overridesData?.success) {
       startTransition(() => {
-        setOverrides(overridesData.data as any);
+        setOverrides(overridesData.data as unknown as SlotOverride[]);
       });
     }
   }, [overridesData]);

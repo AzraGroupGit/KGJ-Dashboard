@@ -1181,18 +1181,18 @@ export default function StatistikPage() {
                   data={
                     (stats?.monthly.filter(
                       (m) => m.omset > 0 || m.lead_serius > 0,
-                    ) ?? []) as any
+                    ) ?? []) as unknown as Record<string, unknown>[]
                   }
                   columns={monthlyColumns as any}
                 />
                 <DataTable
                   title={`Performa Channel Marketing ${selectedYear}`}
-                  data={stats?.channels as any ?? []}
+                  data={(stats?.channels ?? []) as unknown as Record<string, unknown>[]}
                   columns={channelColumns as any}
                 />
                 <DataTable
                   title={`Performa Cabang CS ${selectedYear}`}
-                  data={stats?.branches as any ?? []}
+                  data={(stats?.branches ?? []) as unknown as Record<string, unknown>[]}
                   columns={branchColumns as any}
                 />
               </div>

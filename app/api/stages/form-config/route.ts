@@ -519,6 +519,26 @@ export async function GET(request: Request) {
     const stageConfig = STAGE_CONFIGS[stage];
     const fields = await enrichTukangOptions(admin, stage, stageConfig?.fields ?? []);
 
+    // ── Konfirmasi data for downstream stages ──────────────────────────────────
+    let konfirmasiInfo: { tanggal_packing?: string; nomor_resi?: string } | null = null;
+    if (stage === "packing" || stage === "pengiriman") {
+      const { data: konfirmasiResult } = await admin
+        .from("stage_results")
+        .select("data")
+        .eq("order_id", orderId)
+        .eq("stage", "konfirmasi")
+        .order("attempt_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (konfirmasiResult?.data) {
+        const kd = konfirmasiResult.data as Record<string, unknown>;
+        konfirmasiInfo = {
+          tanggal_packing: (kd.tanggal_packing as string) || undefined,
+          nomor_resi: (kd.nomor_resi as string) || undefined,
+        };
+      }
+    }
+
     const workerGroups = ["production", "operational"];
     const canSubmit =
       permissions.can_insert ??
@@ -584,6 +604,7 @@ export async function GET(request: Request) {
           permissions: { can_submit: canSubmit, can_edit: canEdit },
           current_data: lastResult?.data ?? {},
           work_order: workOrder,
+          konfirmasi_info: konfirmasiInfo,
         },
         user: { name: userData.full_name, role: roleName },
       },

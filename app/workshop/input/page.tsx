@@ -8,7 +8,17 @@ import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import BrandHeader from "@/components/qr/BrandHeader";
 import StageInputForm from "@/components/qr/StageInputForm";
-import { Loader2, ChevronRight, ChevronLeft, CheckCircle, X, AlertTriangle, Key, Search, ClipboardList } from "lucide-react";
+import {
+  Loader2,
+  ChevronRight,
+  ChevronLeft,
+  CheckCircle,
+  X,
+  AlertTriangle,
+  Key,
+  Search,
+  ClipboardList,
+} from "lucide-react";
 import { formatAddsOnList } from "@/lib/adds-on";
 import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
 import type { Field } from "@/components/fields/types";
@@ -90,6 +100,7 @@ interface FormConfig {
   permissions: { can_submit: boolean; can_edit: boolean; can_reject: boolean };
   current_data?: Record<string, unknown>;
   work_order?: WorkshopWorkOrder;
+  konfirmasi_info?: { tanggal_packing?: string; nomor_resi?: string } | null;
 }
 
 interface OrderDetailData {
@@ -275,7 +286,12 @@ function PhaseOrderList({
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data: orders = [], isFetching, error: fetchError, refetch } = useQuery<WorkshopOrderInfo[]>({
+  const {
+    data: orders = [],
+    isFetching,
+    error: fetchError,
+    refetch,
+  } = useQuery<WorkshopOrderInfo[]>({
     queryKey: ["workshop-orders", debouncedSearch],
     queryFn: async () => {
       const url = `/api/workshop/orders${debouncedSearch ? `?q=${encodeURIComponent(debouncedSearch)}` : ""}`;
@@ -357,7 +373,11 @@ function PhaseOrderList({
           </div>
         ) : fetchError ? (
           <div className="flex flex-col items-center gap-3 py-12 px-6 text-center">
-            <p className="text-[13px] text-red-500">{fetchError instanceof Error ? fetchError.message : "Terjadi kesalahan"}</p>
+            <p className="text-[13px] text-red-500">
+              {fetchError instanceof Error
+                ? fetchError.message
+                : "Terjadi kesalahan"}
+            </p>
             <button
               onClick={() => refetch()}
               className={`rounded-lg px-4 py-2 text-[13px] font-medium text-white ${theme.btn}`}
@@ -367,7 +387,10 @@ function PhaseOrderList({
           </div>
         ) : displayOrders.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-14 px-6 text-center">
-            <ClipboardList className="h-10 w-10 text-stone-200" strokeWidth={1.5} />
+            <ClipboardList
+              className="h-10 w-10 text-stone-200"
+              strokeWidth={1.5}
+            />
             <p className="text-[14px] font-medium text-stone-400">
               {search
                 ? "Order tidak ditemukan"
@@ -432,7 +455,10 @@ function PhaseOrderList({
                         {isSelecting ? (
                           <SpinIcon className={`h-4 w-4 text-stone-400`} />
                         ) : (
-                          <ChevronRight className="h-4 w-4 text-stone-300" strokeWidth={2} />
+                          <ChevronRight
+                            className="h-4 w-4 text-stone-300"
+                            strokeWidth={2}
+                          />
                         )}
                       </div>
                     </div>
@@ -469,7 +495,9 @@ const Row = ({
   value !== null && value !== undefined && value !== "" ? (
     <div className="flex gap-2 text-[12px]">
       <span className="shrink-0 text-stone-400 w-28">{label}</span>
-      <span className="text-stone-700 font-medium break-words">{String(value)}</span>
+      <span className="text-stone-700 font-medium break-words">
+        {String(value)}
+      </span>
     </div>
   ) : null;
 
@@ -499,7 +527,13 @@ const DetailCard = ({
 
 // ── Work Order Card ───────────────────────────────────────────────────────────
 
-function WorkshopWorkOrderCard({ wo, theme }: { wo: WorkshopWorkOrder; theme: Theme }) {
+function WorkshopWorkOrderCard({
+  wo,
+  theme,
+}: {
+  wo: WorkshopWorkOrder;
+  theme: Theme;
+}) {
   const hasPria =
     wo.pria &&
     (wo.pria.ukuran ||
@@ -806,6 +840,34 @@ function PhaseForm({
         <WorkshopWorkOrderCard wo={config.work_order} theme={theme} />
       )}
 
+      {config.konfirmasi_info?.tanggal_packing && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 mb-4">
+          <p className="text-xs text-blue-700">
+            <span className="font-semibold">
+              Tgl Packing (dari Konfirmasi):
+            </span>{" "}
+            {new Date(
+              config.konfirmasi_info.tanggal_packing,
+            ).toLocaleDateString("id-ID", {
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
+        </div>
+      )}
+
+      {config.konfirmasi_info?.nomor_resi && (
+        <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 mb-4">
+          <p className="text-xs text-violet-700">
+            <span className="font-semibold">No Resi (dari Konfirmasi):</span>{" "}
+            <span className="font-mono">
+              {config.konfirmasi_info.nomor_resi}
+            </span>
+          </p>
+        </div>
+      )}
+
       <StageInputForm
         fields={config.fields}
         permissions={config.permissions}
@@ -941,7 +1003,10 @@ function WorkerHistorySection({
                   <p className="text-[11px] text-stone-400">
                     {h.finished_at ? formatDate(h.finished_at) : ""}
                   </p>
-                  <ChevronRight className="w-3.5 h-3.5 text-stone-300" strokeWidth={2} />
+                  <ChevronRight
+                    className="w-3.5 h-3.5 text-stone-300"
+                    strokeWidth={2}
+                  />
                 </div>
               </button>
             ))
@@ -1396,14 +1461,15 @@ function WorkshopInputContent() {
   const [sortBy, setSortBy] = useState<"newest" | "deadline">("deadline");
   const [listTab, setListTab] = useState<"orders" | "history">("orders");
 
-  const {
-    data: workerHistory = [],
-    refetch: refetchHistory,
-  } = useQuery<WorkerHistoryItem[]>({
+  const { data: workerHistory = [], refetch: refetchHistory } = useQuery<
+    WorkerHistoryItem[]
+  >({
     queryKey: ["workshop-history"],
     queryFn: () =>
-      fetcher<{ success: boolean; data: Record<string, unknown>[] }>("/api/workshop/history?limit=200").then(
-        (r) => (r.success ? (r.data ?? []) as unknown as WorkerHistoryItem[] : []),
+      fetcher<{ success: boolean; data: Record<string, unknown>[] }>(
+        "/api/workshop/history?limit=200",
+      ).then((r) =>
+        r.success ? ((r.data ?? []) as unknown as WorkerHistoryItem[]) : [],
       ),
   });
 
@@ -1472,12 +1538,12 @@ function WorkshopInputContent() {
       const data = { ...formData };
       // StageInputForm uses check_key; API expects key
       if (Array.isArray(data.quality_checklist)) {
-        data.quality_checklist = (data.quality_checklist as Array<Record<string, unknown>>).map(
-          (item) => ({
-            key: item.check_key ?? item.key,
-            passed: item.passed,
-          }),
-        );
+        data.quality_checklist = (
+          data.quality_checklist as Array<Record<string, unknown>>
+        ).map((item) => ({
+          key: item.check_key ?? item.key,
+          passed: item.passed,
+        }));
       }
       const res = await fetch("/api/stages/submit", {
         method: "POST",
@@ -1577,7 +1643,10 @@ function WorkshopInputContent() {
         <div className="relative mb-3">
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-300 pointer-events-none" strokeWidth={2} />
+              <Search
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-300 pointer-events-none"
+                strokeWidth={2}
+              />
               <input
                 type="text"
                 value={listSearch}
