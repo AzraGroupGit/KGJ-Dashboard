@@ -83,7 +83,7 @@ export async function GET() {
       full_name: u.full_name,
       email: u.email,
       branch_id: u.branch_id,
-      branch_name: (u.branches as any)?.name ?? null,
+      branch_name: (u.branches as { name?: string } | null)?.name ?? null,
     }));
 
     return NextResponse.json({ data: mapped });

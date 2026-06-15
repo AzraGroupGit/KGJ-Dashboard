@@ -14,6 +14,7 @@ import Modal from "@/components/ui/Modal";
 import Loading from "@/components/ui/Loading";
 import Alert from "@/components/ui/Alert";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
+import { LeadInputSchema } from "@/lib/schemas/lead-input";
 import { Plus, Pencil, AlertTriangle } from "lucide-react";
 
 interface LeadInput {
@@ -126,6 +127,17 @@ export default function InputLeadsPage() {
     const leadMasukNum = parseInt(leadMasuk, 10);
     const closingNum = parseInt(closing, 10);
     const omsetNum = parseInt(omset || "0", 10);
+
+    const validation = LeadInputSchema.safeParse({
+      lead_masuk: leadMasukNum,
+      closing: closingNum,
+      omset: omsetNum,
+      notes: notes || null,
+    });
+    if (!validation.success) {
+      showAlert("error", validation.error.issues[0]?.message ?? "Validasi gagal");
+      return;
+    }
 
     if (isNaN(leadMasukNum) || leadMasukNum < 0) {
       showAlert("error", "Lead Masuk harus berupa angka positif");

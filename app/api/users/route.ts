@@ -88,7 +88,7 @@ export async function requireSuperadmin(
 
 export function mapUserResponse(dbUser: Record<string, unknown>) {
   const roleObj = dbUser.role;
-  const roleName = (roleObj as any)?.name ?? null;
+  const roleName = (roleObj as Record<string, unknown>)?.name ?? null;
 
   return {
     // Common fields
@@ -192,11 +192,11 @@ export async function GET(request: Request) {
     let filtered = data ?? [];
     if (roleGroups && roleGroups.length > 0) {
       filtered = filtered.filter((u) =>
-        roleGroups.includes((u.role as any)?.role_group),
+        (roleGroups as string[]).includes((u.role as unknown as Record<string, unknown>)?.role_group as string),
       );
     }
     if (roleName) {
-      filtered = filtered.filter((u) => (u.role as any)?.name === roleName);
+      filtered = filtered.filter((u) => (u.role as unknown as Record<string, unknown>)?.name === roleName);
     }
 
     return NextResponse.json({

@@ -146,7 +146,7 @@ const labelCls = "block text-sm font-medium text-zinc-700 mb-1";
 
 function Required() {
   return (
-    <span style={{ color: GOLD }} className="ml-1">
+    <span className="ml-1 text-[#C8A951]">
       *
     </span>
   );
@@ -156,14 +156,11 @@ function SectionDivider({ title }: { title: string }) {
   return (
     <div className="my-6">
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-px" style={{ backgroundColor: `${GOLD}40` }} />
-        <span
-          className="text-[10px] font-bold tracking-widest uppercase whitespace-nowrap"
-          style={{ color: GOLD, fontFamily: "var(--font-playfair)" }}
-        >
+        <div className="flex-1 h-px bg-[#C8A951]/25" />
+        <span className="text-[10px] font-bold tracking-widest uppercase whitespace-nowrap text-[#C8A951] font-[family-name:var(--font-playfair)]">
           {title}
         </span>
-        <div className="flex-1 h-px" style={{ backgroundColor: `${GOLD}40` }} />
+        <div className="flex-1 h-px bg-[#C8A951]/25" />
       </div>
     </div>
   );
@@ -536,10 +533,7 @@ export default function OrderFormPage() {
   // ── Shared page shell ──────────────────────────────────────────────────────
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
-    <div
-      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      style={{ backgroundColor: "#F2E4C0" }}
-    >
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#F2E4C0]">
       <div
         className="fixed inset-0 pointer-events-none select-none"
         style={{ backgroundImage: watermarkUrl, backgroundSize: "520px 240px" }}
@@ -555,10 +549,7 @@ export default function OrderFormPage() {
       <Shell>
         <div className="text-center">
           <div
-            className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-3"
-            style={{
-              borderColor: `${GOLD} transparent transparent transparent`,
-            }}
+            className="w-10 h-10 border-4 border-[#C8A951] border-t-transparent rounded-full animate-spin mx-auto mb-3"
           />
           <p className="text-zinc-600 text-sm">Memuat formulir...</p>
         </div>
@@ -569,10 +560,7 @@ export default function OrderFormPage() {
   if (pageState === "not_found") {
     return (
       <Shell>
-        <div
-          className="bg-white rounded-2xl shadow-2xl p-8 text-center"
-          style={{ boxShadow: `0 0 40px rgba(200,169,81,0.08)` }}
-        >
+        <div className="bg-white rounded-2xl p-8 text-center shadow-[0_0_40px_rgba(200,169,81,0.08)]">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <X className="w-8 h-8 text-red-500" />
           </div>
@@ -591,17 +579,13 @@ export default function OrderFormPage() {
   if (pageState === "error") {
     return (
       <Shell>
-        <div
-          className="bg-white rounded-2xl shadow-2xl p-8 text-center"
-          style={{ boxShadow: `0 0 40px rgba(200,169,81,0.08)` }}
-        >
+        <div className="bg-white rounded-2xl p-8 text-center shadow-[0_0_40px_rgba(200,169,81,0.08)]">
           <p className="text-zinc-600 text-sm">
             Terjadi kesalahan. Silakan muat ulang halaman.
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-5 py-2.5 text-white font-semibold rounded-lg text-sm transition-colors"
-            style={{ backgroundColor: GOLD }}
+            className="mt-4 px-5 py-2.5 text-white font-semibold rounded-lg text-sm transition-colors bg-[#C8A951]"
           >
             Muat Ulang
           </button>
@@ -620,10 +604,7 @@ export default function OrderFormPage() {
     return (
       <Shell>
         <div className="space-y-3">
-          <div
-            className="bg-white rounded-2xl shadow-2xl p-8 text-center"
-            style={{ boxShadow: `0 0 40px rgba(200,169,81,0.12)` }}
-          >
+          <div className="bg-white rounded-2xl p-8 text-center shadow-[0_0_40px_rgba(200,169,81,0.12)]">
             <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5 border-2 border-emerald-200">
               <Check className="w-10 h-10 text-emerald-500" />
             </div>
@@ -637,17 +618,11 @@ export default function OrderFormPage() {
               Tim CS <strong>PT. Kotagede Jewellery</strong> akan segera
               menghubungi Anda untuk konfirmasi.
             </p>
-            <div
-              className="mt-6 rounded-xl p-4 text-left border"
-              style={{ backgroundColor: `${GOLD}10`, borderColor: `${GOLD}40` }}
-            >
+            <div className="mt-6 rounded-xl p-4 text-left border bg-[#C8A951]/06 border-[#C8A951]/25">
               <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">
                 No. Order Anda
               </p>
-              <p
-                className="font-mono font-bold text-xl"
-                style={{ color: GOLD }}
-              >
+              <p className="font-mono font-bold text-xl text-[#C8A951]">
                 {orderInfo?.order_number}
               </p>
             </div>
@@ -655,8 +630,7 @@ export default function OrderFormPage() {
 
           <button
             onClick={() => setShowTimeline(!showTimeline)}
-            className="w-full rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-zinc-800 shadow-lg hover:bg-zinc-50 transition-all flex items-center justify-center gap-2"
-            style={{ boxShadow: `0 4px 20px rgba(200,169,81,0.12)` }}
+            className="w-full rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-zinc-800 hover:bg-zinc-50 transition-all flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(200,169,81,0.12)]"
           >
             <ChevronRight className="h-4 w-4" />
             {showTimeline ? "Sembunyikan Status" : "Lacak Status Pesanan"}
@@ -711,8 +685,8 @@ export default function OrderFormPage() {
                 Selamat Datang
               </h2>
               <p className="text-sm text-zinc-500 mt-1">
-                Silakan isi formulir order cincin berikut dengan lengkap dan
-                benar.
+                Sebelum mengisi, baca panduan singkat berikut agar pengisian
+                formulir lebih mudah.
               </p>
             </div>
 
@@ -724,44 +698,87 @@ export default function OrderFormPage() {
                 <ul className="space-y-1.5 text-[13px] text-amber-900">
                   <li className="flex items-start gap-2">
                     <span className="text-amber-600 mt-0.5">•</span>
-                    <span>Siapkan ukuran cincin (pria & wanita) dan alat ukur yang digunakan</span>
+                    <span>Siapkan ukuran cincin pria & wanita, dan catat alat ukurnya</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-amber-600 mt-0.5">•</span>
-                    <span>Tentukan teks ukiran nama yang diinginkan</span>
+                    <span>Tentukan teks ukiran nama (maks 15 karakter per cincin)</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-amber-600 mt-0.5">•</span>
-                    <span>Siapkan referensi model / bentuk cincin (jika ada)</span>
+                    <span>Siapkan alamat pengiriman lengkap (jika dikirim ke alamat)</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-2">
+                  Data yang Harus Anda Isi
+                </h3>
+                <ul className="space-y-1.5 text-[13px] text-emerald-900">
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-600 mt-0.5">•</span>
+                    <span>Ukuran cincin pria & wanita</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-600 mt-0.5">•</span>
+                    <span>Teks ukiran nama pada cincin</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-600 mt-0.5">•</span>
+                    <span>Tanggal acara & jenis acara</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-600 mt-0.5">•</span>
+                    <span>Alamat pengiriman & nomor WA aktif</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-600 mt-0.5">•</span>
+                    <span>Sumber tahu Kotagede Jewellery dari mana</span>
                   </li>
                 </ul>
               </div>
 
               <div className="rounded-xl bg-blue-50 border border-blue-200 p-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-blue-800 mb-2">
-                  Petunjuk Pengisian
+                  Akan Dibantu Customer Service
                 </h3>
                 <ul className="space-y-1.5 text-[13px] text-blue-900">
                   <li className="flex items-start gap-2">
                     <span className="text-blue-600 mt-0.5">•</span>
-                    <span>Isi semua data sesuai dengan pesanan Anda</span>
+                    <span>Pemilihan material & model cincin</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-600 mt-0.5">•</span>
-                    <span>Pastikan nomor WhatsApp aktif untuk dikonfirmasi</span>
+                    <span>Gramasi, micro setting, detail finishing</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-600 mt-0.5">•</span>
-                    <span>Data dapat disimpan otomatis sebagai draft</span>
+                    <span>Font & posisi laser</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>Harga, DP, dan metode pembayaran</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-0.5">•</span>
+                    <span>Kategori paket & deadline</span>
                   </li>
                 </ul>
+              </div>
+
+              <div className="rounded-xl bg-zinc-50 border border-zinc-200 p-3">
+                <p className="text-[12px] text-zinc-600 text-center">
+                  <span className="font-semibold">Tips:</span> Bagian teknis (material,
+                  gramasi, model) bisa dikosongkan dulu. Customer Service kami akan
+                  membantu melengkapinya saat konfirmasi via WhatsApp.
+                </p>
               </div>
             </div>
 
             <button
               onClick={handleDismissInstructions}
-              className="w-full py-3 text-white font-semibold rounded-xl text-sm transition-all hover:brightness-110"
-              style={{ backgroundColor: GOLD }}
+              className="w-full py-3 text-white font-semibold rounded-xl text-sm transition-all hover:brightness-110 bg-[#C8A951]"
             >
               Mulai Isi Form
             </button>
@@ -769,10 +786,7 @@ export default function OrderFormPage() {
         </div>
       )}
 
-      <div
-        className="min-h-screen py-8 px-4 relative"
-        style={{ backgroundColor: "#F2E4C0", fontFamily: "var(--font-inter)" }}
-      >
+      <div className="min-h-screen py-8 px-4 relative bg-[#F2E4C0] font-[family-name:var(--font-inter)]">
       {/* Watermark */}
       <div
         className="fixed inset-0 pointer-events-none select-none"
@@ -790,47 +804,24 @@ export default function OrderFormPage() {
               className="h-40 w-auto object-contain drop-shadow-md"
             />
           </div>
-          <h1
-            className="text-xl font-bold tracking-widest text-zinc-900 uppercase"
-            style={{ fontFamily: "var(--font-playfair)" }}
-          >
+          <h1 className="text-xl font-bold tracking-widest text-zinc-900 uppercase font-[family-name:var(--font-playfair)]">
             PT. Kotagede Jewellery
           </h1>
-          <p
-            className="text-xs font-semibold tracking-[0.25em] mt-1 uppercase"
-            style={{ color: GOLD, fontFamily: "var(--font-playfair)" }}
-          >
+          <p className="text-xs font-semibold tracking-[0.25em] mt-1 uppercase text-[#C8A951] font-[family-name:var(--font-playfair)]">
             Formulir Order Cincin
           </p>
           {/* Gold divider */}
           <div className="flex items-center justify-center gap-3 mt-4">
-            <div
-              className="h-px w-12"
-              style={{ backgroundColor: `${GOLD}50` }}
-            />
-            <div
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ backgroundColor: GOLD }}
-            />
-            <div
-              className="h-px w-12"
-              style={{ backgroundColor: `${GOLD}50` }}
-            />
+            <div className="h-px w-12 bg-[#C8A951]/31" />
+            <div className="w-1.5 h-1.5 rounded-full bg-[#C8A951]" />
+            <div className="h-px w-12 bg-[#C8A951]/31" />
           </div>
         </div>
 
         {/* Card */}
-        <div
-          className="bg-white rounded-2xl overflow-hidden shadow-2xl"
-          style={{
-            boxShadow: `0 8px 40px rgba(0,0,0,0.12), 0 0 0 1px ${GOLD}50`,
-          }}
-        >
+        <div className="bg-white rounded-2xl overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.12)] ring-1 ring-[#C8A951]/31">
           {/* Order info banner */}
-          <div
-            className="bg-zinc-900 px-6 py-4"
-            style={{ borderBottom: `1px solid ${GOLD}30` }}
-          >
+          <div className="bg-zinc-900 px-6 py-4 border-b border-[#C8A951]/19">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500 mb-0.5">
@@ -1063,9 +1054,7 @@ export default function OrderFormPage() {
                             setField("dariArtis", v);
                             if (v !== "Iya") setField("dariArtisDetail", "");
                           }}
-                          className="w-4 h-4"
-                          style={{ accentColor: GOLD }}
-                        />
+                          className="w-4 h-4 accent-[#C8A951]" />
                         <span className="text-sm text-zinc-700">{v}</span>
                       </label>
                     ))}
@@ -1105,10 +1094,7 @@ export default function OrderFormPage() {
                   />
                 </div>
                 {hargaDisplay && (
-                  <p
-                    className="text-xs mt-1 font-medium"
-                    style={{ color: GOLD }}
-                  >
+                  <p className="text-xs mt-1 font-medium text-[#C8A951]">
                     Rp {hargaDisplay}
                   </p>
                 )}
@@ -1127,8 +1113,7 @@ export default function OrderFormPage() {
                         value={pct}
                         checked={formData.dpPercent === pct}
                         onChange={() => handleDpPercentChange(pct)}
-                        className="w-4 h-4"
-                        style={{ accentColor: GOLD }}
+                        className="w-4 h-4 accent-[#C8A951]"
                       />
                       <span className="text-sm text-zinc-700">{pct}%</span>
                     </label>
@@ -1147,10 +1132,7 @@ export default function OrderFormPage() {
                   />
                 </div>
                 {formData.dp && (
-                  <p
-                    className="text-xs mt-1 font-medium"
-                    style={{ color: GOLD }}
-                  >
+                  <p className="text-xs mt-1 font-medium text-[#C8A951]">
                     Rp {formatRupiah(formData.dp)}
                   </p>
                 )}
@@ -1328,8 +1310,7 @@ export default function OrderFormPage() {
                       value="Dari Store"
                       checked={formData.alatUkur === "Dari Store"}
                       onChange={() => setField("alatUkur", "Dari Store")}
-                      className="w-4 h-4"
-                      style={{ accentColor: GOLD }}
+                      className="w-4 h-4 accent-[#C8A951]"
                     />
                     <span className="text-sm text-zinc-700">Dari Store</span>
                   </label>
@@ -1345,8 +1326,7 @@ export default function OrderFormPage() {
                       value="Luar Store"
                       checked={formData.alatUkur === "Luar Store"}
                       onChange={() => setField("alatUkur", "Luar Store")}
-                      className="w-4 h-4"
-                      style={{ accentColor: GOLD }}
+                      className="w-4 h-4 accent-[#C8A951]"
                     />
                     <span className="text-sm text-zinc-700">Luar Store</span>
                   </label>
@@ -1384,14 +1364,7 @@ export default function OrderFormPage() {
             {/* ── Ukiran Nama ───────────────────────────────────────────── */}
             <SectionDivider title="Ukiran Nama" />
 
-            <div
-              className="rounded-lg border px-3 py-2.5 text-xs mb-4"
-              style={{
-                backgroundColor: `${GOLD}08`,
-                borderColor: `${GOLD}30`,
-                color: "#7a6030",
-              }}
-            >
+            <div className="rounded-lg border px-3 py-2.5 text-xs mb-4 bg-[#C8A951]/03 border-[#C8A951]/19 text-[#7a6030]">
               Maksimal <strong>15 karakter</strong> sudah dengan simbol dan
               spasi
             </div>
@@ -1580,8 +1553,7 @@ export default function OrderFormPage() {
                         );
                     setField("jenisCincinFeatures", arr);
                   }}
-                  className="w-4 h-4"
-                  style={{ accentColor: GOLD }}
+                  className="w-4 h-4 accent-[#C8A951]"
                 />
                 <span className="text-sm font-semibold text-zinc-700">
                   3D Design
@@ -1651,11 +1623,10 @@ export default function OrderFormPage() {
                               )}
                             </div>
                           ))}
-                          <button
+                           <button
                             type="button"
                             onClick={() => addDetailRow(field)}
-                            className="flex items-center gap-1 text-xs font-medium mt-0.5 transition-colors"
-                            style={{ color: GOLD }}
+                            className="flex items-center gap-1 text-xs font-medium mt-0.5 transition-colors text-[#C8A951]"
                           >
                             <Plus className="w-3.5 h-3.5" />
                             Tambah
@@ -1760,14 +1731,12 @@ export default function OrderFormPage() {
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="w-full py-4 font-bold text-base rounded-xl shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-zinc-950 cursor-pointer hover:scale-[1.01] hover:shadow-xl active:scale-[0.99]"
+                className="w-full py-4 font-bold text-base rounded-xl transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-zinc-950 cursor-pointer hover:scale-[1.01] hover:shadow-xl active:scale-[0.99] bg-[length:200%_200%] shadow-[0_4px_20px_rgba(200,169,81,0.35)]"
                 style={{
                   backgroundImage: isSubmitting
                     ? "none"
                     : `linear-gradient(135deg, ${GOLD}, #E8C46A, ${GOLD})`,
                   backgroundColor: isSubmitting ? GOLD : "transparent",
-                  backgroundSize: "200% 200%",
-                  boxShadow: `0 4px 20px rgba(200,169,81,0.35)`,
                 }}
               >
                 {isSubmitting ? (

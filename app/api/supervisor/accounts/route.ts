@@ -257,7 +257,7 @@ export async function POST(request: Request) {
       });
     } catch (e) { console.warn("[POST /api/supervisor/accounts] activity_log failed:", e); }
 
-    return NextResponse.json({ success: true, account: mapAccount(newUser as any) }, { status: 201 });
+    return NextResponse.json({ success: true, account: mapAccount(newUser as Parameters<typeof mapAccount>[0]) }, { status: 201 });
   } catch (err) {
     console.error("[POST /api/supervisor/accounts]", err);
     return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });

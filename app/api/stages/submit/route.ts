@@ -598,6 +598,7 @@ export async function POST(request: Request) {
       stage,
       attempt_number: attemptNumber,
       data: { ...data },
+      notes: (data as Record<string, unknown>).notes as string | null ?? null,
       started_at: now,
       finished_at: now,
     });

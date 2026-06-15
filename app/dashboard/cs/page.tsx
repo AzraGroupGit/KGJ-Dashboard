@@ -59,16 +59,19 @@ function fmtDate(d: string): string {
 
 export default function CSDashboard() {
   const router = useRouter();
-  const [user] = useState<ClientUser | null>(() => {
-    if (typeof window === "undefined") return null;
-    return getClientUser();
-  });
+  const [user, setUser] = useState<ClientUser | null>(null);
   const [dismissedError, setDismissedError] = useState<string | null>(null);
-  const [currentTime, setCurrentTime] = useState(Date.now);
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!user) router.push("/login");
-  }, [user, router]);
+    const clientUser = getClientUser();
+    if (!clientUser) {
+      router.push("/login");
+      return;
+    }
+    setUser(clientUser);
+    setCurrentTime(Date.now());
+  }, [router]);
 
   useEffect(() => {
     const t = setInterval(() => setCurrentTime(Date.now()), 60000);
@@ -126,7 +129,7 @@ export default function CSDashboard() {
 
   // Oldest pending order (how many days waiting)
   const oldestPending =
-    pending.length > 0
+    currentTime != null && pending.length > 0
       ? Math.floor(
           (currentTime -
             new Date(pending[pending.length - 1].created_at).getTime()) /

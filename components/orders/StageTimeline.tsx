@@ -35,6 +35,7 @@ interface SubmissionEvent {
   notes: string | null;
   timestamp: string;
   user: string | null;
+  data?: Record<string, unknown>;
 }
 
 interface ScanEvent {
@@ -74,6 +75,7 @@ export interface StageTimelineProps {
     attempt_number: number;
     notes: string | null;
     finished_at: string;
+    data?: Record<string, unknown>;
     users?: { full_name: string } | null;
   }>;
   scanEvents?: Array<{
@@ -131,6 +133,104 @@ function getUserName(item: {
   if (item.users?.full_name) return item.users.full_name;
   if (item.user) return item.user;
   return "—";
+}
+
+const MOTIF_LABELS: Record<string, string> = {
+  "kawung_nj001": "Kawung NJ001",
+  "kawung_nj002": "Kawung NJ002",
+  "mega_mendung_nj003": "Mega Mendung NJ003",
+  "kawung_nj004": "Kawung NJ004",
+  "kawung_nj005": "Kawung NJ005",
+  "sidomukti_nj007": "Sidomukti NJ007",
+  "truntum_nj008": "Truntum NJ008",
+  "dayak_perisai_nk001": "Dayak Perisai NK001",
+  "tengkawak_ampiek_nk002": "Tengkawak Ampiek NK002",
+  "dayak_perisai_nk003": "Dayak Perisai NK003",
+  "tidayu_nk004": "Tidayu NK004",
+  "jagatan_pisang_nb001": "Jagatan Pisang NB001",
+  "sabuk_prada_nb002": "Sabuk Prada NB002",
+  "batik_bunga_bali_nb003": "Batik Bunga Bali NB003",
+  "kamoro_np001": "Kamoro NP001",
+  "batik_asmat_np002": "Batik Asmat NP002",
+  "motif_cendrawasih_np003": "Motif Cendrawasih NP003",
+  "motif_sentani_np004": "Motif Sentani NP004",
+  "biak_np005": "Biak NP005",
+  "bunga_melur_ns001": "Bunga Melur NS001",
+  "pucuak_labuar_ns002": "Pucuak Labuar NS002",
+  "naga_besaung_ns003": "Naga Besaung NS003",
+  "ulos_ragi_hotang_ns004": "Ulos Ragi Hotang NS004",
+  "tapis_lampung_ns005": "Tapis Lampung NS005",
+};
+
+function getTukangInfo(stage: string, data?: Record<string, unknown>): string | null {
+  if (!data) return null;
+  if (stage === "laser") {
+    const batik = data.tukang_batik;
+    const nama = data.tukang_nama;
+    const motifs = data.model_nusantara;
+    const parts: string[] = [];
+    if (batik) parts.push(`Laser Batik: ${batik}`);
+    if (nama) parts.push(`Laser Nama: ${nama}`);
+    if (Array.isArray(motifs) && motifs.length > 0) {
+      const labels = motifs.map((code: string) => {
+        const key = String(code).toLowerCase();
+        return MOTIF_LABELS[key] ?? key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      });
+      parts.push(`Motif: ${labels.join(", ")}`);
+    }
+    return parts.length > 0 ? parts.join(" · ") : null;
+  }
+  const tukangStages = ["pembentukan_cincin", "pemasangan_permata", "finishing"];
+  if (tukangStages.includes(stage)) {
+    const tukang = data.tukang;
+    if (tukang) return `Tukang: ${tukang}`;
+  }
+  return null;
+}
+
+function getKonfirmasiInfo(stage: string, data?: Record<string, unknown>): string | null {
+  if (stage !== "konfirmasi" || !data) return null;
+  const parts: string[] = [];
+  if (data.tanggal_packing) {
+    parts.push(`Tgl Packing: ${new Date(data.tanggal_packing as string).toLocaleDateString("id-ID", {
+      day: "2-digit", month: "long", year: "numeric",
+    })}`);
+  }
+  if (data.nomor_resi) {
+    parts.push(`No Resi: ${data.nomor_resi}`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+function getKonfirmasiPhotos(stage: string, data?: Record<string, unknown>): React.ReactNode | null {
+  if (stage !== "konfirmasi" || !data) return null;
+  const pria = data.foto_cincin_pria as string | null;
+  const wanita = data.foto_cincin_wanita as string | null;
+  if (!pria && !wanita) return null;
+  return (
+    <div className="flex gap-2 mt-1">
+      {pria && (
+        <a
+          href={pria}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50 px-2 py-1 text-[10px] font-medium text-violet-700 hover:bg-violet-100 transition-colors"
+        >
+          Foto Pria ↗
+        </a>
+      )}
+      {wanita && (
+        <a
+          href={wanita}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 rounded-lg border border-pink-200 bg-pink-50 px-2 py-1 text-[10px] font-medium text-pink-700 hover:bg-pink-100 transition-colors"
+        >
+          Foto Wanita ↗
+        </a>
+      )}
+    </div>
+  );
 }
 
 // ── Sub-components ─────────────────────────────────────────────────
@@ -277,6 +377,8 @@ function TimelineContent({ item }: { item: TimelineItem }) {
     }
     case "submission": {
       const label = STAGE_LABELS[item.stage] ?? item.stage;
+      const tukangInfo = getTukangInfo(item.stage, item.data);
+      const konfirmasiInfo = getKonfirmasiInfo(item.stage, item.data);
       return (
         <>
           <p className="text-xs font-medium text-stone-800">
@@ -297,9 +399,20 @@ function TimelineContent({ item }: { item: TimelineItem }) {
               {formatDateTime(item.timestamp)}
             </span>
           </div>
+          {tukangInfo && (
+            <p className="text-[11px] text-amber-700 mt-1 font-medium">
+              {tukangInfo}
+            </p>
+          )}
+          {konfirmasiInfo && (
+            <p className="text-[11px] text-blue-700 mt-1 font-medium">
+              {konfirmasiInfo}
+            </p>
+          )}
+          {getKonfirmasiPhotos(item.stage, item.data)}
           {item.notes && (
-            <p className="text-[11px] text-stone-500 mt-1 italic">
-              &ldquo;{item.notes}&rdquo;
+            <p className="text-[11px] text-stone-600 mt-1">
+              <span className="font-semibold">Catatan:</span> {item.notes}
             </p>
           )}
         </>
@@ -382,13 +495,15 @@ export default function StageTimeline({
     }
 
     for (const sr of stageResults) {
+      const notes = sr.notes ?? (sr.data?.notes as string | null);
       result.push({
         type: "submission",
         stage: sr.stage,
         attempt_number: sr.attempt_number,
-        notes: sr.notes,
+        notes,
         timestamp: sr.finished_at,
         user: sr.users?.full_name ?? null,
+        data: sr.data,
       });
     }
 
