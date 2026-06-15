@@ -86,9 +86,7 @@ jobs:
           PUSHER_SECRET=${{ secrets.PUSHER_SECRET }}
           EOF
 
-      - uses: microsoft/setup-playwright@v4
-        with:
-          python-version: "3.11"
+      - uses: microsoft/playwright@v1
 
       - run: npx playwright test
         env:
