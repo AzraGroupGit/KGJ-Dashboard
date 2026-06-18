@@ -180,44 +180,30 @@ export default function ManagementMonitoringPage() {
               Pantau progress task leaders untuk keseluruhan divisi
             </p>
           </div>
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            <div className="relative">
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchName}
                 onChange={(e) => setSearchName(e.target.value)}
                 placeholder="Cari nama atau role..."
-                className="w-56 rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                className="w-full sm:w-56 rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
               />
             </div>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none"
-              title="Dari tanggal"
-            />
-            <span className="text-sm text-slate-400">s/d</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none"
-              title="Sampai tanggal"
-            />
-            {(searchName || dateFrom || dateTo) && (
-              <button
-                onClick={() => {
-                  setSearchName("");
-                  setDateFrom("");
-                  setDateTo("");
-                }}
-                className="text-xs text-indigo-600 hover:text-indigo-800"
-              >
-                Reset filter
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none"
+                title="Dari tanggal" />
+              <span className="text-sm text-slate-400">s/d</span>
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none"
+                title="Sampai tanggal" />
+              {(searchName || dateFrom || dateTo) && (
+                <button onClick={() => { setSearchName(""); setDateFrom(""); setDateTo(""); }}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 whitespace-nowrap">Reset</button>
+              )}
+            </div>
           </div>
           {isLoading ? (
             <Loading variant="skeleton" text="Memuat data..." />
@@ -344,29 +330,19 @@ export default function ManagementMonitoringPage() {
                                         )}
                                       </td>
                                       <td className="px-4 py-3">
-                                        <div className="flex items-center gap-1">
-                                          <input
-                                            type="text"
-                                            value={
-                                              noteInput[pg?.id ?? ""] ??
-                                              pg?.admin_notes ??
-                                              ""
-                                            }
-                                            onChange={(e) =>
-                                              setNoteInput((p) => ({
-                                                ...p,
-                                                [pg?.id ?? ""]: e.target.value,
-                                              }))
-                                            }
-                                            onBlur={() => {
-                                              if (pg?.id) handleSaveNote(pg.id);
-                                            }}
-                                            placeholder="Tambah catatan..."
-                                            className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-indigo-400 focus:outline-none"
-                                          />
-                                          {pg?.admin_notes && (
-                                            <MessageSquare className="w-3 h-3 text-indigo-400 shrink-0" />
-                                          )}
+                                        <div className="space-y-1">
+                                          <div className="flex items-center gap-1">
+                                            <input type="text"
+                                              value={noteInput[pg?.id ?? ""] ?? pg?.admin_notes ?? ""}
+                                              onChange={(e) => setNoteInput((p) => ({ ...p, [pg?.id ?? ""]: e.target.value }))}
+                                              onBlur={() => { if (pg?.id) handleSaveNote(pg.id); }}
+                                              placeholder="Tambah catatan..."
+                                              className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-700 bg-white focus:border-indigo-400 focus:outline-none"
+                                            />
+                                            {pg?.admin_notes && <MessageSquare className="w-3 h-3 text-indigo-400 shrink-0" />}
+                                          </div>
+                                          {pg?.notes && <p className="text-[10px] text-slate-500">📝 {pg.notes}</p>}
+                                          {pg?.kendala && <p className="text-[10px] text-rose-500">⚠ {pg.kendala}</p>}
                                         </div>
                                       </td>
                                     </tr>

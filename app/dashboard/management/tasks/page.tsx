@@ -14,7 +14,7 @@ import Alert from "@/components/ui/Alert";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
-import { Plus, Trash2, Check, ChevronDown, ChevronRight, Calendar } from "lucide-react";
+import { Plus, Trash2, Check, ChevronDown, ChevronRight, Calendar, MessageSquare } from "lucide-react";
 
 interface TaskItem {
   id: string;
@@ -184,10 +184,14 @@ export default function ManagementTasksPage() {
             </div>
           </div>
 
-          <div className="mb-6 flex gap-2 items-end">
-            <Input label="Task" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} placeholder="Judul task baru..." disabled={isSaving} />
-            <Input label="Deadline (Opsional)" type="date" value={newTaskDeadline} onChange={(e) => setNewTaskDeadline(e.target.value)} disabled={isSaving} />
-            <Button variant="primary" onClick={handleAddTask} disabled={isSaving || !newTaskTitle.trim()} leftIcon={<Plus className="w-4 h-4" />}>Tambah</Button>
+          <div className="mb-6 flex gap-2 items-end flex-wrap">
+            <div className="flex-1 min-w-[200px]">
+              <Input label="Task" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} placeholder="Judul task baru..." disabled={isSaving} />
+            </div>
+            <Input label="Deadline (Opsional)" type="date" fullWidth={false} value={newTaskDeadline} onChange={(e) => setNewTaskDeadline(e.target.value)} disabled={isSaving} />
+            <Button variant="primary" onClick={handleAddTask} disabled={isSaving || !newTaskTitle.trim()} leftIcon={<Plus className="w-4 h-4" />} className="ml-auto sm:ml-0">
+              Tambah
+            </Button>
           </div>
 
           {isLoading ? (
@@ -235,21 +239,26 @@ export default function ManagementTasksPage() {
                               </div>
                               <button onClick={() => setDeleteTarget({ type: "item", id: item.id, title: item.title })} className="text-stone-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
                             </div>
-                            <div className="flex gap-2 ml-7">
+                            <div className="flex gap-2 ml-0 sm:ml-7 flex-wrap sm:flex-nowrap">
                               <input type="text"
                                 value={itemNotes[item.id] !== undefined ? itemNotes[item.id] : (item.progress?.[0]?.notes ?? "")}
                                 onChange={(e) => setItemNotes((p) => ({ ...p, [item.id]: e.target.value }))}
                                 onBlur={() => handleSaveItemNote(item.id, "notes", itemNotes[item.id] ?? item.progress?.[0]?.notes ?? "")}
                                 placeholder="Catatan..." disabled={isSaving}
-                                className="flex-1 rounded-md border border-stone-200 px-2 py-1 text-[11px] text-stone-600 focus:border-indigo-400 focus:outline-none" />
+                                className="flex-1 min-w-0 rounded-md border border-stone-200 px-2 py-1 text-[11px] text-stone-600 bg-white focus:border-indigo-400 focus:outline-none" />
                               <input type="text"
                                 value={itemKendala[item.id] !== undefined ? itemKendala[item.id] : (item.progress?.[0]?.kendala ?? "")}
                                 onChange={(e) => setItemKendala((p) => ({ ...p, [item.id]: e.target.value }))}
                                 onBlur={() => handleSaveItemNote(item.id, "kendala", itemKendala[item.id] ?? item.progress?.[0]?.kendala ?? "")}
                                 placeholder="Kendala..."
-                                className="flex-1 rounded-md border border-rose-200 px-2 py-1 text-[11px] text-rose-600 focus:border-rose-400 focus:outline-none"
+                                className="flex-1 min-w-0 rounded-md border border-rose-200 px-2 py-1 text-[11px] text-rose-600 bg-white focus:border-rose-400 focus:outline-none"
                                 disabled={isSaving} />
                             </div>
+                            {item.progress?.[0]?.admin_notes && (
+                              <p className="text-[10px] text-indigo-600 ml-0 sm:ml-7 mt-1 flex items-center gap-1">
+                                <MessageSquare className="w-3 h-3 shrink-0" />Admin: {item.progress[0].admin_notes}
+                              </p>
+                            )}
                           </div>
                         ))}
                         <div className="flex gap-2 pt-2">
