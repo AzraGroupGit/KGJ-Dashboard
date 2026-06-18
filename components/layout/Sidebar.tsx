@@ -10,6 +10,7 @@ import {
   CS_ROUTES,
   MARKETING_ROUTES,
   SUPERVISOR_ROUTES,
+  MANAGEMENT_ROUTES,
 } from "@/lib/routes";
 import {
   LayoutDashboard,
@@ -58,6 +59,29 @@ const menuItems: Record<string, MenuItem[]> = {
       name: "Kelola QR Codes",
       icon: "qrcode",
       href: SUPERADMIN_ROUTES.KELOLA_QR_CODES,
+    },
+
+    // Monitoring Manajemen
+    {
+      name: "Management",
+      icon: "checklist",
+      submenu: [
+        {
+          name: "Dashboard",
+          icon: "dashboard",
+          href: SUPERADMIN_ROUTES.MANAGEMENT_DASHBOARD,
+        },
+        {
+          name: "Monitoring",
+          icon: "monitor",
+          href: SUPERADMIN_ROUTES.MONITORING_MANAJEMEN,
+        },
+        {
+          name: "History",
+          icon: "order",
+          href: SUPERADMIN_ROUTES.MANAGEMENT_HISTORY,
+        },
+      ],
     },
 
     // Menu besar BMS - berisi menu utama sebelumnya
@@ -132,8 +156,17 @@ const menuItems: Record<string, MenuItem[]> = {
       href: SUPERVISOR_ROUTES.ACCOUNTS,
     },
     { name: "Personnel", icon: "personnel", href: SUPERVISOR_ROUTES.PERSONNEL },
-    { name: "Slot Management", icon: "slot", href: SUPERVISOR_ROUTES.SLOT_MANAGEMENT },
+    {
+      name: "Slot Management",
+      icon: "slot",
+      href: SUPERVISOR_ROUTES.SLOT_MANAGEMENT,
+    },
     { name: "QR Code", icon: "qr", href: SUPERVISOR_ROUTES.QR_CODES },
+  ],
+  management: [
+    { name: "Dashboard", icon: "dashboard", href: MANAGEMENT_ROUTES.DASHBOARD },
+    { name: "Tugas", icon: "checklist", href: MANAGEMENT_ROUTES.TASKS },
+    { name: "Riwayat", icon: "order", href: MANAGEMENT_ROUTES.HISTORY },
   ],
 };
 
@@ -157,6 +190,7 @@ const iconMap: Record<string, React.ReactNode> = {
   chevronDown: <ChevronDown className="w-4 h-4" />,
   chevronRight: <ChevronRight className="w-4 h-4" />,
   qr: <QrCode className="w-5 h-5" />,
+  checklist: <ClipboardList className="w-5 h-5" />,
 };
 
 export default function Sidebar({ role }: { role: string }) {
@@ -176,7 +210,7 @@ export default function Sidebar({ role }: { role: string }) {
   }, [pathname]);
 
   useEffect(() => {
-    if (role !== "supervisor") return;
+    if (role !== "supervisor" && role !== "management") return;
     fetch("/api/me")
       .then((r) => r.json())
       .then((j) => setActualRole(j.data?.role?.name ?? null))
@@ -187,21 +221,6 @@ export default function Sidebar({ role }: { role: string }) {
   if (actualRole === "production_supervisor") {
     items = items.filter((i) => i.name !== "Slot Management");
   }
-
-  const getRoleBadgeColor = () => {
-    switch (role) {
-      case "superadmin":
-        return "from-purple-600 to-indigo-600";
-      case "customer_service":
-        return "from-blue-600 to-cyan-600";
-      case "marketing":
-        return "from-green-600 to-emerald-600";
-      case "supervisor":
-        return "from-amber-600 to-orange-600";
-      default:
-        return "from-gray-600 to-gray-600";
-    }
-  };
 
   const toggleMenuCollapse = (menuName: string) => {
     setCollapsedMenus((prev) => ({
@@ -367,9 +386,9 @@ export default function Sidebar({ role }: { role: string }) {
 
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full bg-white flex flex-col
+          fixed top-0 left-0 z-50 h-full bg-white flex flex-col overflow-hidden
           transform transition-transform duration-300 ease-in-out
-          md:sticky md:top-0 md:z-40 md:translate-x-0 md:flex-shrink-0
+          md:sticky md:top-0 md:translate-x-0 md:flex-shrink-0
           ${isCollapsed ? "md:w-20" : "md:w-64"}
           w-72
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
@@ -387,14 +406,6 @@ export default function Sidebar({ role }: { role: string }) {
           </button>
         </div>
 
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden md:flex absolute -right-3 top-24 -translate-y-1/2 w-6 h-6 bg-white border border-gray-200 rounded-full items-center justify-center shadow-md hover:shadow-lg transition-all duration-200 z-40"
-          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          <ChevronLeft className={`w-3 h-3 text-gray-600 transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`} />
-        </button>
-
         {/* Logo Section */}
         <div
           className={`h-24 flex items-center border-b border-gray-200 ${
@@ -403,17 +414,22 @@ export default function Sidebar({ role }: { role: string }) {
         >
           <div className="flex items-center gap-3 overflow-hidden">
             <div
-              className={`bg-gradient-to-br ${getRoleBadgeColor()} rounded-xl flex items-center justify-center shadow-lg w-10 h-10 flex-shrink-0`}
+              className={`${isCollapsed ? "w-10 h-10" : "w-10 h-10"} flex-shrink-0 rounded-xl overflow-hidden`}
             >
-              <BarChart3 className="w-5 h-5 text-white" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.png"
+                alt="KGJ"
+                className="w-full h-full object-contain"
+              />
             </div>
             {!isCollapsed && (
               <div className="min-w-0">
                 <h2 className="text-base font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent whitespace-nowrap">
-                  Operational
+                  KGJ Dashboard
                 </h2>
                 <p className="text-sm font-semibold text-gray-600 whitespace-nowrap">
-                  Dashboard
+                  ERP System
                 </p>
               </div>
             )}
@@ -421,16 +437,12 @@ export default function Sidebar({ role }: { role: string }) {
         </div>
 
         {/* Navigation */}
-        <nav className="mt-6 px-3">
+        <nav className="flex-1 overflow-y-auto mt-6 px-3">
           {items.map((item, index) => renderMenuItem(item, index))}
         </nav>
 
         {/* Bottom Section */}
-        <div
-          className={`absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 ${
-            isCollapsed ? "text-center" : ""
-          }`}
-        >
+        <div className={`p-4 ${isCollapsed ? "text-center" : ""}`}>
           <div
             className={`flex items-center ${
               isCollapsed ? "justify-center" : "gap-3"
@@ -450,6 +462,16 @@ export default function Sidebar({ role }: { role: string }) {
           </div>
         </div>
       </aside>
+
+      {/* Collapse toggle — outside aside to avoid sticky stacking context */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="hidden md:flex fixed z-50 w-6 h-6 bg-white border border-gray-200 rounded-full items-center justify-center shadow-md hover:shadow-lg transition-all duration-200"
+        style={{ left: isCollapsed ? "68px" : "244px", top: "84px" }}
+        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        <ChevronLeft className={`w-3 h-3 text-gray-600 transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`} />
+      </button>
     </>
   );
 }

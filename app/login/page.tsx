@@ -63,6 +63,16 @@ const ROLE_CONFIGS: RoleConfig[] = [
     },
     icon: <BarChart3 className="w-full h-full" />,
   },
+  {
+    value: "management",
+    label: "Management",
+    colors: {
+      border: "#c084fc",
+      bg: "rgba(192,132,252,0.1)",
+      text: "#9333ea",
+    },
+    icon: <Shield className="w-full h-full" />,
+  },
 ];
 
 // ════════════════════════════════════════════════════════════════════════════

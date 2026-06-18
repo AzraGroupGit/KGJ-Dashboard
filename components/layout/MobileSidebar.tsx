@@ -24,6 +24,7 @@ import {
   X,
   ChevronLeft,
   ScanEye,
+  ClipboardList,
 } from "lucide-react";
 import {
   SUPERADMIN_ROUTES,
@@ -154,6 +155,8 @@ const iconMap: Record<string, React.ReactNode> = {
   chevronDown: <ChevronDown className="w-4 h-4" />,
   chevronRight: <ChevronRight className="w-4 h-4" />,
   qr: <QrCode className="w-5 h-5" />,
+  checklist: <ClipboardList className="w-5 h-5" />,
+  order: <FileText className="w-5 h-5" />,
 };
 
 export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
@@ -215,36 +218,6 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-
-  const getRoleTitle = () => {
-    switch (role) {
-      case "superadmin":
-        return "Super Admin";
-      case "customer_service":
-        return "CS";
-      case "marketing":
-        return "Marketing";
-      case "supervisor":
-        return "Supervisor";
-      default:
-        return "Dashboard";
-    }
-  };
-
-  const getRoleBadgeColor = () => {
-    switch (role) {
-      case "superadmin":
-        return "from-purple-600 to-indigo-600";
-      case "customer_service":
-        return "from-blue-600 to-cyan-600";
-      case "marketing":
-        return "from-green-600 to-emerald-600";
-      case "supervisor":
-        return "from-amber-600 to-orange-600";
-      default:
-        return "from-gray-600 to-gray-600";
-    }
-  };
 
   const toggleMenuCollapse = (menuName: string) => {
     setCollapsedMenus((prev) => ({
@@ -391,13 +364,12 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
       {/* Header dengan tombol close (hanya mobile) */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 md:hidden">
         <div className="flex items-center gap-3">
-          <div
-            className={`bg-gradient-to-br ${getRoleBadgeColor()} rounded-xl flex items-center justify-center shadow-lg w-8 h-8`}
-          >
-            <BarChart3 className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 flex-shrink-0 rounded-lg overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="KGJ" className="w-full h-full object-contain" />
           </div>
           <span className="text-sm font-bold text-gray-800">
-            {getRoleTitle()} Dashboard
+            KGJ Dashboard
           </span>
         </div>
         <button
@@ -416,34 +388,22 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
         }`}
       >
         <div className="flex items-center gap-3 overflow-hidden">
-          <div
-            className={`bg-gradient-to-br ${getRoleBadgeColor()} rounded-xl flex items-center justify-center shadow-lg w-10 h-10 flex-shrink-0`}
-          >
-            <BarChart3 className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 flex-shrink-0 rounded-xl overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="KGJ" className="w-full h-full object-contain" />
           </div>
           {!isCollapsed && (
             <div className="min-w-0">
               <h2 className="text-base font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent whitespace-nowrap">
-                Operational
+                KGJ Dashboard
               </h2>
               <p className="text-sm font-semibold text-gray-600 whitespace-nowrap">
-                Dashboard
+                ERP System
               </p>
             </div>
           )}
         </div>
       </div>
-
-      {/* Toggle collapse button - Hanya desktop */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="hidden md:flex absolute -right-3 top-24 -translate-y-1/2 w-6 h-6 bg-white border border-gray-200 rounded-full items-center justify-center shadow-md hover:shadow-lg transition-all duration-200 z-40"
-        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        <ChevronLeft className={`w-3 h-3 text-gray-600 transition-transform duration-300 ${
-          isCollapsed ? "rotate-180" : ""
-        }`} />
-      </button>
 
       {/* Navigation */}
       <nav className="flex-1 mt-4 md:mt-6 px-3 overflow-y-auto">
@@ -501,7 +461,7 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
         className={`
         fixed top-0 left-0 z-50 h-full bg-white flex flex-col
         transform transition-transform duration-300 ease-in-out
-        md:sticky md:top-0 md:z-40 md:translate-x-0 md:flex-shrink-0
+        md:sticky md:top-0 md:translate-x-0 md:flex-shrink-0
         ${isCollapsed ? "md:w-20" : "md:w-64"}
         w-72
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
@@ -510,6 +470,16 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
       >
         {sidebarContent}
       </aside>
+
+      {/* Collapse toggle — outside aside to avoid sticky stacking context */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="hidden md:flex fixed z-50 w-6 h-6 bg-white border border-gray-200 rounded-full items-center justify-center shadow-md hover:shadow-lg transition-all duration-200"
+        style={{ left: isCollapsed ? "68px" : "244px", top: "84px" }}
+        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        <ChevronLeft className={`w-3 h-3 text-gray-600 transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`} />
+      </button>
     </>
   );
 }

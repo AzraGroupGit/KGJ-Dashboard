@@ -43,7 +43,7 @@ export interface UnifiedUser {
   last_login: string | null;
   last_login_at: string | null;
   created_at: string;
-  userType: "bms" | "supervisor" | "oprprd";
+  userType: "bms" | "supervisor" | "oprprd" | "management";
 }
 
 export interface Branch {
@@ -67,7 +67,7 @@ export type AlertState = {
 
 export type UserSegment = "all" | "bms" | "management" | "operational" | "production";
 
-export type NewUserType = "bms" | "supervisor" | "oprprd" | null;
+export type NewUserType = "bms" | "supervisor" | "oprprd" | "management" | null;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -124,6 +124,14 @@ export const EMPTY_BRANCH_FORM = {
   status: "active" as Branch["status"],
 };
 
+export const EMPTY_MANAGEMENT_FORM = {
+  username: "",
+  full_name: "",
+  email: "",
+  password: "",
+  role: "leader_operational" as string,
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export const parseApiError = (raw: string, httpStatus?: number): string => {
@@ -177,12 +185,13 @@ export const parseApiError = (raw: string, httpStatus?: number): string => {
   return raw;
 };
 
-export const resolveUserType = (u: { role?: string; roles?: { name?: string; role_group?: string } | null; username?: string; email?: string }): "bms" | "supervisor" | "oprprd" => {
+export const resolveUserType = (u: { role?: string; roles?: { name?: string; role_group?: string } | null; username?: string; email?: string }): "bms" | "supervisor" | "oprprd" | "management" => {
   if (u.role && (BMS_ROLES as readonly string[]).includes(u.role))
     return "bms";
   const roleName = u.roles?.name;
   if (roleName === "operational_supervisor" || roleName === "production_supervisor")
     return "supervisor";
+  if (u.roles?.role_group === "management") return "management";
   if (u.roles?.role_group) return "oprprd";
   if (u.username && (!u.email || u.email?.endsWith("@internal.local")))
     return "oprprd";
@@ -247,6 +256,24 @@ export const getRoleBadge = (user: UnifiedUser) => {
           Spv. Produksi
         </span>
         <span className="text-[10px] text-gray-400">Manajemen</span>
+      </div>
+    );
+  }
+  // Management (Leader) roles
+  const MGMT_LABELS: Record<string, string> = {
+    leader_hc: "Leader HC",
+    leader_operational: "Leader Operasional",
+    leader_production: "Leader Produksi",
+    leader_marketing: "Leader Marketing",
+    leader_cs: "Leader CS",
+  };
+  if (role.role_group === "management" && MGMT_LABELS[role.name]) {
+    return (
+      <div className="flex flex-col gap-0.5">
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-violet-100 text-violet-800">
+          {MGMT_LABELS[role.name]}
+        </span>
+        <span className="text-[10px] text-gray-400">Management</span>
       </div>
     );
   }

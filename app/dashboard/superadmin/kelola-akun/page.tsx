@@ -30,6 +30,7 @@ import {
   EMPTY_OPRPRD_FORM,
   EMPTY_SUPERVISOR_FORM,
   EMPTY_BRANCH_FORM,
+  EMPTY_MANAGEMENT_FORM,
   parseApiError,
   resolveUserType,
   getRoleBadge,
@@ -49,6 +50,7 @@ import { BmsUserForm } from "./_components/BmsUserForm";
 import { SupervisorUserForm } from "./_components/SupervisorUserForm";
 import { OprprdUserForm } from "./_components/OprprdUserForm";
 import { BranchForm } from "./_components/BranchForm";
+import { ManagementUserForm } from "./_components/ManagementUserForm";
 import {
   BmsUserSchema,
   BmsEditUserSchema,
@@ -56,6 +58,8 @@ import {
   OprprdEditUserSchema,
   SupervisorUserSchema,
   SupervisorEditUserSchema,
+  ManagementUserSchema,
+  ManagementEditUserSchema,
 } from "@/lib/schemas/kelola-akun";
 
 export default function KelolaAkunPage() {
@@ -77,6 +81,7 @@ export default function KelolaAkunPage() {
   const [bmsForm, setBmsForm] = useState(EMPTY_BMS_FORM);
   const [oprprdForm, setOprprdForm] = useState(EMPTY_OPRPRD_FORM);
   const [supervisorForm, setSupervisorForm] = useState(EMPTY_SUPERVISOR_FORM);
+  const [managementForm, setManagementForm] = useState(EMPTY_MANAGEMENT_FORM);
 
   const [userToDelete, setUserToDelete] = useState<UnifiedUser | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
@@ -185,6 +190,7 @@ export default function KelolaAkunPage() {
     setBmsForm(EMPTY_BMS_FORM);
     setOprprdForm(EMPTY_OPRPRD_FORM);
     setSupervisorForm(EMPTY_SUPERVISOR_FORM);
+    setManagementForm(EMPTY_MANAGEMENT_FORM);
     setIsModalOpen(true);
   };
 
@@ -207,6 +213,14 @@ export default function KelolaAkunPage() {
         email: user.email?.endsWith("@noreply.kodagede.id") ? "" : (user.email ?? ""),
         password: "",
         role: (user.roles?.name as "operational_supervisor" | "production_supervisor") ?? "operational_supervisor",
+      });
+    } else if (user.userType === "management") {
+      setManagementForm({
+        username: user.username ?? "",
+        full_name: user.full_name,
+        email: user.email?.endsWith("@noreply.kodagede.id") ? "" : (user.email ?? ""),
+        password: "",
+        role: user.roles?.name ?? "leader_operational",
       });
     } else {
       setOprprdForm({
@@ -383,6 +397,52 @@ export default function KelolaAkunPage() {
     }
   };
 
+  // ─── Save Management ───────────────────────────────────────────
+
+  const handleSaveManagementUser = async () => {
+    const schema = isEditMode ? ManagementEditUserSchema : ManagementUserSchema;
+    const validation = schema.safeParse({
+      username: managementForm.username,
+      full_name: managementForm.full_name,
+      email: managementForm.email,
+      password: managementForm.password,
+      role: managementForm.role,
+    });
+    if (!validation.success) {
+      showAlert("error", validation.error.issues[0]?.message ?? "Validasi gagal");
+      return;
+    }
+    if (!managementForm.full_name.trim()) { showAlert("error", "Nama lengkap wajib diisi."); return; }
+    if (!isEditMode && !managementForm.username.trim()) { showAlert("error", "Username wajib diisi."); return; }
+    if (!managementForm.email.trim()) { showAlert("error", "Email wajib diisi."); return; }
+    if (!isEditMode && !managementForm.password) { showAlert("error", "Password wajib diisi untuk akun baru."); return; }
+    if (managementForm.password && managementForm.password.length < 6) { showAlert("error", "Password terlalu pendek."); return; }
+    if (!managementForm.role) { showAlert("error", "Leader role wajib dipilih."); return; }
+
+    setIsSaving(true);
+    try {
+      const payload: Record<string, string> = {
+        full_name: managementForm.full_name.trim(),
+        email: managementForm.email.trim().toLowerCase(),
+        role: managementForm.role,
+      };
+      if (!isEditMode) payload.username = managementForm.username.trim();
+      if (managementForm.password) payload.password = managementForm.password;
+
+      const res = await fetch(
+        isEditMode ? `/api/users/${selectedUser!.id}` : "/api/users",
+        { method: isEditMode ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) },
+      );
+      const json = await res.json();
+      if (!res.ok) { showAlert("error", parseApiError(json.error, res.status)); return; }
+      showAlert("success", isEditMode ? "Akun management berhasil diperbarui!" : "Akun management baru berhasil dibuat!");
+      setIsModalOpen(false);
+      setTimeout(() => refetchUsers(), 500);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // ─── Toggle / Delete user ─────────────────────────────────────
 
   const handleToggleUserStatus = async (user: UnifiedUser) => {
@@ -498,11 +558,14 @@ export default function KelolaAkunPage() {
       if (selectedUser?.userType === "bms") return prefix + "BMS";
       if (selectedUser?.userType === "supervisor")
         return prefix + (selectedUser.roles?.name === "production_supervisor" ? "Supervisor Produksi" : "Supervisor Operasional");
+      if (selectedUser?.userType === "management")
+        return prefix + "Management";
       return prefix + "Operasional & Produksi";
     }
     if (newUserType === null) return "Pilih Tipe Akun";
     if (newUserType === "bms") return "Buat Akun BMS";
     if (newUserType === "supervisor") return "Buat Akun Supervisor";
+    if (newUserType === "management") return "Buat Akun Management";
     return "Buat Akun Operasional / Produksi";
   })();
 
@@ -797,6 +860,20 @@ export default function KelolaAkunPage() {
                   setForm={setOprprdForm}
                   roles={roles}
                   onSave={handleSaveOprprdUser}
+                  onClose={handleCloseModal}
+                  onBack={() => setNewUserType(null)}
+                  showAlert={showAlert}
+                />
+              )}
+
+              {/* Management Form */}
+              {activeTab === "users" && (isEditMode ? selectedUser?.userType === "management" : newUserType === "management") && (
+                <ManagementUserForm
+                  isEditMode={isEditMode}
+                  isSaving={isSaving}
+                  form={managementForm}
+                  setForm={setManagementForm}
+                  onSave={handleSaveManagementUser}
                   onClose={handleCloseModal}
                   onBack={() => setNewUserType(null)}
                   showAlert={showAlert}

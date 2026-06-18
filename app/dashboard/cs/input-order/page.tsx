@@ -96,7 +96,7 @@ export default function InputOrderPage() {
   }, [router]);
 
   const { data: orders = [], isLoading } = useQuery<CsOrder[]>({
-    queryKey: ["cs-orders"],
+    queryKey: ["cs-orders", "input-order"],
     queryFn: async () => {
       const res = await fetcher<{ data: CsOrder[] }>("/api/cs/orders");
       return res.data ?? [];

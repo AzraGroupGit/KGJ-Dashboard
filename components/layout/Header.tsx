@@ -206,6 +206,10 @@ export default function Header({
         return "from-blue-600 to-cyan-600";
       case "marketing":
         return "from-green-600 to-emerald-600";
+      case "supervisor":
+        return "from-amber-600 to-orange-600";
+      case "management":
+        return "from-violet-600 to-purple-600";
       default:
         return "from-gray-600 to-gray-600";
     }
@@ -213,14 +217,12 @@ export default function Header({
 
   const getRoleLabel = () => {
     switch (role) {
-      case "superadmin":
-        return "Super Admin";
-      case "customer_service":
-        return "Customer Service";
-      case "marketing":
-        return "Marketing";
-      default:
-        return role;
+      case "superadmin": return "Super Admin";
+      case "customer_service": return "Customer Service";
+      case "marketing": return "Marketing";
+      case "supervisor": return "Supervisor";
+      case "management": return "Management";
+      default: return role;
     }
   };
 

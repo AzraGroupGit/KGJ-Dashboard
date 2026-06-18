@@ -191,6 +191,7 @@ CREATE POLICY "Workshop workers can read orders at their stages"
       WHERE u.id = auth.uid()
         AND u.deleted_at IS NULL
         AND u.status = 'active'
+        AND r.allowed_stages IS NOT NULL
         AND cs_orders.current_stage = ANY(r.allowed_stages)
     )
     AND deleted_at IS NULL

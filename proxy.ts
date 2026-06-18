@@ -71,9 +71,9 @@ export async function proxy(req: NextRequest) {
   //    redirect ke dashboard sesuai role
   // ──────────────────────────────────────────────────────────────────────────
   if (pathIsAuthOnly && user) {
-    const roleName = await fetchUserRoleName(supabase, user.id);
+    const roleInfo = await fetchUserRoleName(supabase, user.id);
 
-    const dashboardPath = getDashboardPath(roleName);
+    const dashboardPath = resolveDashboardPath(roleInfo);
     if (dashboardPath) {
       return NextResponse.redirect(new URL(dashboardPath, req.url));
     }
@@ -92,10 +92,10 @@ export async function proxy(req: NextRequest) {
   //    Misal: user CS coba akses /dashboard/superadmin
   // ──────────────────────────────────────────────────────────────────────────
   if (pathIsProtected && user) {
-    const roleName = await fetchUserRoleName(supabase, user.id);
+    const roleInfo = await fetchUserRoleName(supabase, user.id);
 
     // Role user tidak dikenali → force logout
-    if (!roleName) {
+    if (!roleInfo) {
       await supabase.auth.signOut();
       const loginUrl = new URL(ROUTES.LOGIN, req.url);
       loginUrl.searchParams.set("error", "no_role");
@@ -103,8 +103,8 @@ export async function proxy(req: NextRequest) {
     }
 
     // Cek akses path — kalau tidak punya akses, redirect ke dashboard sendiri
-    if (!canAccessPath(roleName, pathname)) {
-      const ownDashboard = getDashboardPath(roleName);
+    if (!canAccessPath(roleInfo.name, pathname)) {
+      const ownDashboard = resolveDashboardPath(roleInfo);
       if (ownDashboard) {
         return NextResponse.redirect(new URL(ownDashboard, req.url));
       }
@@ -128,7 +128,7 @@ export async function proxy(req: NextRequest) {
 async function fetchUserRoleName(
   supabase: ReturnType<typeof createServerClient>,
   userId: string,
-): Promise<string | null> {
+): Promise<{ name: string; roleGroup: string } | null> {
   const { data, error } = await supabase
     .from("users")
     .select(
@@ -136,7 +136,8 @@ async function fetchUserRoleName(
       status,
       deleted_at,
       role:roles!users_role_id_fkey (
-        name
+        name,
+        role_group
       )
     `,
     )
@@ -155,9 +156,16 @@ async function fetchUserRoleName(
   if (data.status !== "active") return null;
 
   const roleName = getRoleProps(data).name;
+  const roleGroup = getRoleProps(data).role_group;
   if (!roleName || typeof roleName !== "string") return null;
 
-  return roleName;
+  return { name: roleName, roleGroup };
+}
+
+function resolveDashboardPath(roleInfo: { name: string; roleGroup: string } | null): string | null {
+  if (!roleInfo) return null;
+  if (roleInfo.roleGroup === "management") return "/dashboard/management";
+  return getDashboardPath(roleInfo.name);
 }
 
 // ════════════════════════════════════════════════════════════════════════════

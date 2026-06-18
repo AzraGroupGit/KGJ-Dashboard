@@ -92,6 +92,9 @@ export const SUPERADMIN_ROUTES = {
   OPRPRD_MONITORING_PRODUKSI: "/dashboard/superadmin/oprprd/produksi",
   OPRPRD_ANALISIS: "/dashboard/superadmin/oprprd/analisis",
   OPRPRD_LAPORAN: "/dashboard/superadmin/oprprd/laporan",
+  MONITORING_MANAJEMEN: "/dashboard/superadmin/management/monitoring",
+  MANAGEMENT_DASHBOARD: "/dashboard/superadmin/management",
+  MANAGEMENT_HISTORY: "/dashboard/superadmin/management/history",
 } as const;
 
 export const CS_ROUTES = {
@@ -125,6 +128,12 @@ export const SUPERVISOR_ROUTES = {
   PERSONNEL: "/dashboard/supervisor/personnel",
   SLOT_MANAGEMENT: "/dashboard/supervisor/slot-management",
   QR_CODES: "/dashboard/supervisor/qr-codes",
+} as const;
+
+export const MANAGEMENT_ROUTES = {
+  DASHBOARD: "/dashboard/management",
+  TASKS: "/dashboard/management/tasks",
+  HISTORY: "/dashboard/management/history",
 } as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -222,6 +231,9 @@ export function getDashboardPath(role: unknown): string | null {
       case "marketing":
         return ROUTES.DASHBOARD_MARKETING;
 
+      case "management":
+        return "/dashboard/management";
+
       default: {
         const _exhaustive: never = role;
         console.warn(`[getDashboardPath] unknown AppRole:`, _exhaustive);
@@ -268,6 +280,16 @@ export function canAccessPath(role: string, path: string): boolean {
   ) {
     return (
       path.startsWith(ROUTES.DASHBOARD_SUPERVISOR) || path.startsWith("/api/")
+    );
+  }
+
+  // Management role — hanya akses dashboard management (termasuk leader roles)
+  if (
+    role === "management" ||
+    role.startsWith("leader_")
+  ) {
+    return (
+      path.startsWith("/dashboard/management") || path.startsWith("/api/")
     );
   }
 
