@@ -5,6 +5,7 @@
 import { useState, useEffect, startTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Loading from "@/components/ui/Loading";
 import { getDashboardPath, queryParamToAppRole } from "@/lib/routes";
 import { setClientUser, type LoginRole } from "@/lib/auth/session";
@@ -19,7 +20,6 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  Gem,
 } from "lucide-react";
 import styles from "./login.module.css";
 
@@ -204,237 +204,184 @@ export default function LoginPage() {
 
   return (
     <div className={styles.loginRoot}>
-      {/* Background effects */}
-      <div className={styles.facetedGrid} />
-      <div className={`${styles.orb} ${styles.orbGold}`} />
-      <div className={`${styles.orb} ${styles.orbBlue}`} />
-      <div className={`${styles.orb} ${styles.orbWarm}`} />
+      <div className={styles.splitLayout}>
+        {/* ──────────── LEFT PANEL (30%) — Branding ──────────── */}
+        <div className={styles.leftPanel}>
+          <div className={`${styles.panelBg} ${styles.facetedGrid}`} />
+          <div className={`${styles.panelBg} ${styles.orb} ${styles.orbGold}`} />
+          <div className={`${styles.panelBg} ${styles.orb} ${styles.orbAccent}`} />
+          <div className={`${styles.panelBg} ${styles.orb} ${styles.orbWarm}`} />
 
-      {/* Decorative SVG — jewellery ring motifs */}
-      <svg
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none",
-          zIndex: 0,
-        }}
-        viewBox="0 0 1200 800"
-        preserveAspectRatio="xMidYMid slice"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Concentric ring motif — top-left */}
-        <circle
-          cx="180"
-          cy="200"
-          r="100"
-          fill="none"
-          stroke="rgba(212,168,67,0.08)"
-          strokeWidth="0.8"
-        />
-        <circle
-          cx="180"
-          cy="200"
-          r="130"
-          fill="none"
-          stroke="rgba(212,168,67,0.05)"
-          strokeWidth="0.6"
-        />
-        <circle
-          cx="180"
-          cy="200"
-          r="160"
-          fill="none"
-          stroke="rgba(212,168,67,0.03)"
-          strokeWidth="0.4"
-        />
-
-        {/* Faceted diamond shape */}
-        <polygon
-          points="1050,180 1100,120 1150,180 1100,240"
-          fill="none"
-          stroke="rgba(79,142,247,0.07)"
-          strokeWidth="1"
-        />
-        <polygon
-          points="1000,180 1100,60 1200,180 1100,300"
-          fill="none"
-          stroke="rgba(79,142,247,0.04)"
-          strokeWidth="0.6"
-        />
-
-        {/* Ring arc — bottom-right */}
-        <path
-          d="M 780 600 A 200 200 0 0 1 1180 600"
-          fill="none"
-          stroke="rgba(212,168,67,0.06)"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-        />
-        <path
-          d="M 800 600 A 180 180 0 0 1 1160 600"
-          fill="none"
-          stroke="rgba(212,168,67,0.04)"
-          strokeWidth="0.8"
-          strokeLinecap="round"
-        />
-
-        {/* Vertical gold accent line */}
-        <line
-          x1="600"
-          y1="0"
-          x2="600"
-          y2="800"
-          stroke="rgba(212,168,67,0.04)"
-          strokeWidth="0.5"
-        />
-
-        {/* Jewel facet — bottom-left */}
-        <polygon
-          points="80,560 200,380 320,560 200,740"
-          fill="none"
-          stroke="rgba(240,201,107,0.05)"
-          strokeWidth="1"
-        />
-      </svg>
-
-      {/* Login card */}
-      <div className={styles.card}>
-        <Link href="/" className={styles.backLink}>
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Kembali ke Beranda
-        </Link>
-
-        <h1 className={styles.welcomeTitle}>Selamat Datang</h1>
-        <p className={styles.welcomeSub}>Login untuk mengakses dashboard</p>
-
-        {error && (
-          <div className={styles.alertError}>
-            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin}>
-          <div className={styles.roleLabel}>Pilih Role</div>
-          <div className={styles.roleGrid}>
-            {ROLE_CONFIGS.map((config) => (
-              <button
-                key={config.value}
-                type="button"
-                className={`${styles.roleGroup} ${role === config.value ? styles.roleGroupActive : ""} ${isLoading ? styles.roleGroupDisabled : ""}`}
-                style={
-                  role === config.value
-                    ? {
-                        ["--role-border" as string]: config.colors.border,
-                        ["--role-bg" as string]: config.colors.bg,
-                        ["--role-text" as string]: config.colors.text,
-                      }
-                    : undefined
-                }
-                onClick={() => setRole(config.value)}
-                disabled={isLoading}
-              >
-                <div className={styles.roleBtnIcon}>{config.icon}</div>
-                <span className={styles.roleBtnLabel}>{config.label}</span>
-              </button>
-            ))}
+          <div className={styles.monogramRing}>
+            <Image
+              src="/logo.png"
+              alt="KGJ"
+              width={84}
+              height={84}
+              className={styles.monogramLogo}
+              priority
+            />
           </div>
 
-          <div className={styles.inputGroup}>
-            <label className={styles.inputLabel}>Email</label>
-            <div className={styles.inputWrapper}>
-              <span className={styles.inputIcon}>
-                <Mail className="w-3.5 h-3.5" />
-              </span>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={styles.inputField}
-                placeholder="nama@email.com"
-                required
-                disabled={isLoading}
-              />
+          <div className={styles.horizontalSep}>
+            <div className={styles.horizontalSepLine} />
+            <div className={styles.horizontalSepDiamond}>
+              <div className={styles.horizontalSepGlow} />
             </div>
+            <div className={styles.horizontalSepLine} />
           </div>
 
-          <div className={styles.inputGroup}>
-            <label className={styles.inputLabel}>Password</label>
-            <div className={styles.inputWrapper}>
-              <span className={styles.inputIcon}>
-                <Lock className="w-3.5 h-3.5" />
-              </span>
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={styles.inputField}
-                placeholder="••••••••"
-                required
-                disabled={isLoading}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className={styles.passwordToggle}
-                disabled={isLoading}
-              >
-                {showPassword ? (
-                  <EyeOff className="w-3.5 h-3.5" />
-                ) : (
-                  <Eye className="w-3.5 h-3.5" />
-                )}
-              </button>
-            </div>
-            <div className={styles.forgotLink}>
-              <Link href="/forgot-password">Lupa password?</Link>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className={styles.loginBtn}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <span className={styles.spinner}></span>
-                <span>Memverifikasi...</span>
-              </>
-            ) : (
-              <>
-                <span>Masuk ke Dashboard</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className={styles.demoSection}>
-          <div className={styles.demoTitle}>Akun Demo</div>
-          <div className={styles.demoAccounts}>
-            {DEMO_ACCOUNTS.map((account) => (
-              <div
-                key={account.email}
-                className={styles.demoAccount}
-                onClick={() => handleDemoClick(account)}
-              >
-                <span
-                  className={`${styles.demoDot} ${account.dotClass}`}
-                ></span>
-                <span>{account.label}</span>
-              </div>
-            ))}
-          </div>
+          <h1 className={styles.companyTitle}>
+            Kotagede
+            <br />
+            Jewellery
+          </h1>
         </div>
 
-        {isLoading && (
-          <div className={styles.loadingOverlay}>
-            <Loading variant="dots" size="lg" text="Memverifikasi akun..." />
+        {/* ──────────── Separator ──────────── */}
+        <div className={styles.separator} />
+        <div className={styles.separatorAccent}>
+          <div className={styles.separatorAccentInner} />
+        </div>
+
+        {/* ──────────── RIGHT PANEL (70%) — Login Card ──────────── */}
+        <div className={styles.rightPanel}>
+          <div className={`${styles.panelBg} ${styles.facetedGrid}`} />
+          <div className={`${styles.panelBg} ${styles.orb} ${styles.orbGold}`} />
+          <div className={`${styles.panelBg} ${styles.orb} ${styles.orbAccent}`} />
+          <div className={`${styles.panelBg} ${styles.orb} ${styles.orbWarm}`} />
+
+          <div className={styles.card}>
+            <Link href="/" className={styles.backLink}>
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Kembali ke Beranda
+            </Link>
+
+            <h2 className={styles.welcomeTitle}>Selamat Datang</h2>
+            <p className={styles.welcomeSub}>Login untuk mengakses dashboard</p>
+
+            {error && (
+              <div className={styles.alertError}>
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleLogin}>
+              <div className={styles.roleLabel}>Pilih Role</div>
+              <div className={styles.roleGrid}>
+                {ROLE_CONFIGS.map((config) => (
+                  <button
+                    key={config.value}
+                    type="button"
+                    className={`${styles.roleGroup} ${role === config.value ? styles.roleGroupActive : ""} ${isLoading ? styles.roleGroupDisabled : ""}`}
+                    style={
+                      role === config.value
+                        ? {
+                            ["--role-border" as string]: config.colors.border,
+                            ["--role-bg" as string]: config.colors.bg,
+                            ["--role-text" as string]: config.colors.text,
+                          }
+                        : undefined
+                    }
+                    onClick={() => setRole(config.value)}
+                    disabled={isLoading}
+                  >
+                    <div className={styles.roleBtnIcon}>{config.icon}</div>
+                    <span className={styles.roleBtnLabel}>{config.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Email</label>
+                <div className={styles.inputWrapper}>
+                  <span className={styles.inputIcon}>
+                    <Mail className="w-3.5 h-3.5" />
+                  </span>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={styles.inputField}
+                    placeholder="nama@email.com"
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Password</label>
+                <div className={styles.inputWrapper}>
+                  <span className={styles.inputIcon}>
+                    <Lock className="w-3.5 h-3.5" />
+                  </span>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={styles.inputField}
+                    placeholder="••••••••"
+                    required
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className={styles.passwordToggle}
+                    disabled={isLoading}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-3.5 h-3.5" />
+                    ) : (
+                      <Eye className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+                <div className={styles.forgotLink}>
+                  <Link href="/forgot-password">Lupa password?</Link>
+                </div>
+              </div>
+
+              <button type="submit" className={styles.loginBtn} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <span className={styles.spinner}></span>
+                    <span>Memverifikasi...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Masuk ke Dashboard</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className={styles.demoSection}>
+              <div className={styles.demoTitle}>Akun Demo</div>
+              <div className={styles.demoAccounts}>
+                {DEMO_ACCOUNTS.map((account) => (
+                  <div
+                    key={account.email}
+                    className={styles.demoAccount}
+                    onClick={() => handleDemoClick(account)}
+                  >
+                    <span className={`${styles.demoDot} ${account.dotClass}`}></span>
+                    <span>{account.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {isLoading && (
+              <div className={styles.loadingOverlay}>
+                <Loading variant="dots" size="lg" text="Memverifikasi akun..." />
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
