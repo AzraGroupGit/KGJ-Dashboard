@@ -70,8 +70,8 @@ export async function GET(request: Request) {
       notes: r.notes ?? null,
       data: r.data ?? null,
       finished_at: r.finished_at,
-      order_number: (r.cs_orders as any)?.order_number ?? "—",
-      customer_name: (r.cs_orders as any)?.customer_name ?? "—",
+      order_number: (r.cs_orders as unknown as Array<{ order_number: string; customer_name: string }>)?.[0]?.order_number ?? "—",
+      customer_name: (r.cs_orders as unknown as Array<{ order_number: string; customer_name: string }>)?.[0]?.customer_name ?? "—",
     }));
 
     return NextResponse.json({ success: true, data: history, total: total ?? 0 });

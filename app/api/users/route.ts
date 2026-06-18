@@ -10,7 +10,7 @@ import { getRoleProps } from "@/lib/auth/session";
 // ════════════════════════════════════════════════════════════════════════════
 
 const BMS_ROLE_NAMES = ["superadmin", "customer_service", "marketing"] as const;
-const MANAGEMENT_ROLE_NAMES = ["operational_supervisor", "production_supervisor"] as const;
+const MANAGEMENT_ROLE_NAMES = ["operational_supervisor", "production_supervisor", "leader_hc", "leader_operational", "leader_production", "leader_marketing", "leader_cs"] as const;
 const ALL_ROLE_GROUPS = [
   "management",
   "operational",
@@ -271,7 +271,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Harus menyertakan 'role' (superadmin/customer_service/marketing/operational_supervisor/production_supervisor) atau 'role_id' (UUID untuk worker)",
+            "Harus menyertakan 'role' (BMS/supervisor/leader) atau 'role_id' (UUID untuk worker)",
         },
         { status: 400 },
       );

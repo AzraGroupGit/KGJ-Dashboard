@@ -115,28 +115,34 @@ export async function POST(request: Request) {
       );
     }
 
-    // Pastikan role user adalah LoginRole (superadmin/customer_service/marketing).
-    // Role produksi/operasional lain tidak diizinkan login lewat halaman form ini —
-    // mereka pakai halaman QR code terpisah.
-    if (!isLoginRole(userRoleName)) {
-      await supabase.auth.signOut();
-      return NextResponse.json(
-        {
-          error:
-            "Akun Anda tidak dapat login di halaman ini. Silakan gunakan halaman login yang sesuai.",
-        },
-        { status: 403 },
-      );
-    }
+    // Role "management": allow any user whose DB role_group is "management"
+    // (operational_supervisor, production_supervisor, superadmin)
+    if (role === "management") {
+      const userRoleGroup = roleProps.role_group;
+      if (userRoleGroup !== "management") {
+        await supabase.auth.signOut();
+        return NextResponse.json(
+          { error: "Akun Anda tidak termasuk dalam grup Management." },
+          { status: 403 },
+        );
+      }
+    } else {
+      // Standard login roles: superadmin / customer_service / marketing
+      if (!isLoginRole(userRoleName)) {
+        await supabase.auth.signOut();
+        return NextResponse.json(
+          { error: "Akun Anda tidak dapat login di halaman ini. Silakan gunakan halaman login yang sesuai." },
+          { status: 403 },
+        );
+      }
 
-    if (userRoleName !== role) {
-      await supabase.auth.signOut();
-      return NextResponse.json(
-        {
-          error: `Anda tidak memiliki akses sebagai ${role}! (role Anda: ${userRoleName})`,
-        },
-        { status: 403 },
-      );
+      if (userRoleName !== role) {
+        await supabase.auth.signOut();
+        return NextResponse.json(
+          { error: `Anda tidak memiliki akses sebagai ${role}! (role Anda: ${userRoleName})` },
+          { status: 403 },
+        );
+      }
     }
 
     // Update last_login
@@ -166,7 +172,7 @@ export async function POST(request: Request) {
           email: userData.email,
           fullName: userData.full_name,
           username: userData.username ?? null,
-          role: userRoleName,
+          role: role === "management" ? "management" : userRoleName,
           roleDetail: {
             id: roleProps.id,
             name: roleProps.name,

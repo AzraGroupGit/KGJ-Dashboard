@@ -96,7 +96,7 @@ export async function GET(
       );
     }
 
-      const orderId = (data as any).id;
+      const orderId = (data as unknown as { id: string }).id;
 
     const [stageResultsRes, transitionsRes, deliveriesRes] =
       await Promise.allSettled([
@@ -253,7 +253,7 @@ export async function PUT(
     }
 
     const customerName = strOrNull(body.namaLengkap) || "Pelanggan";
-    const orderNum = (data as any)?.order_number ?? "—";
+    const orderNum = (data as unknown as { order_number: string })?.order_number ?? "—";
     if (existing.created_by) {
       sendNotification({
         userId: existing.created_by,

@@ -19,7 +19,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
-import DataTable from "@/components/dashboard/DataTable";
+import DataTable, { type Column } from "@/components/dashboard/DataTable";
 import Loading from "@/components/ui/Loading";
 import Alert from "@/components/ui/Alert";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
@@ -1183,17 +1183,17 @@ export default function StatistikPage() {
                       (m) => m.omset > 0 || m.lead_serius > 0,
                     ) ?? []) as unknown as Record<string, unknown>[]
                   }
-                  columns={monthlyColumns as any}
+                  columns={monthlyColumns as Column[]}
                 />
                 <DataTable
                   title={`Performa Channel Marketing ${selectedYear}`}
                   data={(stats?.channels ?? []) as unknown as Record<string, unknown>[]}
-                  columns={channelColumns as any}
+                  columns={channelColumns as Column[]}
                 />
                 <DataTable
                   title={`Performa Cabang CS ${selectedYear}`}
                   data={(stats?.branches ?? []) as unknown as Record<string, unknown>[]}
-                  columns={branchColumns as any}
+                  columns={branchColumns as Column[]}
                 />
               </div>
             </>

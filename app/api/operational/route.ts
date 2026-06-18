@@ -164,10 +164,11 @@ export async function GET(request?: NextRequest) {
 
     // Helper: log errors
     const logError = (label: string, result: PromiseSettledResult<unknown>) => {
-      if (result.status === "fulfilled" && (result.value as any)?.error) {
+      const res = result.status === "fulfilled" ? result.value as { error?: { message: string } | null } : null;
+      if (res?.error) {
         console.error(
           `[GET /api/operational] ${label}:`,
-          (result.value as any).error.message,
+          res.error.message,
         );
       }
     };

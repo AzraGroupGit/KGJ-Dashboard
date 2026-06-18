@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { Search, Download } from "lucide-react";
 
-interface Column {
+export interface Column {
   key: string;
   label: string;
   format?: (value: unknown) => string;
