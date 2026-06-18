@@ -3,7 +3,7 @@
 import { ArrowLeft } from "lucide-react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import { ROLE_GROUP_LABELS, type AlertState, type RoleOPRPRD } from "./shared";
+import { type AlertState } from "./shared";
 
 interface ManagementFormState {
   username: string;

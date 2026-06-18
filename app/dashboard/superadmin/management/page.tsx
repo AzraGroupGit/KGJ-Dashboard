@@ -9,7 +9,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
-import { CheckCircle2, Clock, Users, TrendingUp } from "lucide-react";
+import { CheckCircle2, Users, TrendingUp } from "lucide-react";
 
 interface ManagerData { id: string; full_name: string; role_name: string; tasks: Array<{ items: Array<{ progress: Array<{ is_completed: boolean; completed_at: string | null }> | null }> | null }>; }
 
