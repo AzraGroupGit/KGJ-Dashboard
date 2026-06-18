@@ -94,7 +94,7 @@ export default function ManagementTasksPage() {
       await fetch(`/api/management/tasks/${deleteTarget.id}`, { method: "DELETE" });
       setDeleteTarget(null);
       refetch();
-    } catch (_) {}
+    } catch {}
   };
 
   const handleAddItem = async (taskId: string) => {
@@ -122,7 +122,7 @@ export default function ManagementTasksPage() {
         body: JSON.stringify({ status: nextStatus }),
       });
       queryClient.invalidateQueries({ queryKey: ["management-tasks"] });
-    } catch (_) {}
+    } catch {}
   };
 
   const getStatusStyle = (status: string | null) => {
@@ -148,7 +148,7 @@ export default function ManagementTasksPage() {
         body: JSON.stringify({ [field]: value || null }),
       });
       queryClient.invalidateQueries({ queryKey: ["management-tasks"] });
-    } catch (_) {}
+    } catch {}
   };
 
   const handleDeleteItem = async () => {
@@ -157,7 +157,7 @@ export default function ManagementTasksPage() {
       await fetch(`/api/management/tasks/items/${deleteTarget.id}`, { method: "DELETE" });
       setDeleteTarget(null);
       refetch();
-    } catch (_) {}
+    } catch {}
   };
 
   const toggleExpand = (taskId: string) => {
