@@ -115,3 +115,39 @@ body {
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Parchment Warm — Goldsmith's Atelier Design Tokens
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  --color-parch-page:    #F2EBE0;
+  --color-parch-sidebar: #FAF7F2;
+  --color-parch-header:  #EDE4D8;
+  --color-parch-card:    #E8DDD0;
+  --color-parch-raised:  #E0D5C4;
+  --color-parch-border:  #D4C4A8;
+
+  --color-gold:          #C9A84C;
+  --color-gold-bright:   #D4AF37;
+  --color-gold-muted:    #C9A84C55;
+  --color-gold-dim:      #C9A84C22;
+  --color-gold-text:     #B8960C;
+
+  --color-text-ink:      #2C1810;
+  --color-text-sepia:    #6B5040;
+  --color-text-faded:    #9C7A58;
+  --color-text-ghost:    #B8A090;
+
+  --color-sage:          #4A7A3A;
+  --color-sage-bg:       #EAF2E4;
+  --color-sage-border:   #4A7A3A44;
+  --color-terra:         #9A3A20;
+  --color-terra-bg:      #F5EAE4;
+  --color-terra-border:  #9A3A2044;
+  --color-amber-warn:    #8A6010;
+  --color-amber-bg:      #FFF5DC;
+
+  --font-display: var(--font-display, 'Cormorant Garamond', Georgia, serif);
+  --font-body:    var(--font-inter, 'Inter', system-ui, sans-serif);
+}

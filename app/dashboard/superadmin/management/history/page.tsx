@@ -2,83 +2,583 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
-import { CheckCircle2, Clock, User, MessageSquare } from "lucide-react";
+import { CheckCircle2, User, AlertCircle, ChevronDown, Calendar, Search, X } from "lucide-react";
+import { Diamond } from "@/components/dashboard/superadmin/Diamond";
 
-interface ProgressRow { completed_at: string | null; status: string | null; admin_notes: string | null; notes: string | null; kendala: string | null; }
-interface TaskItem { title: string; progress: ProgressRow[] | null; }
-interface Task { title: string; items: TaskItem[] | null; }
-interface ManagerData { id: string; full_name: string; role_name: string; tasks: Task[]; }
+interface ProgressRow {
+  is_completed: boolean;
+  completed_at: string | null;
+  status: string | null;
+  admin_notes: string | null;
+  notes: string | null;
+  kendala: string | null;
+}
+interface TaskItem {
+  title: string;
+  progress: ProgressRow[] | null;
+}
+interface Task {
+  title: string;
+  items: TaskItem[] | null;
+}
+interface ManagerData {
+  id: string;
+  full_name: string;
+  role_name: string;
+  tasks: Task[];
+  completionRate?: number;
+}
 
-interface HistoryEntry { manager: string; role: string; item: string; task: string; status: string; completed_at: string; notes: string | null; kendala: string | null; admin_notes: string | null; }
+interface HistoryEntry {
+  manager: string;
+  managerId: string;
+  role: string;
+  item: string;
+  task: string;
+  status: string;
+  completed_at: string;
+  notes: string | null;
+  kendala: string | null;
+  admin_notes: string | null;
+  managerRate: number;
+  managerDone: number;
+  managerTotal: number;
+}
+
+const C = {
+  page: "var(--color-parch-page)",
+  card: "var(--color-parch-card)",
+  header: "var(--color-parch-header)",
+  border: "var(--color-parch-border)",
+  gold: "var(--color-gold)",
+  goldDim: "var(--color-gold-dim)",
+  goldText: "var(--color-gold-text)",
+  ink: "var(--color-text-ink)",
+  sepia: "var(--color-text-sepia)",
+  faded: "var(--color-text-faded)",
+  ghost: "var(--color-text-ghost)",
+  sage: "var(--color-sage)",
+  terra: "var(--color-terra)",
+  amber: "var(--color-amber-warn)",
+};
 
 export default function ManagementHistoryPage() {
   const [clientUser, setClientUser] = useState<ClientUser | null>(null);
-  useEffect(() => { setClientUser(getClientUser()); }, []);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const datePickerRef = useRef<HTMLDivElement>(null);
 
-  const { data, isLoading } = useQuery<{ success: boolean; data: ManagerData[] }>({
+  useEffect(() => {
+    if (!showDatePicker) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        datePickerRef.current &&
+        !datePickerRef.current.contains(e.target as Node)
+      ) {
+        setShowDatePicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showDatePicker]);
+  const [expandedIdxs, setExpandedIdxs] = useState<Set<number>>(new Set());
+  useEffect(() => {
+    setClientUser(getClientUser());
+  }, []);
+
+  const { data, isLoading } = useQuery<{
+    success: boolean;
+    data: ManagerData[];
+  }>({
     queryKey: ["superadmin", "management-tasks"],
     queryFn: () => fetcher("/api/superadmin/management-tasks"),
   });
 
-  const managers = data?.data ?? [];
+  const managers = useMemo(() => data?.data ?? [], [data]);
 
-  const history: HistoryEntry[] = managers.flatMap((m) =>
-    m.tasks.flatMap((task) =>
-      (task.items ?? [])
-        .filter((item) => item.progress?.[0]?.completed_at)
-        .map((item) => ({
-          manager: m.full_name, role: m.role_name,
-          item: item.title, task: task.title,
-          status: item.progress![0].status ?? "pending",
-          completed_at: item.progress![0].completed_at!,
-          notes: item.progress![0].notes ?? null,
-          kendala: item.progress![0].kendala ?? null,
-          admin_notes: item.progress![0].admin_notes ?? null,
-        })),
-    ),
-  ).sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
+  const managerRates = useMemo(() => {
+    const map = new Map<string, { done: number; total: number; rate: number }>();
+    managers.forEach((m) => {
+      const items = m.tasks.flatMap((t) => t.items ?? []);
+      const done = items.filter(
+        (i) => i.progress?.[0]?.is_completed,
+      ).length;
+      const total = items.length;
+      map.set(m.id, {
+        done,
+        total,
+        rate: total > 0 ? Math.round((done / total) * 100) : 0,
+      });
+    });
+    return map;
+  }, [managers]);
+
+  const history = useMemo(() => {
+    const entries: HistoryEntry[] = managers
+      .flatMap((m) => {
+        const mRate = managerRates.get(m.id)!;
+        return m.tasks.flatMap((task) =>
+          (task.items ?? [])
+            .filter((item) => item.progress?.[0]?.completed_at)
+            .map((item) => ({
+              manager: m.full_name,
+              managerId: m.id,
+              role: m.role_name,
+              item: item.title,
+              task: task.title,
+              status: item.progress![0].status ?? "pending",
+              completed_at: item.progress![0].completed_at!,
+              notes: item.progress![0].notes ?? null,
+              kendala: item.progress![0].kendala ?? null,
+              admin_notes: item.progress![0].admin_notes ?? null,
+              managerRate: mRate.rate,
+              managerDone: mRate.done,
+              managerTotal: mRate.total,
+            })),
+        );
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.completed_at).getTime() -
+          new Date(a.completed_at).getTime(),
+      );
+    return entries;
+  }, [managers, managerRates]);
+
+  const filteredHistory = useMemo(() => {
+    let result = history;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (e) =>
+          e.manager.toLowerCase().includes(q) ||
+          e.role.toLowerCase().includes(q) ||
+          e.item.toLowerCase().includes(q) ||
+          e.task.toLowerCase().includes(q),
+      );
+    }
+    if (dateFrom) {
+      result = result.filter(
+        (e) => new Date(e.completed_at) >= new Date(dateFrom),
+      );
+    }
+    if (dateTo) {
+      const to = new Date(dateTo + "T23:59:59");
+      result = result.filter(
+        (e) => new Date(e.completed_at) <= to,
+      );
+    }
+    return result;
+  }, [history, searchQuery, dateFrom, dateTo]);
+
+  const monthGroups = useMemo(() => {
+    const groups: { label: string; entries: HistoryEntry[] }[] = [];
+    for (const entry of filteredHistory) {
+      const d = new Date(entry.completed_at);
+      const label = `${d.toLocaleDateString("id-ID", { month: "long" })} ${d.getFullYear()}`;
+      let group = groups.find((g) => g.label === label);
+      if (!group) {
+        group = { label, entries: [] };
+        groups.push(group);
+      }
+      group.entries.push(entry);
+    }
+    return groups;
+  }, [filteredHistory]);
+
+  const toggleExpand = (idx: number) => {
+    setExpandedIdxs((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
+  const uniqueManagers = new Set(history.map((e) => e.managerId)).size;
+  const statusColor = (status: string) =>
+    status === "selesai" ? C.sage : status === "proses" ? C.amber : C.terra;
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-gray-50">
       <Sidebar role="superadmin" />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
         <main className="flex-1 overflow-y-auto p-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-slate-900">Riwayat Management</h2>
-            <p className="text-sm text-slate-400 mt-0.5">Rekapitulasi penyelesaian tugas seluruh manager</p>
+          {/* Page Header */}
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h2
+                className="text-[28px] leading-tight"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontWeight: 300,
+                  color: C.ink,
+                }}
+              >
+                Riwayat{" "}
+                <i style={{ color: C.gold, fontWeight: 400 }}>Management</i>
+              </h2>
+              <p className="text-sm mt-0.5" style={{ color: C.faded }}>
+                Rekapitulasi penyelesaian tugas seluruh manager
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Search — debossed brass */}
+              <div className="relative">
+                <Search
+                  className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
+                  style={{ color: C.ghost }}
+                />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari nama / role..."
+                  className="min-w-[120px] w-44 rounded border py-1.5 pl-8 pr-2 text-xs outline-none transition-colors"
+                  style={{
+                    borderColor: C.border,
+                    color: C.ink,
+                    background: C.card,
+                    borderStyle: "dashed",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = C.gold;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = C.border;
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2"
+                    style={{ color: C.ghost }}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Date filter button + popover */}
+              <div className="relative" ref={datePickerRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowDatePicker(!showDatePicker)}
+                  className="flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap"
+                  style={{
+                    borderColor: dateFrom || dateTo ? C.gold : C.border,
+                    color: dateFrom || dateTo ? C.goldText : C.faded,
+                    background: C.card,
+                  }}
+                >
+                  <Calendar className="h-3.5 w-3.5" />
+                  {dateFrom || dateTo ? (
+                    <span>
+                      {dateFrom
+                        ? new Date(dateFrom).toLocaleDateString("id-ID", {
+                            day: "2-digit",
+                            month: "short",
+                          })
+                        : "…"}
+                      {" — "}
+                      {dateTo
+                        ? new Date(dateTo).toLocaleDateString("id-ID", {
+                            day: "2-digit",
+                            month: "short",
+                          })
+                        : "…"}
+                    </span>
+                  ) : (
+                    "Filter"
+                  )}
+                </button>
+                {(dateFrom || dateTo) && (
+                  <button
+                    onClick={() => {
+                      setDateFrom("");
+                      setDateTo("");
+                    }}
+                    className="absolute -top-1 -right-1 rounded-full p-0.5"
+                    style={{ background: C.card, border: `1px solid ${C.border}` }}
+                  >
+                    <X className="h-2.5 w-2.5" style={{ color: C.ghost }} />
+                  </button>
+                )}
+
+                {showDatePicker && (
+                  <div
+                    className="absolute right-0 top-full mt-1 z-30 rounded-lg border p-3 shadow-lg w-52"
+                    style={{
+                      background: C.card,
+                      borderColor: C.border,
+                    }}
+                  >
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-[10px] uppercase tracking-wider mb-1 block" style={{ color: C.faded }}>
+                          Dari
+                        </label>
+                        <input
+                          type="date"
+                          value={dateFrom}
+                          onChange={(e) => setDateFrom(e.target.value)}
+                          className="w-full rounded border px-2 py-1.5 text-xs outline-none transition-colors"
+                          style={{
+                            borderColor: C.border,
+                            color: C.ink,
+                            background: "var(--color-parch-sidebar)",
+                          }}
+                          onFocus={(e) => {
+                            e.currentTarget.style.borderColor = C.gold;
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.borderColor = C.border;
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase tracking-wider mb-1 block" style={{ color: C.faded }}>
+                          Sampai
+                        </label>
+                        <input
+                          type="date"
+                          value={dateTo}
+                          onChange={(e) => setDateTo(e.target.value)}
+                          className="w-full rounded border px-2 py-1.5 text-xs outline-none transition-colors"
+                          style={{
+                            borderColor: C.border,
+                            color: C.ink,
+                            background: "var(--color-parch-sidebar)",
+                          }}
+                          onFocus={(e) => {
+                            e.currentTarget.style.borderColor = C.gold;
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.borderColor = C.border;
+                          }}
+                        />
+                      </div>
+                      <button
+                        onClick={() => setShowDatePicker(false)}
+                        className="w-full rounded py-1.5 text-[10px] font-medium text-white transition-colors"
+                        style={{ background: C.gold }}
+                      >
+                        Terapkan
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
-          {isLoading ? <Loading variant="skeleton" text="Memuat data..." /> : history.length === 0 ? (
-            <div className="text-center py-16 text-slate-400"><CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-slate-200" /><p>Belum ada riwayat penyelesaian tugas.</p></div>
+          {/* Summary */}
+          {filteredHistory.length > 0 && (
+            <div
+              className="flex items-center gap-4 rounded-lg px-4 py-2 mb-6"
+              style={{
+                background: C.card,
+                border: `0.5px solid ${C.goldDim}`,
+              }}
+            >
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: C.faded }}>
+                <CheckCircle2 className="h-3.5 w-3.5" style={{ color: C.sage }} />
+                {filteredHistory.length} entri log
+              </div>
+              <div className="w-px h-4" style={{ background: C.border }} />
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: C.faded }}>
+                <User className="h-3.5 w-3.5" style={{ color: C.gold }} />
+                {uniqueManagers} managers
+              </div>
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="p-12">
+              <Loading variant="skeleton" text="Memuat data..." />
+            </div>
+          ) : filteredHistory.length === 0 ? (
+            <div
+              className="text-center py-16 rounded-lg"
+              style={{ background: C.card, border: `1px solid ${C.border}` }}
+            >
+              <CheckCircle2 className="mx-auto mb-3 h-10 w-10" style={{ color: C.ghost }} />
+              <p style={{ color: C.faded }}>Belum ada riwayat penyelesaian tugas.</p>
+            </div>
           ) : (
-            <div className="space-y-2">
-              {history.map((entry, idx) => (
-                <div key={idx} className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100"><CheckCircle2 className="h-4 w-4 text-emerald-600" /></div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1 rounded bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-600"><User className="h-3 w-3" />{entry.manager}</span>
-                      <span className="inline-flex rounded bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">{entry.role}</span>
-                      <span className="text-sm text-slate-700">{entry.item}</span>
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${entry.status === "selesai" ? "bg-emerald-50 text-emerald-700" : entry.status === "proses" ? "bg-orange-50 text-orange-700" : "bg-rose-50 text-rose-700"}`}>
-                        {entry.status === "selesai" ? "Selesai" : entry.status === "proses" ? "Proses" : "Belum"}
+            <div className="max-w-3xl mx-auto space-y-10">
+              {monthGroups.map((month) => (
+                <div key={month.label}>
+                  {/* Month stamp */}
+                  <div className="flex items-center gap-4 mb-5 sticky top-0 z-10 py-2" style={{ background: C.page }}>
+                    <div className="shrink-0 flex flex-col items-center">
+                      <span className="text-[9px] uppercase tracking-[0.22em]" style={{ color: C.gold }}>
+                        {month.label.slice(0, 3)}
+                      </span>
+                      <span className="text-lg" style={{ fontFamily: "var(--font-display)", color: C.ink, lineHeight: 1 }}>
+                        {month.label.split(" ")[1]}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">{entry.task}</p>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-slate-400 flex-wrap">
-                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(entry.completed_at).toLocaleString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
-                      {entry.notes && <span className="text-slate-500">📝 {entry.notes}</span>}
-                      {entry.kendala && <span className="text-rose-500">⚠ {entry.kendala}</span>}
-                      {entry.admin_notes && <span className="flex items-center gap-1 text-indigo-500"><MessageSquare className="h-3 w-3" />{entry.admin_notes}</span>}
-                    </div>
+                    <div className="flex-1 h-px" style={{ background: C.goldDim }} />
+                  </div>
+
+                  {/* Timeline */}
+                  <div className="relative pl-8">
+                    {/* Vertical line */}
+                    <div
+                      className="absolute left-[11px] top-2 bottom-2 w-px"
+                      style={{ background: C.goldDim }}
+                    />
+
+                    {month.entries.map((entry) => {
+                      const globalIdx = history.indexOf(entry);
+                      const isExpanded = expandedIdxs.has(globalIdx);
+                      const clr = statusColor(entry.status);
+                      const barColor =
+                        entry.managerRate >= 80
+                          ? C.sage
+                          : entry.managerRate >= 50
+                            ? C.gold
+                            : C.terra;
+                      return (
+                        <div key={globalIdx} className="relative pb-3 last:pb-0">
+                          {/* Node */}
+                          <div
+                            className="absolute left-[-28px] top-1.5"
+                            style={{
+                              width: 10,
+                              height: 10,
+                              borderRadius: "50%",
+                              border: `2px solid ${clr}`,
+                              background: C.page,
+                            }}
+                          />
+
+                          {/* Entry pill */}
+                          <div
+                            className="rounded-lg border p-3 cursor-pointer transition-colors hover:border-opacity-60"
+                            style={{
+                              background: C.card,
+                              borderColor: C.border,
+                            }}
+                            onClick={() => toggleExpand(globalIdx)}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Diamond size={4} />
+
+                                {/* Manager */}
+                                <span
+                                  className="text-sm font-medium truncate"
+                                  style={{
+                                    fontFamily: "var(--font-display)",
+                                    color: C.ink,
+                                  }}
+                                >
+                                  {entry.manager}
+                                </span>
+                              </div>
+                              {/* Full date + time */}
+                              <span
+                                className="text-[10px] font-mono shrink-0"
+                                style={{ color: C.ghost }}
+                              >
+                                {new Date(entry.completed_at).toLocaleString(
+                                  "id-ID",
+                                  {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
+                                )}
+                              </span>
+                            </div>
+
+                            {/* Progress strip */}
+                            <div className="flex items-center gap-2 mt-2">
+                              <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: C.border }}>
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{ width: `${entry.managerRate}%`, background: barColor }}
+                                />
+                              </div>
+                              <span className="text-[10px] shrink-0" style={{ color: C.faded }}>
+                                {entry.managerDone}/{entry.managerTotal}
+                              </span>
+                              <span
+                                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-medium shrink-0"
+                                style={{
+                                  background: `color-mix(in srgb, ${clr} 12%, transparent)`,
+                                  color: clr,
+                                }}
+                              >
+                                <Diamond size={3} />
+                                {entry.status === "selesai" ? "Selesai" : entry.status === "proses" ? "Proses" : "Belum"}
+                              </span>
+                              {isExpanded && <ChevronDown className="h-3 w-3 shrink-0" style={{ color: C.gold }} />}
+                            </div>
+
+                            {/* Expanded details */}
+                            {isExpanded && (
+                              <div
+                                className="mt-2 pt-2 space-y-2 text-[11px]"
+                                style={{ borderTop: `0.5px solid ${C.goldDim}` }}
+                              >
+                                <div className="flex items-start gap-2">
+                                  <span className="shrink-0 font-medium" style={{ color: C.ghost, width: 80 }}>
+                                    Task
+                                  </span>
+                                  <span style={{ color: C.faded }}>{entry.task}</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <span className="shrink-0 font-medium" style={{ color: C.ghost, width: 80 }}>
+                                    Sub-task
+                                  </span>
+                                  <span style={{ color: C.sepia, fontWeight: 500 }}>{entry.item}</span>
+                                </div>
+                                {entry.notes && (
+                                  <div className="flex items-start gap-2">
+                                    <span className="shrink-0 font-medium" style={{ color: C.ghost, width: 80 }}>
+                                      Catatan
+                                    </span>
+                                    <span style={{ color: C.faded }}>{entry.notes}</span>
+                                  </div>
+                                )}
+                                {entry.kendala && (
+                                  <div className="flex items-start gap-2">
+                                    <span className="shrink-0 font-medium flex items-center gap-1" style={{ color: C.terra, width: 80 }}>
+                                      <AlertCircle className="h-3 w-3" /> Kendala
+                                    </span>
+                                    <span style={{ color: C.terra }}>{entry.kendala}</span>
+                                  </div>
+                                )}
+                                {entry.admin_notes && (
+                                  <div className="flex items-start gap-2">
+                                    <span className="shrink-0 font-medium" style={{ color: C.gold, width: 80 }}>
+                                      ◆ Catatan Admin
+                                    </span>
+                                    <span style={{ color: C.gold }}>{entry.admin_notes}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}

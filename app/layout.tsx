@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Playfair_Display, Inter, DM_Sans, DM_Serif_Display } from "next/font/google";
+import { Geist, Geist_Mono, Playfair_Display, Inter, DM_Sans, DM_Serif_Display, Cormorant_Garamond } from "next/font/google";
 import Providers from "./providers";
 import "./globals.css";
 
@@ -37,6 +37,13 @@ const dmSerifDisplay = DM_Serif_Display({
   weight: ["400"],
 });
 
+const cormorantGaramond = Cormorant_Garamond({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  style: ["normal", "italic"],
+});
+
 export const metadata: Metadata = {
   title: "KGJ ERP",
   description: "An ERP system for KGJ",
@@ -50,7 +57,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${inter.variable} ${dmSans.variable} ${dmSerifDisplay.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${inter.variable} ${dmSans.variable} ${dmSerifDisplay.variable} ${cormorantGaramond.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>

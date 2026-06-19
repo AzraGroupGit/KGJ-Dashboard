@@ -12,7 +12,7 @@ import FontPicker from "@/components/order/FontPicker";
 import MaterialSelect from "@/components/order/MaterialSelect";
 import EngravingSelect from "@/components/order/EngravingSelect";
 import AddsOnAccordion from "@/components/order/AddsOnAccordion";
-import { Plus, X } from "lucide-react";
+import { Plus, X, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import type { OrderFormData } from "@/lib/schemas/cs-order";
 
 // ── OrderFormFields ────────────────────────────────────────────────────────
@@ -75,6 +75,13 @@ export function OrderFormFields({
 
   const [slotInfo, setSlotInfo] = useState<SlotCheckResult | null>(null);
   const [slotLoading, setSlotLoading] = useState(false);
+  const [step, setStep] = useState(1);
+
+  const STEPS = [
+    { num: 1, label: "Info Order" },
+    { num: 2, label: "Data & Cincin" },
+    { num: 3, label: "Finalisasi" },
+  ];
 
   useEffect(() => {
     if (data.kategori && data.tglOrder) {
@@ -142,6 +149,41 @@ export function OrderFormFields({
         <p className="text-sm text-gray-600">PT. KOTAGEDE JEWELLERY</p>
       </div>
 
+      {/* Step indicator (edit mode only) */}
+      {!disabled && (
+        <div className="flex items-center justify-center gap-2 mb-2 mt-1">
+          {STEPS.map((s, i) => (
+            <div key={s.num} className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setStep(s.num)}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  step === s.num
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : step > s.num
+                      ? "bg-indigo-50 text-indigo-600 border border-indigo-200"
+                      : "bg-gray-100 text-gray-400"
+                }`}
+              >
+                {step > s.num ? (
+                  <Check className="w-3 h-3" />
+                ) : (
+                  <span className="w-3 h-3 flex items-center justify-center text-[10px] font-bold">
+                    {s.num}
+                  </span>
+                )}
+                {s.label}
+              </button>
+              {i < STEPS.length - 1 && (
+                <div className={`w-6 h-px ${step > i + 1 ? "bg-indigo-300" : "bg-gray-200"}`} />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(disabled || step === 1) && (
+        <>
       <SectionHeader title="Informasi Order" />
 
       <div className="space-y-3">
@@ -450,6 +492,22 @@ export function OrderFormFields({
         </FieldRow>
       </div>
 
+          {!disabled && (
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-indigo-700"
+              >
+                Selanjutnya <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {(disabled || step === 2) && (
+        <>
       <SectionHeader title="Data Pelanggan" />
 
       <div className="space-y-3">
@@ -845,6 +903,29 @@ export function OrderFormFields({
         </label>
       </div>
 
+          {!disabled && (
+            <div className="flex justify-between pt-2">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" /> Sebelumnya
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(3)}
+                className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-indigo-700"
+              >
+                Selanjutnya <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {(disabled || step === 3) && (
+        <>
       <SectionHeader title="Detail" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -1064,6 +1145,21 @@ export function OrderFormFields({
           />
         </FieldRow>
       </div>
+
+          {!disabled && (
+            <div className="flex justify-between pt-2">
+              <span />
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" /> Sebelumnya
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

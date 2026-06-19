@@ -26,6 +26,7 @@ import {
   getStageLabel,
   type OperasionalData,
 } from "./shared";
+import { CollapsibleSection } from "./CollapsibleSection";
 
 export function OperasionalTab({ data, searchQuery }: { data: OperasionalData | null; searchQuery: string }) {
   if (!data) return <EmptyState text="Data operasional tidak tersedia" />;
@@ -68,18 +69,21 @@ export function OperasionalTab({ data, searchQuery }: { data: OperasionalData | 
   return (
     <div className="space-y-5">
       {/* After Sales Kanban */}
-      <section className="rounded-lg border border-slate-200 bg-white">
-        <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-slate-900">
-              After Sales & Konfirmasi Customer
-            </h2>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-              Live
-            </span>
-          </div>
-        </header>
+      <CollapsibleSection
+        header={
+          <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-slate-900">
+                After Sales & Konfirmasi Customer
+              </h2>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                Live
+              </span>
+            </div>
+          </header>
+        }
+      >
         <div className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-3">
           <KanbanCol
             icon={<Camera className="h-4 w-4 text-sky-600" />}
@@ -214,23 +218,26 @@ export function OperasionalTab({ data, searchQuery }: { data: OperasionalData | 
             ))}
           </KanbanCol>
         </div>
-      </section>
+      </CollapsibleSection>
 
       {/* Admin Tasks + Racik/Laser */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Admin Tasks */}
-        <section className="rounded-lg border border-slate-200 bg-white">
-          <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <FileCheck2 className="h-4 w-4 text-slate-400" />
-              <h2 className="text-sm font-semibold text-slate-900">
-                Packing, Pengiriman & Tugas Admin
-              </h2>
-            </div>
-            <span className="text-xs text-slate-500">
-              {filteredAdminTasks.length} tugas
-            </span>
-          </header>
+        <CollapsibleSection
+          header={
+            <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+              <div className="flex items-center gap-2">
+                <FileCheck2 className="h-4 w-4 text-slate-400" />
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Packing, Pengiriman & Tugas Admin
+                </h2>
+              </div>
+              <span className="text-xs text-slate-500">
+                {filteredAdminTasks.length} tugas
+              </span>
+            </header>
+          }
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -315,15 +322,18 @@ export function OperasionalTab({ data, searchQuery }: { data: OperasionalData | 
               +{filteredAdminTasks.length - 10} tugas lainnya
             </div>
           )}
-        </section>
+        </CollapsibleSection>
 
         {/* Racik & Laser */}
-        <section className="rounded-lg border border-slate-200 bg-white">
-          <header className="border-b border-slate-100 px-5 py-3.5">
-            <h2 className="text-sm font-semibold text-slate-900">
-              Racik Bahan & Laser Engraving
-            </h2>
-          </header>
+        <CollapsibleSection
+          header={
+            <header className="border-b border-slate-100 px-5 py-3.5">
+              <h2 className="text-sm font-semibold text-slate-900">
+                Racik Bahan & Laser Engraving
+              </h2>
+            </header>
+          }
+        >
 
           {/* Racik */}
           <div className="border-b border-slate-100 px-5 py-4">
@@ -473,17 +483,20 @@ export function OperasionalTab({ data, searchQuery }: { data: OperasionalData | 
               )}
             </div>
           </div>
-        </section>
+        </CollapsibleSection>
       </div>
 
       {/* QC Overview */}
-      <section className="rounded-lg border border-slate-200 bg-white">
-        <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-          <h2 className="text-sm font-semibold text-slate-900">
-            Quality Control Overview
-          </h2>
-          <span className="text-xs text-slate-500">7 hari terakhir</span>
-        </header>
+      <CollapsibleSection
+        header={
+          <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+            <h2 className="text-sm font-semibold text-slate-900">
+              Quality Control Overview
+            </h2>
+            <span className="text-xs text-slate-500">7 hari terakhir</span>
+          </header>
+        }
+      >
         <div className="grid grid-cols-2 gap-3 border-b border-slate-100 p-5 sm:grid-cols-4">
           {(["qc_1", "qc_2"] as const).map((qcKey) => {
             const row = data.qc.summary.find((s) => s.qc_type === qcKey) ?? {
@@ -574,8 +587,8 @@ export function OperasionalTab({ data, searchQuery }: { data: OperasionalData | 
               ))
             )}
           </div>
-        </div>
-      </section>
+          </div>
+        </CollapsibleSection>
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { getRoleProps } from "@/lib/auth/session";
 // ════════════════════════════════════════════════════════════════════════════
 
 const BMS_ROLE_NAMES = ["superadmin", "customer_service", "marketing"] as const;
-const MANAGEMENT_ROLE_NAMES = ["operational_supervisor", "production_supervisor", "leader_hc", "leader_operational", "leader_production", "leader_marketing", "leader_cs"] as const;
+const MANAGEMENT_ROLE_NAMES = ["operational_supervisor", "production_supervisor", "leader_hc", "leader_operational", "leader_production", "leader_marketing", "leader_sales", "leader_fat", "leader_rnd", "leader_safar", "leader_ga"] as const;
 const ALL_ROLE_GROUPS = [
   "management",
   "operational",
@@ -345,26 +345,30 @@ export async function POST(request: Request) {
       finalRoleName = roleRec.name;
       finalRoleGroup = roleRec.role_group;
 
-      // Enforce one active account per supervisor type
-      const { data: existingSupervisor } = await adminCheck
-        .from("users")
-        .select("id, full_name, username")
-        .eq("role_id", finalRoleId)
-        .eq("status", "active")
-        .is("deleted_at", null)
-        .maybeSingle();
+      // Enforce one active account per supervisor (not for leader roles)
+      const LEADER_PREFIXES = ["leader_"];
+      const isLeader = LEADER_PREFIXES.some((p) => finalRoleName.startsWith(p));
+      if (!isLeader) {
+        const { data: existingSupervisor } = await adminCheck
+          .from("users")
+          .select("id, full_name, username")
+          .eq("role_id", finalRoleId)
+          .eq("status", "active")
+          .is("deleted_at", null)
+          .maybeSingle();
 
-      if (existingSupervisor) {
-        const label =
-          finalRoleName === "operational_supervisor"
-            ? "Supervisor Operasional"
-            : "Supervisor Produksi";
-        return NextResponse.json(
-          {
-            error: `Akun ${label} sudah ada (${existingSupervisor.full_name} / @${existingSupervisor.username}). Setiap jenis supervisor hanya boleh satu akun aktif.`,
-          },
-          { status: 409 },
-        );
+        if (existingSupervisor) {
+          const label =
+            finalRoleName === "operational_supervisor"
+              ? "Supervisor Operasional"
+              : "Supervisor Produksi";
+          return NextResponse.json(
+            {
+              error: `Akun ${label} sudah ada (${existingSupervisor.full_name} / @${existingSupervisor.username}). Setiap jenis supervisor hanya boleh satu akun aktif.`,
+            },
+            { status: 409 },
+          );
+        }
       }
     } else {
       // OPRPRD worker mode — role_id UUID
