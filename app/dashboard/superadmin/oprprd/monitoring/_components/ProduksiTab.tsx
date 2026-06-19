@@ -8,6 +8,7 @@ import {
   fmtGemstone,
   type ProduksiData,
 } from "./shared";
+import { CollapsibleSection } from "./CollapsibleSection";
 
 export function ProduksiTab({ data, searchQuery }: { data: ProduksiData | null; searchQuery: string }) {
   if (!data) return <EmptyState text="Data produksi tidak tersedia" />;
@@ -57,26 +58,29 @@ export function ProduksiTab({ data, searchQuery }: { data: ProduksiData | null; 
   return (
     <div className="space-y-5">
       {/* Expert Cards */}
-      <section className="rounded-lg border border-slate-200 bg-white">
-        <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-slate-900">
-              Jewelry Expert & Tukang
-            </h2>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-              Live
+      <CollapsibleSection
+        header={
+          <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-slate-900">
+                Jewelry Expert & Tukang
+              </h2>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                Live
+              </span>
+            </div>
+            <span className="text-xs text-slate-500">
+              <span className="font-medium text-slate-700">{activeExperts}</span>{" "}
+              dari{" "}
+              <span className="font-medium text-slate-700">
+                {data.experts.length}
+              </span>{" "}
+              aktif
             </span>
-          </div>
-          <span className="text-xs text-slate-500">
-            <span className="font-medium text-slate-700">{activeExperts}</span>{" "}
-            dari{" "}
-            <span className="font-medium text-slate-700">
-              {data.experts.length}
-            </span>{" "}
-            aktif
-          </span>
-        </header>
+          </header>
+        }
+      >
         {filteredExperts.length === 0 ? (
           <div className="p-10 text-center text-sm text-slate-400">
             {q ? "Tidak ditemukan" : "Belum ada data tukang aktif"}
@@ -87,24 +91,27 @@ export function ProduksiTab({ data, searchQuery }: { data: ProduksiData | null; 
               <ExpertCard key={e.userId} expert={e} />
             ))}
           </div>
-        )}
-      </section>
+          )}
+        </CollapsibleSection>
 
       {/* Micro Setting + Yield */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Micro Setting */}
-        <section className="rounded-lg border border-slate-200 bg-white">
-          <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <Microscope className="h-4 w-4 text-violet-500" />
-              <h2 className="text-sm font-semibold text-slate-900">
-                Micro Setting
-              </h2>
-            </div>
-            <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700 ring-1 ring-inset ring-violet-200">
-              {filteredMicro.length} order
-            </span>
-          </header>
+        <CollapsibleSection
+          header={
+            <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+              <div className="flex items-center gap-2">
+                <Microscope className="h-4 w-4 text-violet-500" />
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Micro Setting
+                </h2>
+              </div>
+              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700 ring-1 ring-inset ring-violet-200">
+                {filteredMicro.length} order
+              </span>
+            </header>
+          }
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -188,19 +195,22 @@ export function ProduksiTab({ data, searchQuery }: { data: ProduksiData | null; 
               </p>
             </div>
           )}
-        </section>
+        </CollapsibleSection>
 
         {/* Yield Material */}
-        <section className="rounded-lg border border-slate-200 bg-white">
-          <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-slate-400" />
-              <h2 className="text-sm font-semibold text-slate-900">
-                Yield Material
-              </h2>
-            </div>
-            <span className="text-xs text-slate-500">7 hari terakhir</span>
-          </header>
+        <CollapsibleSection
+          header={
+            <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-slate-400" />
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Yield Material
+                </h2>
+              </div>
+              <span className="text-xs text-slate-500">7 hari terakhir</span>
+            </header>
+          }
+        >
           {filteredYield.length === 0 ? (
             <div className="p-10 text-center">
               <BarChart3 className="mx-auto mb-3 h-10 w-10 text-slate-200" />
@@ -302,7 +312,7 @@ export function ProduksiTab({ data, searchQuery }: { data: ProduksiData | null; 
               </div>
             </div>
           )}
-        </section>
+        </CollapsibleSection>
       </div>
     </div>
   );

@@ -265,7 +265,11 @@ export const getRoleBadge = (user: UnifiedUser) => {
     leader_operational: "Leader Operasional",
     leader_production: "Leader Produksi",
     leader_marketing: "Leader Marketing",
-    leader_cs: "Leader CS",
+    leader_sales: "Leader Sales",
+    leader_fat: "Leader FAT",
+    leader_rnd: "Leader RND",
+    leader_safar: "Leader Safar",
+    leader_ga: "Leader GA",
   };
   if (role.role_group === "management" && MGMT_LABELS[role.name]) {
     return (

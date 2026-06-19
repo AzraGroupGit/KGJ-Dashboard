@@ -26,6 +26,7 @@ import {
   type StageBottleneck,
   type ReworkData,
 } from "./shared";
+import { CollapsibleSection } from "./CollapsibleSection";
 
 export function OverviewTab({
   prodData,
@@ -121,29 +122,32 @@ export function OverviewTab({
 
       {/* ── Rework Overview ── */}
       {reworkData && (
-        <section className="rounded-lg border border-slate-200 bg-white">
-          <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <FlaskConical className="h-4 w-4 text-rose-500" />
-              <h2 className="text-sm font-semibold text-slate-900">
-                Rework
-              </h2>
-              <span className="text-xs text-slate-500">
-                {reworkData.reworkCount} dari {reworkData.totalOrders} order
+        <CollapsibleSection
+          header={
+            <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+              <div className="flex items-center gap-2">
+                <FlaskConical className="h-4 w-4 text-rose-500" />
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Rework
+                </h2>
+                <span className="text-xs text-slate-500">
+                  {reworkData.reworkCount} dari {reworkData.totalOrders} order
+                </span>
+              </div>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${
+                  reworkData.reworkRate > 20
+                    ? "bg-rose-50 text-rose-700 ring-rose-200"
+                    : reworkData.reworkRate > 10
+                      ? "bg-amber-50 text-amber-700 ring-amber-200"
+                      : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                }`}
+              >
+                {reworkData.reworkRate}% rework rate
               </span>
-            </div>
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${
-                reworkData.reworkRate > 20
-                  ? "bg-rose-50 text-rose-700 ring-rose-200"
-                  : reworkData.reworkRate > 10
-                    ? "bg-amber-50 text-amber-700 ring-amber-200"
-                    : "bg-emerald-50 text-emerald-700 ring-emerald-200"
-              }`}
-            >
-              {reworkData.reworkRate}% rework rate
-            </span>
-          </header>
+            </header>
+          }
+        >
           <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
             <div className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
               <p className="text-[10px] uppercase tracking-wide text-slate-500">
@@ -196,35 +200,37 @@ export function OverviewTab({
               </div>
             </div>
           )}
-        </section>
+        </CollapsibleSection>
       )}
 
       {/* ── Bottleneck Table ── */}
-      <section className="rounded-lg border border-slate-200 bg-white">
-        <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            <h2 className="text-sm font-semibold text-slate-900">
-              Bottleneck — Semua Tahap
-            </h2>
-            {bnData && (
-              <span className="text-xs text-slate-500 ml-1">
-                ·{" "}
-                <span className="font-medium text-slate-700">
-                  {bnData.summary.total_orders}
-                </span>{" "}
-                order aktif
+      <CollapsibleSection
+        header={
+          <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <h2 className="text-sm font-semibold text-slate-900">
+                Bottleneck — Semua Tahap
+              </h2>
+              {bnData && (
+                <span className="text-xs text-slate-500 ml-1">
+                  ·{" "}
+                  <span className="font-medium text-slate-700">
+                    {bnData.summary.total_orders}
+                  </span>{" "}
+                  order aktif
+                </span>
+              )}
+            </div>
+            {criticalBn > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700 ring-1 ring-inset ring-rose-200">
+                <AlertTriangle className="h-3 w-3" />
+                {criticalBn} kritis
               </span>
             )}
-          </div>
-          {criticalBn > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700 ring-1 ring-inset ring-rose-200">
-              <AlertTriangle className="h-3 w-3" />
-              {criticalBn} kritis
-            </span>
-          )}
-        </header>
-
+          </header>
+        }
+      >
         {/* Filter tabs */}
         <div className="flex items-center gap-0.5 border-b border-slate-100 px-5 overflow-x-auto">
           {[
@@ -347,26 +353,29 @@ export function OverviewTab({
             </table>
           </div>
         )}
-      </section>
+      </CollapsibleSection>
 
       {/* ── Snapshots ── */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Production snapshot */}
-        <section className="rounded-lg border border-slate-200 bg-white">
-          <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <Hammer className="h-4 w-4 text-amber-500" />
-              <h2 className="text-sm font-semibold text-slate-900">
-                Produksi — Status Tukang
-              </h2>
-            </div>
-            <span className="text-xs text-slate-500">
-              <span className="font-medium text-slate-700">
-                {activeExperts}
-              </span>{" "}
-              sedang bekerja
-            </span>
-          </header>
+        <CollapsibleSection
+          header={
+            <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+              <div className="flex items-center gap-2">
+                <Hammer className="h-4 w-4 text-amber-500" />
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Produksi — Status Tukang
+                </h2>
+              </div>
+              <span className="text-xs text-slate-500">
+                <span className="font-medium text-slate-700">
+                  {activeExperts}
+                </span>{" "}
+                sedang bekerja
+              </span>
+            </header>
+          }
+        >
           {!prodData || prodData.experts.length === 0 ? (
             <div className="p-8 text-center text-sm text-slate-400">
               Belum ada data tukang
@@ -433,18 +442,21 @@ export function OverviewTab({
               )}
             </div>
           )}
-        </section>
+        </CollapsibleSection>
 
         {/* Operational snapshot */}
-        <section className="rounded-lg border border-slate-200 bg-white">
-          <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <FileCheck2 className="h-4 w-4 text-sky-500" />
-              <h2 className="text-sm font-semibold text-slate-900">
-                Operasional — After Sales & QC
-              </h2>
-            </div>
-          </header>
+        <CollapsibleSection
+          header={
+            <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+              <div className="flex items-center gap-2">
+                <FileCheck2 className="h-4 w-4 text-sky-500" />
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Operasional — After Sales & QC
+                </h2>
+              </div>
+            </header>
+          }
+        >
           {!opData ? (
             <div className="p-8 text-center text-sm text-slate-400">
               Belum ada data operasional
@@ -562,7 +574,7 @@ export function OverviewTab({
               </div>
             </div>
           )}
-        </section>
+        </CollapsibleSection>
       </div>
     </div>
   );

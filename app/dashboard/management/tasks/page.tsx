@@ -24,6 +24,8 @@ import {
   MessageSquare,
   ClipboardList,
   StickyNote,
+  AlertTriangle,
+  CalendarClock,
 } from "lucide-react";
 
 interface TaskItem {
@@ -51,8 +53,6 @@ interface Task {
 
 type FilterTab = "all" | "pending" | "done";
 
-// ── Helpers ──────────────────────────────────────────────────────────
-
 function getDeadlineUrgency(deadline: string | null) {
   if (!deadline) return null;
   const d = new Date(deadline);
@@ -71,6 +71,47 @@ function formatDate(deadline: string) {
     year: "numeric",
   });
 }
+
+function getStatusStyle(status: string | null) {
+  switch (status) {
+    case "selesai":
+      return "bg-[#4A7A3A] border-[#4A7A3A] text-white";
+    case "proses":
+      return "bg-[#8A6010] border-[#8A6010] text-white";
+    default:
+      return "border-[#9A3A20] bg-white";
+  }
+}
+
+function getStatusLabel(status: string | null) {
+  switch (status) {
+    case "selesai":
+      return "Selesai";
+    case "proses":
+      return "Proses";
+    default:
+      return "Belum";
+  }
+}
+
+const C = {
+  page: "var(--color-parch-page)",
+  card: "var(--color-parch-card)",
+  border: "var(--color-parch-border)",
+  gold: "var(--color-gold)",
+  goldDim: "var(--color-gold-dim)",
+  goldText: "var(--color-gold-text)",
+  ink: "var(--color-text-ink)",
+  sepia: "var(--color-text-sepia)",
+  faded: "var(--color-text-faded)",
+  ghost: "var(--color-text-ghost)",
+  sage: "#4A7A3A",
+  sageBg: "var(--color-sage-bg)",
+  terra: "#9A3A20",
+  terraBg: "var(--color-terra-bg)",
+  amber: "#8A6010",
+  amberBg: "var(--color-amber-bg)",
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 // COMPONENT
@@ -98,6 +139,8 @@ export default function ManagementTasksPage() {
     id: string;
     title: string;
   } | null>(null);
+  const [showClearDone, setShowClearDone] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   useEffect(() => {
     const u = getClientUser();
@@ -129,6 +172,36 @@ export default function ManagementTasksPage() {
       return !allDone || items.length === 0;
     });
   }, [tasks, filter]);
+
+  const taskStats = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let overdue = 0;
+    let dueToday = 0;
+    tasks.forEach((task) => {
+      if (!task.deadline) return;
+      const items = task.items ?? [];
+      const allDone =
+        items.length > 0 &&
+        items.every((i) => i.progress?.[0]?.is_completed);
+      if (allDone) return;
+      const d = new Date(task.deadline);
+      d.setHours(0, 0, 0, 0);
+      if (d.getTime() < today.getTime()) overdue++;
+      else if (d.getTime() === today.getTime()) dueToday++;
+    });
+    return { overdue, dueToday, total: tasks.length };
+  }, [tasks]);
+
+  const doneCount = useMemo(() => {
+    let count = 0;
+    tasks.forEach((task) => {
+      (task.items ?? []).forEach((item) => {
+        if (item.progress?.[0]?.status === "selesai") count++;
+      });
+    });
+    return count;
+  }, [tasks]);
 
   const showAlert = (type: "success" | "error", message: string) => {
     setAlert({ type, message });
@@ -210,28 +283,6 @@ export default function ManagementTasksPage() {
     } catch {}
   };
 
-  const getStatusStyle = (status: string | null) => {
-    switch (status) {
-      case "selesai":
-        return "bg-emerald-500 border-emerald-500 text-white";
-      case "proses":
-        return "bg-orange-400 border-orange-400 text-white";
-      default:
-        return "border-rose-300 bg-white";
-    }
-  };
-
-  const getStatusLabel = (status: string | null) => {
-    switch (status) {
-      case "selesai":
-        return "Selesai";
-      case "proses":
-        return "Proses";
-      default:
-        return "Belum";
-    }
-  };
-
   const handleSaveItemNote = async (
     itemId: string,
     field: "notes" | "kendala",
@@ -258,6 +309,22 @@ export default function ManagementTasksPage() {
     } catch {}
   };
 
+  const handleClearDone = async () => {
+    setIsClearing(true);
+    try {
+      const res = await fetch("/api/management/tasks", { method: "DELETE" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      showAlert("success", `${json.deleted} item selesai dihapus`);
+      setShowClearDone(false);
+      refetch();
+    } catch (e) {
+      showAlert("error", e instanceof Error ? e.message : "Gagal");
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
   const toggleExpand = (taskId: string) => {
     setExpandedTasks((prev) => {
       const next = new Set(prev);
@@ -277,10 +344,54 @@ export default function ManagementTasksPage() {
   };
 
   return (
-    <div className="flex h-screen bg-stone-50">
+    <div className="flex h-screen bg-gray-50">
       <Sidebar role="management" />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header userEmail={clientUser?.email ?? ""} role="management" />
+        {/* Stats bar */}
+        <div
+          className="flex items-center gap-4 px-6 py-2"
+          style={{
+            background: C.card,
+            borderBottom: `0.5px solid ${C.goldDim}`,
+          }}
+        >
+          <div className="flex items-center gap-1.5 text-xs">
+            <AlertTriangle className="h-3.5 w-3.5" style={{ color: C.terra }} />
+            <span style={{ color: C.faded }}>Overdue</span>
+            <span
+              className="font-semibold tabular-nums"
+              style={{ color: C.terra }}
+            >
+              {taskStats.overdue}
+            </span>
+          </div>
+          <div className="h-4 w-px" style={{ background: C.border }} />
+          <div className="flex items-center gap-1.5 text-xs">
+            <CalendarClock
+              className="h-3.5 w-3.5"
+              style={{ color: C.amber }}
+            />
+            <span style={{ color: C.faded }}>Hari Ini</span>
+            <span
+              className="font-semibold tabular-nums"
+              style={{ color: C.amber }}
+            >
+              {taskStats.dueToday}
+            </span>
+          </div>
+          <div className="h-4 w-px" style={{ background: C.border }} />
+          <div className="flex items-center gap-1.5 text-xs">
+            <ClipboardList className="h-3.5 w-3.5" style={{ color: C.ghost }} />
+            <span style={{ color: C.faded }}>Total</span>
+            <span
+              className="font-semibold tabular-nums"
+              style={{ color: C.ink }}
+            >
+              {taskStats.total}
+            </span>
+          </div>
+        </div>
         <main className="flex-1 overflow-y-auto p-6">
           {alert && (
             <div className="mb-4">
@@ -294,14 +405,37 @@ export default function ManagementTasksPage() {
 
           <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h1 className="text-2xl font-bold text-stone-900">Tugas</h1>
-              <p className="text-sm text-stone-500">
+              <h1
+                className="text-2xl leading-tight"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontWeight: 500,
+                  color: C.ink,
+                }}
+              >
+                Tugas
+              </h1>
+              <p className="text-sm" style={{ color: C.faded }}>
                 Kelola checklist tugas harian Anda
               </p>
             </div>
+            {doneCount > 0 && (
+              <button
+                onClick={() => setShowClearDone(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition"
+                style={{
+                  background: C.card,
+                  borderColor: C.border,
+                  color: C.faded,
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Hapus {doneCount} Selesai
+              </button>
+            )}
           </div>
 
-          {/* ── Input bar ── */}
+          {/* Input bar */}
           <div className="mb-6 flex gap-2 items-end flex-wrap">
             <div className="flex-1 min-w-[200px]">
               <Input
@@ -331,7 +465,7 @@ export default function ManagementTasksPage() {
             </Button>
           </div>
 
-          {/* ── Filter tabs ── */}
+          {/* Filter tabs */}
           {tasks.length > 0 && (
             <div className="flex gap-1 mb-4">
               {(
@@ -344,11 +478,17 @@ export default function ManagementTasksPage() {
                 <button
                   key={key}
                   onClick={() => setFilter(key)}
-                  className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                    filter === key
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "bg-white text-stone-500 border border-stone-200 hover:bg-stone-100"
-                  }`}
+                  className="rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors"
+                  style={{
+                    background:
+                      filter === key ? C.gold : C.card,
+                    color:
+                      filter === key ? "#fff" : C.faded,
+                    border:
+                      filter === key
+                        ? "1px solid transparent"
+                        : `1px solid ${C.border}`,
+                  }}
                 >
                   {label}
                 </button>
@@ -356,25 +496,32 @@ export default function ManagementTasksPage() {
             </div>
           )}
 
-          {/* ── Task list ── */}
+          {/* Task list */}
           {isLoading ? (
             <Loading variant="skeleton" text="Memuat tasks..." />
           ) : filteredTasks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-stone-400">
-              <ClipboardList className="w-12 h-12 mb-3 text-stone-300" />
-              <p className="text-sm font-medium text-stone-400">
+            <div
+              className="flex flex-col items-center justify-center py-20 rounded-lg"
+              style={{
+                background: C.card,
+                border: `1px solid ${C.border}`,
+                color: C.ghost,
+              }}
+            >
+              <ClipboardList className="w-12 h-12 mb-3" style={{ color: C.ghost }} />
+              <p className="text-sm font-medium" style={{ color: C.faded }}>
                 {tasks.length === 0
                   ? "Belum ada task"
                   : filter === "done"
                     ? "Belum ada task selesai"
                     : "Semua task selesai"}
               </p>
-              <p className="text-xs text-stone-300 mt-1">
+              <p className="text-xs mt-1" style={{ color: C.ghost }}>
                 {tasks.length === 0
                   ? "Tambahkan task pertama Anda di atas"
                   : filter === "done"
                     ? "Selesaikan task untuk melihatnya di sini"
-                    : "Pilih tab \"Semua\" untuk melihat semua task"}
+                    : 'Pilih tab "Semua" untuk melihat semua task'}
               </p>
             </div>
           ) : (
@@ -385,29 +532,42 @@ export default function ManagementTasksPage() {
                   (i) => i.progress?.[0]?.is_completed,
                 ).length;
                 const allDone = items.length > 0 && done === items.length;
-                const someProgress = items.length > 0 && done > 0 && !allDone;
+                const someProgress =
+                  items.length > 0 && done > 0 && !allDone;
                 const untouched = items.length === 0;
                 const deadlineUrgency = getDeadlineUrgency(task.deadline);
                 const isExpanded = expandedTasks.has(task.id);
 
-                const cardBorderClass = allDone
-                  ? "border-l-emerald-400 border-l-2"
+                const cardBorderStyle = allDone
+                  ? { borderLeft: `2px solid ${C.sage}` }
                   : deadlineUrgency === "overdue"
-                    ? "border-l-red-400 border-l-2"
+                    ? { borderLeft: `2px solid ${C.terra}` }
                     : deadlineUrgency === "today"
-                      ? "border-l-amber-400 border-l-2"
-                      : "";
+                      ? { borderLeft: `2px solid ${C.amber}` }
+                      : {};
+
+                const progressBg = allDone
+                  ? C.sage
+                  : someProgress
+                    ? C.gold
+                    : C.border;
 
                 return (
                   <div
                     key={task.id}
-                    className={`group rounded-xl border border-stone-200 bg-white shadow-sm overflow-hidden ${cardBorderClass} ${untouched ? "opacity-75" : ""}`}
+                    className="group rounded-xl overflow-hidden"
+                    style={{
+                      background: C.card,
+                      border: `1px solid ${C.border}`,
+                      opacity: untouched ? 0.75 : 1,
+                      ...cardBorderStyle,
+                    }}
                   >
-                    {/* ── Card header ── */}
                     <div className="flex items-center gap-3 px-5 py-4">
                       <button
                         onClick={() => toggleExpand(task.id)}
-                        className="text-stone-400 shrink-0"
+                        style={{ color: C.ghost }}
+                        className="shrink-0"
                       >
                         {isExpanded ? (
                           <ChevronDown className="w-4 h-4" />
@@ -416,44 +576,50 @@ export default function ManagementTasksPage() {
                         )}
                       </button>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-stone-800">
+                        <p
+                          className="font-semibold"
+                          style={{ color: C.ink }}
+                        >
                           {task.title}
                         </p>
                         <div className="flex items-center gap-3 mt-1">
-                          {/* Progress bar */}
                           {items.length > 0 && !untouched && (
                             <div className="flex items-center gap-2">
-                              <div className="w-14 h-1.5 bg-stone-200 rounded-full overflow-hidden">
+                              <div
+                                className="w-14 h-1.5 rounded-full overflow-hidden"
+                                style={{ background: C.border }}
+                              >
                                 <div
                                   className="h-full rounded-full transition-all duration-300"
                                   style={{
                                     width: `${(done / items.length) * 100}%`,
-                                    background: allDone
-                                      ? "#10b981"
-                                      : someProgress
-                                        ? "#f59e0b"
-                                        : "#e5e7eb",
+                                    background: progressBg,
                                   }}
                                 />
                               </div>
-                              <span className="text-[10px] text-stone-400 tabular-nums">
+                              <span
+                                className="text-[10px] tabular-nums"
+                                style={{ color: C.faded }}
+                              >
                                 {done}/{items.length}
                               </span>
                             </div>
                           )}
                           {task.deadline && (
                             <span
-                              className={`flex items-center gap-1 text-xs ${
-                                deadlineUrgency === "overdue"
-                                  ? "text-red-500 font-medium"
-                                  : deadlineUrgency === "today"
-                                    ? "text-amber-600 font-medium"
-                                    : "text-stone-400"
-                              }`}
+                              className="flex items-center gap-1 text-xs font-medium"
+                              style={{
+                                color:
+                                  deadlineUrgency === "overdue"
+                                    ? C.terra
+                                    : deadlineUrgency === "today"
+                                      ? C.amber
+                                      : C.ghost,
+                              }}
                             >
                               <Calendar className="h-3 w-3" />
                               {deadlineUrgency === "overdue"
-                                ? `Terlambat — ${formatDate(task.deadline)}`
+                                ? `Terlambat \u2014 ${formatDate(task.deadline)}`
                                 : formatDate(task.deadline)}
                             </span>
                           )}
@@ -467,15 +633,18 @@ export default function ManagementTasksPage() {
                             title: task.title,
                           })
                         }
-                        className="p-1.5 text-stone-300 hover:text-red-600 rounded-lg hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                        className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                        style={{ color: C.ghost }}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
 
-                    {/* ── Expanded items ── */}
                     {isExpanded && (
-                      <div className="border-t border-stone-100 px-5 py-3 space-y-2">
+                      <div
+                        className="px-5 py-3 space-y-2"
+                        style={{ borderTop: `0.5px solid ${C.goldDim}` }}
+                      >
                         {items.map((item) => {
                           const notesOpen = expandedNotes.has(item.id);
                           return (
@@ -490,9 +659,11 @@ export default function ManagementTasksPage() {
                                   }
                                   className={`w-6 h-6 rounded border-2 flex items-center justify-center shrink-0 text-[10px] font-bold transition-colors ${getStatusStyle(item.progress?.[0]?.status ?? null)}`}
                                 >
-                                  {item.progress?.[0]?.status === "selesai" ? (
+                                  {item.progress?.[0]?.status ===
+                                  "selesai" ? (
                                     <Check className="w-3 h-3" />
-                                  ) : item.progress?.[0]?.status === "proses" ? (
+                                  ) : item.progress?.[0]?.status ===
+                                    "proses" ? (
                                     "…"
                                   ) : (
                                     ""
@@ -500,22 +671,34 @@ export default function ManagementTasksPage() {
                                 </button>
                                 <div className="flex-1 min-w-0 flex items-center gap-2">
                                   <span
-                                    className={`text-sm ${
-                                      item.progress?.[0]?.status === "selesai"
-                                        ? "text-stone-400 line-through"
-                                        : "text-stone-700"
-                                    }`}
+                                    className="text-sm"
+                                    style={{
+                                      color:
+                                        item.progress?.[0]?.status ===
+                                        "selesai"
+                                          ? C.faded
+                                          : C.sepia,
+                                      textDecoration:
+                                        item.progress?.[0]?.status ===
+                                        "selesai"
+                                          ? "line-through"
+                                          : "none",
+                                    }}
                                   >
                                     {item.title}
                                   </span>
                                   <span
-                                    className={`text-[10px] font-medium shrink-0 ${
-                                      item.progress?.[0]?.status === "selesai"
-                                        ? "text-emerald-600"
-                                        : item.progress?.[0]?.status === "proses"
-                                          ? "text-orange-500"
-                                          : "text-rose-400"
-                                    }`}
+                                    className="text-[10px] font-medium shrink-0"
+                                    style={{
+                                      color:
+                                        item.progress?.[0]?.status ===
+                                        "selesai"
+                                          ? C.sage
+                                          : item.progress?.[0]?.status ===
+                                              "proses"
+                                            ? C.amber
+                                            : C.terra,
+                                    }}
                                   >
                                     {getStatusLabel(
                                       item.progress?.[0]?.status ?? null,
@@ -524,11 +707,15 @@ export default function ManagementTasksPage() {
                                 </div>
                                 <button
                                   onClick={() => toggleNotes(item.id)}
-                                  className={`p-1 rounded transition-colors shrink-0 ${
-                                    notesOpen
-                                      ? "text-indigo-500 bg-indigo-50"
-                                      : "text-stone-300 hover:text-stone-500"
-                                  }`}
+                                  className="p-1 rounded transition-colors shrink-0"
+                                  style={{
+                                    color: notesOpen
+                                      ? C.gold
+                                      : C.ghost,
+                                    background: notesOpen
+                                      ? "var(--color-parch-raised)"
+                                      : "transparent",
+                                  }}
                                   title="Toggle notes"
                                 >
                                   <StickyNote className="w-3.5 h-3.5" />
@@ -541,13 +728,13 @@ export default function ManagementTasksPage() {
                                       title: item.title,
                                     })
                                   }
-                                  className="text-stone-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                  style={{ color: C.ghost }}
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
 
-                              {/* ── Collapsible notes ── */}
                               {notesOpen && (
                                 <div className="flex gap-2 ml-0 sm:ml-7 flex-wrap sm:flex-nowrap">
                                   <input
@@ -574,14 +761,19 @@ export default function ManagementTasksPage() {
                                     }
                                     placeholder="Catatan..."
                                     disabled={isSaving}
-                                    className="flex-1 min-w-0 rounded-md border border-stone-200 px-2 py-1 text-[11px] text-stone-600 bg-white focus:border-indigo-400 focus:outline-none"
+                                    className="flex-1 min-w-0 rounded-md border px-2 py-1 text-[11px] bg-white focus:outline-none"
+                                    style={{
+                                      borderColor: C.border,
+                                      color: C.sepia,
+                                    }}
                                   />
                                   <input
                                     type="text"
                                     value={
                                       itemKendala[item.id] !== undefined
                                         ? itemKendala[item.id]
-                                        : (item.progress?.[0]?.kendala ?? "")
+                                        : (item.progress?.[0]?.kendala ??
+                                          "")
                                     }
                                     onChange={(e) =>
                                       setItemKendala((p) => ({
@@ -599,17 +791,24 @@ export default function ManagementTasksPage() {
                                       )
                                     }
                                     placeholder="Kendala..."
-                                    className="flex-1 min-w-0 rounded-md border border-rose-200 px-2 py-1 text-[11px] text-rose-600 bg-white focus:border-rose-400 focus:outline-none"
+                                    className="flex-1 min-w-0 rounded-md border px-2 py-1 text-[11px] bg-white focus:outline-none"
+                                    style={{
+                                      borderColor: C.border,
+                                      color: C.terra,
+                                    }}
                                     disabled={isSaving}
                                   />
                                 </div>
                               )}
 
-                              {/* ── Admin notes ── */}
                               {item.progress?.[0]?.admin_notes && (
-                                <p className="text-xs text-indigo-600 ml-0 sm:ml-7 mt-1 flex items-center gap-1">
+                                <p
+                                  className="text-xs ml-0 sm:ml-7 mt-1 flex items-center gap-1"
+                                  style={{ color: C.faded }}
+                                >
                                   <MessageSquare className="w-3 h-3 shrink-0" />
-                                  Admin: {item.progress[0].admin_notes}
+                                  Admin:{" "}
+                                  {item.progress[0].admin_notes}
                                 </p>
                               )}
                             </div>
@@ -668,6 +867,17 @@ export default function ManagementTasksPage() {
             : handleDeleteItem
         }
         onCancel={() => setDeleteTarget(null)}
+      />
+      <ConfirmDialog
+        isOpen={showClearDone}
+        variant="danger"
+        title="Hapus Semua Item Selesai?"
+        message={`${doneCount} item berstatus selesai akan dihapus permanen dari semua task Anda. Tindakan ini tidak dapat dibatalkan.`}
+        confirmText="Hapus Semua"
+        cancelText="Batal"
+        isLoading={isClearing}
+        onConfirm={handleClearDone}
+        onCancel={() => setShowClearDone(false)}
       />
     </div>
   );

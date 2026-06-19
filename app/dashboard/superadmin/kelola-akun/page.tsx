@@ -23,6 +23,8 @@ import {
   Trash2,
   User,
   Users,
+  Wrench,
+  Shield,
 } from "lucide-react";
 import {
   SEGMENT_OPTIONS,
@@ -63,7 +65,7 @@ import {
 } from "@/lib/schemas/kelola-akun";
 
 export default function KelolaAkunPage() {
-  const [activeTab, setActiveTab] = useState<"users" | "branches">("users");
+  const [activeTab, setActiveTab] = useState<"all" | "bms" | "oprprd" | "management" | "branches">("all");
   const [clientUser, setClientUser] = useState<ClientUser | null>(null);
   const [alert, setAlert] = useState<AlertState>(null);
 
@@ -181,12 +183,25 @@ export default function KelolaAkunPage() {
     ).length,
   };
 
+  const displayUsers = (() => {
+    if (activeTab === "all") return filteredUsers;
+    if (activeTab === "bms") return allUsers.filter((u) => u.userType === "bms");
+    if (activeTab === "oprprd") return allUsers.filter((u) => u.userType === "oprprd");
+    if (activeTab === "management") return allUsers.filter((u) => u.userType === "supervisor" || u.userType === "management");
+    return [];
+  })();
+
   // ─── Modal handlers ────────────────────────────────────────────
 
   const handleOpenCreateModal = () => {
     setIsEditMode(false);
     setSelectedUser(null);
-    setNewUserType(null);
+    setNewUserType(
+      activeTab === "bms" ? "bms" :
+      activeTab === "oprprd" ? "oprprd" :
+      activeTab === "management" ? "management" :
+      null
+    );
     setBmsForm(EMPTY_BMS_FORM);
     setOprprdForm(EMPTY_OPRPRD_FORM);
     setSupervisorForm(EMPTY_SUPERVISOR_FORM);
@@ -598,10 +613,10 @@ export default function KelolaAkunPage() {
               </div>
               <Button
                 variant="primary"
-                onClick={() => activeTab === "users" ? handleOpenCreateModal() : handleOpenBranchModal()}
+                onClick={() => activeTab === "branches" ? handleOpenBranchModal() : handleOpenCreateModal()}
                 leftIcon={<Plus className="w-4 h-4" />}
               >
-                {activeTab === "users" ? "Buat Akun Baru" : "Tambah Cabang"}
+                {activeTab === "branches" ? "Tambah Cabang" : "Buat Akun Baru"}
               </Button>
             </div>
 
@@ -614,60 +629,81 @@ export default function KelolaAkunPage() {
 
             {/* Tabs */}
             <div className="border-b border-gray-200 mb-8">
-              <nav className="flex gap-8">
-                {(["users", "branches"] as const).map((tab) => (
+              <nav className="flex gap-6 overflow-x-auto">
+                {([
+                  { key: "all" as const, label: "Semua User", icon: Users },
+                  { key: "bms" as const, label: "BMS", icon: Building2 },
+                  { key: "oprprd" as const, label: "OPRPRD", icon: Wrench },
+                  { key: "management" as const, label: "Manajemen", icon: Shield },
+                  { key: "branches" as const, label: "Cabang", icon: MapPin },
+                ]).map(({ key, label, icon: Icon }) => (
                   <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`pb-4 px-1 font-medium text-sm transition-colors ${activeTab === tab ? "text-indigo-600 border-b-2 border-indigo-600" : "text-gray-500 hover:text-gray-700"}`}
+                    key={key}
+                    onClick={() => setActiveTab(key)}
+                    className={`flex items-center gap-1.5 pb-4 px-1 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === key ? "text-indigo-600 border-b-2 border-indigo-600" : "text-gray-500 hover:text-gray-700"}`}
                   >
-                    <div className="flex items-center gap-2">
-                      {tab === "users" ? <Users className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
-                      {tab === "users" ? "Manajemen User" : "Data Cabang"}
-                    </div>
+                    <Icon className="w-4 h-4" />
+                    {label}
                   </button>
                 ))}
               </nav>
             </div>
 
             {/* ── Tab: Users ── */}
-            {activeTab === "users" && (
+            {activeTab !== "branches" && (
               <>
                 {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-                  {[
-                    { label: "Total", value: stats.total, color: "border-indigo-400", text: "text-indigo-700" },
-                    { label: "BMS", value: stats.bms, color: "border-purple-400", text: "text-purple-700" },
-                    { label: "Manajemen", value: stats.management, color: "border-orange-400", text: "text-orange-700" },
-                    { label: "Operasional", value: stats.operational, color: "border-blue-400", text: "text-blue-700" },
-                    { label: "Produksi", value: stats.production, color: "border-amber-400", text: "text-amber-700" },
-                    { label: "Aktif", value: stats.active, color: "border-green-400", text: "text-green-700" },
-                  ].map(({ label, value, color, text }) => (
-                    <div key={label} className={`bg-white rounded-xl shadow-sm p-4 border-t-2 ${color}`}>
-                      <p className="text-xs text-gray-500">{label}</p>
-                      <p className={`text-xl font-bold ${text}`}>{value}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Filter bar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                  <div className="flex flex-wrap gap-2">
-                    {SEGMENT_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => setSegment(opt.value)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${segment === opt.value ? "bg-indigo-600 text-white" : "bg-white text-gray-600 border border-gray-200 hover:border-indigo-300"}`}
-                      >
-                        {opt.label}
-                      </button>
+                {activeTab === "all" ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                    {[
+                      { label: "Total", value: stats.total, color: "border-indigo-400", text: "text-indigo-700" },
+                      { label: "BMS", value: stats.bms, color: "border-purple-400", text: "text-purple-700" },
+                      { label: "Manajemen", value: stats.management, color: "border-orange-400", text: "text-orange-700" },
+                      { label: "Operasional", value: stats.operational, color: "border-blue-400", text: "text-blue-700" },
+                      { label: "Produksi", value: stats.production, color: "border-amber-400", text: "text-amber-700" },
+                      { label: "Aktif", value: stats.active, color: "border-green-400", text: "text-green-700" },
+                    ].map(({ label, value, color, text }) => (
+                      <div key={label} className={`bg-white rounded-xl shadow-sm p-4 border-t-2 ${color}`}>
+                        <p className="text-xs text-gray-500">{label}</p>
+                        <p className={`text-xl font-bold ${text}`}>{value}</p>
+                      </div>
                     ))}
                   </div>
-                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-                    <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
-                    Tampilkan nonaktif
-                  </label>
-                </div>
+                ) : (
+                  <div className="flex gap-4 mb-6">
+                    <div className="bg-white rounded-xl shadow-sm p-4 border-t-2 border-indigo-400 flex-1">
+                      <p className="text-xs text-gray-500">Total</p>
+                      <p className="text-xl font-bold text-indigo-700">{displayUsers.length}</p>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm p-4 border-t-2 border-green-400 flex-1">
+                      <p className="text-xs text-gray-500">Aktif</p>
+                      <p className="text-xl font-bold text-green-700">
+                        {displayUsers.filter((u) => u.userType === "bms" ? u.status === "active" : u.is_active).length}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Filter bar — only on "all" tab */}
+                {activeTab === "all" && (
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div className="flex flex-wrap gap-2">
+                      {SEGMENT_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setSegment(opt.value)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${segment === opt.value ? "bg-indigo-600 text-white" : "bg-white text-gray-600 border border-gray-200 hover:border-indigo-300"}`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+                      <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                      Tampilkan nonaktif
+                    </label>
+                  </div>
+                )}
 
                 {/* Table */}
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -681,10 +717,10 @@ export default function KelolaAkunPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {filteredUsers.length === 0 ? (
+                        {displayUsers.length === 0 ? (
                           <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-500 text-sm">Tidak ada data user.</td></tr>
                         ) : (
-                          filteredUsers.map((user) => (
+                          displayUsers.map((user) => (
                             <tr key={user.id} className="hover:bg-gray-50">
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="font-medium text-gray-900">{user.full_name}</div>
@@ -818,12 +854,12 @@ export default function KelolaAkunPage() {
               )}
 
               {/* User Type Picker */}
-              {activeTab === "users" && !isEditMode && newUserType === null && (
+              {activeTab !== "branches" && !isEditMode && newUserType === null && (
                 <UserTypePicker onSelect={setNewUserType} />
               )}
 
               {/* BMS Form */}
-              {activeTab === "users" && (isEditMode ? selectedUser?.userType === "bms" : newUserType === "bms") && (
+              {activeTab !== "branches" && (isEditMode ? selectedUser?.userType === "bms" : newUserType === "bms") && (
                 <BmsUserForm
                   isEditMode={isEditMode}
                   isSaving={isSaving}
@@ -838,7 +874,7 @@ export default function KelolaAkunPage() {
               )}
 
               {/* Supervisor Form */}
-              {activeTab === "users" && (isEditMode ? selectedUser?.userType === "supervisor" : newUserType === "supervisor") && (
+              {activeTab !== "branches" && (isEditMode ? selectedUser?.userType === "supervisor" : newUserType === "supervisor") && (
                 <SupervisorUserForm
                   isEditMode={isEditMode}
                   isSaving={isSaving}
@@ -852,7 +888,7 @@ export default function KelolaAkunPage() {
               )}
 
               {/* OPRPRD Form */}
-              {activeTab === "users" && (isEditMode ? selectedUser?.userType === "oprprd" : newUserType === "oprprd") && (
+              {activeTab !== "branches" && (isEditMode ? selectedUser?.userType === "oprprd" : newUserType === "oprprd") && (
                 <OprprdUserForm
                   isEditMode={isEditMode}
                   isSaving={isSaving}
@@ -867,7 +903,7 @@ export default function KelolaAkunPage() {
               )}
 
               {/* Management Form */}
-              {activeTab === "users" && (isEditMode ? selectedUser?.userType === "management" : newUserType === "management") && (
+              {activeTab !== "branches" && (isEditMode ? selectedUser?.userType === "management" : newUserType === "management") && (
                 <ManagementUserForm
                   isEditMode={isEditMode}
                   isSaving={isSaving}

@@ -228,6 +228,37 @@ export default function StageInputForm({
         onSubmit={handleSubmit}
         className="rounded-2xl border border-stone-200/80 bg-white/90 backdrop-blur-sm p-6 shadow-sm space-y-4"
       >
+        {/* Sticky progress bar */}
+        {(() => {
+          const visible = fields.filter((f) => !SKIP_TYPES.has(f.type));
+          if (visible.length < 2) return null;
+          const filled = visible.filter((f) => {
+            const v = formData[f.name];
+            if (v == null || v === "") return false;
+            if (Array.isArray(v)) return v.length > 0;
+            if (typeof v === "object") return Object.keys(v as object).length > 0;
+            return true;
+          }).length;
+          return (
+            <div className="sticky top-0 z-10 -mx-6 -mt-6 px-6 pt-4 pb-2 rounded-t-2xl bg-white/95 backdrop-blur-sm border-b border-stone-100">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-medium text-stone-500">
+                  Progress Input
+                </span>
+                <span className="text-[11px] font-semibold text-stone-600 tabular-nums">
+                  {filled}/{visible.length} terisi
+                </span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-stone-100">
+                <div
+                  className="h-full rounded-full bg-amber-500 transition-all duration-300"
+                  style={{ width: `${(filled / visible.length) * 100}%` }}
+                />
+              </div>
+            </div>
+          );
+        })()}
+
         {fields.map((field) => {
           if (SKIP_TYPES.has(field.type)) return null;
 

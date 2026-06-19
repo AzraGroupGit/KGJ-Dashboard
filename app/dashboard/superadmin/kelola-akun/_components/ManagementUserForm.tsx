@@ -18,7 +18,11 @@ const MANAGEMENT_ROLE_LABELS: Record<string, string> = {
   leader_operational: "Leader Operasional",
   leader_production: "Leader Produksi",
   leader_marketing: "Leader Marketing",
-  leader_cs: "Leader CS",
+  leader_sales: "Leader Sales",
+  leader_fat: "Leader FAT",
+  leader_rnd: "Leader RND",
+  leader_safar: "Leader Safar",
+  leader_ga: "Leader GA",
 };
 
 interface ManagementUserFormProps {

@@ -12,7 +12,7 @@ import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
 import type { BottleneckData } from "@/types/bottleneck";
-import { Search, RefreshCw } from "lucide-react";
+import { Search } from "lucide-react";
 import type { Channel } from "pusher-js";
 import {
   buildUrl,
@@ -24,6 +24,7 @@ import {
 import { OverviewTab } from "./_components/OverviewTab";
 import { ProduksiTab } from "./_components/ProduksiTab";
 import { OperasionalTab } from "./_components/OperasionalTab";
+import { FilterPresets } from "./_components/FilterPresets";
 
 type ActiveTab = "overview" | "produksi" | "operasional";
 
@@ -88,13 +89,9 @@ export default function MonitoringPage() {
     (reworkQuery.data as { data: ReworkData } | undefined)?.data ?? null;
 
   const initialLoading = queries.some((q) => q.isLoading);
-  const isRefetching = queries.some((q) => q.isFetching);
   const hasData = queries.some((q) => !!q.data);
   const anyError = queries.find((q) => q.error);
   const error = !initialLoading && !hasData && anyError ? (anyError.error instanceof Error ? anyError.error.message : "Terjadi kesalahan") : null;
-
-  const dataUpdatedAts = queries.map((q) => q.dataUpdatedAt).filter(Boolean);
-  const lastUpdated = dataUpdatedAts.length > 0 ? new Date(Math.max(...dataUpdatedAts)) : null;
 
   const refreshAll = () => { queries.forEach((q) => { q.refetch(); }); };
 
@@ -212,7 +209,7 @@ export default function MonitoringPage() {
                 Pantau operasional & produksi secara terpadu
               </p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
               <div className="relative">
                 <input
                   type="text"
@@ -223,36 +220,35 @@ export default function MonitoringPage() {
                 />
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               </div>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-36 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
-                title="Dari tanggal"
-              />
-              <span className="text-xs text-slate-400">—</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-36 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
-                title="Sampai tanggal"
-              />
-              {lastUpdated && (
-                <span className="text-xs text-slate-400 tabular-nums">
-                  {lastUpdated.toLocaleTimeString("id-ID")}
-                </span>
-              )}
-              <button
-                onClick={refreshAll}
-                disabled={isRefetching}
-                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
-              >
-                <RefreshCw
-                  className={`h-3.5 w-3.5 ${isRefetching ? "animate-spin" : ""}`}
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-36 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
+                  title="Dari tanggal"
                 />
-                Refresh
-              </button>
+                <span className="text-xs text-slate-400">—</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-36 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
+                  title="Sampai tanggal"
+                />
+                <FilterPresets
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  dateFrom={dateFrom}
+                  setDateFrom={setDateFrom}
+                  dateTo={dateTo}
+                  setDateTo={setDateTo}
+                  activeTab={activeTab}
+                  setActiveTab={(v) => setActiveTab(v as ActiveTab)}
+                  bnFilter={bnFilter}
+                  setBnFilter={(v) => setBnFilter(v as "all" | "production" | "operational" | "completed")}
+                />
+              </div>
             </div>
           </div>
 
