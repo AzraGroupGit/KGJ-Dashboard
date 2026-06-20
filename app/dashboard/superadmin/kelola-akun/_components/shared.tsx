@@ -129,7 +129,7 @@ export const EMPTY_MANAGEMENT_FORM = {
   full_name: "",
   email: "",
   password: "",
-  role: "leader_operational" as string,
+  role: "" as string,
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
