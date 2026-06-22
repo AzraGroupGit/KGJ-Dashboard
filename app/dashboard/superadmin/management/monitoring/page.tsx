@@ -51,7 +51,10 @@ export default function ManagementMonitoringPage() {
     queryFn: () => fetcher("/api/superadmin/management-tasks"),
   });
 
-  const managers = useMemo(() => data?.data ?? [], [data]);
+  const managers = useMemo(() => {
+    const all = data?.data ?? [];
+    return all.filter((m) => m.role_name.startsWith("leader_"));
+  }, [data]);
 
   const filteredManagers = useMemo(() => {
     const result = managers.filter((m) => {
