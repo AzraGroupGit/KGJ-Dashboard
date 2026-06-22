@@ -36,7 +36,10 @@ export default function ManagementHistoryPage() {
     queryFn: () => fetcher("/api/superadmin/management-tasks"),
   });
 
-  const managers = useMemo(() => data?.data ?? [], [data]);
+  const managers = useMemo(() => {
+    const all = data?.data ?? [];
+    return all.filter((m) => m.role_name.startsWith("leader_"));
+  }, [data]);
 
   const managerRates = useMemo(() => {
     const map = new Map<string, { done: number; total: number; rate: number }>();

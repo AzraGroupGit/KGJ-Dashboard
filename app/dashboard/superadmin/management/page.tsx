@@ -36,7 +36,10 @@ export default function ManagementDashboardPage() {
     queryFn: () => fetcher("/api/superadmin/management-tasks"),
   });
 
-  const managers = useMemo(() => data?.data ?? [], [data]);
+  const managers = useMemo(() => {
+    const all = data?.data ?? [];
+    return all.filter((m) => m.role_name.startsWith("leader_"));
+  }, [data]);
   const stats = useMemo(() => computeDashboardStats(managers), [managers]);
   const animatedRate = useAnimatedValue(stats.overallRate);
   const comparison = useMemo(() => sortByRate(managers), [managers]);
@@ -60,6 +63,15 @@ export default function ManagementDashboardPage() {
   }, [comparison]);
 
   const handleDrillClose = useCallback(() => setDrillManager(null), []);
+  const handleEscalateModal = useCallback(async () => {
+    if (!drillManager) return;
+    const allItems = drillManager.tasks.flatMap((tk) => (tk.items ?? []).map((item) => ({ item, taskTitle: tk.title, deadline: tk.deadline })));
+    const overdueItems = allItems.filter((i) => isOverdue(i.deadline ?? null, i.item.progress?.[0]?.status ?? null));
+    const taskList = overdueItems.map((i) => `\u25C6 ${i.item.title} (${i.taskTitle})`).join("\n");
+    const text = `Eskalasi \u2014 ${drillManager.full_name}\n\nTask overdue:\n${taskList}`;
+    try { await navigator.clipboard.writeText(text); } catch { /* clipboard unavailable */ }
+    handleDrillClose();
+  }, [drillManager, handleDrillClose]);
   useEffect(() => {
     if (!drillManager) return;
     const h = (e: KeyboardEvent) => { if (e.key === "Escape") handleDrillClose(); };
@@ -95,6 +107,7 @@ export default function ManagementDashboardPage() {
                   <p className="text-[10px] uppercase tracking-[0.2em] mb-4" style={{ color: C.faded }}>Completion Rate</p>
                   <span className="text-[140px] leading-none block" style={{ fontFamily: "var(--font-display)", fontWeight: 300, letterSpacing: "-0.03em", color: stats.overallRate >= 80 ? C.sage : stats.overallRate >= 50 ? C.gold : C.terra }}>{animatedRate}</span>
                   <p className="text-sm mt-2" style={{ color: C.ghost }}>{stats.done} dari {stats.total} item · {managers.length} manager</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: C.ghost }}>Keseluruhan · semua periode</p>
                   <TrendingUp className="h-5 w-5 mt-3" style={{ color: stats.overallRate >= 50 ? C.sage : C.terra }} />
                 </div>
                 <div className="flex-1 grid grid-cols-2 gap-0">
@@ -223,6 +236,11 @@ export default function ManagementDashboardPage() {
                       <div className="flex-1"><p className="text-xs uppercase tracking-wider mb-1" style={{ color: C.faded }}>Completion</p><span className="text-3xl" style={{ fontFamily: "var(--font-display)", fontWeight: 600, color: sc }}>{s.rate}%</span><span className="text-sm ml-2" style={{ color: C.faded }}>{s.done}/{s.total} tasks</span></div>
                     </div>
                     <div className="h-2 rounded-full overflow-hidden" style={{ background: C.border }}><div className="h-full rounded-full" style={{ width: `${s.rate}%`, background: sc }} /></div>
+                    {s.rate < 80 && (
+                      <button onClick={handleEscalateModal} className="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium text-white transition-colors" style={{ background: C.gold }} onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#9A7209"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = C.gold; }}>
+                        Eskalasi
+                      </button>
+                    )}
                     <div>
                       <p className="text-[9px] uppercase tracking-[0.22em] mb-3" style={{ color: C.gold }}>Task Breakdown</p>
                       {drillManager.tasks.flatMap((task) => (task.items ?? []).map((item) => {
