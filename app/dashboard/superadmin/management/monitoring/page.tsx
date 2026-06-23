@@ -10,12 +10,10 @@ import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import Alert from "@/components/ui/Alert";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
-import { LayoutGrid, List, Calendar, X } from "lucide-react";
-import { MetricsSection } from "@/components/dashboard/superadmin/MetricsSection";
+import { LayoutGrid, List, Calendar, X, TrendingUp, AlertTriangle, Clock } from "lucide-react";
 import { ManagerCard } from "@/components/dashboard/superadmin/ManagerCard";
 import { TaskDetailModal } from "@/components/dashboard/superadmin/TaskDetailModal";
-import { Diamond } from "@/components/dashboard/superadmin/Diamond";
-import { C, ROLE_DISPLAY } from "../_shared/constants";
+import { ROLE_DISPLAY } from "../_shared/constants";
 import type { ManagerData } from "../_shared/types";
 import { getManagerStats, isOverdue } from "../_shared/utils";
 import type { Manager } from "@/components/dashboard/superadmin/ManagerCard";
@@ -125,50 +123,94 @@ export default function ManagementMonitoringPage() {
   const filterHint = hasFilters && filteredManagers.length !== managers.length ? `${filteredManagers.length} managers dari ${managers.length} total` : null;
   useEffect(() => { setVisibleCount(PAGE_SIZE); }, [searchName, dateFrom, dateTo, sortKey]);
 
-  const inputBase = "block w-full rounded border px-3 py-2 text-sm outline-none transition-colors";
-  const inputStyle = { borderColor: "var(--color-parch-border)", color: "var(--color-text-ink)", background: "var(--color-parch-sidebar)" };
+  const P = {
+    purple: "#7c3aed", purpleLight: "#f5f3ff", purpleMuted: "#c4b5fd",
+    green: "#059669", greenLight: "#ecfdf5", greenMuted: "#a7f3d0",
+    gray: "#6b7280", grayLight: "#f9fafb", grayBorder: "#e5e7eb",
+    orange: "#ea580c", orangeLight: "#fff7ed", ink: "#111827",
+  };
+
+  const inputBase = "block w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors";
+  const inputStyle = { borderColor: P.grayBorder, color: P.ink, background: "#fff" };
+  const bgStyle = {
+    background:
+      "#f8f9fb url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='0.75' fill='rgba(139,92,246,0.06)'/%3E%3C/svg%3E\") repeat",
+  };
+  const cardBase: React.CSSProperties = { background: "#fff", borderRadius: 16, border: `1px solid ${P.grayBorder}`, padding: 20 };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen" style={bgStyle}>
       <Sidebar role="superadmin" />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
         <main className="flex-1 overflow-y-auto p-6">
           {alert && <div className="mb-4"><Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} /></div>}
 
-          <div className="flex items-start justify-between gap-4 mb-2">
-            <div>
-              <h2 className="text-[28px] leading-tight" style={{ fontFamily: "var(--font-display)", fontWeight: 300, color: C.ink }}>Monitoring <i style={{ color: C.gold, fontWeight: 400 }}>Manajemen</i></h2>
-              <p className="text-sm mt-0.5" style={{ color: C.faded }}>Pantau progress task leaders untuk keseluruhan divisi</p>
-            </div>
-            <div className="flex rounded overflow-hidden shrink-0" style={{ border: `1px solid ${C.border}` }}>
-              <button onClick={() => setViewMode("cards")} className="px-3 py-2 text-xs transition-colors focus:outline-none focus-visible:ring-2" style={{ background: viewMode === "cards" ? C.gold : "var(--color-parch-sidebar)", color: viewMode === "cards" ? "#fff" : C.faded }}><LayoutGrid className="h-3.5 w-3.5" /></button>
-              <button onClick={() => setViewMode("table")} className="px-3 py-2 text-xs transition-colors focus:outline-none focus-visible:ring-2" style={{ background: viewMode === "table" ? C.gold : "var(--color-parch-sidebar)", color: viewMode === "table" ? "#fff" : C.faded }}><List className="h-3.5 w-3.5" /></button>
+          {/* Title Banner */}
+          <div className="mb-6 p-5 rounded-2xl relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${P.purpleLight} 0%, #fff 60%)`, border: `1px solid ${P.grayBorder}` }}>
+            <div className="absolute top-0 right-0 w-48 h-full pointer-events-none opacity-30" style={{ background: `radial-gradient(ellipse at top right, ${P.purpleMuted} 0%, transparent 70%)` }} />
+            <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-1" style={{ color: P.purple }}>Management Monitoring</p>
+                <h2 className="text-[28px] font-bold leading-tight" style={{ color: P.ink }}>Monitor <span style={{ color: P.purple }}>Manajemen</span></h2>
+              </div>
+              <div className="flex items-center gap-4 sm:pb-1">
+                {[
+                  { label: "Total", value: metrics.total, color: P.purple },
+                  { label: "Selesai", value: metrics.done, color: P.green },
+                  { label: "Overdue", value: metrics.overdue, color: "#dc2626" },
+                  { label: "Due Soon", value: metrics.dueSoon, color: P.orange },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="text-center">
+                    <p className="text-[10px] font-medium" style={{ color: P.gray }}>{label}</p>
+                    <p className="text-base font-bold" style={{ color }}>{value}</p>
+                  </div>
+                ))}
+                <div className="flex rounded-lg overflow-hidden shrink-0 border" style={{ borderColor: P.grayBorder }}>
+                  <button onClick={() => setViewMode("cards")} className="px-3 py-2 text-xs font-medium transition-colors" style={{ background: viewMode === "cards" ? P.purple : "#fff", color: viewMode === "cards" ? "#fff" : P.gray }}><LayoutGrid className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => setViewMode("table")} className="px-3 py-2 text-xs font-medium transition-colors" style={{ background: viewMode === "table" ? P.purple : "#fff", color: viewMode === "table" ? "#fff" : P.gray }}><List className="h-3.5 w-3.5" /></button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <MetricsSection completionRate={metrics.completionRate} totalItems={metrics.total} doneItems={metrics.done} atRiskCount={metrics.atRisk} overdueCount={metrics.overdue} dueSoonCount={metrics.dueSoon} />
+          {/* Inline Metrics */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            {[
+              { label: "Completion Rate", value: `${metrics.completionRate}%`, icon: <TrendingUp size={16} />, color: P.purple, bg: P.purpleLight },
+              { label: "Total Items", value: metrics.total, icon: <LayoutGrid size={16} />, color: P.green, bg: P.greenLight },
+              { label: "At-Risk / Overdue", value: metrics.atRisk + metrics.overdue, icon: <AlertTriangle size={16} />, color: metrics.overdue > 0 ? "#dc2626" : P.orange, bg: metrics.overdue > 0 ? "#fef2f2" : P.orangeLight },
+              { label: "Due in 2 Days", value: metrics.dueSoon, icon: <Clock size={16} />, color: metrics.dueSoon > 0 ? P.orange : P.green, bg: metrics.dueSoon > 0 ? P.orangeLight : P.greenLight },
+            ].map(({ label, value, icon, color, bg }) => (
+              <div key={label} className="rounded-xl p-4" style={{ background: bg }}>
+                <div className="flex items-center gap-2 mb-2" style={{ color }}>{icon}</div>
+                <p className="text-[10px] font-medium mb-0.5" style={{ color: P.gray }}>{label}</p>
+                <p className="text-xl font-bold" style={{ color }}>{value}</p>
+              </div>
+            ))}
+          </div>
 
-          <div className="sticky top-0 z-10 -mx-6 px-6 pt-3 pb-3 mb-3" style={{ background: "#F9FAFB", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}>
+          {/* Filter Bar */}
+          <div className="mb-4 p-4 rounded-2xl" style={cardBase}>
             <div className="flex items-end justify-between gap-3 flex-wrap">
               <div className="flex-1 min-w-[200px]">
                 <input type="text" value={searchName} onChange={(e) => setSearchName(e.target.value)} placeholder="Cari nama atau role..." className={inputBase} style={inputStyle}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; }} onBlur={(e) => { e.currentTarget.style.borderColor = C.border; }} />
+                  onFocus={(e) => { e.currentTarget.style.borderColor = P.purple; }} onBlur={(e) => { e.currentTarget.style.borderColor = P.grayBorder; }} />
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative" ref={datePickerRef}>
-                  <button type="button" onClick={() => setShowDatePicker(!showDatePicker)} className="flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors"
-                    style={{ borderColor: dateFrom || dateTo ? C.gold : C.border, color: dateFrom || dateTo ? C.goldText : C.faded, background: C.card }}>
+                  <button type="button" onClick={() => setShowDatePicker(!showDatePicker)} className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors"
+                    style={{ borderColor: dateFrom || dateTo ? P.purple : P.grayBorder, color: dateFrom || dateTo ? P.purple : P.gray, background: "#fff" }}>
                     <Calendar className="h-3.5 w-3.5" />
                     {dateFrom || dateTo ? <span>{dateFrom ? new Date(dateFrom).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) : "…"}{" — "}{dateTo ? new Date(dateTo).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) : "…"}</span> : "Filter"}
                   </button>
-                  {(dateFrom || dateTo) && <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="absolute -top-1 -right-1 rounded-full p-0.5" style={{ background: C.card, border: `1px solid ${C.border}` }}><X className="h-2.5 w-2.5" style={{ color: C.ghost }} /></button>}
+                  {(dateFrom || dateTo) && <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="absolute -top-1 -right-1 rounded-full p-0.5" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}><X className="h-2.5 w-2.5" style={{ color: P.gray }} /></button>}
                   {showDatePicker && (
-                    <div className="absolute right-0 top-full mt-1 z-30 rounded-lg border p-3 shadow-lg w-52" style={{ background: C.card, borderColor: C.border }}>
+                    <div className="absolute right-0 top-full mt-1 z-30 rounded-xl border p-3 shadow-lg w-52" style={{ background: "#fff", borderColor: P.grayBorder }}>
                       <div className="space-y-2">
-                        <div><label className="text-[10px] uppercase tracking-wider mb-1 block" style={{ color: C.faded }}>Dari</label><input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded border px-2 py-1.5 text-xs outline-none" style={{ borderColor: C.border, color: C.ink, background: "var(--color-parch-sidebar)" }} onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; }} /></div>
-                        <div><label className="text-[10px] uppercase tracking-wider mb-1 block" style={{ color: C.faded }}>Sampai</label><input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded border px-2 py-1.5 text-xs outline-none" style={{ borderColor: C.border, color: C.ink, background: "var(--color-parch-sidebar)" }} onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; }} /></div>
-                        <button onClick={() => setShowDatePicker(false)} className="w-full rounded py-1.5 text-[10px] font-medium text-white" style={{ background: C.gold }}>Terapkan</button>
+                        <div><label className="text-[10px] font-semibold mb-1 block" style={{ color: P.gray }}>Dari</label><input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-lg border px-2 py-1.5 text-xs outline-none" style={{ borderColor: P.grayBorder, color: P.ink, background: P.grayLight }} onFocus={(e) => { e.currentTarget.style.borderColor = P.purple; }} /></div>
+                        <div><label className="text-[10px] font-semibold mb-1 block" style={{ color: P.gray }}>Sampai</label><input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-lg border px-2 py-1.5 text-xs outline-none" style={{ borderColor: P.grayBorder, color: P.ink, background: P.grayLight }} onFocus={(e) => { e.currentTarget.style.borderColor = P.purple; }} /></div>
+                        <button onClick={() => setShowDatePicker(false)} className="w-full rounded-lg py-1.5 text-[10px] font-semibold text-white transition-colors" style={{ background: P.purple }}>Terapkan</button>
                       </div>
                     </div>
                   )}
@@ -178,28 +220,28 @@ export default function ManagementMonitoringPage() {
             </div>
           </div>
 
-          {filterHint && <p className="text-[11px] mb-3 italic" style={{ color: C.ghost }}>{filterHint}</p>}
+          {filterHint && <p className="text-[11px] mb-3" style={{ color: P.gray }}>{filterHint}</p>}
 
           {isLoading ? <Loading variant="skeleton" text="Memuat data..." /> : filteredManagers.length === 0 ? (
-            <div className="text-center py-12 rounded-lg" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-              {hasFilters ? <div className="space-y-3"><p className="text-sm" style={{ color: C.faded }}>Tidak ada hasil{searchName ? ` untuk "${searchName}"` : null}</p></div> : <p style={{ color: C.ghost }}>Belum ada data manager dengan task.</p>}
+            <div className="text-center py-12 rounded-2xl" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}>
+              {hasFilters ? <div className="space-y-2"><p className="text-sm" style={{ color: P.gray }}>Tidak ada hasil{searchName ? ` untuk "${searchName}"` : null}</p></div> : <p style={{ color: P.gray }}>Belum ada data manager dengan task.</p>}
             </div>
           ) : viewMode === "cards" ? (
             <><div className="grid grid-cols-1 lg:grid-cols-2 gap-4">{visibleManagers.map((m) => <ManagerCard key={m.id} manager={m as Manager} onViewAll={setSelectedManager} onEscalate={handleEscalate} />)}</div>
-              {hasMore && <div className="flex justify-center mt-4"><button onClick={() => setVisibleCount((p) => Math.min(p + PAGE_SIZE, filteredManagers.length))} className="rounded px-6 py-2.5 text-sm font-medium" style={{ border: `1px solid ${C.border}`, color: C.goldText, background: "var(--color-parch-sidebar)" }}>Tampilkan {Math.min(PAGE_SIZE, filteredManagers.length - visibleCount)} lainnya · {filteredManagers.length - visibleCount} tersisa</button></div>}</>
+              {hasMore && <div className="flex justify-center mt-4"><button onClick={() => setVisibleCount((p) => Math.min(p + PAGE_SIZE, filteredManagers.length))} className="rounded-xl px-6 py-2.5 text-sm font-semibold transition-colors" style={{ border: `1px solid ${P.purple}`, color: P.purple, background: "#fff" }}>Tampilkan {Math.min(PAGE_SIZE, filteredManagers.length - visibleCount)} lainnya · {filteredManagers.length - visibleCount} tersisa</button></div>}</>
           ) : (
-            <div className="rounded-lg overflow-hidden" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}>
               <table className="w-full text-sm">
-                <thead style={{ background: C.header }}><tr>{["Manager", "Progress", "Status", "Aksi"].map((h) => <th key={h} className="px-5 py-3 text-left text-[10px] uppercase tracking-[0.15em] font-medium" style={{ color: C.faded, borderBottom: `0.5px solid ${C.goldDim}` }}>{h}</th>)}</tr></thead>
+                <thead style={{ background: P.grayLight }}><tr>{["Manager", "Progress", "Status", "Aksi"].map((h) => <th key={h} className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wider" style={{ color: P.gray, borderBottom: `1px solid ${P.grayBorder}` }}>{h}</th>)}</tr></thead>
                 <tbody>{filteredManagers.map((m) => {
-                  const stats = getManagerStats(m);
+                  const s = getManagerStats(m);
                   const allItems = m.tasks.flatMap((t) => (t.items ?? []).map((item) => ({ item, deadline: t.deadline })));
                   const overdue = allItems.filter((i) => isOverdue(i.deadline ?? null, i.item.progress?.[0]?.status ?? null)).length;
-                  return (<tr key={m.id} style={{ borderBottom: `0.5px solid ${C.goldDim}` }}>
-                    <td className="px-5 py-3"><p className="leading-tight" style={{ fontFamily: "var(--font-display)", fontWeight: 500, color: C.ink }}>{m.full_name}</p><p className="text-[11px]" style={{ color: C.faded }}>{ROLE_DISPLAY[m.role_name] ?? m.role_name}</p></td>
-                    <td className="px-5 py-3"><div className="flex items-center gap-2"><div className="flex-1 flex gap-0.5 max-w-[120px]">{[...Array(stats.total)].map((_, i) => { const st = allItems[i]?.item.progress?.[0]?.status ?? "belum"; return <div key={i} className="flex-1 h-1" style={{ background: st === "selesai" ? C.sage : st === "proses" ? C.gold : C.border }} />; })}</div><span className="text-xs" style={{ color: C.sepia, fontFamily: "var(--font-display)" }}>{stats.rate}%</span></div></td>
-                    <td className="px-5 py-3"><div className="flex items-center gap-1.5 flex-wrap">{stats.done > 0 && <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium" style={{ background: "var(--color-sage-bg)", color: C.sage, border: "1px solid var(--color-sage-border)", borderRadius: 2 }}><Diamond size={4} />{stats.done}</span>}{overdue > 0 && <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium" style={{ background: "var(--color-terra-bg)", color: C.terra, border: "1px solid var(--color-terra-border)", borderRadius: 2 }}><Diamond size={4} />{overdue}</span>}</div></td>
-                    <td className="px-5 py-3"><div className="flex items-center gap-2"><button onClick={() => setSelectedManager(m)} className="rounded px-3 py-1.5 text-xs font-medium" style={{ border: `1px solid ${C.border}`, color: C.sepia }}>Detail</button></div></td>
+                  return (<tr key={m.id} style={{ borderBottom: `1px solid ${P.grayBorder}` }}>
+                    <td className="px-5 py-3"><p className="font-semibold" style={{ color: P.ink }}>{m.full_name}</p><p className="text-[11px]" style={{ color: P.gray }}>{ROLE_DISPLAY[m.role_name] ?? m.role_name}</p></td>
+                    <td className="px-5 py-3"><div className="flex items-center gap-2"><div className="flex-1 flex gap-0.5 max-w-[120px]">{[...Array(s.total)].map((_, i) => { const st = allItems[i]?.item.progress?.[0]?.status ?? "belum"; return <div key={i} className="flex-1 h-1 rounded-full" style={{ background: st === "selesai" ? P.green : st === "proses" ? P.purple : P.grayBorder }} />; })}</div><span className="text-xs font-semibold" style={{ color: P.ink }}>{s.rate}%</span></div></td>
+                    <td className="px-5 py-3"><div className="flex items-center gap-1.5 flex-wrap">{s.done > 0 && <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full" style={{ background: P.greenLight, color: P.green }}>{s.done} done</span>}{overdue > 0 && <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full" style={{ background: "#fef2f2", color: "#dc2626" }}>{overdue} overdue</span>}</div></td>
+                    <td className="px-5 py-3"><button onClick={() => setSelectedManager(m)} className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors" style={{ border: `1px solid ${P.grayBorder}`, color: P.ink, background: "#fff" }}>Detail</button></td>
                   </tr>);
                 })}</tbody>
               </table>

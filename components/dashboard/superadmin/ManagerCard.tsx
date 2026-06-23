@@ -1,7 +1,6 @@
 "use client";
 
 import { Clock, AlertCircle, Check } from "lucide-react";
-import { Diamond } from "./Diamond";
 
 interface ProgressRow {
   id: string;
@@ -130,61 +129,33 @@ export function ManagerCard({
     ).length,
   };
 
-  const statusMeta: Record<
-    string,
-    { label: string; color: string; bg: string; border: string }
-  > = {
-    selesai: {
-      label: "Selesai",
-      color: "var(--color-sage)",
-      bg: "var(--color-sage-bg)",
-      border: "var(--color-sage-border)",
-    },
-    proses: {
-      label: "Proses",
-      color: "var(--color-amber-warn)",
-      bg: "var(--color-amber-bg)",
-      border: "var(--color-gold-muted)",
-    },
-    belum: {
-      label: "Belum",
-      color: "var(--color-terra)",
-      bg: "var(--color-terra-bg)",
-      border: "var(--color-terra-border)",
-    },
+  const statusMeta: Record<string, { label: string; color: string; bg: string; border: string }> = {
+    selesai: { label: "Selesai", color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
+    proses:  { label: "Proses",  color: "#ea580c", bg: "#fff7ed", border: "#fdba74" },
+    belum:   { label: "Belum",   color: "#dc2626", bg: "#fef2f2", border: "#fca5a5" },
   };
   return (
     <div
-      className="rounded-lg p-5 transition-all duration-200"
+      className="rounded-2xl p-5 transition-all duration-200"
       style={{
-        background: "var(--color-parch-card)",
-        border: `1px solid ${hasOverdue ? "var(--color-terra-border)" : "var(--color-parch-border)"}`,
+        background: "#fff",
+        border: `1px solid ${hasOverdue ? "#fca5a5" : "#e5e7eb"}`,
         boxShadow: "none",
       }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLElement;
-        el.style.boxShadow = "0 8px 24px rgba(44,24,16,0.08)";
-        el.style.borderColor = hasOverdue
-          ? "var(--color-terra)"
-          : "var(--color-gold)";
+        el.style.boxShadow = "0 8px 24px rgba(124,58,237,0.08)";
+        el.style.borderColor = hasOverdue ? "#dc2626" : "#7c3aed";
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLElement;
         el.style.boxShadow = "none";
-        el.style.borderColor = hasOverdue
-          ? "var(--color-terra-border)"
-          : "var(--color-parch-border)";
+        el.style.borderColor = hasOverdue ? "#fca5a5" : "#e5e7eb";
       }}
     >
       {/* Header */}
-      <div
-        className="flex items-center gap-4 mb-4 pb-4"
-        style={{ borderBottom: "0.5px solid var(--color-gold-dim)" }}
-      >
-        <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded font-semibold text-sm text-white"
-          style={{ background: "var(--color-gold)" }}
-        >
+      <div className="flex items-center gap-4 mb-4 pb-4" style={{ borderBottom: `1px solid #e5e7eb` }}>
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl font-semibold text-sm text-white" style={{ background: "#7c3aed" }}>
           {manager.full_name
             ?.split(" ")
             .slice(0, 2)
@@ -193,40 +164,12 @@ export function ManagerCard({
             .toUpperCase() ?? "?"}
         </div>
         <div className="flex-1 min-w-0">
-          <p
-            className="text-base leading-tight"
-            style={{
-              fontFamily: "var(--font-display)",
-              fontWeight: 500,
-              color: "var(--color-text-ink)",
-            }}
-          >
-            {manager.full_name}
-          </p>
-          <p
-            className="text-[11px]"
-            style={{ color: "var(--color-text-faded)" }}
-          >
-            {ROLE_DISPLAY[manager.role_name] ?? manager.role_name}
-          </p>
+          <p className="text-base font-semibold leading-tight" style={{ color: "#111827" }}>{manager.full_name}</p>
+          <p className="text-[11px]" style={{ color: "#6b7280" }}>{ROLE_DISPLAY[manager.role_name] ?? manager.role_name}</p>
         </div>
         <div className="text-right shrink-0">
-          <p
-            className="text-xl leading-none"
-            style={{
-              fontFamily: "var(--font-display)",
-              fontWeight: 600,
-              color: "var(--color-text-ink)",
-            }}
-          >
-            {done}/{total}
-          </p>
-          <p
-            className="text-[9px] uppercase tracking-[0.22em]"
-            style={{ color: "var(--color-gold)" }}
-          >
-            Progress
-          </p>
+          <p className="text-xl font-bold leading-none" style={{ color: "#111827" }}>{done}/{total}</p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "#7c3aed" }}>Progress</p>
         </div>
       </div>
 
@@ -236,114 +179,53 @@ export function ManagerCard({
           const item = allItems[i];
           const status = item?.item.progress?.[0]?.status ?? "belum";
           const fill =
-            status === "selesai"
-              ? "var(--color-sage)"
-              : status === "proses"
-                ? "var(--color-gold)"
-                : "var(--color-parch-border)";
+            status === "selesai" ? "#059669" : status === "proses" ? "#7c3aed" : "#e5e7eb";
           return (
-            <div
-              key={i}
-              className="flex-1 h-1 transition-colors duration-500"
-              style={{ background: fill }}
-            />
+            <div key={i} className="flex-1 h-1 rounded-full transition-colors duration-500" style={{ background: fill }} />
           );
         })}
       </div>
 
-      {/* Status Pills — sharp corners, diamond prefix */}
+      {/* Status Pills */}
       <div className="flex gap-2 flex-wrap mb-4">
         {Object.entries(statusCounts).map(([status, count]) => {
           const meta = statusMeta[status] ?? statusMeta.belum;
           if (!count) return null;
           return (
-            <span
-              key={status}
-              className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-medium"
-              style={{
-                background: meta.bg,
-                color: meta.color,
-                border: `1px solid ${meta.border}`,
-                borderRadius: 2,
-              }}
-            >
-              <Diamond size={5} />
+            <span key={status} className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-medium rounded-lg"
+              style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: meta.color }} />
               {count} {meta.label}
             </span>
           );
         })}
         {overdue === 0 && atRisk === 0 && done > 0 && (
-          <span
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-medium ml-1"
-            style={{
-              background: "var(--color-sage-bg)",
-              color: "var(--color-sage)",
-              border: "1px solid var(--color-sage-border)",
-              borderRadius: 2,
-            }}
-          >
-            <Diamond size={5} />
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-medium rounded-lg"
+            style={{ background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0" }}>
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#059669" }} />
             On Track
           </span>
         )}
       </div>
 
-      {/* Task Preview — by task with counts */}
+      {/* Task Preview */}
       {manager.tasks.length > 0 && (
         <>
-          <p
-            className="text-[9px] uppercase tracking-[0.22em] mb-2"
-            style={{ color: "var(--color-gold)" }}
-          >
-            Tasks
-          </p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.15em] mb-2" style={{ color: "#7c3aed" }}>Tasks</p>
           {manager.tasks.slice(0, 2).map((task) => {
             const items = task.items ?? [];
-            const done = items.filter(
-              (i) => i.progress?.[0]?.status === "selesai",
-            ).length;
+            const done = items.filter((i) => i.progress?.[0]?.status === "selesai").length;
             const allDone = items.length > 0 && done === items.length;
-            const nearestDeadline = task.deadline
-              ? formatRelativeDeadline(task.deadline, null)
-              : null;
+            const nearestDeadline = task.deadline ? formatRelativeDeadline(task.deadline, null) : null;
             const hasOverdue = task.deadline && isOverdue(task.deadline, null);
             return (
-              <div
-                key={task.id}
-                className="flex items-center gap-2.5 py-2"
-                style={{
-                  borderBottom: "0.5px solid var(--color-gold-dim)",
-                }}
-              >
+              <div key={task.id} className="flex items-center gap-2.5 py-2" style={{ borderBottom: `1px solid #e5e7eb` }}>
                 <span className="shrink-0">
-                  {allDone ? (
-                    <Check className="h-3.5 w-3.5" style={{ color: "var(--color-sage)" }} />
-                  ) : hasOverdue ? (
-                    <AlertCircle className="h-3.5 w-3.5" style={{ color: "var(--color-terra)" }} />
-                  ) : (
-                    <Clock className="h-3.5 w-3.5" style={{ color: "var(--color-amber-warn)" }} />
-                  )}
+                  {allDone ? <Check className="h-3.5 w-3.5" style={{ color: "#059669" }} /> : hasOverdue ? <AlertCircle className="h-3.5 w-3.5" style={{ color: "#dc2626" }} /> : <Clock className="h-3.5 w-3.5" style={{ color: "#ea580c" }} />}
                 </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm truncate" style={{ color: "var(--color-text-sepia)" }}>
-                    {task.title}
-                  </p>
-                </div>
-                <span className="text-[11px] font-medium shrink-0" style={{ color: "var(--color-text-faded)" }}>
-                  {done}/{items.length}
-                </span>
-                {nearestDeadline && (
-                  <span
-                    className="text-[11px] shrink-0"
-                    style={{
-                      color: nearestDeadline.isUrgent
-                        ? "var(--color-terra)"
-                        : "var(--color-text-ghost)",
-                    }}
-                  >
-                    {nearestDeadline.label}
-                  </span>
-                )}
+                <div className="flex-1 min-w-0"><p className="text-sm truncate" style={{ color: "#374151" }}>{task.title}</p></div>
+                <span className="text-[11px] font-medium shrink-0" style={{ color: "#6b7280" }}>{done}/{items.length}</span>
+                {nearestDeadline && <span className="text-[11px] shrink-0" style={{ color: nearestDeadline.isUrgent ? "#dc2626" : "#9ca3af" }}>{nearestDeadline.label}</span>}
               </div>
             );
           })}
@@ -351,56 +233,24 @@ export function ManagerCard({
       )}
 
       {manager.tasks.length > 2 && (
-        <p
-          className="text-[11px] mt-2"
-          style={{ color: "var(--color-text-ghost)" }}
-        >
-          + {manager.tasks.length - 2} task lainnya
-        </p>
+        <p className="text-[11px] mt-2" style={{ color: "#9ca3af" }}>+ {manager.tasks.length - 2} task lainnya</p>
       )}
 
       {/* Actions */}
-      <div
-        className="flex items-center gap-2 mt-4 pt-3"
-        style={{ borderTop: "0.5px solid var(--color-gold-dim)" }}
-      >
-        <button
-          type="button"
-          onClick={() => onViewAll(manager)}
-          className="flex-1 rounded px-4 py-2 text-xs font-medium transition-colors"
-          style={{
-            border: "1px solid var(--color-parch-border)",
-            color: "var(--color-text-sepia)",
-            background: "transparent",
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.borderColor = "var(--color-gold)";
-            el.style.color = "var(--color-gold-text)";
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.borderColor = "var(--color-parch-border)";
-            el.style.color = "var(--color-text-sepia)";
-          }}
-        >
+      <div className="flex items-center gap-2 mt-4 pt-3" style={{ borderTop: `1px solid #e5e7eb` }}>
+        <button type="button" onClick={() => onViewAll(manager)}
+          className="flex-1 rounded-xl px-4 py-2 text-xs font-medium transition-colors"
+          style={{ border: "1px solid #e5e7eb", color: "#374151", background: "transparent" }}
+          onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "#7c3aed"; el.style.color = "#7c3aed"; }}
+          onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "#e5e7eb"; el.style.color = "#374151"; }}>
           Lihat detail
         </button>
         {hasEscalate && (
-          <button
-            type="button"
-            onClick={() => onEscalate(manager)}
-            className="flex-1 rounded px-4 py-2 text-xs font-medium transition-colors text-white"
-            style={{ background: "var(--color-gold)" }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background =
-                "var(--color-gold-bright)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background =
-                "var(--color-gold)";
-            }}
-          >
+          <button type="button" onClick={() => onEscalate(manager)}
+            className="flex-1 rounded-xl px-4 py-2 text-xs font-medium text-white transition-colors"
+            style={{ background: "#7c3aed" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#6d28d9"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#7c3aed"; }}>
             Eskalasi
           </button>
         )}
