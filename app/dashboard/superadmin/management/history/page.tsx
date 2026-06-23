@@ -10,8 +10,6 @@ import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import { CheckCircle2, User, AlertCircle, ChevronDown, Calendar, Search, X } from "lucide-react";
-import { Diamond } from "@/components/dashboard/superadmin/Diamond";
-import { C } from "../_shared/constants";
 import type { ManagerData, HistoryEntry } from "../_shared/types";
 import { getManagerStats } from "../_shared/utils";
 
@@ -85,88 +83,116 @@ export default function ManagementHistoryPage() {
 
   const toggleExpand = (idx: number) => setExpandedIdxs((prev) => { const n = new Set(prev); if (n.has(idx)) n.delete(idx); else n.add(idx); return n; });
   const uniqueManagers = new Set(history.map((e) => e.managerId)).size;
+  const bgStyle = {
+    background:
+      "#f8f9fb url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='0.75' fill='rgba(139,92,246,0.06)'/%3E%3C/svg%3E\") repeat",
+  };
+
+  const P = {
+    purple: "#7c3aed", purpleLight: "#f5f3ff", purpleMuted: "#c4b5fd",
+    green: "#059669", greenLight: "#ecfdf5", greenMuted: "#a7f3d0",
+    gray: "#6b7280", grayLight: "#f9fafb", grayBorder: "#e5e7eb",
+    orange: "#ea580c", orangeLight: "#fff7ed", ink: "#111827",
+  };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen" style={bgStyle}>
       <Sidebar role="superadmin" />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
         <main className="flex-1 overflow-y-auto p-6">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div>
-              <h2 className="text-[28px] leading-tight" style={{ fontFamily: "var(--font-display)", fontWeight: 300, color: C.ink }}>Riwayat <i style={{ color: C.gold, fontWeight: 400 }}>Management</i></h2>
-              <p className="text-sm mt-0.5" style={{ color: C.faded }}>Rekapitulasi penyelesaian tugas seluruh manager</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" style={{ color: C.ghost }} />
-                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Cari nama / role..." className="min-w-[120px] w-44 rounded border py-1.5 pl-8 pr-2 text-xs outline-none" style={{ borderColor: C.border, color: C.ink, background: C.card, borderStyle: "dashed" }} onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; }} onBlur={(e) => { e.currentTarget.style.borderColor = C.border; }} />
-                {searchQuery && <button onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2" style={{ color: C.ghost }}><X className="h-3 w-3" /></button>}
+          {/* Title Banner */}
+          <div className="mb-6 p-5 rounded-2xl relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${P.purpleLight} 0%, #fff 60%)`, border: `1px solid ${P.grayBorder}` }}>
+            <div className="absolute top-0 right-0 w-48 h-full pointer-events-none opacity-30" style={{ background: `radial-gradient(ellipse at top right, ${P.purpleMuted} 0%, transparent 70%)` }} />
+            <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-1" style={{ color: P.purple }}>Management History</p>
+                <h2 className="text-[28px] font-bold leading-tight" style={{ color: P.ink }}>Riwayat <span style={{ color: P.purple }}>Aktivitas</span></h2>
               </div>
-              <div className="relative" ref={datePickerRef}>
-                <button type="button" onClick={() => setShowDatePicker(!showDatePicker)} className="flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors" style={{ borderColor: dateFrom || dateTo ? C.gold : C.border, color: dateFrom || dateTo ? C.goldText : C.faded, background: C.card }}>
-                  <Calendar className="h-3.5 w-3.5" />{dateFrom || dateTo ? <span>{dateFrom ? new Date(dateFrom).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) : "…"}{" — "}{dateTo ? new Date(dateTo).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) : "…"}</span> : "Filter"}
-                </button>
-                {(dateFrom || dateTo) && <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="absolute -top-1 -right-1 rounded-full p-0.5" style={{ background: C.card, border: `1px solid ${C.border}` }}><X className="h-2.5 w-2.5" style={{ color: C.ghost }} /></button>}
-                {showDatePicker && (
-                  <div className="absolute right-0 top-full mt-1 z-30 rounded-lg border p-3 shadow-lg w-52" style={{ background: C.card, borderColor: C.border }}>
-                    <div className="space-y-2">
-                      <div><label className="text-[10px] uppercase tracking-wider mb-1 block" style={{ color: C.faded }}>Dari</label><input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded border px-2 py-1.5 text-xs outline-none" style={{ borderColor: C.border, color: C.ink, background: "var(--color-parch-sidebar)" }} onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; }} /></div>
-                      <div><label className="text-[10px] uppercase tracking-wider mb-1 block" style={{ color: C.faded }}>Sampai</label><input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded border px-2 py-1.5 text-xs outline-none" style={{ borderColor: C.border, color: C.ink, background: "var(--color-parch-sidebar)" }} onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; }} /></div>
-                      <button onClick={() => setShowDatePicker(false)} className="w-full rounded py-1.5 text-[10px] font-medium text-white" style={{ background: C.gold }}>Terapkan</button>
-                    </div>
-                  </div>
-                )}
+              <div className="flex items-center gap-4 sm:pb-1">
+                {[
+                  { label: "Entri", value: filteredHistory.length, color: P.purple },
+                  { label: "Managers", value: uniqueManagers, color: P.green },
+                  { label: "Selesai", value: filteredHistory.filter((e) => e.status === "selesai").length, color: P.orange },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="text-center"><p className="text-[10px] font-medium" style={{ color: P.gray }}>{label}</p><p className="text-base font-bold" style={{ color }}>{value}</p></div>
+                ))}
               </div>
             </div>
           </div>
 
+          {/* Filter Bar */}
+          <div className="flex items-center gap-2 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2" style={{ color: P.gray }} />
+              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Cari nama / role / task..." className="w-full rounded-xl border py-2 pl-9 pr-3 text-sm outline-none transition-colors" style={{ borderColor: P.grayBorder, color: P.ink, background: "#fff" }} onFocus={(e) => { e.currentTarget.style.borderColor = P.purple; }} onBlur={(e) => { e.currentTarget.style.borderColor = P.grayBorder; }} />
+              {searchQuery && <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: P.gray }}><X className="h-3 w-3" /></button>}
+            </div>
+            <div className="relative" ref={datePickerRef}>
+              <button type="button" onClick={() => setShowDatePicker(!showDatePicker)} className="flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors" style={{ borderColor: dateFrom || dateTo ? P.purple : P.grayBorder, color: dateFrom || dateTo ? P.purple : P.gray, background: "#fff" }}>
+                <Calendar className="h-3.5 w-3.5" />{dateFrom || dateTo ? <span>{dateFrom ? new Date(dateFrom).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) : "…"}{" — "}{dateTo ? new Date(dateTo).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) : "…"}</span> : "Filter"}
+              </button>
+              {(dateFrom || dateTo) && <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="absolute -top-1 -right-1 rounded-full p-0.5" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}><X className="h-2.5 w-2.5" style={{ color: P.gray }} /></button>}
+              {showDatePicker && (
+                <div className="absolute right-0 top-full mt-1 z-30 rounded-xl border p-3 shadow-lg w-52" style={{ background: "#fff", borderColor: P.grayBorder }}>
+                  <div className="space-y-2">
+                    <div><label className="text-[10px] font-semibold mb-1 block" style={{ color: P.gray }}>Dari</label><input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-lg border px-2 py-1.5 text-xs outline-none" style={{ borderColor: P.grayBorder, color: P.ink, background: P.grayLight }} onFocus={(e) => { e.currentTarget.style.borderColor = P.purple; }} /></div>
+                    <div><label className="text-[10px] font-semibold mb-1 block" style={{ color: P.gray }}>Sampai</label><input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-lg border px-2 py-1.5 text-xs outline-none" style={{ borderColor: P.grayBorder, color: P.ink, background: P.grayLight }} onFocus={(e) => { e.currentTarget.style.borderColor = P.purple; }} /></div>
+                    <button onClick={() => setShowDatePicker(false)} className="w-full rounded-lg py-1.5 text-[10px] font-semibold text-white transition-colors" style={{ background: P.purple }}>Terapkan</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {filteredHistory.length > 0 && (
-            <div className="flex items-center gap-4 rounded-lg px-4 py-2 mb-6" style={{ background: C.card, border: `0.5px solid ${C.goldDim}` }}>
-              <div className="flex items-center gap-1.5 text-xs" style={{ color: C.faded }}><CheckCircle2 className="h-3.5 w-3.5" style={{ color: C.sage }} />{filteredHistory.length} entri log</div>
-              <div className="w-px h-4" style={{ background: C.border }} />
-              <div className="flex items-center gap-1.5 text-xs" style={{ color: C.faded }}><User className="h-3.5 w-3.5" style={{ color: C.gold }} />{uniqueManagers} managers</div>
+            <div className="flex items-center gap-4 rounded-2xl px-4 py-2 mb-6" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}>
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: P.gray }}><CheckCircle2 className="h-3.5 w-3.5" style={{ color: P.green }} />{filteredHistory.length} entri log</div>
+              <div className="w-px h-4" style={{ background: P.grayBorder }} />
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: P.gray }}><User className="h-3.5 w-3.5" style={{ color: P.purple }} />{uniqueManagers} managers</div>
             </div>
           )}
 
           {isLoading ? <div className="p-12"><Loading variant="skeleton" text="Memuat data..." /></div> : filteredHistory.length === 0 ? (
-            <div className="text-center py-16 rounded-lg" style={{ background: C.card, border: `1px solid ${C.border}` }}><CheckCircle2 className="mx-auto mb-3 h-10 w-10" style={{ color: C.ghost }} /><p style={{ color: C.faded }}>Belum ada riwayat.</p></div>
+            <div className="text-center py-16 rounded-2xl" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}><CheckCircle2 className="mx-auto mb-3 h-10 w-10" style={{ color: P.gray }} /><p style={{ color: P.gray }}>Belum ada riwayat.</p></div>
           ) : (
             <div className="max-w-3xl mx-auto space-y-10">
               {monthlyGroups.map((month) => (
                 <div key={month.label}>
-                  <div className="flex items-center gap-4 mb-5 sticky top-0 z-10 py-2" style={{ background: "#F9FAFB" }}>
-                    <div className="shrink-0 flex flex-col items-center"><span className="text-[9px] uppercase tracking-[0.22em]" style={{ color: C.gold }}>{month.label.slice(0, 3)}</span><span className="text-lg" style={{ fontFamily: "var(--font-display)", color: C.ink, lineHeight: 1 }}>{month.label.split(" ")[1]}</span></div>
-                    <div className="flex-1 h-px" style={{ background: C.goldDim }} />
+                  <div className="flex items-center gap-4 mb-5 sticky top-0 z-10 py-2" style={{ background: bgStyle.background }}>
+                    <div className="shrink-0 flex flex-col items-center"><span className="text-[9px] font-semibold uppercase tracking-[0.1em]" style={{ color: P.purple }}>{month.label.slice(0, 3)}</span><span className="text-lg font-bold" style={{ color: P.ink, lineHeight: 1 }}>{month.label.split(" ")[1]}</span></div>
+                    <div className="flex-1 h-px" style={{ background: P.grayBorder }} />
                   </div>
                   <div className="relative pl-8">
-                    <div className="absolute left-[11px] top-2 bottom-2 w-px" style={{ background: C.goldDim }} />
+                    <div className="absolute left-[11px] top-2 bottom-2 w-px" style={{ background: P.grayBorder }} />
                     {month.entries.map((entry) => {
                       const globalIdx = history.indexOf(entry);
                       const isExpanded = expandedIdxs.has(globalIdx);
-                      const clr = entry.status === "selesai" ? C.sage : entry.status === "proses" ? C.amber : C.terra;
-                      const barColor = entry.managerRate >= 80 ? C.sage : entry.managerRate >= 50 ? C.gold : C.terra;
+                      const statusColor = entry.status === "selesai" ? P.green : entry.status === "proses" ? P.orange : "#dc2626";
+                      const barColor = entry.managerRate >= 80 ? P.green : entry.managerRate >= 50 ? P.purple : "#dc2626";
                       return (
                         <div key={globalIdx} className="relative pb-3 last:pb-0">
-                          <div className="absolute left-[-28px] top-1.5 rounded-full border-2" style={{ width: 10, height: 10, borderColor: clr, background: "#F9FAFB" }} />
-                          <div className="rounded-lg border p-3 cursor-pointer" style={{ background: C.card, borderColor: C.border }} onClick={() => toggleExpand(globalIdx)}>
+                          <div className="absolute left-[-28px] top-1.5 rounded-full border-2" style={{ width: 10, height: 10, borderColor: statusColor, background: "#F9FAFB" }} />
+                          <div className="rounded-2xl border p-4 cursor-pointer transition-colors" style={{ background: "#fff", borderColor: P.grayBorder }} onClick={() => toggleExpand(globalIdx)}>
                             <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2 min-w-0"><Diamond size={4} /><span className="text-sm font-medium truncate" style={{ fontFamily: "var(--font-display)", color: C.ink }}>{entry.manager}</span></div>
-                              <span className="text-[10px] font-mono shrink-0" style={{ color: C.ghost }}>{new Date(entry.completed_at).toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                              <div className="flex items-center gap-2 min-w-0"><span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: barColor }} /><span className="text-sm font-semibold truncate" style={{ color: P.ink }}>{entry.manager}</span><span className="text-[10px]" style={{ color: P.gray }}>{entry.role}</span></div>
+                              <span className="text-[10px] shrink-0" style={{ color: P.gray }}>{new Date(entry.completed_at).toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                             </div>
                             <div className="flex items-center gap-2 mt-2">
-                              <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: C.border }}><div className="h-full rounded-full" style={{ width: `${entry.managerRate}%`, background: barColor }} /></div>
-                              <span className="text-[10px] shrink-0" style={{ color: C.faded }}>{entry.managerDone}/{entry.managerTotal}</span>
-                              <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-medium shrink-0" style={{ background: `color-mix(in srgb, ${clr} 12%, transparent)`, color: clr }}><Diamond size={3} />{entry.status === "selesai" ? "Selesai" : entry.status === "proses" ? "Proses" : "Belum"}</span>
-                              {isExpanded && <ChevronDown className="h-3 w-3 shrink-0" style={{ color: C.gold }} />}
+                              <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: P.grayBorder }}><div className="h-full rounded-full" style={{ width: `${entry.managerRate}%`, background: barColor }} /></div>
+                              <span className="text-[10px] shrink-0" style={{ color: P.gray }}>{entry.managerDone}/{entry.managerTotal}</span>
+                              <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-medium shrink-0" style={{ background: statusColor === P.green ? P.greenLight : statusColor === P.orange ? P.orangeLight : "#fef2f2", color: statusColor }}>
+                                {entry.status === "selesai" ? "Selesai" : entry.status === "proses" ? "Proses" : "Belum"}
+                              </span>
+                              {isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" style={{ color: P.purple }} /> : <ChevronDown className="h-3 w-3 shrink-0 rotate-[-90deg]" style={{ color: P.gray }} />}
                             </div>
                             {isExpanded && (
-                              <div className="mt-2 pt-2 space-y-2 text-[11px]" style={{ borderTop: `0.5px solid ${C.goldDim}` }}>
-                                <div className="flex items-start gap-2"><span className="shrink-0 font-medium" style={{ color: C.ghost, width: 80 }}>Task</span><span style={{ color: C.faded }}>{entry.task}</span></div>
-                                <div className="flex items-start gap-2"><span className="shrink-0 font-medium" style={{ color: C.ghost, width: 80 }}>Sub-task</span><span style={{ color: C.sepia, fontWeight: 500 }}>{entry.item}</span></div>
-                                {entry.notes && <div className="flex items-start gap-2"><span className="shrink-0 font-medium" style={{ color: C.ghost, width: 80 }}>Catatan</span><span style={{ color: C.faded }}>{entry.notes}</span></div>}
-                                {entry.kendala && <div className="flex items-start gap-2"><span className="shrink-0 font-medium flex items-center gap-1" style={{ color: C.terra, width: 80 }}><AlertCircle className="h-3 w-3" /> Kendala</span><span style={{ color: C.terra }}>{entry.kendala}</span></div>}
-                                {entry.admin_notes && <div className="flex items-start gap-2"><span className="shrink-0 font-medium" style={{ color: C.gold, width: 80 }}>◆ Catatan Admin</span><span style={{ color: C.gold }}>{entry.admin_notes}</span></div>}
+                              <div className="mt-3 pt-3 space-y-2 text-[11px]" style={{ borderTop: `1px solid ${P.grayBorder}` }}>
+                                <div className="flex items-start gap-2"><span className="shrink-0 font-medium" style={{ color: P.gray, width: 90 }}>Task</span><span style={{ color: P.ink }}>{entry.task}</span></div>
+                                <div className="flex items-start gap-2"><span className="shrink-0 font-medium" style={{ color: P.gray, width: 90 }}>Sub-task</span><span className="font-semibold" style={{ color: P.ink }}>{entry.item}</span></div>
+                                {entry.notes && <div className="flex items-start gap-2"><span className="shrink-0 font-medium" style={{ color: P.gray, width: 90 }}>Catatan</span><span style={{ color: P.ink }}>{entry.notes}</span></div>}
+                                {entry.kendala && <div className="flex items-start gap-2"><span className="shrink-0 font-medium flex items-center gap-1" style={{ color: "#dc2626", width: 90 }}><AlertCircle className="h-3 w-3" /> Kendala</span><span style={{ color: "#dc2626" }}>{entry.kendala}</span></div>}
+                                {entry.admin_notes && <div className="flex items-start gap-2"><span className="shrink-0 font-medium" style={{ color: P.purple, width: 90 }}>Catatan Admin</span><span style={{ color: P.purple }}>{entry.admin_notes}</span></div>}
                               </div>
                             )}
                           </div>
