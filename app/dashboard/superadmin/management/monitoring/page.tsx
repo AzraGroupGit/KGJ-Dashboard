@@ -33,6 +33,7 @@ export default function ManagementMonitoringPage() {
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "all">("today");
   const datePickerRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -100,6 +101,34 @@ export default function ManagementMonitoringPage() {
     return { completionRate, total, done, overdue, atRisk, dueSoon };
   }, [filteredManagers]);
 
+  const dailyMetrics = useMemo(() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 7);
+
+    const allItems = managers.flatMap((m) =>
+      m.tasks.flatMap((t) => (t.items ?? []).map((item) => ({
+        item, deadline: t.deadline, managerId: m.id,
+        completedAt: item.progress?.[0]?.completed_at ?? null,
+        status: item.progress?.[0]?.status ?? "belum",
+        isCompleted: item.progress?.[0]?.is_completed ?? false,
+      })))
+    );
+
+    const todayDone = allItems.filter((i) => i.isCompleted && i.completedAt && new Date(i.completedAt) >= today && new Date(i.completedAt) < tomorrow).length;
+    const weekDone = allItems.filter((i) => i.isCompleted && i.completedAt && new Date(i.completedAt) >= weekAgo).length;
+    const todayActive = new Set(allItems.filter((i) => i.isCompleted && i.completedAt && new Date(i.completedAt) >= today && new Date(i.completedAt) < tomorrow).map((i) => i.managerId)).size;
+
+    const displayTotal = dateFilter === "today" ? allItems.filter((i) => i.isCompleted && i.completedAt && new Date(i.completedAt) >= today && new Date(i.completedAt) < tomorrow).length
+      : dateFilter === "week" ? weekDone
+      : metrics.done;
+    const displayRate = dateFilter === "today" ? 0
+      : dateFilter === "week" ? (metrics.total > 0 ? Math.round((weekDone / metrics.total) * 100) : 0)
+      : metrics.completionRate;
+
+    return { todayDone, weekDone, todayActive, displayTotal, displayRate };
+  }, [managers, metrics, dateFilter]);
+
   const showAlert = (type: "success" | "error", msg: string) => { setAlert({ type, message: msg }); setTimeout(() => setAlert(null), 3000); };
   const handleSaveNote = async (progressId: string) => {
     const note = noteInput[progressId]?.trim(); if (note === undefined) return;
@@ -117,6 +146,15 @@ export default function ManagementMonitoringPage() {
     const taskList = [...oi, ...ai].map((i) => `\u25C6 ${i.item.title} (${i.taskTitle})`).join("\n");
     const text = `Eskalasi \u2014 ${manager.full_name}\n\nTask perlu perhatian:\n${taskList}`;
     try { await navigator.clipboard.writeText(text); showAlert("success", "Template eskalasi disalin"); } catch { showAlert("error", "Gagal menyalin"); }
+  };
+
+  const handleReview = async (itemId: string, action: "approve" | "reject", notes?: string) => {
+    try {
+      const res = await fetch(`/api/superadmin/management-tasks/items/${itemId}/review`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, notes: notes || undefined }) });
+      if (!res.ok) throw new Error("Gagal");
+      showAlert("success", action === "approve" ? "Item disetujui" : "Item ditolak");
+      queryClient.invalidateQueries({ queryKey: ["superadmin", "management-tasks"] });
+    } catch { showAlert("error", "Gagal memperbarui status"); }
   };
 
   const hasFilters = !!(searchName || dateFrom || dateTo);
@@ -151,20 +189,26 @@ export default function ManagementMonitoringPage() {
             <div className="absolute top-0 right-0 w-48 h-full pointer-events-none opacity-30" style={{ background: `radial-gradient(ellipse at top right, ${P.purpleMuted} 0%, transparent 70%)` }} />
             <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-1" style={{ color: P.purple }}>Management Monitoring</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: P.purple }}>Management Monitoring</p>
+                  <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                    {(["today", "week", "all"] as const).map((f) => (
+                      <button key={f} onClick={() => setDateFilter(f)}
+                        className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all ${dateFilter === f ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                        {f === "today" ? "Hari Ini" : f === "week" ? "Minggu Ini" : "Semua"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <h2 className="text-[28px] font-bold leading-tight" style={{ color: P.ink }}>Monitor <span style={{ color: P.purple }}>Manajemen</span></h2>
               </div>
               <div className="flex items-center gap-4 sm:pb-1">
                 {[
-                  { label: "Total", value: metrics.total, color: P.purple },
-                  { label: "Selesai", value: metrics.done, color: P.green },
-                  { label: "Overdue", value: metrics.overdue, color: "#dc2626" },
-                  { label: "Due Soon", value: metrics.dueSoon, color: P.orange },
+                  { label: dateFilter === "today" ? "Selesai Hari Ini" : dateFilter === "week" ? "Selesai Minggu Ini" : "Total", value: dateFilter === "all" ? metrics.total : dailyMetrics.displayTotal, color: P.purple },
+                  { label: dateFilter === "all" ? "Selesai" : "Aktif", value: dateFilter === "all" ? metrics.done : dailyMetrics.todayActive, color: P.green },
+                  { label: dateFilter === "all" ? "Rate" : "Overdue", value: dateFilter === "all" ? `${metrics.completionRate}%` : metrics.overdue, color: dateFilter === "all" ? P.orange : "#dc2626" },
                 ].map(({ label, value, color }) => (
-                  <div key={label} className="text-center">
-                    <p className="text-[10px] font-medium" style={{ color: P.gray }}>{label}</p>
-                    <p className="text-base font-bold" style={{ color }}>{value}</p>
-                  </div>
+                  <div key={label} className="text-center"><p className="text-[10px] font-medium" style={{ color: P.gray }}>{label}</p><p className="text-base font-bold" style={{ color }}>{value}</p></div>
                 ))}
                 <div className="flex rounded-lg overflow-hidden shrink-0 border" style={{ borderColor: P.grayBorder }}>
                   <button onClick={() => setViewMode("cards")} className="px-3 py-2 text-xs font-medium transition-colors" style={{ background: viewMode === "cards" ? P.purple : "#fff", color: viewMode === "cards" ? "#fff" : P.gray }}><LayoutGrid className="h-3.5 w-3.5" /></button>
@@ -232,14 +276,18 @@ export default function ManagementMonitoringPage() {
           ) : (
             <div className="rounded-2xl overflow-hidden" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}>
               <table className="w-full text-sm">
-                <thead style={{ background: P.grayLight }}><tr>{["Manager", "Progress", "Status", "Aksi"].map((h) => <th key={h} className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wider" style={{ color: P.gray, borderBottom: `1px solid ${P.grayBorder}` }}>{h}</th>)}</tr></thead>
+                <thead style={{ background: P.grayLight }}><tr>{["Manager", "Progress", "Hari Ini", "Status", "Aksi"].map((h) => <th key={h} className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wider" style={{ color: P.gray, borderBottom: `1px solid ${P.grayBorder}` }}>{h}</th>)}</tr></thead>
                 <tbody>{filteredManagers.map((m) => {
                   const s = getManagerStats(m);
                   const allItems = m.tasks.flatMap((t) => (t.items ?? []).map((item) => ({ item, deadline: t.deadline })));
                   const overdue = allItems.filter((i) => isOverdue(i.deadline ?? null, i.item.progress?.[0]?.status ?? null)).length;
+                  const today = new Date(); today.setHours(0, 0, 0, 0);
+                  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+                  const todayDone = allItems.filter((i) => i.item.progress?.[0]?.is_completed && i.item.progress?.[0]?.completed_at && new Date(i.item.progress![0].completed_at!) >= today && new Date(i.item.progress![0].completed_at!) < tomorrow).length;
                   return (<tr key={m.id} style={{ borderBottom: `1px solid ${P.grayBorder}` }}>
                     <td className="px-5 py-3"><p className="font-semibold" style={{ color: P.ink }}>{m.full_name}</p><p className="text-[11px]" style={{ color: P.gray }}>{ROLE_DISPLAY[m.role_name] ?? m.role_name}</p></td>
                     <td className="px-5 py-3"><div className="flex items-center gap-2"><div className="flex-1 flex gap-0.5 max-w-[120px]">{[...Array(s.total)].map((_, i) => { const st = allItems[i]?.item.progress?.[0]?.status ?? "belum"; return <div key={i} className="flex-1 h-1 rounded-full" style={{ background: st === "selesai" ? P.green : st === "proses" ? P.purple : P.grayBorder }} />; })}</div><span className="text-xs font-semibold" style={{ color: P.ink }}>{s.rate}%</span></div></td>
+                    <td className="px-5 py-3"><span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full ${todayDone > 0 ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-500"}`}>{todayDone > 0 ? `${todayDone} done` : "—"}</span></td>
                     <td className="px-5 py-3"><div className="flex items-center gap-1.5 flex-wrap">{s.done > 0 && <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full" style={{ background: P.greenLight, color: P.green }}>{s.done} done</span>}{overdue > 0 && <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full" style={{ background: "#fef2f2", color: "#dc2626" }}>{overdue} overdue</span>}</div></td>
                     <td className="px-5 py-3"><button onClick={() => setSelectedManager(m)} className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors" style={{ border: `1px solid ${P.grayBorder}`, color: P.ink, background: "#fff" }}>Detail</button></td>
                   </tr>);
@@ -249,7 +297,7 @@ export default function ManagementMonitoringPage() {
           )}
         </main>
       </div>
-      {selectedManager && <TaskDetailModal manager={selectedManager as unknown as Manager} noteInput={noteInput} setNoteInput={setNoteInput} onSaveNote={handleSaveNote} onClose={() => setSelectedManager(null)} />}
+      {selectedManager && <TaskDetailModal manager={selectedManager as unknown as Manager} noteInput={noteInput} setNoteInput={setNoteInput} onSaveNote={handleSaveNote} onReview={handleReview} onClose={() => setSelectedManager(null)} />}
     </div>
   );
 }

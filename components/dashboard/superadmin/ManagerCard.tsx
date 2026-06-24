@@ -1,6 +1,7 @@
 "use client";
 
 import { Clock, AlertCircle, Check } from "lucide-react";
+import { ROLE_DISPLAY } from "@/app/dashboard/superadmin/management/_shared/constants";
 
 interface ProgressRow {
   id: string;
@@ -10,6 +11,7 @@ interface ProgressRow {
   admin_notes: string | null;
   notes: string | null;
   kendala: string | null;
+  review_notes: string | null;
 }
 
 interface TaskItem {
@@ -34,21 +36,6 @@ export interface Manager {
   role_name: string;
   tasks: Task[];
 }
-
-const ROLE_DISPLAY: Record<string, string> = {
-  leader_hc: "Leader HC",
-  leader_operational: "Leader Operasional",
-  leader_production: "Leader Produksi",
-  leader_marketing: "Leader Marketing",
-  leader_sales: "Leader Sales",
-  leader_fat: "Leader FAT",
-  leader_rnd: "Leader RND",
-  leader_safar: "Leader Safar",
-  leader_ga: "Leader GA",
-  operational_supervisor: "Spv. Operasional",
-  production_supervisor: "Spv. Produksi",
-  superadmin: "Super Admin",
-};
 
 export function formatRelativeDeadline(
   deadline: string | null,

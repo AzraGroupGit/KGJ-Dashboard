@@ -162,6 +162,14 @@ export default function ManagementDashboardPage() {
     }));
   }, [comparison]);
 
+  const pendingReviews = useMemo(() => {
+    return managers.flatMap((m) =>
+      m.tasks.flatMap((t) => (t.items ?? []).filter((item) =>
+        item.progress?.[0]?.status === "waiting_review"
+      ))
+    ).length;
+  }, [managers]);
+
   if (!mounted) {
     return (
       <div className="flex h-screen" style={bgParchment}>
@@ -201,14 +209,17 @@ export default function ManagementDashboardPage() {
                 <div className="absolute top-0 right-0 w-48 h-full pointer-events-none opacity-30" style={{ background: `radial-gradient(ellipse at top right, ${P.purpleMuted} 0%, transparent 70%)` }} />
                 <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-1" style={{ color: P.purple }}>Management Dashboard</p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: P.purple }}>Management Dashboard</p>
+                    </div>
                     <h2 className="text-[28px] font-bold leading-tight" style={{ color: P.ink }}>Performance <span style={{ color: P.purple }}>Overview</span></h2>
                   </div>
                   <div className="flex items-center gap-4 sm:pb-1">
                     {[
                       { label: "Managers", value: managers.length, color: P.purple },
                       { label: "Tasks", value: stats.totalTasks, color: P.green },
-                      { label: "Done", value: `${stats.overallRate}%`, color: P.orange },
+                      { label: "Review", value: pendingReviews, color: P.orange },
+                      { label: "Done", value: `${stats.overallRate}%`, color: P.gray },
                     ].map(({ label, value, color }) => (
                       <div key={label} className="text-center">
                         <p className="text-[10px] font-medium" style={{ color: P.gray }}>{label}</p>
@@ -237,16 +248,16 @@ export default function ManagementDashboardPage() {
               <div className="lg:col-span-2" style={{ ...cardBase, ...bend(40) }}>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { label: "Total Items", value: stats.total, color: P.purple, bg: P.purpleLight, icon: "◆" },
-                    { label: "Completed", value: stats.done, color: P.green, bg: P.greenLight, icon: "✓" },
-                    { label: "This Week", value: stats.thisWeekDone, color: P.orange, bg: P.orangeLight, icon: "●" },
-                    { label: "Managers", value: managers.length, color: P.gray, bg: P.grayLight, icon: "▣" },
-                  ].map(({ label, value, color, bg, icon }) => (
-                    <div key={label} className="rounded-xl p-3" style={{ background: bg }}>
+                    { label: "Total Items", value: stats.total, color: P.purple, bg: P.purpleLight, icon: "◆", link: undefined as string | undefined },
+                    { label: "Completed", value: stats.done, color: P.green, bg: P.greenLight, icon: "✓", link: undefined },
+                    { label: "Overdue", value: statusSum.overdue, color: "#dc2626", bg: "#fef2f2", icon: "!", link: undefined },
+                    { label: "Review", value: pendingReviews, color: P.purple, bg: P.purpleLight, icon: "⟳", link: "/dashboard/superadmin/management/monitoring" },
+                  ].map(({ label, value, color, bg, icon, link }) => (
+                    <a key={label} href={link} className={`rounded-xl p-3 block ${link ? "hover:ring-2 hover:ring-purple-300 transition-all cursor-pointer" : ""}`} style={{ background: bg }}>
                       <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg text-[10px] font-bold mb-1.5" style={{ background: color, color: "#fff" }}>{icon}</span>
                       <p className="text-[10px] font-medium" style={{ color: P.gray }}>{label}</p>
                       <p className="text-lg font-bold" style={{ color: P.ink }}>{value}</p>
-                    </div>
+                    </a>
                   ))}
                 </div>
               </div>
@@ -405,12 +416,16 @@ export default function ManagementDashboardPage() {
                       {drillManager.tasks.flatMap((task) => (task.items ?? []).map((item) => {
                         const pg = item.progress?.[0]; const st = pg?.status ?? "belum"; const done = pg?.is_completed;
                         const overdue = isOverdue(task.deadline ?? null, st);
-                        const stClr = done ? P.green : overdue ? "#dc2626" : st === "proses" ? "#ea580c" : P.gray;
+                        const isReview = st === "waiting_review";
+                        const isApproved = st === "approved";
+                        const isRejected = st === "rejected";
+                        const stClr = isApproved || done ? P.green : isRejected ? "#dc2626" : isReview ? P.purple : overdue ? "#dc2626" : st === "proses" ? P.orange : P.gray;
+                        const stLabel = isApproved ? "Disetujui" : isRejected ? "Ditolak" : isReview ? "Review" : done ? "Done" : st === "proses" ? "Proses" : "Pending";
                         const adminNote = pg?.admin_notes;
                         return (
                           <div key={item.id} className="flex items-start gap-3 py-3" style={{ borderBottom: `1px solid ${P.grayBorder}` }}>
                             <div className="shrink-0 mt-[3px]">
-                              {done ? <CheckCircle size={14} color={P.green} /> : overdue ? <Clock size={14} color="#dc2626" /> : <Circle size={14} color={st === "proses" ? P.orange : P.gray} />}
+                              {isApproved || done ? <CheckCircle size={14} color={P.green} /> : isRejected ? <Circle size={14} color="#dc2626" /> : isReview ? <Circle size={14} color={P.purple} /> : overdue ? <Clock size={14} color="#dc2626" /> : <Circle size={14} color={st === "proses" ? P.orange : P.gray} />}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium" style={{ color: P.ink }}>{item.title}</p>
@@ -421,7 +436,7 @@ export default function ManagementDashboardPage() {
                                 </div>
                               )}
                             </div>
-                            <span className="text-[10px] shrink-0 font-semibold" style={{ color: stClr }}>{done ? "Done" : st === "proses" ? "Proses" : "Pending"}</span>
+                            <span className="text-[10px] shrink-0 font-semibold" style={{ color: stClr }}>{stLabel}</span>
                           </div>
                         );
                       }))}

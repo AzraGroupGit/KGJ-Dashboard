@@ -15,9 +15,8 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import {
   Plus, Trash2, CheckCircle2, ChevronDown, ChevronRight, Calendar,
-  ClipboardList, AlertTriangle, CalendarClock, X, GripVertical, Square, CheckSquare,
+  ClipboardList, AlertTriangle, CalendarClock, X, GripVertical, Square, CheckSquare, Paperclip,
 } from "lucide-react";
-import { C } from "@/app/dashboard/superadmin/management/_shared/constants";
 import type { Task } from "@/app/dashboard/superadmin/management/_shared/types";
 import { ProgressWidget } from "@/components/dashboard/superadmin/ProgressWidget";
 import { ItemRow } from "@/components/dashboard/superadmin/ItemRow";
@@ -84,11 +83,25 @@ export default function ManagementTasksPage() {
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
+  const [attachments, setAttachments] = useState<Record<string, { id: string; file_name: string; public_url: string; mime_type: string }[]>>({});
+  const [attachmentsLoading, setAttachmentsLoading] = useState<Record<string, boolean>>({});
+
+  const fetchAttachments = async (itemId: string) => {
+    if (attachments[itemId]) return;
+    setAttachmentsLoading((p) => ({ ...p, [itemId]: true }));
+    try {
+      const res = await fetch(`/api/management/tasks/items/${itemId}/attachments`);
+      if (res.ok) { const data = await res.json(); setAttachments((p) => ({ ...p, [itemId]: data })); }
+    } catch { /* silent */ }
+    finally { setAttachmentsLoading((p) => ({ ...p, [itemId]: false })); }
+  };
+
   useEffect(() => { const u = getClientUser(); if (!u) { router.push("/login"); return; } setClientUser(u); }, [router]);
 
   const { data, isLoading, isError, error: queryError, refetch } = useQuery<{ success: boolean; data: Task[] }>({
     queryKey: ["management-tasks"],
     queryFn: () => fetcher("/api/management/tasks"),
+    refetchInterval: 30_000,
   });
 
   const tasks = useMemo(() => data?.data ?? [], [data]);
@@ -127,6 +140,9 @@ export default function ManagementTasksPage() {
   const statusGroups = useMemo(() => filter === "all" ? groupTasksByStatus(tasks) : null, [tasks, filter]);
 
   const animOverdue = useAnimatedValue(taskStats.overdue, 600);
+
+  const P = { purple: "#7c3aed", purpleLight: "#f5f3ff", purpleMuted: "#c4b5fd", green: "#059669", greenLight: "#ecfdf5", gray: "#6b7280", grayLight: "#f9fafb", grayBorder: "#e5e7eb", orange: "#ea580c", orangeLight: "#fff7ed", red: "#dc2626", redLight: "#fef2f2", ink: "#111827" };
+  const bgStyle = { background: "#f8f9fb url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='0.75' fill='rgba(139,92,246,0.06)'/%3E%3C/svg%3E\") repeat" };
   const animDueToday = useAnimatedValue(taskStats.dueToday, 600);
   const animTotal = useAnimatedValue(taskStats.total, 600);
 
@@ -148,8 +164,13 @@ export default function ManagementTasksPage() {
   };
   const handleCycleStatus = async (itemId: string, currentStatus: string | null) => {
     if (cyclingItemId) return;
+    if (currentStatus === "waiting_review" || currentStatus === "approved") return; // locked
     setCyclingItemId(itemId);
-    const nextStatus = currentStatus === "selesai" ? "pending" : currentStatus === "proses" ? "selesai" : "proses";
+    const nextStatus =
+      currentStatus === "rejected" ? "proses" :
+      currentStatus === "proses" ? "waiting_review" :
+      currentStatus === "selesai" ? "pending" :
+      "proses";
     try { await fetch(`/api/management/tasks/items/${itemId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: nextStatus }) }); queryClient.invalidateQueries({ queryKey: ["management-tasks"] }); flashItem(itemId); } catch { showAlert("error", "Gagal memperbarui status"); } finally { setCyclingItemId(null); }
   };
   const handleSaveItemNote = async (itemId: string, field: "notes" | "kendala", value: string) => {
@@ -235,6 +256,70 @@ export default function ManagementTasksPage() {
   }, [panelTask, closePanel]);
 
   // Enhanced task card with keyboard support
+  function AttachmentSection({ itemId }: { itemId: string }) {
+    const files = attachments[itemId] ?? [];
+    const loading = attachmentsLoading[itemId] ?? false;
+    const [uploading, setUploading] = useState(false);
+
+    useEffect(() => { fetchAttachments(itemId); }, [itemId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (files.length >= 3) { showAlert("error", "Maksimal 3 lampiran"); return; }
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch(`/api/management/tasks/items/${itemId}/attachments`, { method: "POST", body: formData });
+        if (!res.ok) { const j = await res.json(); throw new Error(j.error); }
+        const data = await res.json();
+        setAttachments((p) => ({ ...p, [itemId]: [...(p[itemId] ?? []), data] }));
+      } catch (err) { showAlert("error", err instanceof Error ? err.message : "Gagal upload"); }
+      finally { setUploading(false); e.target.value = ""; }
+    };
+
+    const handleDelete = async (attachId: string) => {
+      try {
+        const res = await fetch(`/api/management/tasks/items/${itemId}/attachments/${attachId}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Gagal menghapus");
+        setAttachments((p) => ({ ...p, [itemId]: (p[itemId] ?? []).filter((f) => f.id !== attachId) }));
+      } catch { showAlert("error", "Gagal menghapus lampiran"); }
+    };
+
+    return (
+      <div className="ml-7 flex items-center gap-2 flex-wrap">
+        {files.map((f) => {
+          const isImage = f.mime_type?.startsWith("image/");
+          return (
+            <a key={f.id} href={f.public_url} target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-medium hover:bg-gray-50 transition-colors shrink-0 group"
+              style={{ borderColor: P.grayBorder, color: P.purple }}>
+              {isImage ? (
+                <img src={f.public_url} alt={f.file_name} className="w-4 h-4 rounded object-cover" />
+              ) : (
+                <Paperclip className="w-3 h-3" />
+              )}
+              <span className="max-w-[80px] truncate">{f.file_name}</span>
+              <button onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); handleDelete(f.id); }}
+                className="ml-1 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: P.gray }}>
+                <X className="w-3 h-3" />
+              </button>
+            </a>
+          );
+        })}
+        {files.length < 3 && (
+          <label className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-medium cursor-pointer hover:bg-gray-50 transition-colors shrink-0"
+            style={{ borderColor: P.grayBorder, color: P.gray, borderStyle: "dashed" }}>
+            {uploading ? "Mengunggah..." : <><Plus className="w-3 h-3" /> Lampiran</>}
+            <input type="file" className="hidden" accept="image/*,.pdf" onChange={handleUpload} disabled={uploading} />
+          </label>
+        )}
+      </div>
+    );
+  }
+
+  // Enhanced task card with keyboard support
   function renderTaskCard(task: Task, index?: number, extra?: { dragHandleProps?: DraggableProvidedDragHandleProps | null; isDragging?: boolean; isSelected?: boolean; onSelect?: (taskId: string) => void }) {
     const items = task.items ?? [];
     const done = items.filter((i) => i.progress?.[0]?.status === "selesai").length;
@@ -244,55 +329,65 @@ export default function ManagementTasksPage() {
     const isSelected = extra?.isSelected ?? false;
     const isDragging = extra?.isDragging ?? false;
     const deadlineUrgency = getDeadlineUrgency(task.deadline ?? null); const isExpanded = expandedTasks.has(task.id);
-    const leftBorder = allDone ? `2px solid ${C.sage}` : deadlineUrgency === "overdue" ? `2px solid ${C.terra}` : deadlineUrgency === "today" ? `2px solid ${C.amber}` : `1px solid ${C.border}`;
-    const progressBg = allDone ? C.sage : someProgress ? C.gold : C.border;
+    const leftBorder = allDone ? `2px solid ${P.green}` : deadlineUrgency === "overdue" ? `2px solid ${P.red}` : deadlineUrgency === "today" ? `2px solid ${P.orange}` : `1px solid ${P.grayBorder}`;
+    const progressBg = allDone ? P.green : someProgress ? P.purple : P.grayBorder;
     const staggerDelay = index !== undefined ? `${index * 50}ms` : "0ms";
     return (
-      <div key={task.id} className={`group rounded-xl overflow-hidden cursor-pointer transition-shadow animate-card-enter ${isDragging ? "shadow-lg scale-[1.02]" : "hover:shadow-sm"} ${isSelected ? "ring-2" : ""}`} style={{ background: C.card, borderTop: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, borderLeft: leftBorder, opacity: untouched ? 0.75 : 1, animationDelay: staggerDelay, boxShadow: isDragging ? "0 8px 24px rgba(44,24,16,0.18)" : isSelected ? "0 0 0 2px #B89B5B30" : undefined }}
+      <div key={task.id} className={`group rounded-xl overflow-hidden cursor-pointer transition-shadow animate-card-enter ${isDragging ? "shadow-lg scale-[1.02]" : "hover:shadow-sm"} ${isSelected ? "ring-2" : ""}`} style={{ background: "#fff", borderTop: `1px solid ${P.grayBorder}`, borderRight: `1px solid ${P.grayBorder}`, borderBottom: `1px solid ${P.grayBorder}`, borderLeft: leftBorder, opacity: untouched ? 0.75 : 1, animationDelay: staggerDelay, boxShadow: isDragging ? "0 8px 24px rgba(124,58,237,0.1)" : isSelected ? "0 0 0 2px rgba(124,58,237,0.2)" : undefined }}
         tabIndex={0} role="button" onClick={() => openPanel(task.id)} title="Open details — edit status, notes, kendala"
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); openPanel(task.id); } }}>
         <div className="flex items-center gap-3 px-5 py-4">
           {extra?.dragHandleProps && (
-            <div {...extra.dragHandleProps} className="shrink-0 cursor-grab active:cursor-grabbing touch-none" style={{ color: C.ghost }} tabIndex={-1} title="Drag to move"><GripVertical className="w-4 h-4" /></div>
+            <div {...extra.dragHandleProps} className="shrink-0 cursor-grab active:cursor-grabbing touch-none" style={{ color: P.gray }} tabIndex={-1} title="Drag to move"><GripVertical className="w-4 h-4" /></div>
           )}
-          <button onClick={(e) => { e.stopPropagation(); extra?.onSelect?.(task.id); }} className="shrink-0 hidden group-hover:inline-flex md:inline-flex" style={{ color: isSelected ? C.gold : C.ghost }} tabIndex={-1} title="Select task">
+          <button onClick={(e) => { e.stopPropagation(); extra?.onSelect?.(task.id); }} className="shrink-0 hidden group-hover:inline-flex md:inline-flex" style={{ color: isSelected ? P.purple : P.gray }} tabIndex={-1} title="Select task">
             {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
           </button>
-          <button onClick={(e) => { e.stopPropagation(); toggleExpand(task.id); }} style={{ color: C.ghost }} className="shrink-0" tabIndex={-1} title="Quick preview — view items only">{isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</button>
-          <div className="flex-1 min-w-0"><p className="font-semibold" style={{ color: C.ink }}>{task.title}</p>
+          <button onClick={(e) => { e.stopPropagation(); toggleExpand(task.id); }} style={{ color: P.gray }} className="shrink-0" tabIndex={-1} title="Quick preview — view items only">{isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</button>
+          <div className="flex-1 min-w-0"><p className="font-semibold" style={{ color: P.ink }}>{task.title}</p>
             <div className="flex items-center gap-3 mt-1">
               {items.length > 0 && !untouched && <ProgressWidget done={done} total={items.length} color={progressBg} />}
               {task.deadline && (
-                <span className="flex items-center gap-1 text-xs font-medium" style={{ color: deadlineUrgency === "overdue" ? C.terra : deadlineUrgency === "today" ? C.amber : C.ghost }}>
+                <span className="flex items-center gap-1 text-xs font-medium" style={{ color: deadlineUrgency === "overdue" ? P.red : deadlineUrgency === "today" ? P.orange : P.gray }}>
                   {deadlineUrgency === "overdue" ? <AlertTriangle className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
                   {deadlineUrgency === "overdue" ? `Terlambat \u2014 ${formatDate(task.deadline)}` : formatDate(task.deadline)}
                 </span>
               )}
-              {allDone && items.length > 0 && <CheckCircle2 className="h-3.5 w-3.5" style={{ color: C.sage }} />}
+              {(() => {
+                const attachCount = items.reduce((sum, item) => sum + (attachments[item.id]?.length ?? 0), 0);
+                return attachCount > 0 ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium rounded-full px-1.5 py-0.5" style={{ background: P.purpleLight, color: P.purple }}>
+                    <Paperclip className="w-3 h-3" />{attachCount}
+                  </span>
+                ) : null;
+              })()}
+              {allDone && items.length > 0 && <CheckCircle2 className="h-3.5 w-3.5" style={{ color: P.green }} />}
             </div>
           </div>
-          <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: "task", id: task.id, title: task.title }); }} className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: C.ghost }} tabIndex={-1} title="Delete task"><Trash2 className="w-4 h-4" /></button>
+          <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: "task", id: task.id, title: task.title }); }} className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: P.gray }} tabIndex={-1} title="Delete task"><Trash2 className="w-4 h-4" /></button>
         </div>
         {isExpanded && (
-          <div className="px-5 py-3 space-y-2" style={{ borderTop: `0.5px solid ${C.goldDim}` }}>
+          <div className="px-5 py-3 space-y-2" style={{ borderTop: `1px solid ${P.grayBorder}` }}>
             {items.map((item) => (
-              <ItemRow
-                key={item.id}
-                variant="inline"
-                item={item}
-                notesOpen={expandedNotes.has(item.id)}
-                isCycling={cyclingItemId === item.id}
-                isSaving={isSaving}
-                isFlashing={flashItemId === item.id}
-                notesValue={itemNotes[item.id] !== undefined ? itemNotes[item.id] : (item.progress?.[0]?.notes ?? "")}
-                kendalaValue={itemKendala[item.id] !== undefined ? itemKendala[item.id] : (item.progress?.[0]?.kendala ?? "")}
-                onCycleStatus={handleCycleStatus}
-                onToggleNotes={toggleNotes}
-                onNotesChange={(id, value) => setItemNotes((p) => ({ ...p, [id]: value }))}
-                onKendalaChange={(id, value) => setItemKendala((p) => ({ ...p, [id]: value }))}
-                onSaveNote={handleSaveItemNote}
-                onDelete={(id, title) => setDeleteTarget({ type: "item", id, title })}
-              />
+              <div key={item.id} className="space-y-1">
+                <ItemRow
+                  variant="inline"
+                  item={item}
+                  notesOpen={expandedNotes.has(item.id)}
+                  isCycling={cyclingItemId === item.id}
+                  isSaving={isSaving}
+                  isFlashing={flashItemId === item.id}
+                  notesValue={itemNotes[item.id] !== undefined ? itemNotes[item.id] : (item.progress?.[0]?.notes ?? "")}
+                  kendalaValue={itemKendala[item.id] !== undefined ? itemKendala[item.id] : (item.progress?.[0]?.kendala ?? "")}
+                  onCycleStatus={handleCycleStatus}
+                  onToggleNotes={toggleNotes}
+                  onNotesChange={(id, value) => setItemNotes((p) => ({ ...p, [id]: value }))}
+                  onKendalaChange={(id, value) => setItemKendala((p) => ({ ...p, [id]: value }))}
+                  onSaveNote={handleSaveItemNote}
+                  onDelete={(id, title) => setDeleteTarget({ type: "item", id, title })}
+                />
+                <AttachmentSection itemId={item.id} />
+              </div>
             ))}
           </div>
         )}
@@ -302,16 +397,16 @@ export default function ManagementTasksPage() {
 
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen" style={bgStyle}>
       <Sidebar role="management" />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header userEmail={clientUser?.email ?? ""} role="management" />
-        <div className="flex items-center gap-4 px-6 py-2" style={{ background: C.card, borderBottom: `0.5px solid ${C.goldDim}` }}>
-          {[{ icon: <AlertTriangle className="h-3.5 w-3.5" style={{ color: C.terra }} />, label: "Overdue", value: animOverdue, color: C.terra },
-            { icon: <CalendarClock className="h-3.5 w-3.5" style={{ color: C.amber }} />, label: "Hari Ini", value: animDueToday, color: C.amber },
-            { icon: <ClipboardList className="h-3.5 w-3.5" style={{ color: C.ghost }} />, label: "Total", value: animTotal, color: C.ink }]
+        <div className="flex items-center gap-4 px-6 py-2" style={{ background: "#fff", borderBottom: `1px solid ${P.grayBorder}` }}>
+          {[{ icon: <AlertTriangle className="h-3.5 w-3.5" style={{ color: P.red }} />, label: "Overdue", value: animOverdue, color: P.red },
+            { icon: <CalendarClock className="h-3.5 w-3.5" style={{ color: P.orange }} />, label: "Hari Ini", value: animDueToday, color: P.orange },
+            { icon: <ClipboardList className="h-3.5 w-3.5" style={{ color: P.gray }} />, label: "Total", value: animTotal, color: P.ink }]
             .map(({ label, value, color }) => (
-              <div key={label} className="flex items-center gap-1.5 text-xs"><span style={{ color: C.faded }}>{label}</span><span className="font-semibold tabular-nums" style={{ color }}>{value}</span></div>
+              <div key={label} className="flex items-center gap-1.5 text-xs"><span style={{ color: P.gray }}>{label}</span><span className="font-semibold tabular-nums" style={{ color }}>{value}</span></div>
             ))}
         </div>
         <main className="flex-1 overflow-y-auto p-6">
@@ -354,7 +449,7 @@ export default function ManagementTasksPage() {
               </div>
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="rounded-xl p-5 overflow-hidden" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+                  <div key={i} className="rounded-xl p-5 overflow-hidden" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}>
                     <div className="h-5 w-48 rounded mb-3 skeleton-shimmer" />
                     <div className="h-3 w-32 rounded skeleton-shimmer" />
                   </div>
@@ -362,30 +457,30 @@ export default function ManagementTasksPage() {
               </div>
             </>
           ) : isError ? (
-            <div className="flex flex-col items-center justify-center py-20 rounded-lg" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-              <AlertTriangle className="w-12 h-12 mb-3" style={{ color: C.terra }} />
-              <p className="text-sm font-medium mb-1" style={{ color: C.terra }}>Gagal memuat data</p>
-              <p className="text-xs mb-4" style={{ color: C.faded }}>{queryError instanceof Error ? queryError.message : "Koneksi gagal. Periksa jaringan Anda."}</p>
-              <button onClick={() => refetch()} className="rounded-lg border px-4 py-2 text-sm font-medium transition" style={{ background: C.card, borderColor: C.gold, color: C.gold }}>Coba Lagi</button>
+            <div className="flex flex-col items-center justify-center py-20 rounded-lg" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}>
+              <AlertTriangle className="w-12 h-12 mb-3" style={{ color: P.red }} />
+              <p className="text-sm font-medium mb-1" style={{ color: P.red }}>Gagal memuat data</p>
+              <p className="text-xs mb-4" style={{ color: P.gray }}>{queryError instanceof Error ? queryError.message : "Koneksi gagal. Periksa jaringan Anda."}</p>
+              <button onClick={() => refetch()} className="rounded-lg border px-4 py-2 text-sm font-medium transition" style={{ background: "#fff", borderColor: P.purple, color: P.purple }}>Coba Lagi</button>
             </div>
           ) : (<>
           {alert && <div className="mb-4"><Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} /></div>}
 
           <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
-            <div><h1 className="text-2xl leading-tight" style={{ fontFamily: "var(--font-display)", fontWeight: 500, color: C.ink }}>Tugas</h1><p className="text-sm" style={{ color: C.faded }}>Kelola checklist tugas harian Anda</p></div>
-            {doneCount > 0 && <button onClick={() => setShowClearDone(true)} className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition" style={{ background: C.card, borderColor: C.border, color: C.faded }}><Trash2 className="h-3.5 w-3.5" />Hapus {doneCount} Selesai</button>}
+            <div><h1 className="text-2xl leading-tight font-semibold" style={{ color: P.ink }}>Tugas</h1><p className="text-sm" style={{ color: P.gray }}>Kelola checklist tugas harian Anda</p></div>
+            {doneCount > 0 && <button onClick={() => setShowClearDone(true)} className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition" style={{ background: "#fff", borderColor: P.grayBorder, color: P.gray }}><Trash2 className="h-3.5 w-3.5" />Hapus {doneCount} Selesai</button>}
           </div>
 
           <div className="mb-6 flex gap-2 items-end flex-wrap">
-            <div className="flex-1 min-w-[200px]"><Input label="Task" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} placeholder="Judul task baru..." disabled={isSaving} className="focus:ring-[#B89B5B]" style={{ borderColor: C.border }} /></div>
-            <Input label="Deadline (Opsional)" type="date" fullWidth={false} value={newTaskDeadline} onChange={(e) => setNewTaskDeadline(e.target.value)} disabled={isSaving} className="focus:ring-[#B89B5B]" style={{ borderColor: C.border }} />
-            <button type="button" onClick={handleAddTask} disabled={isSaving || !newTaskTitle.trim()} className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition ml-auto sm:ml-0" style={{ background: C.gold, color: "#fff" }}><Plus className="w-4 h-4" />Tambah</button>
+            <div className="flex-1 min-w-[200px]"><Input label="Task" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} placeholder="Judul task baru..." disabled={isSaving} className="focus:ring-[#7c3aed]" style={{ borderColor: P.grayBorder }} /></div>
+            <Input label="Deadline (Opsional)" type="date" fullWidth={false} value={newTaskDeadline} onChange={(e) => setNewTaskDeadline(e.target.value)} disabled={isSaving} className="focus:ring-[#7c3aed]" style={{ borderColor: P.grayBorder }} />
+            <button type="button" onClick={handleAddTask} disabled={isSaving || !newTaskTitle.trim()} className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition ml-auto sm:ml-0" style={{ background: P.purple, color: "#fff" }}><Plus className="w-4 h-4" />Tambah</button>
           </div>
 
           {tasks.length > 0 && (
             <div className="flex gap-1 mb-4">
               {(["all", "pending", "done"] as const).map((key) => (
-                <button key={key} onClick={() => setFilter(key)} className="rounded-full px-3.5 py-1.5 text-xs font-medium transition-all" style={{ background: filter === key ? C.gold : C.card, color: filter === key ? "#fff" : C.faded, border: filter === key ? "1px solid transparent" : `1px solid ${C.border}`, boxShadow: filter === key ? "0 0 10px rgba(184,155,91,0.35)" : "none" }}>
+                <button key={key} onClick={() => setFilter(key)} className="rounded-full px-3.5 py-1.5 text-xs font-medium transition-all" style={{ background: filter === key ? P.purple : "#fff", color: filter === key ? "#fff" : P.gray, border: filter === key ? "1px solid transparent" : `1px solid ${P.grayBorder}`, boxShadow: filter === key ? "0 0 10px rgba(124,58,237,0.35)" : "none" }}>
                   {key === "all" ? "Semua" : key === "pending" ? "Belum" : "Selesai"}
                 </button>
               ))}
@@ -393,23 +488,23 @@ export default function ManagementTasksPage() {
           )}
 
           {selectedTaskIds.size > 0 && (
-            <div className="mb-4 flex items-center gap-3 p-3 rounded-xl flex-wrap" style={{ background: C.card, border: `1px solid ${C.gold}`, boxShadow: "0 2px 8px rgba(184,155,91,0.15)" }}>
-              <span className="text-sm font-medium" style={{ color: C.ink }}>{selectedTaskIds.size} dipilih</span>
+            <div className="mb-4 flex items-center gap-3 p-3 rounded-xl flex-wrap" style={{ background: "#fff", border: `1px solid ${P.purple}`, boxShadow: "0 2px 8px rgba(124,58,237,0.15)" }}>
+              <span className="text-sm font-medium" style={{ color: P.ink }}>{selectedTaskIds.size} dipilih</span>
               <div className="flex-1" />
-              <button onClick={handleBulkMarkDone} disabled={bulkActionLoading} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition disabled:opacity-50" style={{ background: C.gold, color: "#fff" }}><CheckCircle2 className="w-3.5 h-3.5" />Tandai Selesai</button>
-              <button onClick={() => setBulkDeleteConfirm(true)} disabled={bulkActionLoading} className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50" style={{ borderColor: C.terra, color: C.terra }}><Trash2 className="w-3.5 h-3.5" />Hapus</button>
-              <button onClick={clearSelection} disabled={bulkActionLoading} className="text-xs" style={{ color: C.ghost }}>Batal</button>
+              <button onClick={handleBulkMarkDone} disabled={bulkActionLoading} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition disabled:opacity-50" style={{ background: P.purple, color: "#fff" }}><CheckCircle2 className="w-3.5 h-3.5" />Tandai Selesai</button>
+              <button onClick={() => setBulkDeleteConfirm(true)} disabled={bulkActionLoading} className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50" style={{ borderColor: P.red, color: P.red }}><Trash2 className="w-3.5 h-3.5" />Hapus</button>
+              <button onClick={clearSelection} disabled={bulkActionLoading} className="text-xs" style={{ color: P.gray }}>Batal</button>
             </div>
           )}
 
           {filteredTasks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 rounded-lg" style={{ background: C.card, border: `1px solid ${C.border}` }}><ClipboardList className="w-12 h-12 mb-3" style={{ color: C.ghost }} /><p className="text-sm font-medium" style={{ color: C.faded }}>{tasks.length === 0 ? "Belum ada task" : filter === "done" ? "Belum ada task selesai" : "Semua task selesai"}</p></div>
+            <div className="flex flex-col items-center justify-center py-20 rounded-lg" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}><ClipboardList className="w-12 h-12 mb-3" style={{ color: P.gray }} /><p className="text-sm font-medium" style={{ color: P.gray }}>{tasks.length === 0 ? "Belum ada task" : filter === "done" ? "Belum ada task selesai" : "Semua task selesai"}</p></div>
           ) : statusGroups ? (
             <DragDropContext onDragEnd={handleDragEnd}>
               <div className="space-y-3">
-                {[{ key: "belum", label: "Belum", tasks: statusGroups.belum, icon: <ClipboardList className="h-3.5 w-3.5" style={{ color: C.terra }} /> },
-                  { key: "proses", label: "Proses", tasks: statusGroups.proses, icon: <ClipboardList className="h-3.5 w-3.5" style={{ color: C.amber }} /> },
-                  { key: "selesai", label: "Selesai", tasks: statusGroups.selesai, icon: <ClipboardList className="h-3.5 w-3.5" style={{ color: C.sage }} /> }]
+                {[{ key: "belum", label: "Belum", tasks: statusGroups.belum, icon: <ClipboardList className="h-3.5 w-3.5" style={{ color: P.red }} /> },
+                  { key: "proses", label: "Proses", tasks: statusGroups.proses, icon: <ClipboardList className="h-3.5 w-3.5" style={{ color: P.orange }} /> },
+                  { key: "selesai", label: "Selesai", tasks: statusGroups.selesai, icon: <ClipboardList className="h-3.5 w-3.5" style={{ color: P.green }} /> }]
                   .filter((g) => g.tasks.length > 0)
                   .map(({ key, label, tasks: groupTasks, icon }, idx) => {
                     const isCollapsed = collapsedGroups.has(key);
@@ -428,10 +523,10 @@ export default function ManagementTasksPage() {
                               <div
                                 ref={provided.innerRef}
                                 {...provided.droppableProps}
-                                className={`space-y-3 rounded-lg transition-colors duration-200 ${snapshot.isDraggingOver && !isDropDisabled ? "ring-2 ring-offset-2 ring-[#B89B5B]" : ""}`}
+                                className={`space-y-3 rounded-lg transition-colors duration-200 ${snapshot.isDraggingOver && !isDropDisabled ? "ring-2 ring-offset-2 ring-[#7c3aed]" : ""}`}
                                 style={{
-                                  background: snapshot.isDraggingOver && !isDropDisabled ? "#B89B5B0D" : "transparent",
-                                  border: snapshot.isDraggingOver && !isDropDisabled ? "2px dashed #B89B5B44" : "2px dashed transparent",
+                                  background: snapshot.isDraggingOver && !isDropDisabled ? "#7c3aed0D" : "transparent",
+                                  border: snapshot.isDraggingOver && !isDropDisabled ? "2px dashed #7c3aed44" : "2px dashed transparent",
                                   borderRadius: "12px",
                                   minHeight: groupTasks.length === 0 ? "60px" : undefined,
                                 }}
@@ -474,44 +569,46 @@ export default function ManagementTasksPage() {
       {panelTask && (
         <>
           <div className="fixed inset-0 z-40 backdrop-blur-sm" style={{ background: "rgba(44,24,16,0.3)" }} onClick={closePanel} />
-          <div className="fixed right-0 top-0 bottom-0 z-50 w-full md:w-[420px] flex flex-col shadow-2xl animate-slide-in" style={{ background: "var(--color-parch-sidebar)", borderLeft: `1px solid ${C.border}` }}>
+          <div className="fixed right-0 top-0 bottom-0 z-50 w-full md:w-[420px] flex flex-col shadow-2xl animate-slide-in" style={{ background: "#fff", borderLeft: `1px solid ${P.grayBorder}` }}>
             <style>{`@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } } .animate-slide-in { animation: slideIn 200ms ease-out; }`}</style>
-            <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ background: C.header, borderBottom: `0.5px solid ${C.goldDim}`, borderTop: `2px solid ${C.gold}` }}>
+            <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ background: P.purpleLight, borderBottom: `0.5px solid ${P.grayBorder}`, borderTop: `2px solid ${P.purple}` }}>
               <div className="min-w-0">
-                <p className="text-[9px] uppercase tracking-[0.22em]" style={{ color: C.gold }}>Task Detail</p>
-                <p className="text-base font-medium truncate" style={{ fontFamily: "var(--font-display)", color: C.ink }}>{panelTask.title}</p>
+                <p className="text-[9px] uppercase tracking-[0.22em]" style={{ color: P.purple }}>Task Detail</p>
+                <p className="text-base font-semibold truncate" style={{ color: P.ink }}>{panelTask.title}</p>
                 {panelTask.deadline && (
-                  <p className="text-[11px]" style={{ color: C.ghost }}>Deadline: {formatDate(panelTask.deadline)}</p>
+                  <p className="text-[11px]" style={{ color: P.gray }}>Deadline: {formatDate(panelTask.deadline)}</p>
                 )}
               </div>
-              <button onClick={closePanel} className="rounded p-2 transition-colors shrink-0" style={{ color: C.ghost }} aria-label="Close panel"><X className="h-5 w-5" /></button>
+              <button onClick={closePanel} className="rounded p-2 transition-colors shrink-0" style={{ color: P.gray }} aria-label="Close panel"><X className="h-5 w-5" /></button>
             </div>
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
               {((panelTask.items ?? []).length > 0 ? (
                 panelTask.items!.map((item) => (
-                  <ItemRow
-                    key={item.id}
-                    variant="panel"
-                    item={item}
-                    notesOpen={expandedNotes.has(item.id)}
-                    isCycling={cyclingItemId === item.id}
-                    isSaving={isSaving}
-                    notesValue={itemNotes[item.id] !== undefined ? itemNotes[item.id] : (item.progress?.[0]?.notes ?? "")}
-                    kendalaValue={itemKendala[item.id] !== undefined ? itemKendala[item.id] : (item.progress?.[0]?.kendala ?? "")}
-                    onCycleStatus={handleCycleStatus}
-                    onToggleNotes={toggleNotes}
-                    onNotesChange={(id, value) => setItemNotes((p) => ({ ...p, [id]: value }))}
-                    onKendalaChange={(id, value) => setItemKendala((p) => ({ ...p, [id]: value }))}
-                    onSaveNote={handleSaveItemNote}
-                    onDelete={(id, title) => setDeleteTarget({ type: "item", id, title })}
-                  />
+                  <div key={item.id} className="space-y-1">
+                    <ItemRow
+                      variant="panel"
+                      item={item}
+                      notesOpen={expandedNotes.has(item.id)}
+                      isCycling={cyclingItemId === item.id}
+                      isSaving={isSaving}
+                      notesValue={itemNotes[item.id] !== undefined ? itemNotes[item.id] : (item.progress?.[0]?.notes ?? "")}
+                      kendalaValue={itemKendala[item.id] !== undefined ? itemKendala[item.id] : (item.progress?.[0]?.kendala ?? "")}
+                      onCycleStatus={handleCycleStatus}
+                      onToggleNotes={toggleNotes}
+                      onNotesChange={(id, value) => setItemNotes((p) => ({ ...p, [id]: value }))}
+                      onKendalaChange={(id, value) => setItemKendala((p) => ({ ...p, [id]: value }))}
+                      onSaveNote={handleSaveItemNote}
+                      onDelete={(id, title) => setDeleteTarget({ type: "item", id, title })}
+                    />
+                    <AttachmentSection itemId={item.id} />
+                  </div>
                 ))
               ) : (
-                <p className="text-center py-8" style={{ color: C.ghost }}>Belum ada item.</p>
+                <p className="text-center py-8" style={{ color: P.gray }}>Belum ada item.</p>
               ))}
             </div>
-            <div className="px-5 py-3 shrink-0 flex gap-2" style={{ borderTop: `0.5px solid ${C.goldDim}` }}>
-              <Input value={newItemTitle[panelTask.id] || ""} onChange={(e) => setNewItemTitle((p) => ({ ...p, [panelTask.id]: e.target.value }))} placeholder="Tambah item baru..." disabled={isSaving} className="focus:ring-[#B89B5B]" style={{ borderColor: C.border }} />
+            <div className="px-5 py-3 shrink-0 flex gap-2" style={{ borderTop: `0.5px solid ${P.grayBorder}` }}>
+              <Input value={newItemTitle[panelTask.id] || ""} onChange={(e) => setNewItemTitle((p) => ({ ...p, [panelTask.id]: e.target.value }))} placeholder="Tambah item baru..." disabled={isSaving} className="focus:ring-[#7c3aed]" style={{ borderColor: P.grayBorder }} />
               <Button variant="outline" size="sm" onClick={() => handleAddItem(panelTask.id)} disabled={isSaving || !newItemTitle[panelTask.id]?.trim()} leftIcon={<Plus className="w-3 h-3" />}>Tambah</Button>
             </div>
           </div>

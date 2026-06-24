@@ -78,49 +78,6 @@ const ROLE_CONFIGS: RoleConfig[] = [
 ];
 
 // ════════════════════════════════════════════════════════════════════════════
-// DEMO ACCOUNTS
-// ════════════════════════════════════════════════════════════════════════════
-
-interface DemoAccount {
-  role: LoginRole;
-  email: string;
-  password: string;
-  label: string;
-  dotClass: string;
-}
-
-const DEMO_ACCOUNTS: DemoAccount[] = [
-  {
-    role: "superadmin",
-    email: "admin@company.com",
-    password: "password123",
-    label: "Super Admin: admin@company.com / password123",
-    dotClass: styles.demoDotSuperadmin,
-  },
-  {
-    role: "customer_service",
-    email: "cs.jogja@company.com",
-    password: "password123",
-    label: "CS: cs.jogja@company.com / password123",
-    dotClass: styles.demoDotCs,
-  },
-  {
-    role: "marketing",
-    email: "marketing@company.com",
-    password: "password123",
-    label: "Marketing: marketing@company.com / password123",
-    dotClass: styles.demoDotMarketing,
-  },
-  {
-    role: "management",
-    email: "leader_marketing@company.com",
-    password: "password123",
-    label: "Management: leader_marketing@company.com / password123",
-    dotClass: styles.demoDotManagement,
-  },
-];
-
-// ════════════════════════════════════════════════════════════════════════════
 // COMPONENT
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -194,12 +151,6 @@ export default function LoginPage() {
       setError("Terjadi kesalahan pada server!");
       setIsLoading(false);
     }
-  };
-
-  const handleDemoClick = (account: DemoAccount) => {
-    setRole(account.role);
-    setEmail(account.email);
-    setPassword(account.password);
   };
 
   return (
@@ -358,22 +309,6 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
-
-            <div className={styles.demoSection}>
-              <div className={styles.demoTitle}>Akun Demo</div>
-              <div className={styles.demoAccounts}>
-                {DEMO_ACCOUNTS.map((account) => (
-                  <div
-                    key={account.email}
-                    className={styles.demoAccount}
-                    onClick={() => handleDemoClick(account)}
-                  >
-                    <span className={`${styles.demoDot} ${account.dotClass}`}></span>
-                    <span>{account.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
 
             {isLoading && (
               <div className={styles.loadingOverlay}>

@@ -44,7 +44,12 @@ next-env.d.ts
 
 # ai
 .claude
+.opencode/
+.agents/
 AGENTS.md
 opencode.json
+skills-lock.json
+
+# local folders
 memory-bank/
 bussiness-documents/
