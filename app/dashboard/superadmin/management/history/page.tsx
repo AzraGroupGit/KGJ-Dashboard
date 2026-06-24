@@ -17,6 +17,7 @@ export default function ManagementHistoryPage() {
   const [clientUser, setClientUser] = useState<ClientUser | null>(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [expandedIdxs, setExpandedIdxs] = useState<Set<number>>(new Set());
@@ -60,6 +61,16 @@ export default function ManagementHistoryPage() {
 
   const filteredHistory = useMemo(() => {
     let result = history;
+    const now = new Date(); now.setHours(23, 59, 59, 999);
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const weekStart = new Date(todayStart); weekStart.setDate(weekStart.getDate() - 7);
+
+    if (dateFilter === "today") {
+      result = result.filter((e) => { const d = new Date(e.completed_at); return d >= todayStart && d <= now; });
+    } else if (dateFilter === "week") {
+      result = result.filter((e) => { const d = new Date(e.completed_at); return d >= weekStart && d <= now; });
+    }
+
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter((e) => e.manager.toLowerCase().includes(q) || e.role.toLowerCase().includes(q) || e.item.toLowerCase().includes(q) || e.task.toLowerCase().includes(q));
@@ -67,7 +78,7 @@ export default function ManagementHistoryPage() {
     if (dateFrom) result = result.filter((e) => new Date(e.completed_at) >= new Date(dateFrom));
     if (dateTo) result = result.filter((e) => new Date(e.completed_at) <= new Date(dateTo + "T23:59:59"));
     return result;
-  }, [history, searchQuery, dateFrom, dateTo]);
+  }, [history, searchQuery, dateFrom, dateTo, dateFilter]);
 
   const monthlyGroups = useMemo(() => {
     const groups: { label: string; entries: HistoryEntry[] }[] = [];
@@ -107,7 +118,17 @@ export default function ManagementHistoryPage() {
             <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-1" style={{ color: P.purple }}>Management History</p>
-                <h2 className="text-[28px] font-bold leading-tight" style={{ color: P.ink }}>Riwayat <span style={{ color: P.purple }}>Aktivitas</span></h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-[28px] font-bold leading-tight" style={{ color: P.ink }}>Riwayat <span style={{ color: P.purple }}>Aktivitas</span></h2>
+                  <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                    {(["today", "week", "all"] as const).map((f) => (
+                      <button key={f} onClick={() => setDateFilter(f)}
+                        className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all ${dateFilter === f ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                        {f === "today" ? "Hari Ini" : f === "week" ? "Minggu Ini" : "Semua"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
               <div className="flex items-center gap-4 sm:pb-1">
                 {[

@@ -1,21 +1,31 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Check, StickyNote, Trash2, MessageSquare } from "lucide-react";
+import { Check, StickyNote, Trash2, MessageSquare, Clock, XCircle } from "lucide-react";
 import type { TaskItem } from "@/app/dashboard/superadmin/management/_shared/types";
 import { C } from "@/app/dashboard/superadmin/management/_shared/constants";
 import { Diamond } from "@/components/dashboard/superadmin/Diamond";
 
 function getStatusStyle(status: string | null) {
   switch (status) {
+    case "approved": return { background: C.sage, borderColor: C.sage, color: "#fff" };
     case "selesai": return { background: C.sage, borderColor: C.sage, color: "#fff" };
+    case "waiting_review": return { background: C.gold, borderColor: C.gold, color: "#fff" };
     case "proses": return { background: C.amber, borderColor: C.amber, color: "#fff" };
+    case "rejected": return { background: C.terra, borderColor: C.terra, color: "#fff" };
     default: return { background: "#fff", borderColor: C.terra };
   }
 }
 
 function getStatusLabel(status: string | null) {
-  switch (status) { case "selesai": return "Selesai"; case "proses": return "Proses"; default: return "Belum"; }
+  switch (status) {
+    case "approved": return "Disetujui";
+    case "selesai": return "Selesai";
+    case "waiting_review": return "Review";
+    case "proses": return "Proses";
+    case "rejected": return "Ditolak";
+    default: return "Belum";
+  }
 }
 
 interface ItemRowProps {
@@ -63,12 +73,13 @@ export function ItemRow({
   const statusButton = (
     <button
       onClick={(e) => { e.stopPropagation(); onCycleStatus(item.id, status); }}
-      disabled={isDisabled}
+      disabled={isDisabled || status === "waiting_review" || status === "approved"}
       className={`w-6 h-6 rounded border-2 flex items-center justify-center shrink-0 text-[10px] font-bold transition-colors disabled:opacity-50 ${bounce ? "animate-checkbox-pop" : ""}`}
       style={{ background: statusStyle.background, borderColor: statusStyle.borderColor, color: statusStyle.color }}
       tabIndex={-1}
+      title={status === "waiting_review" ? "Menunggu review superadmin" : status === "approved" ? "Disetujui" : status === "rejected" ? "Ditolak — klik untuk ulangi" : "Klik untuk ubah status"}
     >
-      {status === "selesai" ? <Check className="w-3 h-3" /> : status === "proses" ? "…" : ""}
+      {status === "approved" || status === "selesai" ? <Check className="w-3 h-3" /> : status === "waiting_review" ? <Clock className="w-3 h-3" /> : status === "rejected" ? <XCircle className="w-3 h-3" /> : status === "proses" ? "…" : ""}
     </button>
   );
 

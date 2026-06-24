@@ -11,7 +11,6 @@ import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import { ClipboardList, CheckCircle2, Clock, AlertTriangle, Calendar } from "lucide-react";
-import { C } from "@/app/dashboard/superadmin/management/_shared/constants";
 
 interface TaskItem {
   id: string;
@@ -48,6 +47,7 @@ export default function ManagementOverviewPage() {
   const { data, isLoading } = useQuery<{ success: boolean; data: Task[] }>({
     queryKey: ["management-tasks"],
     queryFn: () => fetcher("/api/management/tasks"),
+    refetchInterval: 30_000,
   });
 
   const tasks = useMemo(() => data?.data ?? [], [data]);
@@ -59,70 +59,75 @@ export default function ManagementOverviewPage() {
   const total = allItems.length;
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
+  const P = { purple: "#7c3aed", purpleLight: "#f5f3ff", purpleMuted: "#c4b5fd", green: "#059669", greenLight: "#ecfdf5", gray: "#6b7280", grayLight: "#f9fafb", grayBorder: "#e5e7eb", orange: "#ea580c", orangeLight: "#fff7ed", red: "#dc2626", redLight: "#fef2f2", ink: "#111827" };
+  const bgStyle = { background: "#f8f9fb url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='0.75' fill='rgba(139,92,246,0.06)'/%3E%3C/svg%3E\") repeat" };
+
   const kpiCards = [
-    { label: "Total Tasks", value: tasks.length, icon: ClipboardList, color: C.gold, bg: "#FFF5DC" },
-    { label: "Selesai", value: completed, icon: CheckCircle2, color: C.sage, bg: "var(--color-sage-bg)" },
-    { label: "Proses", value: inProgress, icon: Clock, color: C.amber, bg: "var(--color-amber-bg)" },
-    { label: "Belum", value: pending, icon: AlertTriangle, color: C.terra, bg: "var(--color-terra-bg)" },
+    { label: "Total Tasks", value: tasks.length, icon: ClipboardList, color: P.purple, bg: P.purpleLight },
+    { label: "Selesai", value: completed, icon: CheckCircle2, color: P.green, bg: P.greenLight },
+    { label: "Proses", value: inProgress, icon: Clock, color: P.orange, bg: P.orangeLight },
+    { label: "Belum", value: pending, icon: AlertTriangle, color: P.red, bg: P.redLight },
   ];
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen" style={bgStyle}>
       <Sidebar role="management" />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header userEmail={clientUser?.email ?? ""} role="management" />
         <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-5xl mx-auto">
-            {/* Masthead */}
-            <div className="mb-8">
-              <h2 className="text-[40px] leading-[0.95]" style={{ fontFamily: "var(--font-display)", fontWeight: 300, color: C.ink, letterSpacing: "-0.02em" }}>
-                Dashboard <i style={{ color: C.gold, fontWeight: 400 }}>Management</i>
-              </h2>
-              <p className="text-sm mt-1" style={{ color: C.faded }}>Ringkasan progress dan checklist tugas</p>
-              <div className="mt-3 h-px w-full" style={{ background: `linear-gradient(to right, ${C.gold}, transparent)` }} />
+
+            {/* Gradient Banner */}
+            <div className="mb-8 p-5 rounded-2xl relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${P.purpleLight} 0%, #fff 60%)`, border: `1px solid ${P.grayBorder}` }}>
+              <div className="absolute top-0 right-0 w-48 h-full pointer-events-none opacity-30" style={{ background: `radial-gradient(ellipse at top right, ${P.purpleMuted} 0%, transparent 70%)` }} />
+              <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-1" style={{ color: P.purple }}>Management Overview</p>
+                  <h2 className="text-[28px] font-bold leading-tight" style={{ color: P.ink }}>Dashboard <span style={{ color: P.purple }}>Management</span></h2>
+                </div>
+                <div className="flex items-center gap-3 sm:pb-1">
+                  {[{ label: "Total", value: total, color: P.purple }, { label: "Selesai", value: completed, color: P.green }, { label: "Proses", value: inProgress, color: P.orange }, { label: "Progress", value: `${progress}%`, color: P.ink }].map(({ label, value, color }) => (
+                    <div key={label} className="text-center"><p className="text-[10px] font-medium" style={{ color: P.gray }}>{label}</p><p className="text-base font-bold" style={{ color }}>{value}</p></div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {isLoading ? (
-              <Loading variant="skeleton" text="Memuat data..." />
-            ) : (
+            {isLoading ? <Loading variant="skeleton" text="Memuat data..." /> : (
               <>
                 {/* KPI Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
                   {kpiCards.map(({ label, value, icon: Icon, color, bg }) => (
-                    <div key={label} className="rounded-lg border p-5" style={{ background: C.card, borderColor: C.border }}>
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg mb-3" style={{ background: bg }}>
+                    <div key={label} className="rounded-2xl p-4" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}>
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl mb-3" style={{ background: bg }}>
                         <Icon className="h-5 w-5" style={{ color }} />
                       </div>
-                      <p className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)", color: C.ink }}>{value}</p>
-                      <p className="text-xs mt-0.5" style={{ color: C.faded }}>{label}</p>
+                      <p className="text-2xl font-bold" style={{ color: P.ink }}>{value}</p>
+                      <p className="text-xs mt-0.5" style={{ color: P.gray }}>{label}</p>
                     </div>
                   ))}
                 </div>
 
                 {/* Overall Progress */}
-                <div className="rounded-lg border p-5 mb-8" style={{ background: C.card, borderColor: C.border }}>
+                <div className="rounded-2xl p-5 mb-6" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}>
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-semibold" style={{ color: C.sepia }}>Progress Keseluruhan</p>
-                    <p className="text-sm font-bold" style={{ fontFamily: "var(--font-display)", color: C.ink }}>{progress}%</p>
+                    <p className="text-sm font-semibold" style={{ color: P.ink }}>Progress Keseluruhan</p>
+                    <p className="text-sm font-bold" style={{ color: P.purple }}>{progress}%</p>
                   </div>
                   <div className="flex gap-1">
                     {[...Array(total || 1)].map((_, i) => {
                       const item = allItems[i];
                       const st = item?.progress?.[0]?.status ?? "belum";
-                      const fill = st === "selesai" ? C.sage : st === "proses" ? C.gold : C.border;
-                      return <div key={i} className="flex-1 h-2" style={{ background: fill }} />;
+                      const fill = st === "selesai" ? P.green : st === "proses" ? P.purple : P.grayBorder;
+                      return <div key={i} className="flex-1 h-2 rounded-full" style={{ background: fill }} />;
                     })}
                   </div>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-[10px]" style={{ color: C.ghost }}>{completed} selesai · {inProgress} proses · {pending} belum</span>
-                  </div>
+                  <div className="flex items-center justify-between mt-2"><span className="text-[10px]" style={{ color: P.gray }}>{completed} selesai · {inProgress} proses · {pending} belum</span></div>
                 </div>
 
                 {/* Task Cards */}
                 {tasks.length === 0 ? (
-                  <div className="text-center py-12 rounded-lg" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-                    <ClipboardList className="mx-auto mb-3 h-10 w-10" style={{ color: C.ghost }} />
-                    <p style={{ color: C.faded }}>Belum ada task. Tambahkan dari menu Tugas.</p>
+                  <div className="text-center py-12 rounded-2xl" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}>
+                    <ClipboardList className="mx-auto mb-3 h-10 w-10" style={{ color: P.gray }} /><p style={{ color: P.gray }}>Belum ada task.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -131,31 +136,17 @@ export default function ManagementOverviewPage() {
                       const done = items.filter((i) => i.progress?.[0]?.status === "selesai").length;
                       const pct = items.length > 0 ? Math.round((done / items.length) * 100) : 0;
                       const urgency = getDeadlineUrgency(task.deadline);
-                      const borderStyle = urgency === "overdue" ? { borderLeft: `3px solid ${C.terra}` } : urgency === "today" ? { borderLeft: `3px solid ${C.amber}` } : {};
+                      const borderStyle = urgency === "overdue" ? { borderLeft: `3px solid ${P.red}` } : urgency === "today" ? { borderLeft: `3px solid ${P.orange}` } : {};
                       return (
-                        <div key={task.id} className="rounded-lg border p-4" style={{ background: C.card, borderColor: C.border, ...borderStyle }}>
+                        <div key={task.id} className="rounded-2xl p-4" style={{ background: "#fff", border: `1px solid ${P.grayBorder}`, ...borderStyle }}>
                           <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <p className="font-medium" style={{ fontFamily: "var(--font-display)", color: C.ink }}>{task.title}</p>
-                              {task.deadline && (
-                                <p className="text-[11px] flex items-center gap-1 mt-0.5" style={{ color: urgency === "overdue" ? C.terra : urgency === "today" ? C.amber : C.ghost }}>
-                                  <Calendar className="h-3 w-3" />
-                                  {urgency === "overdue" ? "Terlambat — " : ""}
-                                  {new Date(task.deadline).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
-                                </p>
-                              )}
+                            <div><p className="font-semibold" style={{ color: P.ink }}>{task.title}</p>
+                              {task.deadline && <p className="text-[11px] flex items-center gap-1 mt-0.5" style={{ color: urgency === "overdue" ? P.red : urgency === "today" ? P.orange : P.gray }}><Calendar className="h-3 w-3" />{urgency === "overdue" ? "Terlambat — " : ""}{new Date(task.deadline).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}</p>}
                             </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)", color: C.ink }}>{done}/{items.length}</p>
-                              <p className="text-[10px]" style={{ color: C.faded }}>{pct}%</p>
-                            </div>
+                            <div className="text-right shrink-0"><p className="text-sm font-semibold" style={{ color: P.ink }}>{done}/{items.length}</p><p className="text-[10px]" style={{ color: P.gray }}>{pct}%</p></div>
                           </div>
                           <div className="flex gap-1">
-                            {items.map((item, i) => {
-                              const st = item.progress?.[0]?.status ?? "belum";
-                              const fill = st === "selesai" ? C.sage : st === "proses" ? C.gold : C.border;
-                              return <div key={i} className="flex-1 h-1.5" style={{ background: fill }} />;
-                            })}
+                            {items.map((item, i) => { const st = item.progress?.[0]?.status ?? "belum"; const fill = st === "selesai" ? P.green : st === "proses" ? P.purple : P.grayBorder; return <div key={i} className="flex-1 h-1.5 rounded-full" style={{ background: fill }} />; })}
                           </div>
                         </div>
                       );
@@ -164,7 +155,6 @@ export default function ManagementOverviewPage() {
                 )}
               </>
             )}
-          </div>
         </main>
       </div>
     </div>
