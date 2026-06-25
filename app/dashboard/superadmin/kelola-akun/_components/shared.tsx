@@ -90,6 +90,7 @@ export const SEGMENT_OPTIONS: { value: UserSegment; label: string }[] = [
 // ─── Empty forms ──────────────────────────────────────────────────────────────
 
 export const EMPTY_BMS_FORM = {
+  username: "",
   full_name: "",
   email: "",
   password: "",
@@ -270,6 +271,8 @@ export const getRoleBadge = (user: UnifiedUser) => {
     leader_rnd: "Leader RND",
     leader_safar: "Leader Safar",
     leader_ga: "Leader GA",
+    leader_sekdir: "Leader Sekdir",
+    leader_rji: "Leader RJI",
   };
   if (role.role_group === "management" && MGMT_LABELS[role.name]) {
     return (

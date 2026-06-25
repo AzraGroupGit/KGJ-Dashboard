@@ -215,6 +215,7 @@ export default function KelolaAkunPage() {
     setNewUserType(user.userType);
     if (user.userType === "bms") {
       setBmsForm({
+        username: user.username ?? "",
         full_name: user.full_name,
         email: user.email ?? "",
         password: "",
@@ -260,6 +261,7 @@ export default function KelolaAkunPage() {
   const handleSaveBmsUser = async () => {
     const schema = isEditMode ? BmsEditUserSchema : BmsUserSchema;
     const validation = schema.safeParse({
+      username: bmsForm.username || undefined,
       full_name: bmsForm.full_name,
       email: bmsForm.email,
       password: bmsForm.password,
@@ -293,6 +295,7 @@ export default function KelolaAkunPage() {
         email: bmsForm.email.trim(),
         role: bmsForm.role,
         branch_id: bmsForm.role === "customer_service" ? bmsForm.branch_id || null : null,
+        ...(bmsForm.username?.trim() ? { username: bmsForm.username.trim() } : {}),
         ...(bmsForm.password ? { password: bmsForm.password } : {}),
       };
       const res = await fetch(
@@ -396,8 +399,8 @@ export default function KelolaAkunPage() {
         email: supervisorForm.email.trim().toLowerCase(),
         role: supervisorForm.role,
       };
-      if (!isEditMode) payload.username = supervisorForm.username.trim();
-      if (supervisorForm.password) payload.password = supervisorForm.password;
+      if (supervisorForm.username.trim()) payload.username = supervisorForm.username.trim();
+
       const res = await fetch(
         isEditMode ? `/api/users/${selectedUser!.id}` : "/api/users",
         { method: isEditMode ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) },
@@ -441,7 +444,7 @@ export default function KelolaAkunPage() {
         email: managementForm.email.trim().toLowerCase(),
         role: managementForm.role,
       };
-      if (!isEditMode) payload.username = managementForm.username.trim();
+      if (managementForm.username.trim()) payload.username = managementForm.username.trim();
       if (managementForm.password) payload.password = managementForm.password;
 
       const res = await fetch(

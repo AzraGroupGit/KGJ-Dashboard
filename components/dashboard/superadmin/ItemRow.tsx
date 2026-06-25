@@ -115,7 +115,7 @@ export function ItemRow({
   const deleteButton = (
     <button
       onClick={(e) => { e.stopPropagation(); onDelete(item.id, item.title); }}
-      className={variant === "inline" ? "opacity-0 group-hover:opacity-100 transition-opacity shrink-0" : "shrink-0"}
+      className={variant === "inline" ? "opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0" : "shrink-0"}
       style={{ color: C.ghost }}
       tabIndex={-1}
     >

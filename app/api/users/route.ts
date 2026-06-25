@@ -10,7 +10,7 @@ import { getRoleProps } from "@/lib/auth/session";
 // ════════════════════════════════════════════════════════════════════════════
 
 const BMS_ROLE_NAMES = ["superadmin", "customer_service", "marketing"] as const;
-const MANAGEMENT_ROLE_NAMES = ["operational_supervisor", "production_supervisor", "leader_hc", "leader_operational", "leader_production", "leader_marketing", "leader_sales", "leader_fat", "leader_rnd", "leader_safar", "leader_ga"] as const;
+const MANAGEMENT_ROLE_NAMES = ["operational_supervisor", "production_supervisor", "leader_hc", "leader_operational", "leader_production", "leader_marketing", "leader_sales", "leader_fat", "leader_rnd", "leader_safar", "leader_ga", "leader_sekdir", "leader_rji"] as const;
 const ALL_ROLE_GROUPS = [
   "management",
   "operational",

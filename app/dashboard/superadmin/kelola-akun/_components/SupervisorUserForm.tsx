@@ -47,15 +47,13 @@ export function SupervisorUserForm({
       <div className="bg-rose-50 border border-rose-200 rounded-lg p-3 text-xs text-rose-700">
         Hanya boleh satu akun aktif per tipe supervisor. Jika sudah ada, pembuatan akan ditolak.
       </div>
-      {!isEditMode && (
-        <Input
-          label="Username"
-          value={form.username}
-          onChange={(e) => setForm({ ...form, username: e.target.value })}
-          placeholder="min. 3 karakter"
-          disabled={isSaving}
-        />
-      )}
+      <Input
+        label="Username"
+        value={form.username}
+        onChange={(e) => setForm({ ...form, username: e.target.value })}
+        placeholder="min. 3 karakter"
+        disabled={isSaving}
+      />
       <Input
         label="Email"
         type="email"

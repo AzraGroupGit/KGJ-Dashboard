@@ -58,6 +58,65 @@ function groupTasksByStatus(tasks: Task[]) {
   return { selesai, proses, belum };
 }
 
+type AttachmentFile = { id: string; file_name: string; public_url: string; mime_type: string };
+
+function AttachmentSection({
+  itemId, files, showAlert, P,
+  fetchAttachments, onUpload, onDelete,
+}: {
+  itemId: string;
+  files: AttachmentFile[];
+  showAlert: (type: "success" | "error", message: string) => void;
+  P: Record<string, string>;
+  fetchAttachments: (itemId: string) => Promise<void>;
+  onUpload: (itemId: string, file: File) => Promise<void>;
+  onDelete: (itemId: string, attachId: string) => Promise<void>;
+}) {
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => { fetchAttachments(itemId); }, [itemId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (files.length >= 3) { showAlert("error", "Maksimal 3 lampiran"); return; }
+    setUploading(true);
+    try { await onUpload(itemId, file); } catch (err) { showAlert("error", err instanceof Error ? err.message : "Gagal upload"); }
+    finally { setUploading(false); e.target.value = ""; }
+  };
+
+  return (
+    <div className="ml-7 flex items-center gap-2 flex-wrap">
+      {files.map((f) => {
+        const isImage = f.mime_type?.startsWith("image/");
+        return (
+          <a key={f.id} href={f.public_url} target="_blank" rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-medium hover:bg-gray-50 transition-colors shrink-0 group"
+            style={{ borderColor: P.grayBorder, color: P.purple }}>
+            {isImage ? (
+              <img src={f.public_url} alt={f.file_name} className="w-4 h-4 rounded object-cover" />
+            ) : (
+              <Paperclip className="w-3 h-3" />
+            )}
+            <span className="max-w-[80px] truncate">{f.file_name}</span>
+            <button onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); onDelete(itemId, f.id); }}
+              className="ml-1 hover:text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" style={{ color: P.gray }}>
+              <X className="w-3 h-3" />
+            </button>
+          </a>
+        );
+      })}
+      {files.length < 3 && (
+        <label className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-medium cursor-pointer hover:bg-gray-50 transition-colors shrink-0"
+          style={{ borderColor: P.grayBorder, color: P.gray, borderStyle: "dashed" }}>
+          {uploading ? "Mengunggah..." : <><Plus className="w-3 h-3" /> Lampiran</>}
+          <input type="file" className="hidden" accept="image/*,.pdf" onChange={handleUpload} disabled={uploading} />
+        </label>
+      )}
+    </div>
+  );
+}
+
 export default function ManagementTasksPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -147,6 +206,21 @@ export default function ManagementTasksPage() {
   const animTotal = useAnimatedValue(taskStats.total, 600);
 
   const showAlert = (type: "success" | "error", message: string) => { setAlert({ type, message }); setTimeout(() => setAlert(null), 3000); };
+
+  const handleAttachmentUpload = async (itemId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`/api/management/tasks/items/${itemId}/attachments`, { method: "POST", body: formData });
+    if (!res.ok) { const j = await res.json(); throw new Error(j.error || "Gagal upload"); }
+    const data = await res.json();
+    setAttachments((p) => ({ ...p, [itemId]: [...(p[itemId] ?? []), data] }));
+  };
+
+  const handleAttachmentDelete = async (itemId: string, attachId: string) => {
+    const res = await fetch(`/api/management/tasks/items/${itemId}/attachments/${attachId}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Gagal menghapus");
+    setAttachments((p) => ({ ...p, [itemId]: (p[itemId] ?? []).filter((f) => f.id !== attachId) }));
+  };
 
   const handleAddTask = async () => {
     if (!newTaskTitle.trim()) return; setIsSaving(true);
@@ -255,71 +329,6 @@ export default function ManagementTasksPage() {
     return () => document.removeEventListener("keydown", h);
   }, [panelTask, closePanel]);
 
-  // Enhanced task card with keyboard support
-  function AttachmentSection({ itemId }: { itemId: string }) {
-    const files = attachments[itemId] ?? [];
-    const loading = attachmentsLoading[itemId] ?? false;
-    const [uploading, setUploading] = useState(false);
-
-    useEffect(() => { fetchAttachments(itemId); }, [itemId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      if (files.length >= 3) { showAlert("error", "Maksimal 3 lampiran"); return; }
-      setUploading(true);
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-        const res = await fetch(`/api/management/tasks/items/${itemId}/attachments`, { method: "POST", body: formData });
-        if (!res.ok) { const j = await res.json(); throw new Error(j.error); }
-        const data = await res.json();
-        setAttachments((p) => ({ ...p, [itemId]: [...(p[itemId] ?? []), data] }));
-      } catch (err) { showAlert("error", err instanceof Error ? err.message : "Gagal upload"); }
-      finally { setUploading(false); e.target.value = ""; }
-    };
-
-    const handleDelete = async (attachId: string) => {
-      try {
-        const res = await fetch(`/api/management/tasks/items/${itemId}/attachments/${attachId}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Gagal menghapus");
-        setAttachments((p) => ({ ...p, [itemId]: (p[itemId] ?? []).filter((f) => f.id !== attachId) }));
-      } catch { showAlert("error", "Gagal menghapus lampiran"); }
-    };
-
-    return (
-      <div className="ml-7 flex items-center gap-2 flex-wrap">
-        {files.map((f) => {
-          const isImage = f.mime_type?.startsWith("image/");
-          return (
-            <a key={f.id} href={f.public_url} target="_blank" rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-medium hover:bg-gray-50 transition-colors shrink-0 group"
-              style={{ borderColor: P.grayBorder, color: P.purple }}>
-              {isImage ? (
-                <img src={f.public_url} alt={f.file_name} className="w-4 h-4 rounded object-cover" />
-              ) : (
-                <Paperclip className="w-3 h-3" />
-              )}
-              <span className="max-w-[80px] truncate">{f.file_name}</span>
-              <button onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); handleDelete(f.id); }}
-                className="ml-1 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: P.gray }}>
-                <X className="w-3 h-3" />
-              </button>
-            </a>
-          );
-        })}
-        {files.length < 3 && (
-          <label className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-medium cursor-pointer hover:bg-gray-50 transition-colors shrink-0"
-            style={{ borderColor: P.grayBorder, color: P.gray, borderStyle: "dashed" }}>
-            {uploading ? "Mengunggah..." : <><Plus className="w-3 h-3" /> Lampiran</>}
-            <input type="file" className="hidden" accept="image/*,.pdf" onChange={handleUpload} disabled={uploading} />
-          </label>
-        )}
-      </div>
-    );
-  }
-
-  // Enhanced task card with keyboard support
   function renderTaskCard(task: Task, index?: number, extra?: { dragHandleProps?: DraggableProvidedDragHandleProps | null; isDragging?: boolean; isSelected?: boolean; onSelect?: (taskId: string) => void }) {
     const items = task.items ?? [];
     const done = items.filter((i) => i.progress?.[0]?.status === "selesai").length;
@@ -340,7 +349,7 @@ export default function ManagementTasksPage() {
           {extra?.dragHandleProps && (
             <div {...extra.dragHandleProps} className="shrink-0 cursor-grab active:cursor-grabbing touch-none" style={{ color: P.gray }} tabIndex={-1} title="Drag to move"><GripVertical className="w-4 h-4" /></div>
           )}
-          <button onClick={(e) => { e.stopPropagation(); extra?.onSelect?.(task.id); }} className="shrink-0 hidden group-hover:inline-flex md:inline-flex" style={{ color: isSelected ? P.purple : P.gray }} tabIndex={-1} title="Select task">
+          <button onClick={(e) => { e.stopPropagation(); extra?.onSelect?.(task.id); }} className="shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" style={{ color: isSelected ? P.purple : P.gray }} tabIndex={-1} title="Select task">
             {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
           </button>
           <button onClick={(e) => { e.stopPropagation(); toggleExpand(task.id); }} style={{ color: P.gray }} className="shrink-0" tabIndex={-1} title="Quick preview — view items only">{isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</button>
@@ -364,7 +373,7 @@ export default function ManagementTasksPage() {
               {allDone && items.length > 0 && <CheckCircle2 className="h-3.5 w-3.5" style={{ color: P.green }} />}
             </div>
           </div>
-          <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: "task", id: task.id, title: task.title }); }} className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: P.gray }} tabIndex={-1} title="Delete task"><Trash2 className="w-4 h-4" /></button>
+          <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: "task", id: task.id, title: task.title }); }} className="p-1.5 rounded-lg opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0" style={{ color: P.gray }} tabIndex={-1} title="Delete task"><Trash2 className="w-4 h-4" /></button>
         </div>
         {isExpanded && (
           <div className="px-5 py-3 space-y-2" style={{ borderTop: `1px solid ${P.grayBorder}` }}>
@@ -386,7 +395,7 @@ export default function ManagementTasksPage() {
                   onSaveNote={handleSaveItemNote}
                   onDelete={(id, title) => setDeleteTarget({ type: "item", id, title })}
                 />
-                <AttachmentSection itemId={item.id} />
+                <AttachmentSection itemId={item.id} files={attachments[item.id] ?? []} showAlert={showAlert} P={P} fetchAttachments={fetchAttachments} onUpload={handleAttachmentUpload} onDelete={handleAttachmentDelete} />
               </div>
             ))}
           </div>
@@ -600,11 +609,11 @@ export default function ManagementTasksPage() {
                       onSaveNote={handleSaveItemNote}
                       onDelete={(id, title) => setDeleteTarget({ type: "item", id, title })}
                     />
-                    <AttachmentSection itemId={item.id} />
+                    <AttachmentSection itemId={item.id} files={attachments[item.id] ?? []} showAlert={showAlert} P={P} fetchAttachments={fetchAttachments} onUpload={handleAttachmentUpload} onDelete={handleAttachmentDelete} />
                   </div>
                 ))
               ) : (
-                <p className="text-center py-8" style={{ color: P.gray }}>Belum ada item.</p>
+                  <p className="text-center py-8" style={{ color: P.gray }}>Belum ada item.</p>
               ))}
             </div>
             <div className="px-5 py-3 shrink-0 flex gap-2" style={{ borderTop: `0.5px solid ${P.grayBorder}` }}>
