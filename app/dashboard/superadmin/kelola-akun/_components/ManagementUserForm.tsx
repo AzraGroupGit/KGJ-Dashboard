@@ -23,6 +23,8 @@ const MANAGEMENT_ROLE_LABELS: Record<string, string> = {
   leader_rnd: "Leader RND",
   leader_safar: "Leader Safar",
   leader_ga: "Leader GA",
+  leader_sekdir: "Leader Sekdir",
+  leader_rji: "Leader RJI",
 };
 
 interface ManagementUserFormProps {
@@ -57,10 +59,8 @@ export function ManagementUserForm({
       <div className="bg-violet-50 border border-violet-200 rounded-lg p-3 text-xs text-violet-700">
         Akun Management dapat login melalui halaman login dengan kartu Management dan memiliki akses ke dashboard tugas.
       </div>
-      {!isEditMode && (
-        <Input label="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })}
-          placeholder="min. 3 karakter" disabled={isSaving} />
-      )}
+      <Input label="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })}
+        placeholder="min. 3 karakter" disabled={isSaving} />
       <Input label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
         placeholder="contoh: leader@perusahaan.com" disabled={isSaving} />
       <Input label="Nama Lengkap" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })}

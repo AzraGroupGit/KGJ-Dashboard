@@ -3,6 +3,7 @@
 import { z } from "zod";
 
 export const BmsUserSchema = z.object({
+  username: z.string().optional(),
   full_name: z.string().min(1, "Nama lengkap wajib diisi"),
   email: z.string().email("Format email tidak valid"),
   password: z.string().min(6, "Password minimal 6 karakter"),
@@ -21,6 +22,7 @@ export const BmsUserSchema = z.object({
 });
 
 export const BmsEditUserSchema = z.object({
+  username: z.string().optional(),
   full_name: z.string().min(1, "Nama lengkap wajib diisi"),
   email: z.string().email("Format email tidak valid"),
   role: z.enum(["superadmin", "customer_service", "marketing"], {
@@ -39,6 +41,7 @@ export const OprprdUserSchema = z.object({
 });
 
 export const OprprdEditUserSchema = z.object({
+  username: z.string().optional(),
   full_name: z.string().min(1, "Nama lengkap wajib diisi"),
   role_id: z.string().min(1, "Role wajib dipilih"),
   email: z.string().optional(),
@@ -56,6 +59,7 @@ export const SupervisorUserSchema = z.object({
 });
 
 export const SupervisorEditUserSchema = z.object({
+  username: z.string().optional(),
   full_name: z.string().min(1, "Nama lengkap wajib diisi"),
   email: z.string().email("Format email tidak valid"),
   role: z.enum(["operational_supervisor", "production_supervisor"], {
@@ -72,6 +76,7 @@ export const ManagementUserSchema = z.object({
 });
 
 export const ManagementEditUserSchema = z.object({
+  username: z.string().optional(),
   full_name: z.string().min(1, "Nama lengkap wajib diisi"),
   email: z.string().email("Format email tidak valid"),
   role: z.string().min(1, "Leader role wajib dipilih"),

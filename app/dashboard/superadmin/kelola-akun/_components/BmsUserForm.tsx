@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import { type AlertState, type Branch } from "./shared";
 
 interface BmsFormState {
+  username: string;
   full_name: string;
   email: string;
   password: string;
@@ -46,6 +47,13 @@ export function BmsUserForm({
           Ganti tipe akun
         </button>
       )}
+      <Input
+        label={isEditMode ? "Username" : "Username (opsional)"}
+        value={form.username}
+        onChange={(e) => setForm({ ...form, username: e.target.value })}
+        placeholder={isEditMode ? undefined : "min. 3 karakter"}
+        disabled={isSaving}
+      />
       <Input
         label="Nama Lengkap"
         value={form.full_name}

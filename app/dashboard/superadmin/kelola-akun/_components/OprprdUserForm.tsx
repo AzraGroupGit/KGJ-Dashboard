@@ -53,7 +53,7 @@ export function OprprdUserForm({
           value={form.username}
           onChange={(e) => setForm({ ...form, username: e.target.value })}
           placeholder="min. 3 karakter"
-          disabled={isSaving || isEditMode}
+          disabled={isSaving}
         />
         <Input
           label="Nama Lengkap"

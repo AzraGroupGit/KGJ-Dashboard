@@ -26,6 +26,8 @@ export const ROLE_DISPLAY: Record<string, string> = {
   leader_rnd: "Leader RND",
   leader_safar: "Leader Safar",
   leader_ga: "Leader GA",
+  leader_sekdir: "Leader Sekdir",
+  leader_rji: "Leader RJI",
   operational_supervisor: "Spv. Operasional",
   production_supervisor: "Spv. Produksi",
   superadmin: "Super Admin",

@@ -23,6 +23,8 @@ import { ROUTES } from "@/lib/routes";
 import { clearClientUser } from "@/lib/auth/session";
 import type { Channel } from "pusher-js";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import ProfileModal from "@/components/layout/ProfileModal";
+import SettingsModal from "@/components/layout/SettingsModal";
 
 import type { Notification } from "@/types/layout";
 
@@ -49,6 +51,8 @@ export default function Header({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [greeting, setGreeting] = useState("");
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +73,26 @@ export default function Header({
       setUnreadCount(notifData.unread_count ?? 0);
     }
   }, [notifData]);
+
+  // ─── Fetch profile ─────────────────────────────────────────────────────────
+
+  interface ProfileData {
+    id: string;
+    full_name: string;
+    username: string | null;
+    email: string | null;
+    status: string;
+    role: { id: string; name: string; role_group: string; description: string | null };
+    branch: { id: string; name: string; code: string } | null;
+  }
+
+  const { data: profile } = useQuery<ProfileData>({
+    queryKey: ["profile"],
+    queryFn: () => fetcher("/api/profile"),
+  });
+
+  const formatRoleName = (name: string) =>
+    name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
   useEffect(() => {
     const h = new Date().getHours();
@@ -303,19 +327,19 @@ export default function Header({
               {/* Role & Greeting */}
               <div className="min-w-0">
                 <h1 className="text-base md:text-lg font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent truncate">
-                  {getRoleLabel()}
+                  {profile ? formatRoleName(profile.role.name) : getRoleLabel()}
                 </h1>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-500 hidden sm:inline">
                     {greeting}
                   </span>
-                  {greeting && getDisplayName() && (
+                  {greeting && profile?.full_name && (
                     <>
                       <span className="text-xs text-gray-300 hidden sm:inline">
                         •
                       </span>
                       <span className="text-xs font-medium text-gray-700 truncate">
-                        {getDisplayName()}
+                        {profile.full_name}
                       </span>
                     </>
                   )}
@@ -450,7 +474,7 @@ export default function Header({
                   {/* Name & Role - Hidden on mobile */}
                   <div className="hidden md:block text-left">
                     <p className="text-sm font-medium text-gray-800 leading-tight">
-                      {getDisplayName()}
+                      {profile?.full_name || getDisplayName()}
                     </p>
                     <p className="text-xs text-gray-500">{getRoleLabel()}</p>
                   </div>
@@ -467,7 +491,7 @@ export default function Header({
                       className={`px-4 py-3 border-b border-gray-100 bg-gradient-to-r ${getRoleBadgeColor()} bg-opacity-10`}
                     >
                       <p className="text-sm font-semibold text-gray-800 truncate">
-                        {userEmail}
+                        {profile?.email || userEmail}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         Role: {getRoleLabel()}
@@ -476,11 +500,15 @@ export default function Header({
 
                     {/* Menu Items */}
                     <div className="py-2">
-                      <button className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3 min-h-[44px]">
+                      <button
+                        onClick={() => { setIsProfileOpen(false); setIsProfileModalOpen(true); }}
+                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3 min-h-[44px]">
                         <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         <span>Profil Saya</span>
                       </button>
-                      <button className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3 min-h-[44px]">
+                      <button
+                        onClick={() => { setIsProfileOpen(false); setIsSettingsModalOpen(true); }}
+                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3 min-h-[44px]">
                         <Settings className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         <span>Pengaturan</span>
                       </button>
@@ -524,13 +552,29 @@ export default function Header({
         isOpen={isLogoutConfirmOpen}
         variant="danger"
         title="Logout dari akun?"
-        message={`Anda akan keluar dari akun ${getDisplayName() || userEmail}. Silakan login kembali untuk mengakses dashboard.`}
+        message={`Anda akan keluar dari akun ${profile?.full_name || getDisplayName() || userEmail}. Silakan login kembali untuk mengakses dashboard.`}
         confirmText="Ya, Logout"
         cancelText="Batal"
         isLoading={isLoggingOut}
         onConfirm={handleLogout}
         onCancel={() => setIsLogoutConfirmOpen(false)}
       />
+      <ProfileModal
+        profile={isProfileModalOpen ? profile ?? null : null}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
+      {profile && isSettingsModalOpen && (
+        <SettingsModal
+          profile={{
+            id: profile.id,
+            full_name: profile.full_name,
+            username: profile.username,
+            email: profile.email,
+          }}
+          onClose={() => setIsSettingsModalOpen(false)}
+          onSaved={() => { window.location.reload(); }}
+        />
+      )}
     </>
   );
 }
