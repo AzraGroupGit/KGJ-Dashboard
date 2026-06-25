@@ -14,10 +14,11 @@ import Alert from "@/components/ui/Alert";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import {
-  Plus, Trash2, CheckCircle2, ChevronDown, ChevronRight, Calendar,
+  Plus, Trash2, CheckCircle2, ChevronDown, ChevronRight, Calendar, Copy,
   ClipboardList, AlertTriangle, CalendarClock, X, GripVertical, Square, CheckSquare, Paperclip,
 } from "lucide-react";
 import type { Task } from "@/app/dashboard/superadmin/management/_shared/types";
+import { computeOverdueDays, getOverdueSeverity } from "@/lib/overdue";
 import { ProgressWidget } from "@/components/dashboard/superadmin/ProgressWidget";
 import { ItemRow } from "@/components/dashboard/superadmin/ItemRow";
 import { useAnimatedValue } from "@/app/dashboard/superadmin/management/_shared/utils";
@@ -58,65 +59,6 @@ function groupTasksByStatus(tasks: Task[]) {
   return { selesai, proses, belum };
 }
 
-type AttachmentFile = { id: string; file_name: string; public_url: string; mime_type: string };
-
-function AttachmentSection({
-  itemId, files, showAlert, P,
-  fetchAttachments, onUpload, onDelete,
-}: {
-  itemId: string;
-  files: AttachmentFile[];
-  showAlert: (type: "success" | "error", message: string) => void;
-  P: Record<string, string>;
-  fetchAttachments: (itemId: string) => Promise<void>;
-  onUpload: (itemId: string, file: File) => Promise<void>;
-  onDelete: (itemId: string, attachId: string) => Promise<void>;
-}) {
-  const [uploading, setUploading] = useState(false);
-
-  useEffect(() => { fetchAttachments(itemId); }, [itemId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (files.length >= 3) { showAlert("error", "Maksimal 3 lampiran"); return; }
-    setUploading(true);
-    try { await onUpload(itemId, file); } catch (err) { showAlert("error", err instanceof Error ? err.message : "Gagal upload"); }
-    finally { setUploading(false); e.target.value = ""; }
-  };
-
-  return (
-    <div className="ml-7 flex items-center gap-2 flex-wrap">
-      {files.map((f) => {
-        const isImage = f.mime_type?.startsWith("image/");
-        return (
-          <a key={f.id} href={f.public_url} target="_blank" rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-medium hover:bg-gray-50 transition-colors shrink-0 group"
-            style={{ borderColor: P.grayBorder, color: P.purple }}>
-            {isImage ? (
-              <img src={f.public_url} alt={f.file_name} className="w-4 h-4 rounded object-cover" />
-            ) : (
-              <Paperclip className="w-3 h-3" />
-            )}
-            <span className="max-w-[80px] truncate">{f.file_name}</span>
-            <button onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); onDelete(itemId, f.id); }}
-              className="ml-1 hover:text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" style={{ color: P.gray }}>
-              <X className="w-3 h-3" />
-            </button>
-          </a>
-        );
-      })}
-      {files.length < 3 && (
-        <label className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-medium cursor-pointer hover:bg-gray-50 transition-colors shrink-0"
-          style={{ borderColor: P.grayBorder, color: P.gray, borderStyle: "dashed" }}>
-          {uploading ? "Mengunggah..." : <><Plus className="w-3 h-3" /> Lampiran</>}
-          <input type="file" className="hidden" accept="image/*,.pdf" onChange={handleUpload} disabled={uploading} />
-        </label>
-      )}
-    </div>
-  );
-}
-
 export default function ManagementTasksPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -141,6 +83,7 @@ export default function ManagementTasksPage() {
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkSubmitReviewConfirm, setBulkSubmitReviewConfirm] = useState(false);
 
   const [attachments, setAttachments] = useState<Record<string, { id: string; file_name: string; public_url: string; mime_type: string }[]>>({});
   const [attachmentsLoading, setAttachmentsLoading] = useState<Record<string, boolean>>({});
@@ -165,13 +108,32 @@ export default function ManagementTasksPage() {
 
   const tasks = useMemo(() => data?.data ?? [], [data]);
 
+  const submittableCount = useMemo(() => {
+    let count = 0;
+    for (const taskId of selectedTaskIds) {
+      const task = tasks.find((t) => t.id === taskId);
+      for (const item of task?.items ?? []) {
+        const st = item.progress?.[0]?.status;
+        if (st !== "selesai" && st !== "approved" && st !== "waiting_review") count++;
+      }
+    }
+    return count;
+  }, [selectedTaskIds, tasks]);
+
   const filteredTasks = useMemo(() => {
-    if (filter === "all") return tasks;
-    return tasks.filter((task) => {
+    let result: Task[];
+    if (filter === "all") result = tasks;
+    else result = tasks.filter((task) => {
       const items = task.items ?? [];
       const allDone = items.length > 0 && items.every((i) => i.progress?.[0]?.status === "selesai");
       if (filter === "done") return allDone;
       return !allDone || items.length === 0;
+    });
+    // Sort overdue first by max overdue days
+    return [...result].sort((a, b) => {
+      const maxA = Math.max(0, ...(a.items ?? []).map((i) => computeOverdueDays(a.deadline ?? null)));
+      const maxB = Math.max(0, ...(b.items ?? []).map((i) => computeOverdueDays(b.deadline ?? null)));
+      return maxB - maxA;
     });
   }, [tasks, filter]);
 
@@ -232,20 +194,27 @@ export default function ManagementTasksPage() {
   };
 
   const handleDeleteTask = async () => { if (!deleteTarget || deleteTarget.type !== "task") return; try { await fetch(`/api/management/tasks/${deleteTarget.id}`, { method: "DELETE" }); setDeleteTarget(null); refetch(); showAlert("success", "Task berhasil dihapus"); } catch { showAlert("error", "Gagal menghapus task"); } };
+  const handleDuplicateTask = async (taskId: string, taskTitle: string) => {
+    try {
+      const res = await fetch(`/api/management/tasks/${taskId}/duplicate`, { method: "POST" });
+      if (!res.ok) { const j = await res.json(); throw new Error(j.error || "Gagal"); }
+      refetch();
+      showAlert("success", `"${taskTitle}" berhasil diduplikasi`);
+    } catch (e) { showAlert("error", e instanceof Error ? e.message : "Gagal menduplikasi"); }
+  };
   const handleAddItem = async (taskId: string) => {
     const title = newItemTitle[taskId]?.trim(); if (!title) return; setIsSaving(true);
     try { const res = await fetch(`/api/management/tasks/${taskId}/items`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }) }); if (!res.ok) throw new Error((await res.json()).error); setNewItemTitle((prev) => ({ ...prev, [taskId]: "" })); refetch(); showAlert("success", "Item berhasil ditambahkan"); } catch (e) { showAlert("error", e instanceof Error ? e.message : "Gagal"); } finally { setIsSaving(false); }
   };
-  const handleCycleStatus = async (itemId: string, currentStatus: string | null) => {
+  const handleSetStatus = async (itemId: string, newStatus: string) => {
     if (cyclingItemId) return;
-    if (currentStatus === "waiting_review" || currentStatus === "approved") return; // locked
     setCyclingItemId(itemId);
-    const nextStatus =
-      currentStatus === "rejected" ? "proses" :
-      currentStatus === "proses" ? "waiting_review" :
-      currentStatus === "selesai" ? "pending" :
-      "proses";
-    try { await fetch(`/api/management/tasks/items/${itemId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: nextStatus }) }); queryClient.invalidateQueries({ queryKey: ["management-tasks"] }); flashItem(itemId); } catch { showAlert("error", "Gagal memperbarui status"); } finally { setCyclingItemId(null); }
+    try {
+      await fetch(`/api/management/tasks/items/${itemId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: newStatus }) });
+      queryClient.invalidateQueries({ queryKey: ["management-tasks"] });
+      flashItem(itemId);
+    } catch { showAlert("error", "Gagal memperbarui status"); }
+    finally { setCyclingItemId(null); }
   };
   const handleSaveItemNote = async (itemId: string, field: "notes" | "kendala", value: string) => {
     try { await fetch(`/api/management/tasks/items/${itemId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [field]: value || null }) }); queryClient.invalidateQueries({ queryKey: ["management-tasks"] }); } catch { showAlert("error", "Gagal menyimpan catatan"); }
@@ -270,22 +239,26 @@ export default function ManagementTasksPage() {
   const clearSelection = () => setSelectedTaskIds(new Set());
 
   const handleBulkMarkDone = async () => {
+    setBulkSubmitReviewConfirm(false);
     setBulkActionLoading(true);
     try {
       const targets = Array.from(selectedTaskIds);
+      let itemCount = 0;
       for (const taskId of targets) {
         const task = tasks.find((t) => t.id === taskId);
         if (!task?.items) continue;
         for (const item of task.items) {
-          if (item.progress?.[0]?.status !== "selesai") {
-            await fetch(`/api/management/tasks/items/${item.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "selesai" }) });
+          const st = item.progress?.[0]?.status;
+          if (st !== "selesai" && st !== "approved" && st !== "waiting_review") {
+            await fetch(`/api/management/tasks/items/${item.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "waiting_review" }) });
+            itemCount++;
           }
         }
       }
       queryClient.invalidateQueries({ queryKey: ["management-tasks"] });
       clearSelection();
-      showAlert("success", `${targets.length} task ditandai selesai`);
-    } catch { showAlert("error", "Gagal memperbarui task"); } finally { setBulkActionLoading(false); }
+      showAlert("success", `${itemCount} item dikirim untuk review`);
+    } catch { showAlert("error", "Gagal mengirim untuk review"); } finally { setBulkActionLoading(false); }
   };
 
   const handleBulkDelete = async () => {
@@ -338,7 +311,9 @@ export default function ManagementTasksPage() {
     const isSelected = extra?.isSelected ?? false;
     const isDragging = extra?.isDragging ?? false;
     const deadlineUrgency = getDeadlineUrgency(task.deadline ?? null); const isExpanded = expandedTasks.has(task.id);
-    const leftBorder = allDone ? `2px solid ${P.green}` : deadlineUrgency === "overdue" ? `2px solid ${P.red}` : deadlineUrgency === "today" ? `2px solid ${P.orange}` : `1px solid ${P.grayBorder}`;
+    const overdueDays = computeOverdueDays(task.deadline ?? null);
+    const overdueSev = getOverdueSeverity(overdueDays);
+    const leftBorder = allDone ? `2px solid ${P.green}` : overdueSev ? `2px solid ${overdueSev.color}` : deadlineUrgency === "today" ? `2px solid ${P.orange}` : `1px solid ${P.grayBorder}`;
     const progressBg = allDone ? P.green : someProgress ? P.purple : P.grayBorder;
     const staggerDelay = index !== undefined ? `${index * 50}ms` : "0ms";
     return (
@@ -357,9 +332,9 @@ export default function ManagementTasksPage() {
             <div className="flex items-center gap-3 mt-1">
               {items.length > 0 && !untouched && <ProgressWidget done={done} total={items.length} color={progressBg} />}
               {task.deadline && (
-                <span className="flex items-center gap-1 text-xs font-medium" style={{ color: deadlineUrgency === "overdue" ? P.red : deadlineUrgency === "today" ? P.orange : P.gray }}>
-                  {deadlineUrgency === "overdue" ? <AlertTriangle className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
-                  {deadlineUrgency === "overdue" ? `Terlambat \u2014 ${formatDate(task.deadline)}` : formatDate(task.deadline)}
+                <span className="flex items-center gap-1 text-xs font-medium" style={{ color: overdueSev ? overdueSev.color : deadlineUrgency === "today" ? P.orange : P.gray }}>
+                  {overdueSev ? <AlertTriangle className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
+                  {overdueSev ? overdueSev.label : deadlineUrgency === "today" ? "Hari ini" : formatDate(task.deadline)}
                 </span>
               )}
               {(() => {
@@ -373,31 +348,25 @@ export default function ManagementTasksPage() {
               {allDone && items.length > 0 && <CheckCircle2 className="h-3.5 w-3.5" style={{ color: P.green }} />}
             </div>
           </div>
+          <button onClick={(e) => { e.stopPropagation(); handleDuplicateTask(task.id, task.title); }} className="p-1.5 rounded-lg opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0" style={{ color: P.gray }} tabIndex={-1} title="Duplikat task"><Copy className="w-4 h-4" /></button>
           <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: "task", id: task.id, title: task.title }); }} className="p-1.5 rounded-lg opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0" style={{ color: P.gray }} tabIndex={-1} title="Delete task"><Trash2 className="w-4 h-4" /></button>
         </div>
-        {isExpanded && (
-          <div className="px-5 py-3 space-y-2" style={{ borderTop: `1px solid ${P.grayBorder}` }}>
-            {items.map((item) => (
-              <div key={item.id} className="space-y-1">
-                <ItemRow
-                  variant="inline"
-                  item={item}
-                  notesOpen={expandedNotes.has(item.id)}
-                  isCycling={cyclingItemId === item.id}
-                  isSaving={isSaving}
-                  isFlashing={flashItemId === item.id}
-                  notesValue={itemNotes[item.id] !== undefined ? itemNotes[item.id] : (item.progress?.[0]?.notes ?? "")}
-                  kendalaValue={itemKendala[item.id] !== undefined ? itemKendala[item.id] : (item.progress?.[0]?.kendala ?? "")}
-                  onCycleStatus={handleCycleStatus}
-                  onToggleNotes={toggleNotes}
-                  onNotesChange={(id, value) => setItemNotes((p) => ({ ...p, [id]: value }))}
-                  onKendalaChange={(id, value) => setItemKendala((p) => ({ ...p, [id]: value }))}
-                  onSaveNote={handleSaveItemNote}
-                  onDelete={(id, title) => setDeleteTarget({ type: "item", id, title })}
-                />
-                <AttachmentSection itemId={item.id} files={attachments[item.id] ?? []} showAlert={showAlert} P={P} fetchAttachments={fetchAttachments} onUpload={handleAttachmentUpload} onDelete={handleAttachmentDelete} />
+        {isExpanded && items.length > 0 && (
+          <div className="px-5 py-3 flex items-center justify-between" style={{ borderTop: `1px solid ${P.grayBorder}` }}>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-medium" style={{ color: P.gray }}>{done}/{items.length} selesai</span>
+              <div className="flex gap-0.5">
+                {items.map((item, j) => {
+                  const st = item.progress?.[0]?.status ?? "belum";
+                  const fill = st === "selesai" || st === "approved" ? P.green : st === "proses" || st === "waiting_review" ? P.purple : P.grayBorder;
+                  return <div key={item.id} className="w-3 h-3 rounded-sm" style={{ background: fill }} />;
+                })}
               </div>
-            ))}
+              {allDone && <CheckCircle2 className="h-3.5 w-3.5" style={{ color: P.green }} />}
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); openPanel(task.id); }} className="text-[10px] font-semibold rounded-lg px-3 py-1.5 transition-colors" style={{ color: P.purple, background: P.purpleLight }}>
+              Buka detail →
+            </button>
           </div>
         )}
       </div>
@@ -500,7 +469,7 @@ export default function ManagementTasksPage() {
             <div className="mb-4 flex items-center gap-3 p-3 rounded-xl flex-wrap" style={{ background: "#fff", border: `1px solid ${P.purple}`, boxShadow: "0 2px 8px rgba(124,58,237,0.15)" }}>
               <span className="text-sm font-medium" style={{ color: P.ink }}>{selectedTaskIds.size} dipilih</span>
               <div className="flex-1" />
-              <button onClick={handleBulkMarkDone} disabled={bulkActionLoading} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition disabled:opacity-50" style={{ background: P.purple, color: "#fff" }}><CheckCircle2 className="w-3.5 h-3.5" />Tandai Selesai</button>
+              <button onClick={() => setBulkSubmitReviewConfirm(true)} disabled={bulkActionLoading || submittableCount === 0} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition disabled:opacity-50" style={{ background: P.purple, color: "#fff" }}><CheckCircle2 className="w-3.5 h-3.5" />Submit Review{submittableCount > 0 ? ` (${submittableCount})` : ""}</button>
               <button onClick={() => setBulkDeleteConfirm(true)} disabled={bulkActionLoading} className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50" style={{ borderColor: P.red, color: P.red }}><Trash2 className="w-3.5 h-3.5" />Hapus</button>
               <button onClick={clearSelection} disabled={bulkActionLoading} className="text-xs" style={{ color: P.gray }}>Batal</button>
             </div>
@@ -595,21 +564,25 @@ export default function ManagementTasksPage() {
                 panelTask.items!.map((item) => (
                   <div key={item.id} className="space-y-1">
                     <ItemRow
-                      variant="panel"
                       item={item}
                       notesOpen={expandedNotes.has(item.id)}
                       isCycling={cyclingItemId === item.id}
                       isSaving={isSaving}
+                      isFlashing={flashItemId === item.id}
                       notesValue={itemNotes[item.id] !== undefined ? itemNotes[item.id] : (item.progress?.[0]?.notes ?? "")}
                       kendalaValue={itemKendala[item.id] !== undefined ? itemKendala[item.id] : (item.progress?.[0]?.kendala ?? "")}
-                      onCycleStatus={handleCycleStatus}
+                      onSetStatus={handleSetStatus}
                       onToggleNotes={toggleNotes}
                       onNotesChange={(id, value) => setItemNotes((p) => ({ ...p, [id]: value }))}
                       onKendalaChange={(id, value) => setItemKendala((p) => ({ ...p, [id]: value }))}
                       onSaveNote={handleSaveItemNote}
                       onDelete={(id, title) => setDeleteTarget({ type: "item", id, title })}
+                      attachments={attachments[item.id] ?? []}
+                      attachmentOnUpload={handleAttachmentUpload}
+                      attachmentOnDelete={handleAttachmentDelete}
+                      attachmentShowAlert={showAlert}
+                      attachmentFetch={fetchAttachments}
                     />
-                    <AttachmentSection itemId={item.id} files={attachments[item.id] ?? []} showAlert={showAlert} P={P} fetchAttachments={fetchAttachments} onUpload={handleAttachmentUpload} onDelete={handleAttachmentDelete} />
                   </div>
                 ))
               ) : (
@@ -626,6 +599,7 @@ export default function ManagementTasksPage() {
       <ConfirmDialog isOpen={!!deleteTarget} variant="danger" title={deleteTarget?.type === "task" ? "Hapus Task" : "Hapus Item"} message={deleteTarget ? `Yakin ingin menghapus "${deleteTarget.title}"?` : ""} confirmText="Hapus" cancelText="Batal" onConfirm={deleteTarget?.type === "task" ? handleDeleteTask : handleDeleteItem} onCancel={() => setDeleteTarget(null)} />
       <ConfirmDialog isOpen={showClearDone} variant="danger" title="Hapus Semua Item Selesai?" message={`${doneCount} item selesai akan dihapus permanen.`} confirmText="Hapus Semua" cancelText="Batal" isLoading={isClearing} onConfirm={handleClearDone} onCancel={() => setShowClearDone(false)} />
       <ConfirmDialog isOpen={bulkDeleteConfirm} variant="danger" title="Hapus Task Terpilih?" message={`${selectedTaskIds.size} task akan dihapus permanen beserta semua item di dalamnya.`} confirmText="Hapus" cancelText="Batal" isLoading={bulkActionLoading} onConfirm={handleBulkDelete} onCancel={() => setBulkDeleteConfirm(false)} />
+      <ConfirmDialog isOpen={bulkSubmitReviewConfirm && submittableCount > 0} variant="warning" title="Submit untuk Review?" message={`${submittableCount} item akan dikirim ke superadmin untuk review. Anda tidak bisa mengubahnya setelah disubmit.`} confirmText="Ya, Submit Review" cancelText="Batal" isLoading={bulkActionLoading} onConfirm={handleBulkMarkDone} onCancel={() => setBulkSubmitReviewConfirm(false)} />
     </div>
   );
 }

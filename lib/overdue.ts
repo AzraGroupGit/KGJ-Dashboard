@@ -1,0 +1,40 @@
+// lib/overdue.ts — overdue computation + severity helpers
+
+/**
+ * Compute days overdue from a deadline.
+ * Returns 0 if deadline is today or in the future.
+ */
+export function computeOverdueDays(deadline: string | null): number {
+  if (!deadline) return 0;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const d = new Date(deadline);
+  d.setHours(0, 0, 0, 0);
+  const diff = now.getTime() - d.getTime();
+  const days = Math.floor(diff / 86400000);
+  return Math.max(0, days);
+}
+
+export interface OverdueSeverity {
+  level: "today" | "overdue-mild" | "overdue-severe" | "overdue-critical";
+  label: string;
+  bg: string;
+  color: string;
+  sort: number; // lower = higher priority
+}
+
+export function getOverdueSeverity(daysOverdue: number): OverdueSeverity | null {
+  if (daysOverdue <= 0) return null;
+  if (daysOverdue === 1) return { level: "today", label: "Hari ini", bg: "#fff7ed", color: "#ea580c", sort: 1 };
+  if (daysOverdue <= 3) return { level: "overdue-mild", label: `${daysOverdue} hari terlambat`, bg: "#fef2f2", color: "#dc2626", sort: 0 };
+  if (daysOverdue <= 7) return { level: "overdue-severe", label: `${daysOverdue} hari terlambat`, bg: "#fef2f2", color: "#b91c1c", sort: -1 };
+  return { level: "overdue-critical", label: `${daysOverdue} hari terlambat`, bg: "#7f1d1d", color: "#fff", sort: -2 };
+}
+
+export function getReviewWaitingDays(completedAt: string | null): number {
+  if (!completedAt) return 0;
+  const now = new Date();
+  const d = new Date(completedAt);
+  const diff = now.getTime() - d.getTime();
+  return Math.max(0, Math.floor(diff / 86400000));
+}

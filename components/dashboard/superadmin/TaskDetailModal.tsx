@@ -6,6 +6,7 @@ import Input from "@/components/ui/Input";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { formatRelativeDeadline } from "./ManagerCard";
 import { ROLE_DISPLAY } from "@/app/dashboard/superadmin/management/_shared/constants";
+import { computeOverdueDays, getOverdueSeverity, getReviewWaitingDays } from "@/lib/overdue";
 
 interface ProgressRow {
   id: string;
@@ -245,6 +246,19 @@ export function TaskDetailModal({
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-medium rounded-lg" style={{ background: st.bg, color: st.color }}>
                                 {st.icon}{st.label}
                               </span>
+                              {(() => {
+                                const od = computeOverdueDays(task.deadline);
+                                const sev = getOverdueSeverity(od);
+                                const isOverdueStatus = status !== "approved" && status !== "selesai" && status !== "waiting_review";
+                                if (sev && isOverdueStatus) {
+                                  return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-lg" style={{ background: sev.bg, color: sev.color, border: `1px solid ${sev.color}33` }}><AlertCircle className="h-2.5 w-2.5" />{sev.label}</span>;
+                                }
+                                if (status === "waiting_review") {
+                                  const rd = getReviewWaitingDays(pg?.completed_at ?? null);
+                                  if (rd > 0) return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-lg" style={{ background: "#f5f3ff", color: "#7c3aed", border: "1px solid #c4b5fd" }}><Clock className="h-2.5 w-2.5" />Menunggu review {rd} hari</span>;
+                                }
+                                return null;
+                              })()}
                               {status === "waiting_review" && onReview && (
                                 <div className="space-y-1.5">
                                   <button onClick={() => setConfirmAction({ itemId: item.id, action: "approve", isBulk: false, title: "Setujui tugas ini?", message: `"${item.title}" akan disetujui. Leader akan mendapat notifikasi.` })}

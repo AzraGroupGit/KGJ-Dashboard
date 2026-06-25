@@ -16,6 +16,7 @@ import { TaskDetailModal } from "@/components/dashboard/superadmin/TaskDetailMod
 import { ROLE_DISPLAY } from "../_shared/constants";
 import type { ManagerData } from "../_shared/types";
 import { getManagerStats, isOverdue } from "../_shared/utils";
+import { computeOverdueDays, getOverdueSeverity, getReviewWaitingDays } from "@/lib/overdue";
 import type { Manager } from "@/components/dashboard/superadmin/ManagerCard";
 
 type SortKey = "completion" | "overdue" | "name";
@@ -48,6 +49,7 @@ export default function ManagementMonitoringPage() {
   const { data, isLoading } = useQuery<{ success: boolean; data: ManagerData[] }>({
     queryKey: ["superadmin", "management-tasks"],
     queryFn: () => fetcher("/api/superadmin/management-tasks"),
+    refetchInterval: 30_000,
   });
 
   const managers = useMemo(() => {
@@ -153,6 +155,28 @@ export default function ManagementMonitoringPage() {
       const res = await fetch(`/api/superadmin/management-tasks/items/${itemId}/review`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, notes: notes || undefined }) });
       if (!res.ok) throw new Error("Gagal");
       showAlert("success", action === "approve" ? "Item disetujui" : "Item ditolak");
+      // Update selectedManager in-place so modal reflects changes immediately
+      if (selectedManager) {
+        setSelectedManager({
+          ...selectedManager,
+          tasks: selectedManager.tasks.map((task) => ({
+            ...task,
+            items: (task.items ?? []).map((item) => {
+              if (item.id !== itemId) return item;
+              return {
+                ...item,
+                progress: (item.progress ?? []).map((pg) => ({
+                  ...pg,
+                  status: action === "approve" ? "approved" : "rejected",
+                  is_completed: action === "approve",
+                  completed_at: new Date().toISOString(),
+                  review_notes: notes || null,
+                })),
+              };
+            }),
+          })),
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["superadmin", "management-tasks"] });
     } catch { showAlert("error", "Gagal memperbarui status"); }
   };
@@ -276,11 +300,15 @@ export default function ManagementMonitoringPage() {
           ) : (
             <div className="rounded-2xl overflow-hidden" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}>
               <table className="w-full text-sm">
-                <thead style={{ background: P.grayLight }}><tr>{["Manager", "Progress", "Hari Ini", "Status", "Aksi"].map((h) => <th key={h} className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wider" style={{ color: P.gray, borderBottom: `1px solid ${P.grayBorder}` }}>{h}</th>)}</tr></thead>
+                <thead style={{ background: P.grayLight }}><tr>{["Manager", "Progress", "Hari Ini", "Terlambat", "Status", "Aksi"].map((h) => <th key={h} className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wider" style={{ color: P.gray, borderBottom: `1px solid ${P.grayBorder}` }}>{h}</th>)}</tr></thead>
                 <tbody>{filteredManagers.map((m) => {
                   const s = getManagerStats(m);
                   const allItems = m.tasks.flatMap((t) => (t.items ?? []).map((item) => ({ item, deadline: t.deadline })));
                   const overdue = allItems.filter((i) => isOverdue(i.deadline ?? null, i.item.progress?.[0]?.status ?? null)).length;
+                  const maxOverdueDays = Math.max(0, ...allItems.map((i) => computeOverdueDays(i.deadline ?? null)));
+                  const overdueSev = getOverdueSeverity(maxOverdueDays);
+                  const waitingItems = allItems.filter((i) => i.item.progress?.[0]?.status === "waiting_review");
+                  const maxReviewDays = waitingItems.length > 0 ? Math.max(...waitingItems.map((i) => getReviewWaitingDays(i.item.progress?.[0]?.completed_at ?? null))) : 0;
                   const today = new Date(); today.setHours(0, 0, 0, 0);
                   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
                   const todayDone = allItems.filter((i) => i.item.progress?.[0]?.is_completed && i.item.progress?.[0]?.completed_at && new Date(i.item.progress![0].completed_at!) >= today && new Date(i.item.progress![0].completed_at!) < tomorrow).length;
@@ -288,6 +316,13 @@ export default function ManagementMonitoringPage() {
                     <td className="px-5 py-3"><p className="font-semibold" style={{ color: P.ink }}>{m.full_name}</p><p className="text-[11px]" style={{ color: P.gray }}>{ROLE_DISPLAY[m.role_name] ?? m.role_name}</p></td>
                     <td className="px-5 py-3"><div className="flex items-center gap-2"><div className="flex-1 flex gap-0.5 max-w-[120px]">{[...Array(s.total)].map((_, i) => { const st = allItems[i]?.item.progress?.[0]?.status ?? "belum"; return <div key={i} className="flex-1 h-1 rounded-full" style={{ background: st === "selesai" ? P.green : st === "proses" ? P.purple : P.grayBorder }} />; })}</div><span className="text-xs font-semibold" style={{ color: P.ink }}>{s.rate}%</span></div></td>
                     <td className="px-5 py-3"><span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full ${todayDone > 0 ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-500"}`}>{todayDone > 0 ? `${todayDone} done` : "—"}</span></td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {overdueSev && <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full" style={{ background: overdueSev.bg, color: overdueSev.color }}>{overdueSev.label}</span>}
+                        {maxReviewDays > 0 && <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full" style={{ background: "#f5f3ff", color: "#7c3aed" }}>Review {maxReviewDays}h</span>}
+                        {!overdueSev && maxReviewDays === 0 && <span className="text-[10px]" style={{ color: P.gray }}>—</span>}
+                      </div>
+                    </td>
                     <td className="px-5 py-3"><div className="flex items-center gap-1.5 flex-wrap">{s.done > 0 && <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full" style={{ background: P.greenLight, color: P.green }}>{s.done} done</span>}{overdue > 0 && <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full" style={{ background: "#fef2f2", color: "#dc2626" }}>{overdue} overdue</span>}</div></td>
                     <td className="px-5 py-3"><button onClick={() => setSelectedManager(m)} className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors" style={{ border: `1px solid ${P.grayBorder}`, color: P.ink, background: "#fff" }}>Detail</button></td>
                   </tr>);

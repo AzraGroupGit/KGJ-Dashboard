@@ -6,6 +6,10 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyUser } from "@/lib/pusher/server";
+import { computeOverdueDays } from "@/lib/overdue";
+
+const OVERDUE_STATUSES = new Set(["belum", "proses", null]);
+const SKIP_NOTIFY_STATUSES = new Set(["approved", "selesai", "waiting_review"]);
 
 export async function GET() {
   try {
@@ -17,7 +21,7 @@ export async function GET() {
 
     const { data: tasks, error } = await admin
       .from("management_tasks")
-      .select("id, title, description, deadline, sort_order, is_active, items:management_task_items(id, title, sort_order, progress:management_task_progress(id, is_completed, completed_at, status, admin_notes, notes, kendala))")
+      .select("id, title, description, deadline, sort_order, is_active, items:management_task_items(id, title, sort_order, overdue_notified_at, progress:management_task_progress(id, is_completed, completed_at, status, admin_notes, notes, kendala))")
       .eq("user_id", user.id)
       .order("sort_order")
       .order("sort_order", { referencedTable: "management_task_items" });
@@ -25,6 +29,37 @@ export async function GET() {
     if (error) {
       console.error("[management/tasks GET]", error.message);
       return NextResponse.json({ error: "Gagal memuat data" }, { status: 500 });
+    }
+
+    // Process overdue notifications
+    const now = new Date();
+    for (const task of tasks ?? []) {
+      if (!task.deadline) continue;
+      const deadlineDate = new Date(task.deadline);
+      deadlineDate.setHours(0, 0, 0, 0);
+      if (deadlineDate >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) continue;
+
+      for (const item of (task.items ?? []) as Array<{ id: string; overdue_notified_at: string | null; progress: Array<{ status: string | null }> | null }>) {
+        const status = item.progress?.[0]?.status ?? null;
+        if (SKIP_NOTIFY_STATUSES.has(status ?? "")) continue;
+        if (item.overdue_notified_at) continue;
+
+        // Set notified
+        await admin.from("management_task_items").update({ overdue_notified_at: new Date().toISOString() }).eq("id", item.id);
+
+        // Send notification
+        try {
+          const days = computeOverdueDays(task.deadline);
+          const { data: notif } = await admin.from("notifications").insert({
+            user_id: user.id,
+            title: "Task Terlambat",
+            message: `"${task.title}" melewati deadline${days > 0 ? ` — ${days} hari terlambat` : ""}`,
+            type: "warning",
+            link: "/dashboard/management",
+          }).select("id, created_at").single();
+          if (notif) notifyUser(user.id, { id: notif.id, title: "Task Terlambat", message: `"${task.title}" melewati deadline${days > 0 ? ` — ${days} hari terlambat` : ""}`, type: "warning", link: "/dashboard/management", created_at: notif.created_at }).catch(() => {});
+        } catch { /* non-critical */ }
+      }
     }
 
     return NextResponse.json({ success: true, data: tasks ?? [] });
