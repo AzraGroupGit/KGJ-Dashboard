@@ -75,7 +75,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { full_name, username, email, current_password, new_password } = body;
+    const { full_name, username, email, new_password } = body;
 
     const admin = createAdminClient();
 
@@ -97,20 +97,6 @@ export async function PUT(request: NextRequest) {
 
     // Update Supabase Auth email/password if provided
     if (email || new_password) {
-      if (!current_password) {
-        return NextResponse.json({ error: "Password saat ini diperlukan untuk mengubah email/password" }, { status: 400 });
-      }
-
-      // Verify current password first
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email: user.email!,
-        password: current_password,
-      });
-
-      if (signInErr) {
-        return NextResponse.json({ error: "Password saat ini salah" }, { status: 400 });
-      }
-
       // Update email
       if (email && email !== user.email) {
         const { error: emailErr } = await admin.auth.admin.updateUserById(user.id, { email });

@@ -13,6 +13,7 @@ export interface TaskItem {
   id: string;
   title: string;
   sort_order?: number;
+  overdue_notified_at?: string | null;
   progress: ProgressRow[] | null;
 }
 

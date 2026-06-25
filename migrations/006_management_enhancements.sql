@@ -1,8 +1,22 @@
 -- ============================================================================
 -- Migration 006: Management Task — deadline, notes, kendala, status
 -- Project: BMS-OPR-PRD ERP System
--- Description: Adds task deadline, management notes, kendala, and item status
+-- Description: Adds task deadline, management notes, kendala, item status,
+--              approval workflow, file attachments, overdue tracking
 -- ============================================================================
+--
+-- MUST SET: `task-attachments` Storage di Supabase Dashboard → toggle "public"
+--           agar attachment bisa diakses sebagai publicUrl.
+--
+-- ══════════════════════════════════════════════════════════════════════════════
+--
+-- 1. management_task_items — overdue tracking
+--
+ALTER TABLE management_task_items
+ADD COLUMN IF NOT EXISTS overdue_notified_at timestamptz;
+
+COMMENT ON COLUMN management_task_items.overdue_notified_at IS 'Set when overdue notification fires; cleared on approve/selesai or deadline extension';
+CREATE INDEX IF NOT EXISTS idx_mgmt_items_overdue_notified ON management_task_items(overdue_notified_at) WHERE overdue_notified_at IS NULL;
 
 -- 1. Add deadline to management_tasks
 ALTER TABLE management_tasks ADD COLUMN IF NOT EXISTS deadline DATE;

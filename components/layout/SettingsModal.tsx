@@ -20,10 +20,8 @@ export default function SettingsModal({ profile, onClose, onSaved }: SettingsMod
   const [fullName, setFullName] = useState(profile.full_name);
   const [username, setUsername] = useState(profile.username ?? "");
   const [email, setEmail] = useState(profile.email ?? "");
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -46,18 +44,12 @@ export default function SettingsModal({ profile, onClose, onSaved }: SettingsMod
       return;
     }
 
-    if ((email !== profile.email || newPassword) && !currentPassword) {
-      setError("Password saat ini diperlukan untuk mengubah email/password");
-      return;
-    }
-
     setIsSaving(true);
     try {
       const body: Record<string, string> = {};
       if (fullName !== profile.full_name) body.full_name = fullName;
       if (username !== (profile.username ?? "")) body.username = username || "";
       if (email !== profile.email) body.email = email;
-      if (currentPassword) body.current_password = currentPassword;
       if (newPassword) body.new_password = newPassword;
 
       const res = await fetch("/api/profile", {
@@ -126,16 +118,6 @@ export default function SettingsModal({ profile, onClose, onSaved }: SettingsMod
             <p className="text-[10px] font-semibold uppercase tracking-[0.08em] mb-3" style={{ color: P.gray }}>Ubah Password (opsional)</p>
 
             <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold uppercase tracking-[0.08em] flex items-center gap-1.5" style={{ color: P.gray }}><Lock className="h-3 w-3" />Password Saat Ini</label>
-                <div className="relative">
-                  <input type={showCurrent ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className={inputClass + " pr-9"} style={inputStyle} disabled={isSaving} placeholder="••••••••" />
-                  <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: P.gray }} disabled={isSaving}>
-                    {showCurrent ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                  </button>
-                </div>
-              </div>
-
               <div className="space-y-1.5">
                 <label className="text-[10px] font-semibold uppercase tracking-[0.08em] flex items-center gap-1.5" style={{ color: P.gray }}><Lock className="h-3 w-3" />Password Baru</label>
                 <div className="relative">

@@ -1,6 +1,7 @@
 "use client";
 
 import { Clock, AlertCircle, Check } from "lucide-react";
+import { computeOverdueDays, getOverdueSeverity, getReviewWaitingDays } from "@/lib/overdue";
 import { ROLE_DISPLAY } from "@/app/dashboard/superadmin/management/_shared/constants";
 
 interface ProgressRow {
@@ -105,6 +106,14 @@ export function ManagerCard({
   const hasOverdue = overdue > 0;
   const hasEscalate = hasOverdue || atRisk > 0;
 
+  const maxOverdueDays = Math.max(0, ...allItems.map((i) => computeOverdueDays(i.deadline ?? null)));
+  const overdueSev = getOverdueSeverity(maxOverdueDays);
+
+  const waitingReviewItems = allItems.filter((i) => i.item.progress?.[0]?.status === "waiting_review");
+  const reviewDays = waitingReviewItems.length > 0
+    ? Math.max(...waitingReviewItems.map((i) => getReviewWaitingDays(i.item.progress?.[0]?.completed_at ?? null)))
+    : 0;
+
   const statusCounts = {
     selesai: done,
     proses: allItems.filter((i) => i.item.progress?.[0]?.status === "proses")
@@ -126,13 +135,13 @@ export function ManagerCard({
       className="rounded-2xl p-5 transition-all duration-200"
       style={{
         background: "#fff",
-        border: `1px solid ${hasOverdue ? "#fca5a5" : "#e5e7eb"}`,
+        border: `1px solid ${overdueSev ? overdueSev.color : "#e5e7eb"}`,
         boxShadow: "none",
       }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLElement;
         el.style.boxShadow = "0 8px 24px rgba(124,58,237,0.08)";
-        el.style.borderColor = hasOverdue ? "#dc2626" : "#7c3aed";
+        el.style.borderColor = overdueSev ? overdueSev.color : "#7c3aed";
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLElement;
@@ -186,7 +195,21 @@ export function ManagerCard({
             </span>
           );
         })}
-        {overdue === 0 && atRisk === 0 && done > 0 && (
+        {overdueSev && (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-medium rounded-lg"
+            style={{ background: overdueSev.bg, color: overdueSev.color, border: `1px solid ${overdueSev.color}33` }}>
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: overdueSev.color }} />
+            {overdueSev.label}
+          </span>
+        )}
+        {reviewDays > 0 && (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-medium rounded-lg"
+            style={{ background: "#f5f3ff", color: "#7c3aed", border: "1px solid #c4b5fd" }}>
+            <Clock className="w-3 h-3" />
+            Menunggu review {reviewDays} hari
+          </span>
+        )}
+        {overdue === 0 && atRisk === 0 && done > 0 && !waitingReviewItems.length && (
           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-medium rounded-lg"
             style={{ background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0" }}>
             <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#059669" }} />

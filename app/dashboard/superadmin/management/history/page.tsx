@@ -33,6 +33,7 @@ export default function ManagementHistoryPage() {
   const { data, isLoading } = useQuery<{ success: boolean; data: ManagerData[] }>({
     queryKey: ["superadmin", "management-tasks"],
     queryFn: () => fetcher("/api/superadmin/management-tasks"),
+    refetchInterval: 30_000,
   });
 
   const managers = useMemo(() => {
