@@ -71,16 +71,11 @@ export default function Home() {
 
         .grid-lines {
           position: absolute; inset: 0; pointer-events: none; z-index: 0;
-          background-image:
-            linear-gradient(30deg, rgba(201, 162, 39, 0.05) 1px, transparent 1px),
-            linear-gradient(-30deg, rgba(201, 162, 39, 0.03) 1px, transparent 1px),
-            linear-gradient(rgba(201, 162, 39, 0.025) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(201, 162, 39, 0.025) 1px, transparent 1px);
-          background-size:
-            50px 86px,
-            50px 86px,
-            50px 50px,
-            50px 50px;
+          background:
+            linear-gradient(45deg, rgba(201, 162, 39, 0.06) 25%, transparent 25%, transparent 75%, rgba(201, 162, 39, 0.06) 75%),
+            linear-gradient(-45deg, rgba(201, 162, 39, 0.06) 25%, transparent 25%, transparent 75%, rgba(201, 162, 39, 0.06) 75%);
+          background-size: 80px 80px;
+          background-position: 0 0, 40px 40px;
         }
 
         .orb {

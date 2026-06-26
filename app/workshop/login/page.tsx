@@ -5,11 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api";
 import { useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import BrandHeader from "@/components/qr/BrandHeader";
-import LoginForm from "@/components/qr/LoginForm";
-import WorkerSelect from "@/components/qr/WorkerSelect";
-import PinPad from "@/components/qr/PinPad";
-import { Loader2, Check, Delete } from "lucide-react";
+import Image from "next/image";
+import { Loader2, Check, Delete, User, Lock, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { getDashboardPath } from "@/lib/routes";
 
 type Step = "loading" | "workers" | "pin" | "setup" | "manual";
@@ -29,10 +26,10 @@ function PinDots({ filled }: { filled: number }) {
       {Array.from({ length: PIN_LENGTH }).map((_, i) => (
         <div
           key={i}
-          className={`flex h-10 w-10 items-center justify-center rounded-xl border-2 text-lg font-bold transition-all ${
+          className={`flex h-10 w-10 items-center justify-center rounded-xl border text-lg font-bold transition-all ${
             i < filled
-              ? "border-stone-800 bg-stone-800 text-white"
-              : "border-stone-200 bg-white text-transparent"
+              ? "border-[#c9a227] bg-[#c9a227] text-[#15130f]"
+              : "border-white/[0.08] bg-white/[0.04] text-transparent"
           }`}
         >
           {i < filled ? "●" : "○"}
@@ -68,7 +65,7 @@ function Numpad({
                   type="button"
                   onClick={onClear}
                   disabled={disabled}
-                  className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-stone-200 bg-white text-[13px] font-medium text-stone-400 transition-all hover:border-stone-300 hover:bg-stone-50 active:scale-[0.95] disabled:opacity-30"
+                  className="flex h-16 w-16 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-[13px] font-medium text-white/30 transition-all hover:border-white/[0.15] hover:bg-white/[0.08] active:scale-[0.95] disabled:opacity-20"
                 >
                   Hapus
                 </button>
@@ -81,13 +78,13 @@ function Numpad({
                   type="button"
                   onClick={onSubmit}
                   disabled={disabled}
-                  className="flex h-16 w-16 items-center justify-center rounded-xl bg-stone-800 text-white shadow-sm transition-all hover:bg-stone-900 active:scale-[0.95] disabled:opacity-30"
+                  className="flex h-16 w-16 items-center justify-center rounded-xl bg-[#c9a227] text-[#15130f] transition-all hover:bg-[#d4ae3a] active:scale-[0.95] disabled:opacity-30"
                 >
-                    {disabled ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <Check className="h-5 w-5" strokeWidth={2.5} />
-                    )}
+                  {disabled ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Check className="h-5 w-5" strokeWidth={2.5} />
+                  )}
                 </button>
               ) : (
                 <div key="sp" className="h-16 w-16" />
@@ -100,7 +97,7 @@ function Numpad({
                 type="button"
                 onClick={() => onDigit(digit)}
                 disabled={disabled}
-                className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-stone-200 bg-white text-[22px] font-semibold text-stone-700 transition-all hover:border-stone-300 hover:bg-stone-50 active:scale-[0.95] disabled:opacity-50"
+                className="flex h-16 w-16 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-[22px] font-semibold text-[#e8e2d4] transition-all hover:border-white/[0.15] hover:bg-white/[0.08] active:scale-[0.95] disabled:opacity-30"
               >
                 {digit}
               </button>
@@ -146,6 +143,9 @@ function WorkshopLoginContent() {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // ── Manual login state ──────────────────────────────────────────
+
+
   // ── Helpers to redirect after login ─────────────────────────────
 
   const doRedirect = useCallback(
@@ -167,7 +167,7 @@ function WorkshopLoginContent() {
     [redirectTo, orderId, stage, qrToken],
   );
 
-  // ── Client-side Supabase client for cookie-based session ─────────
+  // ── Client-side Supabase client ─────────────────────────────────
 
   const browserSupabase = useRef<ReturnType<typeof createBrowserClient> | null>(null);
   const getBrowserClient = useCallback(() => {
@@ -184,15 +184,13 @@ function WorkshopLoginContent() {
     async (email: string, password: string, roleName: string, roleGroup: string) => {
       const sb = getBrowserClient();
       const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) {
-        throw new Error(error.message);
-      }
+      if (error) throw new Error(error.message);
       doRedirect(roleName, roleGroup);
     },
     [getBrowserClient, doRedirect],
   );
 
-  // ── Manual login handler (username + password) ──────────────────
+  // ── Manual login handler ────────────────────────────────────────
 
   const handleManualLogin = useCallback(
     async (username: string, password: string) => {
@@ -208,15 +206,11 @@ function WorkshopLoginContent() {
 
         const data = await res.json();
 
-        if (!res.ok) {
-          throw new Error(data.error || "Login gagal");
-        }
+        if (!res.ok) throw new Error(data.error || "Login gagal");
 
         doRedirect(data.user?.role ?? "", data.user?.roleDetail?.role_group ?? "");
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Terjadi kesalahan, coba lagi",
-        );
+        setError(err instanceof Error ? err.message : "Terjadi kesalahan, coba lagi");
       } finally {
         setIsLoading(false);
       }
@@ -224,7 +218,7 @@ function WorkshopLoginContent() {
     [doRedirect],
   );
 
-  // ── PIN login handler ──────────────────────────────────────────
+  // ── PIN login handler ───────────────────────────────────────────
 
   const handlePinLogin = useCallback(
     async (pin: string) => {
@@ -246,7 +240,6 @@ function WorkshopLoginContent() {
 
         const data = await res.json();
 
-        // If PIN needs setup, show setup screen
         if (data.needs_pin_setup) {
           setStep("setup");
           setSetupPhase("enter");
@@ -262,7 +255,6 @@ function WorkshopLoginContent() {
           throw new Error(data.error || "Login gagal");
         }
 
-        // Sign in client-side (sets cookies via @supabase/ssr browser client)
         await signInAndRedirect(
           data.email,
           data.workshopPassword,
@@ -270,9 +262,7 @@ function WorkshopLoginContent() {
           data.user?.roleDetail?.role_group ?? "",
         );
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Terjadi kesalahan, coba lagi",
-        );
+        setError(err instanceof Error ? err.message : "Terjadi kesalahan, coba lagi");
       } finally {
         setIsLoading(false);
       }
@@ -280,7 +270,7 @@ function WorkshopLoginContent() {
     [selectedWorker, qrToken, signInAndRedirect],
   );
 
-  // ── PIN setup handler (single API call with setup_pin) ──────────
+  // ── PIN setup handler ───────────────────────────────────────────
 
   const submitPinSetup = useCallback(
     async (newPin: string) => {
@@ -302,11 +292,8 @@ function WorkshopLoginContent() {
 
         const data = await res.json();
 
-        if (!res.ok) {
-          throw new Error(data.error || "Gagal menyimpan PIN");
-        }
+        if (!res.ok) throw new Error(data.error || "Gagal menyimpan PIN");
 
-        // Sign in client-side (sets cookies via @supabase/ssr browser client)
         await signInAndRedirect(
           data.email,
           data.workshopPassword,
@@ -314,9 +301,7 @@ function WorkshopLoginContent() {
           data.user?.roleDetail?.role_group ?? "",
         );
       } catch (err) {
-        setSetupError(
-          err instanceof Error ? err.message : "Terjadi kesalahan, coba lagi",
-        );
+        setSetupError(err instanceof Error ? err.message : "Terjadi kesalahan, coba lagi");
       } finally {
         setSetupSubmitting(false);
       }
@@ -366,7 +351,7 @@ function WorkshopLoginContent() {
     setError(null);
   }, [qrToken]);
 
-  // ── Setup PIN input handling ───────────────────────────────────
+  // ── Setup PIN input handling ────────────────────────────────────
 
   const handleSetupDigit = useCallback((d: string) => {
     setSetupPin((prev) => (prev.length < PIN_LENGTH ? prev + d : prev));
@@ -380,10 +365,8 @@ function WorkshopLoginContent() {
     setSetupPin((prev) => prev.slice(0, -1));
   }, []);
 
-  // Guard ref to prevent double-submit from finally block re-triggering
   const setupSubmittingRef = useRef(false);
 
-  // Auto-advance setup when PIN is full
   useEffect(() => {
     if (setupSubmitting || setupSubmittingRef.current || setupPin.length !== PIN_LENGTH) return;
 
@@ -419,152 +402,435 @@ function WorkshopLoginContent() {
     [handleSetupDigit, handleSetupDelete, handleSetupClear],
   );
 
-  // If no QR token, show manual login directly
-  if (!qrToken && step === "manual") {
-    return (
-      <div className="w-full max-w-[420px]">
-        <BrandHeader subtitle="Workshop Access Point" className="mb-5" />
+  // ──── Render ────────────────────────────────────────────────────
 
-        <div className="rounded-2xl border border-stone-200/80 bg-white/90 backdrop-blur-sm p-6 shadow-sm min-h-[280px] flex flex-col justify-center">
-          <LoginForm onSubmit={handleManualLogin} isLoading={isLoading} error={error} />
-        </div>
-
-        <p className="mt-3 text-center text-[11px] text-stone-400 leading-relaxed">
-          Hanya untuk staf workshop terdaftar.
-          <br />
-          Hubungi admin jika mengalami kendala akses.
-        </p>
-      </div>
-    );
-  }
+  const stageLabel = stage ? stage.replace(/_/g, " ") : null;
 
   return (
-    <div className="w-full max-w-[420px]">
-      <BrandHeader subtitle="Workshop Access Point" className="mb-5" />
+    <>
+      <style>{`
+        .bgDust {
+          position: fixed; inset: 0; pointer-events: none; z-index: 0;
+          background:
+            linear-gradient(45deg, rgba(201, 162, 39, 0.06) 25%, transparent 25%, transparent 75%, rgba(201, 162, 39, 0.06) 75%),
+            linear-gradient(-45deg, rgba(201, 162, 39, 0.06) 25%, transparent 25%, transparent 75%, rgba(201, 162, 39, 0.06) 75%);
+          background-size: 80px 80px;
+          background-position: 0 0, 40px 40px;
+        }
+        .orbGold {
+          position: fixed; width: 520px; height: 520px; border-radius: 50%; pointer-events: none; z-index: 0;
+          background: radial-gradient(circle, rgba(201, 162, 39, 0.1) 0%, transparent 70%);
+          top: -160px; right: -100px;
+        }
+        .orbAccent {
+          position: fixed; width: 400px; height: 400px; border-radius: 50%; pointer-events: none; z-index: 0;
+          background: radial-gradient(circle, rgba(74, 31, 31, 0.06) 0%, transparent 70%);
+          bottom: -120px; left: 20%;
+        }
+        .orbWarm {
+          position: fixed; width: 300px; height: 300px; border-radius: 50%; pointer-events: none; z-index: 0;
+          background: radial-gradient(circle, rgba(201, 162, 39, 0.05) 0%, transparent 70%);
+          top: 40%; left: -60px;
+        }
+        .divider {
+          width: 48px; height: 1px; background: rgba(201, 162, 39, 0.4);
+          margin-bottom: 20px; position: relative;
+        }
+        .divider::after {
+          content: ""; position: absolute; top: 50%; left: 50%;
+          transform: translate(-50%, -50%) rotate(45deg);
+          width: 5px; height: 5px; background: #c9a227;
+          box-shadow: 0 0 10px rgba(201, 162, 39, 0.4), 0 0 24px rgba(201, 162, 39, 0.15);
+        }
+      `}</style>
 
-      {/* Stage info from QR */}
-      {stage && (
-        <div className="mb-4 rounded-xl border border-amber-100 bg-amber-50/70 px-4 py-3 text-center">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-amber-600/70">
-            Akses Stage
+      <div className="fixed inset-0 flex items-center justify-center bg-[#15130f] text-[#e8e2d4] font-[var(--font-dm-sans)]">
+        {/* Background */}
+        <div className="bgDust" />
+        <div className="orbGold" />
+        <div className="orbAccent" />
+        <div className="orbWarm" />
+
+        {/* Main column */}
+        <div className="relative z-10 flex flex-col items-center w-full max-w-[540px] px-4 py-5 gap-y-2">
+          {/* Logo */}
+          <Image src="/logo.png" alt="KGJ" width={72} height={72} className="object-contain shrink-0 sm:w-24 sm:h-24" priority />
+
+          {/* Brand title */}
+          <h1 className="font-[var(--font-dm-serif)] text-base sm:text-lg text-[#c9a227] tracking-[0.08em]">
+            Kotagede Jewellery
+          </h1>
+
+          {/* Subtitle */}
+          <p className="text-[10px] sm:text-xs text-white/25 tracking-[0.15em] uppercase">Workshop Access Point</p>
+
+          {/* Stage info */}
+          {stageLabel && (
+            <div className="rounded-xl border border-[#c9a227]/[0.15] bg-[#c9a227]/[0.06] px-5 py-2.5 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#c9a227]/70">Akses Stage</p>
+              <p className="mt-0.5 text-sm font-medium text-[#e8e2d4] capitalize">{stageLabel}</p>
+            </div>
+          )}
+
+          {/* Gold divider */}
+          <div className="divider mt-1" />
+
+          {/* Frosted glass card */}
+          <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-6 sm:px-12 py-6 bg-[#15130f]/75 backdrop-blur-[20px] min-h-[320px] flex flex-col justify-center">
+            {/* Worker select */}
+            {step === "workers" && (
+              <div>
+                <div className="mb-6 text-center">
+                  <p className="text-[11px] uppercase tracking-wider text-white/30">Pilih Pekerja</p>
+                  <p className="mt-1 text-sm text-white/40">Siapa yang akan bekerja di workstation ini?</p>
+                </div>
+
+                {workers.length === 0 ? (
+                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-6 py-8 text-center">
+                    <p className="text-[15px] font-medium text-white/40">Tidak ada pekerja tersedia</p>
+                    <p className="mt-1 text-[13px] text-white/25">Tidak ditemukan pekerja dengan role yang sesuai.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {workers.map((worker) => (
+                      <button
+                        key={worker.id}
+                        type="button"
+                        onClick={() => handleSelectWorker(worker)}
+                        disabled={isLoading}
+                        className="group flex flex-col items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-5 transition-all hover:border-[#c9a227]/[0.3] hover:bg-[#c9a227]/[0.05] active:scale-[0.97] disabled:opacity-30"
+                      >
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.06] text-lg font-semibold text-white/40 transition-colors group-hover:bg-[#c9a227] group-hover:text-[#15130f]">
+                          {worker.full_name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-center text-[13px] font-medium text-white/50 transition-colors group-hover:text-white/80">
+                          {worker.full_name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-6 text-center">
+                  <button
+                    type="button"
+                    onClick={handleSwitchToManual}
+                    className="text-[13px] text-white/25 underline underline-offset-2 transition-colors hover:text-white/50"
+                  >
+                    Login dengan username & password →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PIN entry */}
+            {step === "pin" && selectedWorker && (
+              <PinPadInline
+                workerName={selectedWorker.full_name}
+                error={error}
+                remainingAttempts={remainingAttempts}
+                isLoading={isLoading}
+                onSubmit={handlePinLogin}
+                onBack={handleBackToWorkers}
+              />
+            )}
+
+            {/* PIN setup */}
+            {step === "setup" && selectedWorker && (
+              <div ref={containerRef} tabIndex={0} onKeyDown={handleSetupKeyDown} className="outline-none">
+                <div className="mb-6 text-center">
+                  <p className="text-[11px] uppercase tracking-wider text-white/30">
+                    {setupPhase === "enter" ? "Buat PIN Baru (6 digit)" : "Konfirmasi PIN"}
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-[#f0f4ff]">{selectedWorker.full_name}</p>
+                  <p className="mt-1 text-[12px] text-white/25">PIN digunakan untuk login via QR Code</p>
+                </div>
+
+                <PinDots filled={setupPin.length} />
+
+                <div className="mt-4 mb-2 text-center text-[12px] text-white/25">
+                  {setupPin.length}/{PIN_LENGTH} digit
+                </div>
+
+                {setupError && (
+                  <div className="mb-6 rounded-lg bg-red-500/[0.08] border border-red-500/[0.15] px-4 py-2.5 text-center text-[13px] text-red-300">
+                    {setupError}
+                  </div>
+                )}
+
+                <Numpad
+                  onDigit={handleSetupDigit}
+                  onClear={handleSetupClear}
+                  onSubmit={() => {}}
+                  disabled={setupSubmitting}
+                  showSubmit={false}
+                />
+
+                <div className="mt-6 text-center">
+                  <button
+                    type="button"
+                    onClick={handleSetupDelete}
+                    disabled={setupPin.length === 0 || setupSubmitting}
+                    className="mb-3 flex h-12 w-[148px] items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.04] text-[14px] font-medium text-white/40 transition-all hover:border-white/[0.15] hover:bg-white/[0.08] active:scale-[0.95] disabled:opacity-20 mx-auto"
+                  >
+                    <Delete className="h-4 w-4" strokeWidth={1.5} />
+                    Hapus
+                  </button>
+                  <br />
+                  <button
+                    type="button"
+                    onClick={handleBackFromSetup}
+                    disabled={setupSubmitting}
+                    className="text-[13px] text-white/25 underline underline-offset-2 transition-colors hover:text-white/50 disabled:opacity-20"
+                  >
+                    ← Kembali ke daftar pekerja
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Manual login */}
+            {step === "manual" && (
+              <div>
+                <ManualLoginForm
+                  isLoading={isLoading}
+                  error={error}
+                  onSubmit={handleManualLogin}
+                  onBack={qrToken ? handleBackFromManual : undefined}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <p className="mt-3 text-center text-[11px] text-white leading-relaxed">
+            Hanya untuk staf workshop terdaftar.
+            <br />
+            Hubungi admin jika mengalami kendala akses.
           </p>
-          <p className="mt-1 text-[15px] font-medium text-stone-800 capitalize">
-            {stage.replace(/_/g, " ")}
-          </p>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Inline PIN pad component ───────────────────────────────────────
+
+function PinPadInline({
+  workerName, error, remainingAttempts, isLoading, onSubmit, onBack,
+}: {
+  workerName: string;
+  error: string | null;
+  remainingAttempts: number | null;
+  isLoading: boolean;
+  onSubmit: (pin: string) => void;
+  onBack: () => void;
+}) {
+  const [pin, setPin] = useState<string[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { containerRef.current?.focus(); }, []);
+
+  const handleDigit = useCallback((digit: string) => {
+    if (pin.length < PIN_LENGTH && !isLoading) setPin((prev) => [...prev, digit]);
+  }, [pin.length, isLoading]);
+
+  const handleDelete = useCallback(() => {
+    if (!isLoading) setPin((prev) => prev.slice(0, -1));
+  }, [isLoading]);
+
+  const handleClear = useCallback(() => {
+    if (!isLoading) setPin([]);
+  }, [isLoading]);
+
+  const handleSubmit = useCallback(() => {
+    if (pin.length === PIN_LENGTH && !isLoading) onSubmit(pin.join(""));
+  }, [pin, isLoading, onSubmit]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key >= "0" && e.key <= "9") handleDigit(e.key);
+    else if (e.key === "Backspace" || e.key === "Delete") handleDelete();
+    else if (e.key === "Enter" && pin.length === PIN_LENGTH) handleSubmit();
+    else if (e.key === "Escape") handleClear();
+  }, [handleDigit, handleDelete, handleSubmit, handleClear, pin.length]);
+
+  return (
+    <div ref={containerRef} tabIndex={0} onKeyDown={handleKeyDown} className="outline-none">
+      <div className="mb-6 text-center">
+        <p className="text-[11px] uppercase tracking-wider text-white/30">Masukkan PIN</p>
+        <p className="mt-1 text-xl font-semibold text-[#f0f4ff]">{workerName}</p>
+      </div>
+
+      <div className="mb-8 flex justify-center gap-3">
+        {Array.from({ length: PIN_LENGTH }).map((_, i) => (
+          <div
+            key={i}
+            className={`flex h-10 w-10 items-center justify-center rounded-xl border text-lg font-bold transition-all ${
+              i < pin.length
+                ? "border-[#c9a227] bg-[#c9a227] text-[#15130f]"
+                : "border-white/[0.08] bg-white/[0.04] text-transparent"
+            }`}
+          >
+            {i < pin.length ? "●" : "○"}
+          </div>
+        ))}
+      </div>
+
+      {error && (
+        <div className="mb-6 rounded-lg bg-red-500/[0.08] border border-red-500/[0.15] px-4 py-2.5 text-center text-[13px] text-red-300">
+          {error}
         </div>
       )}
 
-      <div className="rounded-2xl border border-stone-200/80 bg-white/90 backdrop-blur-sm p-6 shadow-sm min-h-[280px] flex flex-col justify-center">
-        {step === "workers" && (
-          <WorkerSelect
-            workers={workers}
-            onSelect={handleSelectWorker}
-            onManualLogin={handleSwitchToManual}
-            isLoading={isLoading}
-          />
-        )}
+      {remainingAttempts !== null && remainingAttempts > 0 && (
+        <p className="mb-4 text-center text-[12px] text-[#c9a227]/70">
+          Sisa percobaan: {remainingAttempts}
+        </p>
+      )}
 
-        {step === "pin" && selectedWorker && (
-          <PinPad
-            onSubmit={handlePinLogin}
-            onBack={handleBackToWorkers}
-            isLoading={isLoading}
-            error={error}
-            workerName={selectedWorker.full_name}
-            remainingAttempts={remainingAttempts}
-          />
-        )}
+      <Numpad
+        onDigit={handleDigit}
+        onClear={handleClear}
+        onSubmit={handleSubmit}
+        disabled={isLoading}
+        showSubmit={true}
+      />
 
-        {step === "setup" && selectedWorker && (
-          <div ref={containerRef} tabIndex={0} onKeyDown={handleSetupKeyDown} className="outline-none">
-            <div className="mb-6 text-center">
-              <p className="text-[11px] uppercase tracking-wider text-stone-400">
-                {setupPhase === "enter" ? "Buat PIN Baru (6 digit)" : "Konfirmasi PIN"}
-              </p>
-              <p className="mt-1 text-lg font-semibold text-stone-800">
-                {selectedWorker.full_name}
-              </p>
-              <p className="mt-1 text-[12px] text-stone-400">
-                PIN digunakan untuk login via QR Code
-              </p>
-            </div>
-
-            <PinDots filled={setupPin.length} />
-
-            <div className="mt-4 mb-2 text-center text-[12px] text-stone-400">
-              {setupPin.length}/{PIN_LENGTH} digit
-            </div>
-
-            {setupError && (
-              <div className="mb-6 rounded-lg bg-red-50 px-4 py-2.5 text-center text-[13px] text-red-600 border border-red-100">
-                {setupError}
-              </div>
-            )}
-
-            <Numpad
-              onDigit={handleSetupDigit}
-              onClear={handleSetupClear}
-              onSubmit={() => {}}
-              disabled={setupSubmitting}
-              showSubmit={false}
-            />
-
-            <div className="mt-6 text-center">
-              <button
-                type="button"
-                onClick={handleSetupDelete}
-                disabled={setupPin.length === 0 || setupSubmitting}
-                className="mb-3 flex h-12 w-[148px] items-center justify-center gap-1.5 rounded-xl border-2 border-stone-200 bg-white text-[14px] font-medium text-stone-500 transition-all hover:border-stone-300 hover:bg-stone-50 active:scale-[0.95] disabled:opacity-30 mx-auto"
-              >
-                <Delete className="h-4 w-4" strokeWidth={1.5} />
-                Hapus
-              </button>
-              <br />
-              <button
-                type="button"
-                onClick={handleBackFromSetup}
-                disabled={setupSubmitting}
-                className="text-[13px] text-stone-400 underline underline-offset-2 transition-colors hover:text-stone-600 disabled:opacity-40"
-              >
-                ← Kembali ke daftar pekerja
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step === "manual" && (
-          <>
-            <LoginForm onSubmit={handleManualLogin} isLoading={isLoading} error={error} />
-            {qrToken && (
-              <div className="mt-4 text-center">
-                <button
-                  type="button"
-                  onClick={handleBackFromManual}
-                  className="text-[13px] text-stone-400 underline underline-offset-2 transition-colors hover:text-stone-600"
-                >
-                  ← Kembali ke PIN
-                </button>
-              </div>
-            )}
-          </>
-        )}
+      <div className="mt-3 flex justify-center">
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={pin.length === 0 || isLoading}
+          className="flex h-12 w-[148px] items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.04] text-[14px] font-medium text-white/40 transition-all hover:border-white/[0.15] hover:bg-white/[0.08] active:scale-[0.95] disabled:opacity-20"
+        >
+          <Delete className="h-4 w-4" />
+          Hapus
+        </button>
       </div>
 
-      <p className="mt-3 text-center text-[11px] text-stone-400 leading-relaxed">
-        Hanya untuk staf workshop terdaftar.
-        <br />
-        Hubungi admin jika mengalami kendala akses.
-      </p>
+      <div className="mt-6 text-center">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={isLoading}
+          className="text-[13px] text-white/25 underline underline-offset-2 transition-colors hover:text-white/50 disabled:opacity-20"
+        >
+          ← Kembali ke daftar pekerja
+        </button>
+      </div>
     </div>
   );
 }
+
+// ── Inline manual login form ───────────────────────────────────────
+
+function ManualLoginForm({
+  isLoading, error, onSubmit, onBack,
+}: {
+  isLoading: boolean;
+  error: string | null;
+  onSubmit: (username: string, password: string) => void;
+  onBack?: () => void;
+}) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const usernameRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { usernameRef.current?.focus(); }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (username.trim() && password.trim()) onSubmit(username.trim(), password);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/30">Nama Pengguna</label>
+        <div className="relative">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/20">
+            <User className="h-4 w-4" />
+          </span>
+          <input
+            ref={usernameRef}
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="username atau email"
+            disabled={isLoading}
+            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2.5 pl-10 pr-4 text-[15px] text-[#e8e2d4] placeholder:text-white/[0.12] focus:border-[#c9a227] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-[#c9a227]/[0.08] transition-all disabled:opacity-30"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            required
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/30">Kata Sandi</label>
+        <div className="relative">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/20">
+            <Lock className="h-4 w-4" />
+          </span>
+          <input
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            disabled={isLoading}
+            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2.5 pl-10 pr-12 text-[15px] text-[#e8e2d4] placeholder:text-white/[0.12] focus:border-[#c9a227] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-[#c9a227]/[0.08] transition-all disabled:opacity-30"
+            autoComplete="current-password"
+            required
+          />
+          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-white/20 hover:text-white/40 transition-colors" tabIndex={-1}>
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-lg bg-red-500/[0.08] border border-red-500/[0.15] px-4 py-2.5 flex items-start gap-2 text-[13px] text-red-300">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={isLoading || !username.trim() || !password.trim()}
+        className="mt-2 w-full rounded-xl bg-[#c9a227] py-2.5 text-[14px] font-medium text-[#15130f] transition-all hover:bg-[#d4ae3a] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        {isLoading ? (
+          <span className="flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Memverifikasi...
+          </span>
+        ) : (
+          "Masuk ke Workshop"
+        )}
+      </button>
+
+      {onBack && (
+        <div className="text-center">
+          <button type="button" onClick={onBack} className="text-[13px] text-white/25 underline underline-offset-2 transition-colors hover:text-white/50">
+            ← Kembali ke PIN
+          </button>
+        </div>
+      )}
+    </form>
+  );
+}
+
+// ── Page export ─────────────────────────────────────────────────────
 
 export default function WorkshopLoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center min-h-[40vh]">
-          <div className="h-10 w-10 rounded-full border-2 border-stone-200 border-t-amber-500 animate-spin" />
+        <div className="flex items-center justify-center min-h-screen bg-[#15130f]">
+          <div className="h-10 w-10 rounded-full border-2 border-[#c9a227]/[0.2] border-t-[#c9a227] animate-spin" />
         </div>
       }
     >
