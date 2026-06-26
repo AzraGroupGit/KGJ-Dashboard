@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeOverdueDays } from "@/lib/overdue";
 
-const OVERDUE_STATUSES = new Set(["belum", "proses", null]);
 const SKIP_NOTIFY_STATUSES = new Set(["approved", "selesai", "waiting_review"]);
 
 export async function GET() {

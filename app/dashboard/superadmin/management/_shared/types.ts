@@ -63,6 +63,7 @@ export interface HistoryEntry {
   managerId: string;
   role: string;
   item: string;
+  itemId: string;
   task: string;
   status: string;
   completed_at: string;

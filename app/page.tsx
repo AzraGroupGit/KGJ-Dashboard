@@ -72,23 +72,24 @@ export default function Home() {
         .grid-lines {
           position: absolute; inset: 0; pointer-events: none; z-index: 0;
           background-image:
-            linear-gradient(rgba(79,142,247,0.04) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(79,142,247,0.04) 1px, transparent 1px);
-          background-size: 60px 60px;
+            linear-gradient(30deg, rgba(201, 162, 39, 0.05) 1px, transparent 1px),
+            linear-gradient(-30deg, rgba(201, 162, 39, 0.03) 1px, transparent 1px),
+            linear-gradient(rgba(201, 162, 39, 0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(201, 162, 39, 0.025) 1px, transparent 1px);
+          background-size:
+            50px 86px,
+            50px 86px,
+            50px 50px,
+            50px 50px;
         }
 
         .orb {
-          position: absolute; border-radius: 50%; filter: blur(80px);
-          pointer-events: none; animation: orbFloat 8s ease-in-out infinite;
+          position: absolute; border-radius: 50%;
+          pointer-events: none;
         }
-        .orb-1 { width: 400px; height: 400px; background: rgba(79,142,247,0.12); top: -100px; right: -80px; animation-delay: 0s; }
-        .orb-2 { width: 300px; height: 300px; background: rgba(240,201,107,0.07); bottom: -60px; left: 30%; animation-delay: 3s; }
-        .orb-3 { width: 200px; height: 200px; background: rgba(79,142,247,0.08); top: 40%; left: 8%; animation-delay: 5s; }
-
-        @keyframes orbFloat {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-24px); }
-        }
+        .orb-1 { width: 420px; height: 420px; background: radial-gradient(circle, rgba(201, 162, 39, 0.1) 0%, transparent 70%); top: -120px; right: -60px; }
+        .orb-2 { width: 320px; height: 320px; background: radial-gradient(circle, rgba(74, 31, 31, 0.08) 0%, transparent 70%); bottom: -80px; left: 25%; }
+        .orb-3 { width: 240px; height: 240px; background: radial-gradient(circle, rgba(201, 162, 39, 0.06) 0%, transparent 70%); top: 50%; left: 8%; }
 
         /* LEFT PANEL — centered */
         .left-panel {
@@ -200,6 +201,25 @@ export default function Home() {
           from { opacity: 0; transform: translateX(20px); }
           to { opacity: 1; transform: translateX(0); }
         }
+
+        @media (max-width: 768px) {
+          .left-panel { padding: 32px 20px; }
+          .cta-group { flex-direction: column; width: 100%; }
+          .cta-group .btn-primary,
+          .cta-group .btn-ghost { width: 100%; justify-content: center; }
+          .stats-row { flex-wrap: wrap; gap: 16px 20px; }
+          .stat-div { display: none; }
+          .bottom-bar { flex-direction: column; gap: 6px; padding: 10px 20px; }
+          .bottom-info { text-align: center; font-size: 11px; }
+        }
+
+        @media (max-width: 480px) {
+          .left-panel { padding: 24px 16px; }
+          .stats-row { gap: 12px 14px; }
+          .stat-num { font-size: 22px; }
+          .headline { font-size: 28px; }
+          .sub { font-size: 13px; }
+        }
       `}</style>
 
       <div className="page-root">
@@ -251,23 +271,13 @@ export default function Home() {
               <div className="stat-num">12+</div>
               <div className="stat-label">Sub Role</div>
             </div>
-            <div className="stat-div" />
-            <div>
-              <div
-                className="stat-num"
-                style={{ fontSize: 18, lineHeight: "1.5" }}
-              >
-                Live
-              </div>
-              <div className="stat-label">Update Data</div>
-            </div>
           </div>
         </div>
 
         {/* ───── BOTTOM BAR ───── */}
         <div className="bottom-bar">
           <div className="bottom-info px-4">
-            © 2025 Operational Dashboard · Trial Version
+            Real-time notification · Live Update Data
           </div>
           <div className="status-wrap">
             <div className="status-dots">
@@ -275,6 +285,7 @@ export default function Home() {
               <div className="sdot sdot-2" />
               <div className="sdot sdot-3" />
             </div>
+            <span className="status-label">Active</span>
           </div>
         </div>
       </div>

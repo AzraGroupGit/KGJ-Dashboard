@@ -63,18 +63,8 @@ const fmtRpShort = (v: number) => {
   return `Rp ${Math.round(v).toLocaleString("id-ID")}`;
 };
 
-const fmtPct = (v: number) => `${v.toFixed(1)}%`;
-
 const toLocalDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-const formatDisplayDate = (dateStr: string) =>
-  new Date(dateStr + "T00:00:00").toLocaleDateString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-});
 
 // ─── Animated Value Hook ───────────────────────────────────────────────────────
 
@@ -300,9 +290,6 @@ export default function DailyAnalysisPage() {
     return getClientUser();
   });
   const [selectedDate, setSelectedDate] = useState(toLocalDate(new Date()));
-  const [activeTab, setActiveTab] = useState<"overview" | "staff" | "trend">(
-    "overview",
-  );
   const [mounted, setMounted] = useState(false);
 
   const { data, isLoading, isError, error } = useQuery({
@@ -342,19 +329,12 @@ export default function DailyAnalysisPage() {
     return () => window.removeEventListener("keydown", handler);
   }, [selectedDate]);
 
-  const isToday = selectedDate === toLocalDate(new Date());
-
   const cr =
     data && data.totals.lead_masuk > 0
       ? (data.totals.closing / data.totals.lead_masuk) * 100
       : 0;
-  const crSerius =
-    data && data.totals.lead_serius > 0
-      ? (data.totals.closing / data.totals.lead_serius) * 100
-      : 0;
 
   const trend7Lead = data?.trend.map((t) => t.lead_masuk) ?? [];
-  const trend7Omset = data?.trend.map((t) => t.omset) ?? [];
   const trend7Closing = data?.trend.map((t) => t.closing) ?? [];
 
   const overallRate = data && data.totals.lead_masuk > 0 ? Math.round((data.totals.closing / data.totals.lead_masuk) * 100) : 0;
