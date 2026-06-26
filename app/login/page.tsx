@@ -155,167 +155,145 @@ export default function LoginPage() {
 
   return (
     <div className={styles.loginRoot}>
-      <div className={styles.splitLayout}>
-        {/* ──────────── LEFT PANEL (30%) — Branding ──────────── */}
-        <div className={styles.leftPanel}>
-          <div className={`${styles.panelBg} ${styles.facetedGrid}`} />
-          <div className={`${styles.panelBg} ${styles.orb} ${styles.orbGold}`} />
-          <div className={`${styles.panelBg} ${styles.orb} ${styles.orbAccent}`} />
-          <div className={`${styles.panelBg} ${styles.orb} ${styles.orbWarm}`} />
+      {/* Background — full viewport */}
+      <div className={styles.bgGrid} />
+      <div className={styles.orbGold} />
+      <div className={styles.orbAccent} />
+      <div className={styles.orbWarm} />
 
-          <div className={styles.monogramRing}>
-            <Image
-              src="/logo.png"
-              alt="KGJ"
-              width={84}
-              height={84}
-              className={styles.monogramLogo}
-              priority
-            />
-          </div>
+      {/* Back link — floating chip top-left */}
+      <Link href="/" className={styles.backChip}>
+        <ArrowLeft className="w-3.5 h-3.5" />
+        Kembali
+      </Link>
 
-          <div className={styles.horizontalSep}>
-            <div className={styles.horizontalSepLine} />
-            <div className={styles.horizontalSepDiamond}>
-              <div className={styles.horizontalSepGlow} />
+      {/* Main content column */}
+      <div className={styles.main}>
+        {/* Logo + title section */}
+        <div className={styles.logoSection}>
+          <Image
+            src="/logo.png"
+            alt="KGJ"
+            width={96}
+            height={96}
+            className={styles.logoImg}
+            priority
+          />
+          <h1 className={styles.brandTitle}>Kotagede Jewellery</h1>
+        </div>
+
+        {/* Gold divider with diamond accent */}
+        <div className={styles.divider} />
+
+        {/* Login card */}
+        <div className={styles.card}>
+          <h2 className={styles.welcomeTitle}>Selamat Datang</h2>
+          <p className={styles.welcomeSub}>Login untuk mengakses dashboard</p>
+
+          {error && (
+            <div className={styles.alertError}>
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              {error}
             </div>
-            <div className={styles.horizontalSepLine} />
-          </div>
+          )}
 
-          <h1 className={styles.companyTitle}>
-            Kotagede
-            <br />
-            Jewellery
-          </h1>
-        </div>
+          <form onSubmit={handleLogin}>
+            <div className={styles.roleLabel}>Pilih Role</div>
+            <div className={styles.roleGrid}>
+              {ROLE_CONFIGS.map((config) => (
+                <button
+                  key={config.value}
+                  type="button"
+                  className={`${styles.roleGroup} ${role === config.value ? styles.roleGroupActive : ""} ${isLoading ? styles.roleGroupDisabled : ""}`}
+                  style={
+                    role === config.value
+                      ? {
+                          ["--role-border" as string]: config.colors.border,
+                          ["--role-bg" as string]: config.colors.bg,
+                          ["--role-text" as string]: config.colors.text,
+                        }
+                      : undefined
+                  }
+                  onClick={() => setRole(config.value)}
+                  disabled={isLoading}
+                >
+                  <div className={styles.roleBtnIcon}>{config.icon}</div>
+                  <span className={styles.roleBtnLabel}>{config.label}</span>
+                </button>
+              ))}
+            </div>
 
-        {/* ──────────── Separator ──────────── */}
-        <div className={styles.separator} />
-        <div className={styles.separatorAccent}>
-          <div className={styles.separatorAccentInner} />
-        </div>
-
-        {/* ──────────── RIGHT PANEL (70%) — Login Card ──────────── */}
-        <div className={styles.rightPanel}>
-          <div className={`${styles.panelBg} ${styles.facetedGrid}`} />
-          <div className={`${styles.panelBg} ${styles.orb} ${styles.orbGold}`} />
-          <div className={`${styles.panelBg} ${styles.orb} ${styles.orbAccent}`} />
-          <div className={`${styles.panelBg} ${styles.orb} ${styles.orbWarm}`} />
-
-          <div className={styles.card}>
-            <Link href="/" className={styles.backLink}>
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Kembali ke Beranda
-            </Link>
-
-            <h2 className={styles.welcomeTitle}>Selamat Datang</h2>
-            <p className={styles.welcomeSub}>Login untuk mengakses dashboard</p>
-
-            {error && (
-              <div className={styles.alertError}>
-                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                {error}
+            <div className={styles.inputGroup}>
+              <label className={styles.inputLabel}>Email</label>
+              <div className={styles.inputWrapper}>
+                <span className={styles.inputIcon}>
+                  <Mail className="w-3.5 h-3.5" />
+                </span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={styles.inputField}
+                  placeholder="nama@email.com"
+                  required
+                  disabled={isLoading}
+                />
               </div>
-            )}
+            </div>
 
-            <form onSubmit={handleLogin}>
-              <div className={styles.roleLabel}>Pilih Role</div>
-              <div className={styles.roleGrid}>
-                {ROLE_CONFIGS.map((config) => (
-                  <button
-                    key={config.value}
-                    type="button"
-                    className={`${styles.roleGroup} ${role === config.value ? styles.roleGroupActive : ""} ${isLoading ? styles.roleGroupDisabled : ""}`}
-                    style={
-                      role === config.value
-                        ? {
-                            ["--role-border" as string]: config.colors.border,
-                            ["--role-bg" as string]: config.colors.bg,
-                            ["--role-text" as string]: config.colors.text,
-                          }
-                        : undefined
-                    }
-                    onClick={() => setRole(config.value)}
-                    disabled={isLoading}
-                  >
-                    <div className={styles.roleBtnIcon}>{config.icon}</div>
-                    <span className={styles.roleBtnLabel}>{config.label}</span>
-                  </button>
-                ))}
+            <div className={styles.inputGroup}>
+              <label className={styles.inputLabel}>Password</label>
+              <div className={styles.inputWrapper}>
+                <span className={styles.inputIcon}>
+                  <Lock className="w-3.5 h-3.5" />
+                </span>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={styles.inputField}
+                  placeholder="••••••••"
+                  required
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className={styles.passwordToggle}
+                  disabled={isLoading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-3.5 h-3.5" />
+                  ) : (
+                    <Eye className="w-3.5 h-3.5" />
+                  )}
+                </button>
               </div>
-
-              <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>Email</label>
-                <div className={styles.inputWrapper}>
-                  <span className={styles.inputIcon}>
-                    <Mail className="w-3.5 h-3.5" />
-                  </span>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className={styles.inputField}
-                    placeholder="nama@email.com"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
+              <div className={styles.forgotLink}>
+                <Link href="/forgot-password">Lupa password?</Link>
               </div>
+            </div>
 
-              <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>Password</label>
-                <div className={styles.inputWrapper}>
-                  <span className={styles.inputIcon}>
-                    <Lock className="w-3.5 h-3.5" />
-                  </span>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={styles.inputField}
-                    placeholder="••••••••"
-                    required
-                    disabled={isLoading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className={styles.passwordToggle}
-                    disabled={isLoading}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-3.5 h-3.5" />
-                    ) : (
-                      <Eye className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                </div>
-                <div className={styles.forgotLink}>
-                  <Link href="/forgot-password">Lupa password?</Link>
-                </div>
-              </div>
+            <button type="submit" className={styles.loginBtn} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <span className={styles.spinner} />
+                  <span>Memverifikasi...</span>
+                </>
+              ) : (
+                <>
+                  <span>Masuk ke Dashboard</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </>
+              )}
+            </button>
+          </form>
 
-              <button type="submit" className={styles.loginBtn} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <span className={styles.spinner}></span>
-                    <span>Memverifikasi...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Masuk ke Dashboard</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </>
-                )}
-              </button>
-            </form>
-
-            {isLoading && (
-              <div className={styles.loadingOverlay}>
-                <Loading variant="dots" size="lg" text="Memverifikasi akun..." />
-              </div>
-            )}
-          </div>
+          {isLoading && (
+            <div className={styles.loadingOverlay}>
+              <Loading variant="dots" size="lg" text="Memverifikasi akun..." />
+            </div>
+          )}
         </div>
       </div>
     </div>
