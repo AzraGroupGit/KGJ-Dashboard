@@ -298,7 +298,7 @@ export default function ManagementMonitoringPage() {
             <><div className="grid grid-cols-1 lg:grid-cols-2 gap-4">{visibleManagers.map((m) => <ManagerCard key={m.id} manager={m as Manager} onViewAll={setSelectedManager} onEscalate={handleEscalate} />)}</div>
               {hasMore && <div className="flex justify-center mt-4"><button onClick={() => setVisibleCount((p) => Math.min(p + PAGE_SIZE, filteredManagers.length))} className="rounded-xl px-6 py-2.5 text-sm font-semibold transition-colors" style={{ border: `1px solid ${P.purple}`, color: P.purple, background: "#fff" }}>Tampilkan {Math.min(PAGE_SIZE, filteredManagers.length - visibleCount)} lainnya · {filteredManagers.length - visibleCount} tersisa</button></div>}</>
           ) : (
-            <div className="rounded-2xl overflow-hidden" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}>
+            <div className="rounded-2xl overflow-x-auto" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}>
               <table className="w-full text-sm">
                 <thead style={{ background: P.grayLight }}><tr>{["Manager", "Progress", "Hari Ini", "Terlambat", "Status", "Aksi"].map((h) => <th key={h} className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wider" style={{ color: P.gray, borderBottom: `1px solid ${P.grayBorder}` }}>{h}</th>)}</tr></thead>
                 <tbody>{filteredManagers.map((m) => {

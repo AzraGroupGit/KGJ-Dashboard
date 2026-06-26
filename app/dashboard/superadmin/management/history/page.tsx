@@ -9,7 +9,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
-import { CheckCircle2, User, AlertCircle, ChevronDown, Calendar, Search, X } from "lucide-react";
+import { CheckCircle2, User, AlertCircle, ChevronDown, Calendar, Search, X, Paperclip } from "lucide-react";
 import type { ManagerData, HistoryEntry } from "../_shared/types";
 import { getManagerStats } from "../_shared/utils";
 
@@ -21,6 +21,7 @@ export default function ManagementHistoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [expandedIdxs, setExpandedIdxs] = useState<Set<number>>(new Set());
+  const [attachments, setAttachments] = useState<Record<string, { id: string; file_name: string; public_url: string; mime_type: string }[]>>({});
   const datePickerRef = useRef<HTMLDivElement>(null);
   useEffect(() => { setClientUser(getClientUser()); }, []);
   useEffect(() => {
@@ -51,7 +52,7 @@ export default function ManagementHistoryPage() {
     const entries: HistoryEntry[] = managers.flatMap((m) => {
       const mRate = managerRates.get(m.id)!;
       return m.tasks.flatMap((task) => (task.items ?? []).filter((item) => item.progress?.[0]?.completed_at).map((item) => ({
-        manager: m.full_name, managerId: m.id, role: m.role_name, item: item.title, task: task.title,
+        manager: m.full_name, managerId: m.id, role: m.role_name, item: item.title, itemId: item.id, task: task.title,
         status: item.progress![0].status ?? "belum", completed_at: item.progress![0].completed_at!,
         notes: item.progress![0].notes ?? null, kendala: item.progress![0].kendala ?? null, admin_notes: item.progress![0].admin_notes ?? null,
         managerRate: mRate.rate, managerDone: mRate.done, managerTotal: mRate.total,
@@ -93,7 +94,20 @@ export default function ManagementHistoryPage() {
     return groups;
   }, [filteredHistory]);
 
-  const toggleExpand = (idx: number) => setExpandedIdxs((prev) => { const n = new Set(prev); if (n.has(idx)) n.delete(idx); else n.add(idx); return n; });
+  const toggleExpand = (idx: number, itemId: string) => {
+    setExpandedIdxs((prev) => {
+      const n = new Set(prev);
+      if (n.has(idx)) { n.delete(idx); return n; }
+      n.add(idx);
+      if (!attachments[itemId]) {
+        fetch(`/api/management/tasks/items/${itemId}/attachments`)
+          .then((res) => res.ok ? res.json() : null)
+          .then((data) => { if (data) setAttachments((p) => ({ ...p, [itemId]: data })); })
+          .catch(() => {});
+      }
+      return n;
+    });
+  };
   const uniqueManagers = new Set(history.map((e) => e.managerId)).size;
   const bgStyle = {
     background:
@@ -119,17 +133,7 @@ export default function ManagementHistoryPage() {
             <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.15em] mb-1" style={{ color: P.purple }}>Management History</p>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-[28px] font-bold leading-tight" style={{ color: P.ink }}>Riwayat <span style={{ color: P.purple }}>Aktivitas</span></h2>
-                  <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
-                    {(["today", "week", "all"] as const).map((f) => (
-                      <button key={f} onClick={() => setDateFilter(f)}
-                        className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all ${dateFilter === f ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
-                        {f === "today" ? "Hari Ini" : f === "week" ? "Minggu Ini" : "Semua"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <h2 className="text-[28px] font-bold leading-tight" style={{ color: P.ink }}>Riwayat <span style={{ color: P.purple }}>Aktivitas</span></h2>
               </div>
               <div className="flex items-center gap-4 sm:pb-1">
                 {[
@@ -149,6 +153,14 @@ export default function ManagementHistoryPage() {
               <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2" style={{ color: P.gray }} />
               <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Cari nama / role / task..." className="w-full rounded-xl border py-2 pl-9 pr-3 text-sm outline-none transition-colors" style={{ borderColor: P.grayBorder, color: P.ink, background: "#fff" }} onFocus={(e) => { e.currentTarget.style.borderColor = P.purple; }} onBlur={(e) => { e.currentTarget.style.borderColor = P.grayBorder; }} />
               {searchQuery && <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: P.gray }}><X className="h-3 w-3" /></button>}
+            </div>
+            <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5 shrink-0">
+              {(["today", "week", "all"] as const).map((f) => (
+                <button key={f} onClick={() => setDateFilter(f)}
+                  className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all ${dateFilter === f ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                  {f === "today" ? "Hari Ini" : f === "week" ? "Minggu Ini" : "Semua"}
+                </button>
+              ))}
             </div>
             <div className="relative" ref={datePickerRef}>
               <button type="button" onClick={() => setShowDatePicker(!showDatePicker)} className="flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors" style={{ borderColor: dateFrom || dateTo ? P.purple : P.grayBorder, color: dateFrom || dateTo ? P.purple : P.gray, background: "#fff" }}>
@@ -178,7 +190,7 @@ export default function ManagementHistoryPage() {
           {isLoading ? <div className="p-12"><Loading variant="skeleton" text="Memuat data..." /></div> : filteredHistory.length === 0 ? (
             <div className="text-center py-16 rounded-2xl" style={{ background: "#fff", border: `1px solid ${P.grayBorder}` }}><CheckCircle2 className="mx-auto mb-3 h-10 w-10" style={{ color: P.gray }} /><p style={{ color: P.gray }}>Belum ada riwayat.</p></div>
           ) : (
-            <div className="max-w-3xl mx-auto space-y-10">
+            <div className="space-y-10">
               {monthlyGroups.map((month) => (
                 <div key={month.label}>
                   <div className="flex items-center gap-4 mb-5 sticky top-0 z-10 py-2" style={{ background: bgStyle.background }}>
@@ -195,7 +207,7 @@ export default function ManagementHistoryPage() {
                       return (
                         <div key={globalIdx} className="relative pb-3 last:pb-0">
                           <div className="absolute left-[-28px] top-1.5 rounded-full border-2" style={{ width: 10, height: 10, borderColor: statusColor, background: "#F9FAFB" }} />
-                          <div className="rounded-2xl border p-4 cursor-pointer transition-colors" style={{ background: "#fff", borderColor: P.grayBorder }} onClick={() => toggleExpand(globalIdx)}>
+                          <div className="rounded-2xl border p-4 cursor-pointer transition-colors" style={{ background: "#fff", borderColor: P.grayBorder }} onClick={() => toggleExpand(globalIdx, entry.itemId)}>
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-2 min-w-0"><span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: barColor }} /><span className="text-sm font-semibold truncate" style={{ color: P.ink }}>{entry.manager}</span><span className="text-[10px]" style={{ color: P.gray }}>{entry.role}</span></div>
                               <span className="text-[10px] shrink-0" style={{ color: P.gray }}>{new Date(entry.completed_at).toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
@@ -215,6 +227,28 @@ export default function ManagementHistoryPage() {
                                 {entry.notes && <div className="flex items-start gap-2"><span className="shrink-0 font-medium" style={{ color: P.gray, width: 90 }}>Catatan</span><span style={{ color: P.ink }}>{entry.notes}</span></div>}
                                 {entry.kendala && <div className="flex items-start gap-2"><span className="shrink-0 font-medium flex items-center gap-1" style={{ color: "#dc2626", width: 90 }}><AlertCircle className="h-3 w-3" /> Kendala</span><span style={{ color: "#dc2626" }}>{entry.kendala}</span></div>}
                                 {entry.admin_notes && <div className="flex items-start gap-2"><span className="shrink-0 font-medium" style={{ color: P.purple, width: 90 }}>Catatan Admin</span><span style={{ color: P.purple }}>{entry.admin_notes}</span></div>}
+                                {(attachments[entry.itemId]?.length ?? 0) > 0 && (
+                                  <div className="flex items-start gap-2">
+                                    <span className="shrink-0 font-medium flex items-center gap-1" style={{ color: P.purple, width: 90 }}><Paperclip className="h-3 w-3" /> Lampiran</span>
+                                    <div className="flex items-center gap-1 flex-wrap">
+                                      {(attachments[entry.itemId] ?? []).map((f) => {
+                                        const isImg = f.mime_type?.startsWith("image/");
+                                        return (
+                                          <a key={f.id} href={f.public_url} target="_blank" rel="noreferrer"
+                                            className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium hover:bg-purple-50 transition-colors shrink-0"
+                                            style={{ borderColor: P.grayBorder, color: P.purple }}>
+                                            {isImg ? (
+                                              <img src={f.public_url} alt={f.file_name} className="w-3.5 h-3.5 rounded object-cover" />
+                                            ) : (
+                                              <Paperclip className="w-3 h-3" />
+                                            )}
+                                            <span className="max-w-[80px] truncate">{f.file_name}</span>
+                                          </a>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>

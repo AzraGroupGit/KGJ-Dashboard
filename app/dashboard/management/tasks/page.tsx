@@ -76,7 +76,7 @@ export default function ManagementTasksPage() {
   const [bulkSubmitReviewConfirm, setBulkSubmitReviewConfirm] = useState(false);
 
   const [attachments, setAttachments] = useState<Record<string, { id: string; file_name: string; public_url: string; mime_type: string }[]>>({});
-  const [attachmentsLoading, setAttachmentsLoading] = useState<Record<string, boolean>>({});
+  const [ , setAttachmentsLoading] = useState<Record<string, boolean>>({});
 
   const fetchAttachments = async (itemId: string) => {
     if (attachments[itemId]) return;
@@ -121,8 +121,8 @@ export default function ManagementTasksPage() {
     });
     // Sort overdue first by max overdue days
     return [...result].sort((a, b) => {
-      const maxA = Math.max(0, ...(a.items ?? []).map((i) => computeOverdueDays(a.deadline ?? null)));
-      const maxB = Math.max(0, ...(b.items ?? []).map((i) => computeOverdueDays(b.deadline ?? null)));
+      const maxA = Math.max(0, ...(a.items ?? []).map(() => computeOverdueDays(a.deadline ?? null)));
+      const maxB = Math.max(0, ...(b.items ?? []).map(() => computeOverdueDays(b.deadline ?? null)));
       return maxB - maxA;
     });
   }, [tasks, filter]);
@@ -346,7 +346,7 @@ export default function ManagementTasksPage() {
             <div className="flex items-center gap-3">
               <span className="text-xs font-medium" style={{ color: P.gray }}>{done}/{items.length} selesai</span>
               <div className="flex gap-0.5">
-                {items.map((item, j) => {
+                {items.map((item) => {
                   const st = item.progress?.[0]?.status ?? "belum";
                   const fill = st === "selesai" || st === "approved" ? P.green : st === "proses" || st === "waiting_review" ? P.purple : P.grayBorder;
                   return <div key={item.id} className="w-3 h-3 rounded-sm" style={{ background: fill }} />;
