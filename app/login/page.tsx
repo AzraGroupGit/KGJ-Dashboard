@@ -21,7 +21,6 @@ import {
   EyeOff,
   ArrowRight,
 } from "lucide-react";
-import styles from "./login.module.css";
 
 // ════════════════════════════════════════════════════════════════════════════
 // ROLE CONFIGS & ICONS
@@ -154,148 +153,222 @@ export default function LoginPage() {
   };
 
   return (
-    <div className={styles.loginRoot}>
-      {/* Background — full viewport */}
-      <div className={styles.bgGrid} />
-      <div className={styles.orbGold} />
-      <div className={styles.orbAccent} />
-      <div className={styles.orbWarm} />
+    <>
+      <style>{`
+        .bgDust {
+          position: fixed; inset: 0; pointer-events: none; z-index: 0;
+          background:
+            linear-gradient(45deg, rgba(201, 162, 39, 0.06) 25%, transparent 25%, transparent 75%, rgba(201, 162, 39, 0.06) 75%),
+            linear-gradient(-45deg, rgba(201, 162, 39, 0.06) 25%, transparent 25%, transparent 75%, rgba(201, 162, 39, 0.06) 75%);
+          background-size: 80px 80px;
+          background-position: 0 0, 40px 40px;
+        }
+        .orbGold {
+          position: fixed; width: 520px; height: 520px; border-radius: 50%; pointer-events: none; z-index: 0;
+          background: radial-gradient(circle, rgba(201, 162, 39, 0.1) 0%, transparent 70%);
+          top: -160px; right: -100px;
+        }
+        .orbAccent {
+          position: fixed; width: 400px; height: 400px; border-radius: 50%; pointer-events: none; z-index: 0;
+          background: radial-gradient(circle, rgba(74, 31, 31, 0.06) 0%, transparent 70%);
+          bottom: -120px; left: 20%;
+        }
+        .orbWarm {
+          position: fixed; width: 300px; height: 300px; border-radius: 50%; pointer-events: none; z-index: 0;
+          background: radial-gradient(circle, rgba(201, 162, 39, 0.05) 0%, transparent 70%);
+          top: 40%; left: -60px;
+        }
+        .divider {
+          width: 48px; height: 1px; background: rgba(201, 162, 39, 0.4);
+          margin-bottom: 10px; position: relative;
+        }
+        .divider::after {
+          content: ""; position: absolute; top: 50%; left: 50%;
+          transform: translate(-50%, -50%) rotate(45deg);
+          width: 5px; height: 5px; background: #c9a227;
+          box-shadow: 0 0 10px rgba(201, 162, 39, 0.4), 0 0 24px rgba(201, 162, 39, 0.15);
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
 
-      {/* Back link — floating chip top-left */}
-      <Link href="/" className={styles.backChip}>
-        <ArrowLeft className="w-3.5 h-3.5" />
-        Kembali
-      </Link>
+      <div className="fixed inset-0 flex items-center justify-center bg-[#15130f] text-[#e8e2d4] font-[var(--font-dm-sans)]">
+        {/* Background */}
+        <div className="bgDust" />
+        <div className="orbGold" />
+        <div className="orbAccent" />
+        <div className="orbWarm" />
 
-      {/* Main content column */}
-      <div className={styles.main}>
-        {/* Logo + title section */}
-        <div className={styles.logoSection}>
+        {/* Back link — floating chip top-left */}
+        <Link
+          href="/"
+          className="absolute top-5 left-5 inline-flex items-center gap-1.5 text-xs text-white/35 bg-white/[0.04] border border-white/[0.07] rounded-full px-3.5 py-1.5 transition-all hover:text-[#e8e2d4] hover:bg-white/[0.07] hover:border-white/[0.12] z-20 no-underline"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Kembali
+        </Link>
+
+        {/* Main content column */}
+        <div className="relative z-10 flex flex-col items-center w-full max-w-[540px] px-10 py-6 gap-y-1.5">
+          {/* Logo */}
           <Image
             src="/logo.png"
             alt="KGJ"
             width={96}
             height={96}
-            className={styles.logoImg}
+            className="w-16 h-16 sm:w-28 sm:h-28 object-contain shrink-0"
             priority
           />
-          <h1 className={styles.brandTitle}>Kotagede Jewellery</h1>
-        </div>
 
-        {/* Gold divider with diamond accent */}
-        <div className={styles.divider} />
+          {/* Brand title */}
+          <h1 className="font-[var(--font-dm-serif)] text-base sm:text-lg text-[#c9a227] tracking-[0.08em]">
+            Kotagede Jewellery
+          </h1>
 
-        {/* Login card */}
-        <div className={styles.card}>
-          <h2 className={styles.welcomeTitle}>Selamat Datang</h2>
-          <p className={styles.welcomeSub}>Login untuk mengakses dashboard</p>
+          {/* Gold divider with diamond accent */}
+          <div className="divider mt-1" />
 
-          {error && (
-            <div className={styles.alertError}>
-              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-              {error}
-            </div>
-          )}
+          {/* Frosted glass card */}
+          <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-4 sm:px-12 py-2 sm:py-6 bg-[#15130f]/75 backdrop-blur-[20px] relative">
+            <h2 className="font-[var(--font-dm-serif)] text-lg sm:text-2xl text-[#f0f4ff] text-center mb-3 tracking-[-0.01em] [text-wrap:balance]">
+              Selamat Datang
+            </h2>
+            <p className="text-[13px] sm:text-base text-white/40 text-center mb-3 sm:mb-4">
+              Login untuk mengakses dashboard
+            </p>
 
-          <form onSubmit={handleLogin}>
-            <div className={styles.roleLabel}>Pilih Role</div>
-            <div className={styles.roleGrid}>
-              {ROLE_CONFIGS.map((config) => (
-                <button
-                  key={config.value}
-                  type="button"
-                  className={`${styles.roleGroup} ${role === config.value ? styles.roleGroupActive : ""} ${isLoading ? styles.roleGroupDisabled : ""}`}
-                  style={
-                    role === config.value
-                      ? {
-                          ["--role-border" as string]: config.colors.border,
-                          ["--role-bg" as string]: config.colors.bg,
-                          ["--role-text" as string]: config.colors.text,
-                        }
-                      : undefined
-                  }
-                  onClick={() => setRole(config.value)}
-                  disabled={isLoading}
-                >
-                  <div className={styles.roleBtnIcon}>{config.icon}</div>
-                  <span className={styles.roleBtnLabel}>{config.label}</span>
-                </button>
-              ))}
-            </div>
+            {error && (
+              <div className="flex items-center gap-2 rounded-lg bg-red-500/[0.08] border border-red-500/[0.15] px-3 py-2.5 mb-3 text-[12px] text-red-300">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                {error}
+              </div>
+            )}
 
-            <div className={styles.inputGroup}>
-              <label className={styles.inputLabel}>Email</label>
-              <div className={styles.inputWrapper}>
-                <span className={styles.inputIcon}>
-                  <Mail className="w-3.5 h-3.5" />
-                </span>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={styles.inputField}
-                  placeholder="nama@email.com"
-                  required
-                  disabled={isLoading}
+            <form onSubmit={handleLogin}>
+              <p className="text-xs font-semibold text-white/35 text-center tracking-[0.06em] uppercase mb-2.5">
+                Pilih Role
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                {ROLE_CONFIGS.map((config) => (
+                  <button
+                    key={config.value}
+                    type="button"
+                    onClick={() => setRole(config.value)}
+                    disabled={isLoading}
+                    className={`flex flex-col items-center justify-center gap-1 py-2.5 sm:py-3.5 px-2 sm:px-2.5 rounded-xl border border-white/[0.06] bg-white/[0.04] text-white/35 text-[11px] sm:text-[13px] font-medium transition-all hover:bg-white/[0.08] hover:border-white/[0.12] hover:text-white/50 active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed min-h-[56px] sm:min-h-[76px] ${
+                      role === config.value ? "" : ""
+                    }`}
+                    style={
+                      role === config.value
+                        ? {
+                            borderColor: config.colors.border,
+                            background: config.colors.bg,
+                            color: config.colors.text,
+                            boxShadow: "0 0 12px rgba(201,162,39,0.1)",
+                          }
+                        : undefined
+                    }
+                  >
+                    <div className="w-6 h-6 flex-shrink-0">{config.icon}</div>
+                    <span className="text-center leading-tight">
+                      {config.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mb-3">
+                <label className="block text-[13px] font-medium text-white/50 tracking-[0.01em] mb-1.5">
+                  Email
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none">
+                    <Mail className="w-3.5 h-3.5" />
+                  </span>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full rounded-[10px] border border-white/[0.08] bg-white/[0.06] py-2.5 sm:py-3 pl-[42px] pr-3.5 text-[13px] sm:text-sm text-[#e8e2d4] placeholder:text-white/[0.12] focus:border-[#c9a227] focus:bg-white/[0.1] focus:outline-none focus:ring-2 focus:ring-[#c9a227]/[0.08] transition-all disabled:opacity-40"
+                    placeholder="nama@email.com"
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <label className="block text-[13px] font-medium text-white/50 tracking-[0.01em] mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none">
+                    <Lock className="w-3.5 h-3.5" />
+                  </span>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full rounded-[10px] border border-white/[0.08] bg-white/[0.06] py-2.5 sm:py-3 pl-[42px] pr-10 text-[13px] sm:text-sm text-[#e8e2d4] placeholder:text-white/[0.12] focus:border-[#c9a227] focus:bg-white/[0.1] focus:outline-none focus:ring-2 focus:ring-[#c9a227]/[0.08] transition-all disabled:opacity-40"
+                    placeholder="••••••••"
+                    required
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-white/20 hover:text-white/40 transition-colors"
+                    disabled={isLoading}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-3.5 h-3.5" />
+                    ) : (
+                      <Eye className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+                <div className="flex justify-end mt-[-2px]">
+                  <Link
+                    href="/forgot-password"
+                    className="text-[11.5px] text-[#c9a227] hover:text-[#b8921e] font-medium no-underline transition-colors"
+                  >
+                    Lupa password?
+                  </Link>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full rounded-[10px] bg-[#c9a227] py-3 sm:py-3.5 text-[14px] sm:text-[15px] font-semibold text-[#15130f] transition-all hover:bg-[#d4ae3a] active:scale-[0.98] disabled:opacity-30 flex items-center justify-center gap-2 mt-3"
+              >
+                {isLoading ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-[#15130f]/[0.2] border-t-[#15130f] rounded-full animate-spin" />
+                    Memverifikasi...
+                  </>
+                ) : (
+                  <>
+                    Masuk ke Dashboard
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {isLoading && (
+              <div className="absolute inset-0 bg-[#15130f]/[0.85] backdrop-blur-[4px] rounded-[20px] flex items-center justify-center z-20">
+                <Loading
+                  variant="dots"
+                  size="lg"
+                  text="Memverifikasi akun..."
                 />
               </div>
-            </div>
-
-            <div className={styles.inputGroup}>
-              <label className={styles.inputLabel}>Password</label>
-              <div className={styles.inputWrapper}>
-                <span className={styles.inputIcon}>
-                  <Lock className="w-3.5 h-3.5" />
-                </span>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={styles.inputField}
-                  placeholder="••••••••"
-                  required
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className={styles.passwordToggle}
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-3.5 h-3.5" />
-                  ) : (
-                    <Eye className="w-3.5 h-3.5" />
-                  )}
-                </button>
-              </div>
-              <div className={styles.forgotLink}>
-                <Link href="/forgot-password">Lupa password?</Link>
-              </div>
-            </div>
-
-            <button type="submit" className={styles.loginBtn} disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <span className={styles.spinner} />
-                  <span>Memverifikasi...</span>
-                </>
-              ) : (
-                <>
-                  <span>Masuk ke Dashboard</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </>
-              )}
-            </button>
-          </form>
-
-          {isLoading && (
-            <div className={styles.loadingOverlay}>
-              <Loading variant="dots" size="lg" text="Memverifikasi akun..." />
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
