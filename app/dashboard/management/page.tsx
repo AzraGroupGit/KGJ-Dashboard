@@ -10,6 +10,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
+import { getDeadlineUrgency } from "@/lib/overdue";
 import { ClipboardList, CheckCircle2, Clock, AlertTriangle, Calendar } from "lucide-react";
 
 interface TaskItem {
@@ -23,15 +24,6 @@ interface Task {
   title: string;
   deadline: string | null;
   items: TaskItem[] | null;
-}
-
-function getDeadlineUrgency(deadline: string | null) {
-  if (!deadline) return null;
-  const d = new Date(deadline); const now = new Date();
-  now.setHours(0, 0, 0, 0); d.setHours(0, 0, 0, 0);
-  if (d.getTime() < now.getTime()) return "overdue" as const;
-  if (d.getTime() === now.getTime()) return "today" as const;
-  return "future" as const;
 }
 
 export default function ManagementOverviewPage() {

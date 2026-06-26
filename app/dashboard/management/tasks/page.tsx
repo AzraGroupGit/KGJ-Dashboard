@@ -18,23 +18,13 @@ import {
   ClipboardList, AlertTriangle, CalendarClock, X, GripVertical, Square, CheckSquare, Paperclip,
 } from "lucide-react";
 import type { Task } from "@/app/dashboard/superadmin/management/_shared/types";
-import { computeOverdueDays, getOverdueSeverity } from "@/lib/overdue";
+import { computeOverdueDays, getOverdueSeverity, getDeadlineUrgency } from "@/lib/overdue";
 import { ProgressWidget } from "@/components/dashboard/superadmin/ProgressWidget";
 import { ItemRow } from "@/components/dashboard/superadmin/ItemRow";
 import { useAnimatedValue } from "@/app/dashboard/superadmin/management/_shared/utils";
 import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 
 type FilterTab = "all" | "pending" | "done";
-
-function getDeadlineUrgency(deadline: string | null) {
-  if (!deadline) return null;
-  const d = new Date(deadline);
-  const now = new Date(); now.setHours(0, 0, 0, 0);
-  d.setHours(0, 0, 0, 0);
-  if (d.getTime() < now.getTime()) return "overdue" as const;
-  if (d.getTime() === now.getTime()) return "today" as const;
-  return "future" as const;
-}
 
 function formatDate(deadline: string) {
   return new Date(deadline).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
@@ -282,7 +272,7 @@ export default function ManagementTasksPage() {
     if (targetGroup === "proses") return;
     const task = tasks.find((t) => t.id === draggableId);
     if (!task?.items?.length) return;
-    const newStatus = targetGroup === "selesai" ? "selesai" : "pending";
+    const newStatus = targetGroup === "selesai" ? "selesai" : "belum";
     setBulkActionLoading(true);
     try {
       for (const item of task.items) {

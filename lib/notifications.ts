@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { notifyUser } from "@/lib/pusher/server";
+// Pusher push is now handled by Supabase Database Webhook
+// ("Pusher-RealTime-Notification") on the notifications table.
 
 export async function sendNotification({
   userId,
@@ -16,7 +17,7 @@ export async function sendNotification({
 }) {
   const admin = createAdminClient();
 
-  const { data, error } = await admin
+  const { error } = await admin
     .from("notifications")
     .insert({
       user_id: userId,
@@ -24,26 +25,10 @@ export async function sendNotification({
       message,
       type,
       link: link ?? null,
-    })
-    .select("id, title, message, type, link, created_at")
-    .single();
-
-  if (error || !data) {
-    console.error("[sendNotification] insert error:", error);
-    return;
-  }
-
-  try {
-    await notifyUser(userId, {
-      id: data.id,
-      title: data.title,
-      message: data.message,
-      type: data.type,
-      link: data.link,
-      created_at: data.created_at,
     });
-  } catch (err) {
-    console.error("[sendNotification] pusher error:", err);
+
+  if (error) {
+    console.error("[sendNotification] insert error:", error);
   }
 }
 

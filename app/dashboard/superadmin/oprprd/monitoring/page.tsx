@@ -45,32 +45,34 @@ export default function MonitoringPage() {
 
   const queryClient = useQueryClient();
 
+  const [refetchInterval, setRefetchInterval] = useState<number | false>(60_000);
+
   const queries = useQueries({
     queries: [
       {
         queryKey: ["monitoring", "prod", dateFrom, dateTo],
         queryFn: () => fetcher<{ data: ProduksiData }>(buildUrl("/api/production", dateFrom, dateTo)),
-        refetchInterval: 60_000,
+        refetchInterval,
       },
       {
         queryKey: ["monitoring", "op", dateFrom, dateTo],
         queryFn: () => fetcher<{ data: OperasionalData }>(buildUrl("/api/operational", dateFrom, dateTo)),
-        refetchInterval: 60_000,
+        refetchInterval,
       },
       {
         queryKey: ["monitoring", "bn", dateFrom, dateTo],
         queryFn: () => fetcher<{ data: BottleneckData }>(buildUrl("/api/bottleneck", dateFrom, dateTo)),
-        refetchInterval: 60_000,
+        refetchInterval,
       },
       {
         queryKey: ["monitoring", "supervisor", dateFrom, dateTo],
         queryFn: () => fetcher<{ data: { completedOrders: Array<{ id: string; order_number: string; customer_name: string; completed_at: string }> } }>(buildUrl("/api/supervisor", dateFrom, dateTo)),
-        refetchInterval: 60_000,
+        refetchInterval,
       },
       {
         queryKey: ["monitoring", "rework", dateFrom, dateTo],
         queryFn: () => fetcher<{ data: ReworkData }>(buildUrl("/api/rework-overview", dateFrom, dateTo)),
-        refetchInterval: 60_000,
+        refetchInterval,
       },
     ],
   });
@@ -117,6 +119,11 @@ export default function MonitoringPage() {
           cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
           authEndpoint: "/api/pusher/auth",
         });
+
+        pusher.connection.bind("state_change", (states: { current: string }) => {
+          setRefetchInterval(states.current === "connected" ? false : 60_000);
+        });
+
         channel = pusher.subscribe(`private-user-${userId}`);
         channel.bind("new-notification", () => {
           queryClient.invalidateQueries({ queryKey: ["monitoring"] });
