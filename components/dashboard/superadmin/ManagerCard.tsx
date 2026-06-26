@@ -2,6 +2,8 @@
 
 import { Clock, AlertCircle, Check } from "lucide-react";
 import { computeOverdueDays, getOverdueSeverity, getReviewWaitingDays } from "@/lib/overdue";
+import { formatRelativeDeadline } from "@/lib/format";
+import { isOverdue } from "@/app/dashboard/superadmin/management/_shared/utils";
 import { ROLE_DISPLAY } from "@/app/dashboard/superadmin/management/_shared/constants";
 
 interface ProgressRow {
@@ -38,40 +40,6 @@ export interface Manager {
   tasks: Task[];
 }
 
-export function formatRelativeDeadline(
-  deadline: string | null,
-  status: string | null,
-): { label: string; isUrgent: boolean } {
-  if (!deadline || status === "selesai")
-    return { label: "—", isUrgent: false };
-  const d = new Date(deadline);
-  const now = new Date();
-  const diffMs = d.getTime() - now.getTime();
-  const diffHours = Math.round(diffMs / 3600000);
-  const diffDays = Math.round(diffMs / 86400000);
-
-  if (diffHours < 0) {
-    const absH = Math.abs(diffHours);
-    if (absH < 24) return { label: `${absH}h lalu`, isUrgent: true };
-    return { label: `${Math.abs(diffDays)}h lalu`, isUrgent: true };
-  }
-  if (diffHours < 24) return { label: "Hari ini", isUrgent: true };
-  if (diffDays === 1) return { label: "Besok", isUrgent: false };
-  if (diffDays <= 3) return { label: `${diffDays}h lagi`, isUrgent: false };
-  return {
-    label: new Date(deadline).toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "short",
-    }),
-    isUrgent: false,
-  };
-}
-
-function isOverdue(deadline: string | null, status: string | null): boolean {
-  if (!deadline || status === "selesai") return false;
-  return new Date(deadline) < new Date();
-}
-
 export function ManagerCard({
   manager,
   onViewAll,
@@ -90,7 +58,7 @@ export function ManagerCard({
   );
 
   const done = allItems.filter(
-    (i) => i.item.progress?.[0]?.status === "selesai",
+    (i) => i.item.progress?.[0]?.status === "selesai" || i.item.progress?.[0]?.status === "approved",
   ).length;
   const total = allItems.length || 1;
 
@@ -115,20 +83,21 @@ export function ManagerCard({
     : 0;
 
   const statusCounts = {
-    selesai: done,
-    proses: allItems.filter((i) => i.item.progress?.[0]?.status === "proses")
-      .length,
+    selesai: allItems.filter((i) => i.item.progress?.[0]?.status === "selesai" || i.item.progress?.[0]?.status === "approved").length,
+    proses: allItems.filter((i) => i.item.progress?.[0]?.status === "proses" || i.item.progress?.[0]?.status === "waiting_review").length,
     belum: allItems.filter(
       (i) =>
         !i.item.progress?.[0]?.status ||
         i.item.progress?.[0]?.status === "belum",
     ).length,
+    rejected: allItems.filter((i) => i.item.progress?.[0]?.status === "rejected").length,
   };
 
   const statusMeta: Record<string, { label: string; color: string; bg: string; border: string }> = {
     selesai: { label: "Selesai", color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
-    proses:  { label: "Proses",  color: "#ea580c", bg: "#fff7ed", border: "#fdba74" },
+    proses:  { label: "Proses",  color: "#7c3aed", bg: "#f5f3ff", border: "#c4b5fd" },
     belum:   { label: "Belum",   color: "#dc2626", bg: "#fef2f2", border: "#fca5a5" },
+    rejected:{ label: "Ditolak", color: "#b91c1c", bg: "#fee2e2", border: "#fca5a5" },
   };
   return (
     <div

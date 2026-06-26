@@ -5,7 +5,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { notifyUser } from "@/lib/pusher/server";
 
 export async function PATCH(
   request: Request,
@@ -71,17 +70,18 @@ export async function PATCH(
     if (upsertData.status === "waiting_review") {
       try {
         const { data: itemTitle } = await admin.from("management_task_items").select("title").eq("id", itemId).single();
-        const { data: superadmins } = await admin.from("users").select("id").eq("role_id", admin.from("roles").select("id").eq("name", "superadmin").single());
+        const { data: saRole } = await admin.from("roles").select("id").eq("name", "superadmin").single();
+        if (!saRole) return;
+        const { data: superadmins } = await admin.from("users").select("id").eq("role_id", saRole.id).eq("status", "active");
         if (superadmins && itemTitle) {
           for (const sa of superadmins) {
-            const { data: notif } = await admin.from("notifications").insert({
+            await admin.from("notifications").insert({
               user_id: sa.id,
               title: "Review Dibutuhkan",
               message: `"${itemTitle.title}" siap direview`,
               type: "warning",
               link: "/dashboard/superadmin/management/monitoring",
-            }).select("id, created_at").single();
-            if (notif) notifyUser(sa.id, { id: notif.id, title: "Review Dibutuhkan", message: `"${itemTitle.title}" siap direview`, type: "warning", link: "/dashboard/superadmin/management/monitoring", created_at: notif.created_at }).catch(() => {});
+            });
           }
         }
       } catch { /* non-critical */ }

@@ -5,7 +5,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { notifyUser } from "@/lib/pusher/server";
 import { computeOverdueDays } from "@/lib/overdue";
 
 const OVERDUE_STATUSES = new Set(["belum", "proses", null]);
@@ -50,14 +49,13 @@ export async function GET() {
         // Send notification
         try {
           const days = computeOverdueDays(task.deadline);
-          const { data: notif } = await admin.from("notifications").insert({
+          await admin.from("notifications").insert({
             user_id: user.id,
             title: "Task Terlambat",
             message: `"${task.title}" melewati deadline${days > 0 ? ` — ${days} hari terlambat` : ""}`,
             type: "warning",
-            link: "/dashboard/management",
-          }).select("id, created_at").single();
-          if (notif) notifyUser(user.id, { id: notif.id, title: "Task Terlambat", message: `"${task.title}" melewati deadline${days > 0 ? ` — ${days} hari terlambat` : ""}`, type: "warning", link: "/dashboard/management", created_at: notif.created_at }).catch(() => {});
+            link: "/dashboard/management/tasks",
+          });
         } catch { /* non-critical */ }
       }
     }
@@ -101,20 +99,22 @@ export async function POST(request: Request) {
 
     // Notify superadmins
     try {
+      const { data: saRole } = await admin.from("roles").select("id").eq("name", "superadmin").single();
+      if (!saRole) return;
       const { data: superadmins } = await admin
         .from("users")
         .select("id")
-        .eq("role_id", admin.from("roles").select("id").eq("name", "superadmin").single());
+        .eq("role_id", saRole.id)
+        .eq("status", "active");
       if (superadmins) {
         for (const sa of superadmins) {
-          const { data: notif } = await admin.from("notifications").insert({
+          await admin.from("notifications").insert({
             user_id: sa.id,
             title: "Task Baru",
             message: `${user.email} membuat task "${title.trim()}"`,
             type: "info",
             link: "/dashboard/superadmin/management/monitoring",
-          }).select("id, created_at").single();
-          if (notif) notifyUser(sa.id, { id: notif.id, title: "Task Baru", message: `${user.email} membuat task "${title.trim()}"`, type: "info", link: "/dashboard/superadmin/management/monitoring", created_at: notif.created_at }).catch(() => {});
+          });
         }
       }
     } catch { /* notification failure is non-critical */ }

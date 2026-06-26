@@ -38,3 +38,13 @@ export function getReviewWaitingDays(completedAt: string | null): number {
   const diff = now.getTime() - d.getTime();
   return Math.max(0, Math.floor(diff / 86400000));
 }
+
+export function getDeadlineUrgency(deadline: string | null) {
+  if (!deadline) return null;
+  const d = new Date(deadline);
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  if (d.getTime() < now.getTime()) return "overdue" as const;
+  if (d.getTime() === now.getTime()) return "today" as const;
+  return "future" as const;
+}

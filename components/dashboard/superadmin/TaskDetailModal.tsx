@@ -4,8 +4,8 @@ import React, { useEffect, useCallback, useState } from "react";
 import { X, MessageSquare, AlertCircle, ChevronDown, ChevronRight, Check, Clock, Paperclip, CheckCircle } from "lucide-react";
 import Input from "@/components/ui/Input";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { formatRelativeDeadline } from "./ManagerCard";
 import { ROLE_DISPLAY } from "@/app/dashboard/superadmin/management/_shared/constants";
+import { formatRelativeDeadline } from "@/lib/format";
 import { computeOverdueDays, getOverdueSeverity, getReviewWaitingDays } from "@/lib/overdue";
 
 interface ProgressRow {

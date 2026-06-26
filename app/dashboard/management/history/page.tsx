@@ -63,7 +63,7 @@ export default function ManagementHistoryPage() {
         .map((item) => ({
           item: item.title,
           task: task.title,
-          status: item.progress![0].status ?? "pending",
+          status: item.progress![0].status ?? "belum",
           completed_at: item.progress![0].completed_at!,
           notes: item.progress![0].notes ?? null,
           kendala: item.progress![0].kendala ?? null,

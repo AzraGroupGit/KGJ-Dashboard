@@ -52,7 +52,7 @@ export default function ManagementHistoryPage() {
       const mRate = managerRates.get(m.id)!;
       return m.tasks.flatMap((task) => (task.items ?? []).filter((item) => item.progress?.[0]?.completed_at).map((item) => ({
         manager: m.full_name, managerId: m.id, role: m.role_name, item: item.title, task: task.title,
-        status: item.progress![0].status ?? "pending", completed_at: item.progress![0].completed_at!,
+        status: item.progress![0].status ?? "belum", completed_at: item.progress![0].completed_at!,
         notes: item.progress![0].notes ?? null, kendala: item.progress![0].kendala ?? null, admin_notes: item.progress![0].admin_notes ?? null,
         managerRate: mRate.rate, managerDone: mRate.done, managerTotal: mRate.total,
       })));

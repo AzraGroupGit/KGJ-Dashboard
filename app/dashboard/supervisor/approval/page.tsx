@@ -1127,11 +1127,13 @@ export default function SupervisorApprovalPage() {
     })();
   }, [router]);
 
+  const [refetchInterval, setRefetchInterval] = useState<number | false>(30_000);
+
   const { data: items = [], isLoading: loading, error, refetch } = useQuery({
     queryKey: ["supervisor", "pending"],
     queryFn: () => fetcher<{ data: PendingItem[] }>("/api/supervisor/pending"),
     select: (res) => res.data ?? [],
-    refetchInterval: 30_000,
+    refetchInterval,
   });
 
   useEffect(() => {
@@ -1149,6 +1151,10 @@ export default function SupervisorApprovalPage() {
         const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
           cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
           authEndpoint: "/api/pusher/auth",
+        });
+
+        pusher.connection.bind("state_change", (states: { current: string }) => {
+          setRefetchInterval(states.current === "connected" ? false : 30_000);
         });
 
         channel = pusher.subscribe(`private-user-${userId}`);

@@ -41,7 +41,7 @@ export async function GET() {
 
     const { data: tasks, error: taskErr } = await admin
       .from("management_tasks")
-      .select("id, user_id, title, description, deadline, sort_order, is_active, items:management_task_items(id, title, sort_order, progress:management_task_progress(id, is_completed, completed_at, status, admin_notes, notes, kendala))")
+      .select("id, user_id, title, description, deadline, sort_order, is_active, items:management_task_items(id, title, sort_order, overdue_notified_at, progress:management_task_progress(id, is_completed, completed_at, status, admin_notes, notes, kendala))")
       .in("user_id", userIds)
       .order("sort_order")
       .order("sort_order", { referencedTable: "management_task_items" });
