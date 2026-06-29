@@ -210,14 +210,14 @@ export default function LoginPage() {
         </Link>
 
         {/* Main content column */}
-        <div className="relative z-10 flex flex-col items-center w-full max-w-[540px] px-10 py-6 gap-y-1.5">
+        <div         className="relative z-10 flex flex-col items-center w-full max-w-[540px] px-4 sm:px-10 py-6 gap-y-2 sm:gap-y-3">
           {/* Logo */}
           <Image
             src="/logo.png"
             alt="KGJ"
             width={96}
             height={96}
-            className="w-16 h-16 sm:w-28 sm:h-28 object-contain shrink-0"
+            className="w-16 h-16 sm:w-20 sm:h-20 md:w-28 md:h-28 object-contain shrink-0"
             priority
           />
 
@@ -230,7 +230,7 @@ export default function LoginPage() {
           <div className="divider mt-1" />
 
           {/* Frosted glass card */}
-          <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-4 sm:px-12 py-2 sm:py-6 bg-[#15130f]/75 backdrop-blur-[20px] relative">
+          <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-4 sm:px-8 md:px-12 py-3 sm:py-5 md:py-6 bg-[#15130f]/75 backdrop-blur-[20px] relative min-h-[340px] sm:min-h-[380px]">
             <h2 className="font-[var(--font-dm-serif)] text-lg sm:text-2xl text-[#f0f4ff] text-center mb-3 tracking-[-0.01em] [text-wrap:balance]">
               Selamat Datang
             </h2>

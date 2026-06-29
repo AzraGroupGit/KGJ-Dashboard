@@ -23,6 +23,7 @@ import {
   AlertTriangle,
   Info,
   XCircle,
+  RefreshCw,
 } from "lucide-react";
 
 import type { Notification } from "@/types/layout";
@@ -350,14 +351,14 @@ export default function Header({
                 </button>
 
                 {isNotificationOpen && (
-                  <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-slide-down">
+                  <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-96 sm:w-96 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-slide-down">
                     <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-gray-800">
+                        <h3 className="font-semibold text-gray-800 text-sm sm:text-base">
                           Notifikasi
                         </h3>
                         {unreadCount > 0 && (
-                          <span className="px-1.5 py-0.5 text-xs font-bold bg-red-100 text-red-600 rounded-full">
+                          <span className="px-1.5 py-0.5 text-[10px] sm:text-xs font-bold bg-red-100 text-red-600 rounded-full">
                             {unreadCount}
                           </span>
                         )}
@@ -372,10 +373,10 @@ export default function Header({
                       )}
                     </div>
 
-                    <div className="max-h-96 overflow-y-auto">
+                    <div className="max-h-[60vh] sm:max-h-96 overflow-y-auto">
                       {notifications.length === 0 ? (
-                        <div className="p-8 text-center">
-                          <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <div className="p-6 sm:p-8 text-center">
+                          <Bell className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mx-auto mb-3" />
                           <p className="text-sm text-gray-500">
                             Tidak ada notifikasi
                           </p>
@@ -385,7 +386,7 @@ export default function Header({
                           <div
                             key={n.id}
                             onClick={() => handleNotificationClick(n)}
-                            className={`p-4 border-b border-gray-50 cursor-pointer transition-colors hover:bg-gray-50 ${
+                            className={`p-3 sm:p-4 border-b border-gray-50 cursor-pointer transition-colors hover:bg-gray-50 active:bg-gray-100 ${
                               !n.is_read ? "bg-indigo-50/40" : ""
                             }`}
                           >
@@ -394,11 +395,11 @@ export default function Header({
                               <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-start mb-1">
                                   <p
-                                    className={`text-sm font-medium ${!n.is_read ? "text-gray-900" : "text-gray-600"}`}
+                                    className={`text-sm font-medium truncate ${!n.is_read ? "text-gray-900" : "text-gray-600"}`}
                                   >
                                     {n.title}
                                   </p>
-                                  <span className="text-xs text-gray-400 whitespace-nowrap ml-2 shrink-0">
+                                  <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap ml-2 shrink-0">
                                     {formatTime(n.created_at)}
                                   </span>
                                 </div>
@@ -421,8 +422,9 @@ export default function Header({
                           onClick={() => {
                             refetch();
                           }}
-                          className="text-xs text-gray-400 hover:text-indigo-600 transition-colors"
+                          className="text-xs text-gray-400 hover:text-indigo-600 transition-colors inline-flex items-center gap-1"
                         >
+                          <RefreshCw className="w-3 h-3" />
                           Refresh notifikasi
                         </button>
                       </div>
