@@ -111,7 +111,7 @@ export default function PersonnelPage() {
   // ── UI ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex flex-col md:flex-row h-screen bg-slate-50">
         <Sidebar role="supervisor" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
@@ -119,8 +119,7 @@ export default function PersonnelPage() {
           role="supervisor"
           onMenuClick={() => setSidebarOpen(true)}
         />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <div className="max-w-6xl mx-auto">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -230,7 +229,6 @@ export default function PersonnelPage() {
                 )}
               </div>
             )}
-          </div>
         </main>
       </div>
 

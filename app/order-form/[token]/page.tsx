@@ -13,7 +13,7 @@ import {
   KATEGORI_THRESHOLDS,
   addWorkingDays,
 } from "@/lib/working-days";
-import { checkSlotAvailability, type SlotCheckResult } from "@/lib/slot-check";
+import { checkSlotAvailability, checkAllSlots, type SlotCheckResult } from "@/lib/slot-check";
 import AddressAutocomplete from "@/components/order/AddressAutocomplete";
 import FontPicker from "@/components/order/FontPicker";
 import MaterialSelect from "@/components/order/MaterialSelect";
@@ -186,6 +186,7 @@ export default function OrderFormPage() {
   const [workingDays, setWorkingDays] = useState<number | null>(null);
   const [slotInfo, setSlotInfo] = useState<SlotCheckResult | null>(null);
   const [slotLoading, setSlotLoading] = useState(false);
+  const [fullSlots, setFullSlots] = useState<Record<string, boolean>>({});
   const [showTimeline, setShowTimeline] = useState(false);
   const [stageResults, setStageResults] = useState<StageResult[]>([]);
   const [transitions, setTransitions] = useState<Transition[]>([]);
@@ -441,6 +442,14 @@ export default function OrderFormPage() {
       setSlotInfo(null);
     }
   }, [formData.kategori, formData.tglOrder]);
+
+  useEffect(() => {
+    if (formData.tglOrder) {
+      checkAllSlots(formData.tglOrder).then(setFullSlots);
+    } else {
+      setFullSlots({});
+    }
+  }, [formData.tglOrder]);
 
   const handleHargaChange = (val: string) => {
     const raw = val.replace(/[^\d]/g, "");
@@ -859,7 +868,7 @@ export default function OrderFormPage() {
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>Deadline</label>
+                  <label className={labelCls}>Deadline / Dibutuhkan pada tanggal</label>
                   <input
                     type="date"
                     value={formData.deadline}
@@ -870,24 +879,33 @@ export default function OrderFormPage() {
               </div>
               <div>
                 <label className={labelCls}>Kategori</label>
+                <p className="text-xs text-zinc-400 mt-0.5 mb-1.5">
+                  Kategori direkomendasikan otomatis berdasarkan jumlah hari kerja antara tanggal order dan deadline.
+                </p>
                 <select
                   value={formData.kategori}
                   onChange={(e) => setField("kategori", e.target.value)}
                   className={`${inputCls} select-chevron`}
                 >
                   <option value="">Pilih kategori</option>
-                  {KATEGORI_THRESHOLDS.map((k) => (
+                  {KATEGORI_THRESHOLDS.map((k) => {
+                    const isFull = fullSlots[k.value];
+                    const tooFewDays = workingDays !== null && workingDays < k.minDays;
+                    return (
                     <option
                       key={k.value}
                       value={k.value}
-                      disabled={workingDays !== null && workingDays < k.minDays}
+                      disabled={tooFewDays || isFull}
                     >
                       {k.label}
-                      {workingDays !== null && workingDays < k.minDays
+                      {tooFewDays
                         ? ` (butuh ${k.minDays} hari)`
+                        : isFull
+                        ? " (slot penuh)"
                         : ""}
                     </option>
-                  ))}
+                    );
+                  })}
                 </select>
                 {workingDays !== null && (
                   <p

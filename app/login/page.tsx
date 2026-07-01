@@ -210,7 +210,7 @@ export default function LoginPage() {
         </Link>
 
         {/* Main content column */}
-        <div         className="relative z-10 flex flex-col items-center w-full max-w-[540px] px-4 sm:px-10 py-6 gap-y-2 sm:gap-y-3">
+        <div         className="relative z-10 flex flex-col items-center w-full max-w-[540px] px-4 sm:px-10 py-6 gap-y-2 sm:gap-y-3 md:gap-y-4">
           {/* Logo */}
           <Image
             src="/logo.png"
@@ -222,7 +222,7 @@ export default function LoginPage() {
           />
 
           {/* Brand title */}
-          <h1 className="font-[var(--font-dm-serif)] text-base sm:text-lg text-[#c9a227] tracking-[0.08em]">
+          <h1 className="font-[var(--font-dm-serif)] text-base sm:text-lg md:text-2xl text-[#c9a227] tracking-[0.08em]">
             Kotagede Jewellery
           </h1>
 

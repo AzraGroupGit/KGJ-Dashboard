@@ -274,6 +274,7 @@ export function ItemRow({
                     className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-medium hover:bg-gray-50 transition-colors shrink-0 group"
                     style={{ borderColor: "#e5e7eb", color: "#7c3aed" }}>
                     {isImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={f.public_url} alt={f.file_name} className="w-4 h-4 rounded object-cover" />
                     ) : (
                       <Paperclip className="w-3 h-3" />

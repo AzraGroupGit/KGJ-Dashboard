@@ -230,6 +230,7 @@ export function TaskDetailModal({
                                       className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium hover:bg-purple-50 transition-colors shrink-0"
                                       style={{ borderColor: "#e5e7eb", color: "#7c3aed" }}>
                                       {isImg ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
                                         <img src={f.public_url} alt={f.file_name} className="w-3.5 h-3.5 rounded object-cover" />
                                       ) : (
                                         <Paperclip className="w-3 h-3" />

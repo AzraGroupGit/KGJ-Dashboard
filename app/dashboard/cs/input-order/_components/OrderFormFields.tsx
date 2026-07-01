@@ -5,7 +5,7 @@ import {
   KATEGORI_THRESHOLDS,
   addWorkingDays,
 } from "@/lib/working-days";
-import { checkSlotAvailability, type SlotCheckResult } from "@/lib/slot-check";
+import { checkSlotAvailability, checkAllSlots, type SlotCheckResult } from "@/lib/slot-check";
 import { formatRupiah, SUB_SOURCES, paymentCategory, BANKS } from "./shared";
 import AddressAutocomplete from "@/components/order/AddressAutocomplete";
 import FontPicker from "@/components/order/FontPicker";
@@ -75,6 +75,7 @@ export function OrderFormFields({
 
   const [slotInfo, setSlotInfo] = useState<SlotCheckResult | null>(null);
   const [slotLoading, setSlotLoading] = useState(false);
+  const [fullSlots, setFullSlots] = useState<Record<string, boolean>>({});
   const [step, setStep] = useState(1);
 
   const STEPS = [
@@ -115,6 +116,14 @@ export function OrderFormFields({
       });
     }
   }, [data.kategori, data.tglOrder]);
+
+  useEffect(() => {
+    if (data.tglOrder) {
+      checkAllSlots(data.tglOrder).then(setFullSlots);
+    } else {
+      setFullSlots({});
+    }
+  }, [data.tglOrder]);
 
   const _detailField = (prefix: string, gender: "Pria" | "Wanita") =>
     `${prefix}${gender}` as keyof OrderFormData;
@@ -231,18 +240,25 @@ export function OrderFormFields({
             disabled={disabled}
           >
             <option value="">Pilih kategori</option>
-            {KATEGORI_THRESHOLDS.map((k) => (
+            {KATEGORI_THRESHOLDS.map((k) => {
+                const isFull = fullSlots[k.value];
+                const tooFewDays = workingDays !== null && workingDays < k.minDays;
+                const slotDisabled = isFull;
+                return (
               <option
                 key={k.value}
                 value={k.value}
-                disabled={workingDays !== null && workingDays < k.minDays}
+                disabled={tooFewDays || slotDisabled}
               >
                 {k.label}
-                {workingDays !== null && workingDays < k.minDays
+                {tooFewDays
                   ? ` (butuh ${k.minDays} hari)`
+                  : isFull
+                  ? " (slot penuh)"
                   : ""}
               </option>
-            ))}
+                );
+              })}
           </select>
           {workingDays !== null && (
             <p
