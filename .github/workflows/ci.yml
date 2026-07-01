@@ -55,7 +55,10 @@ jobs:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      # Use npm install (not npm ci) to allow platform-specific
+      # native bindings (rolldown, lightningcss) to be installed
+      # correctly on Linux, since lockfile was generated on Windows.
+      - run: npm install
 
       - run: npm test
 
@@ -71,7 +74,10 @@ jobs:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      # Use npm install (not npm ci) to allow platform-specific
+      # native bindings (rolldown, lightningcss) to be installed
+      # correctly on Linux, since lockfile was generated on Windows.
+      - run: npm install
 
       - name: Create .env.local
         run: |
