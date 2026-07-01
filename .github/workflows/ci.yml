@@ -55,7 +55,10 @@ jobs:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      # Delete lockfile and do a fresh install to ensure Linux-specific
+      # optional dependencies (rolldown, lightningcss) are resolved,
+      # since the committed lockfile was generated on Windows.
+      - run: rm package-lock.json && npm install
 
       - run: npm test
 
@@ -71,7 +74,10 @@ jobs:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      # Delete lockfile and do a fresh install to ensure Linux-specific
+      # optional dependencies (rolldown, lightningcss) are resolved,
+      # since the committed lockfile was generated on Windows.
+      - run: rm package-lock.json && npm install
 
       - name: Create .env.local
         run: |
