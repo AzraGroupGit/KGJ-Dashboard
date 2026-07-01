@@ -131,7 +131,11 @@ const menuItems: Record<string, MenuItem[]> = {
     { name: "Persetujuan", icon: "approval", href: SUPERVISOR_ROUTES.APPROVAL },
     { name: "Kelola Akun", icon: "users", href: SUPERVISOR_ROUTES.ACCOUNTS },
     { name: "Personnel", icon: "personnel", href: SUPERVISOR_ROUTES.PERSONNEL },
-    { name: "Slot Management", icon: "slot", href: SUPERVISOR_ROUTES.SLOT_MANAGEMENT },
+    {
+      name: "Slot Management",
+      icon: "slot",
+      href: SUPERVISOR_ROUTES.SLOT_MANAGEMENT,
+    },
     { name: "QR Code", icon: "qr", href: SUPERVISOR_ROUTES.QR_CODES },
   ],
 };
@@ -163,6 +167,7 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [actualRole, setActualRole] = useState<string | null>(null);
+  const [headerBottom, setHeaderBottom] = useState<number | null>(null);
   const [collapsedMenus, setCollapsedMenus] = useState<CollapseState>({
     BMS: false,
     OPRPRD: true,
@@ -217,6 +222,17 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Observe header position for collapse button alignment
+  useEffect(() => {
+    const header = document.getElementById("dashboard-header");
+    if (!header) return;
+    const observer = new ResizeObserver(() => {
+      setHeaderBottom(header.getBoundingClientRect().bottom);
+    });
+    observer.observe(header);
+    return () => observer.disconnect();
   }, []);
 
   const toggleMenuCollapse = (menuName: string) => {
@@ -366,11 +382,13 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 flex-shrink-0 rounded-lg overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="KGJ" className="w-full h-full object-contain" />
+            <img
+              src="/logo.png"
+              alt="KGJ"
+              className="w-full h-full object-contain"
+            />
           </div>
-          <span className="text-sm font-bold text-gray-800">
-            KGJ Dashboard
-          </span>
+          <span className="text-sm font-bold text-gray-800">KGJ Dashboard</span>
         </div>
         <button
           onClick={onClose}
@@ -390,7 +408,11 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
         <div className="flex items-center gap-3 overflow-hidden">
           <div className="w-10 h-10 flex-shrink-0 rounded-xl overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="KGJ" className="w-full h-full object-contain" />
+            <img
+              src="/logo.png"
+              alt="KGJ"
+              className="w-full h-full object-contain"
+            />
           </div>
           {!isCollapsed && (
             <div className="min-w-0">
@@ -474,11 +496,16 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
       {/* Collapse toggle — outside aside to avoid sticky stacking context */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="hidden md:flex fixed z-50 w-6 h-6 bg-white border border-gray-200 rounded-full items-center justify-center shadow-md hover:shadow-lg transition-all duration-200"
-        style={{ left: isCollapsed ? "68px" : "244px", top: "84px" }}
+        className="hidden md:flex fixed z-50 w-7 h-7 bg-white border border-gray-200 rounded-full items-center justify-center shadow-md hover:shadow-lg transition-all duration-200"
+        style={{
+          left: isCollapsed ? "42px" : "182px",
+          top: headerBottom != null ? headerBottom - 12 : 84,
+        }}
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
-        <ChevronLeft className={`w-3 h-3 text-gray-600 transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`} />
+        <ChevronLeft
+          className={`w-4 h-4 text-gray-600 transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`}
+        />
       </button>
     </>
   );
