@@ -309,7 +309,7 @@ export default function Header({
 
   return (
     <>
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 h-16 md:h-24">
+      <header id="dashboard-header" className="bg-white border-b border-gray-200 sticky top-0 z-30 h-16 md:h-24">
         {/* Mobile & Desktop Container */}
         <div className="h-full px-4 md:px-6">
           <div className="flex justify-between items-center h-full">
@@ -467,6 +467,7 @@ export default function Header({
                   {/* Avatar */}
                   <div
                     className={`w-8 h-8 md:w-9 md:h-9 bg-gradient-to-br ${getRoleBadgeColor()} rounded-full flex items-center justify-center text-white text-xs md:text-sm font-semibold shadow-md flex-shrink-0`}
+                    suppressHydrationWarning
                   >
                     {getUserInitials()}
                   </div>

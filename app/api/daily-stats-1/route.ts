@@ -65,16 +65,15 @@ export async function GET(request: NextRequest) {
 
     // ── Date params ──────────────────────────────────────────────────────────
     const { searchParams } = new URL(request.url);
+    const isAll = searchParams.get("all") === "true";
     const dateStr =
       searchParams.get("date") ?? new Date().toISOString().slice(0, 10);
-    const prev = prevDay(dateStr);
-    const days7 = last7Days(dateStr); // ["2026-04-14", ..., "2026-04-20"]
+    const prev = isAll ? null : prevDay(dateStr);
+    const days7 = isAll ? [] : last7Days(dateStr);
 
-    // ── 1. Fetch marketing_inputs for selected day + prev day + 7 days ───────
-    //    Single query spanning the full 7-day window, then filter in JS —
-    //    same approach as /api/stats (fetch once, aggregate in-memory).
-    const rangeStart = days7[0]; // earliest date in the 7-day window
-    const rangeEnd = dateStr; // today
+    // ── 1. Fetch marketing_inputs & cs_inputs ─────────────────────────────────
+    const rangeStart = isAll ? "2020-01-01" : days7[0];
+    const rangeEnd = isAll ? "2099-12-31" : dateStr;
 
     const [mktResult, csResult] = await Promise.all([
       supabase
@@ -115,25 +114,22 @@ export async function GET(request: NextRequest) {
     const allCs = csResult.data ?? [];
 
     // ── 2. Filter rows by day ─────────────────────────────────────────────────
-    const mktToday = allMkt.filter((r) => r.input_date === dateStr);
-    const _mktPrev = allMkt.filter((r) => r.input_date === prev);
-    const csToday = allCs.filter((r) => r.input_date === dateStr);
-    const csPrev = allCs.filter((r) => r.input_date === prev);
+    const mktToday = isAll ? allMkt : allMkt.filter((r) => r.input_date === dateStr);
+    const csToday = isAll ? allCs : allCs.filter((r) => r.input_date === dateStr);
+    const csPrev = prev ? allCs.filter((r) => r.input_date === prev) : [];
 
-    // ── 3. Totals for selected day ────────────────────────────────────────────
-    //    Mirrors totals block in /api/stats, scoped to one day
+    // ── 3. Totals ────────────────────────────────────────────────────────────
     const dayTotals = {
       omset: sumField(csToday, "omset"),
       gross_profit: Math.round(sumField(csToday, "omset") * 0.5),
       biaya_marketing: sumField(mktToday, "biaya_marketing"),
       lead_serius: sumField(mktToday, "lead_serius"),
       lead_all: sumField(mktToday, "lead_all"),
-      closing: sumField(mktToday, "closing"), // marketing closing
+      closing: sumField(mktToday, "closing"),
       lead_masuk_cs: sumField(csToday, "lead_masuk"),
       closing_cs: sumField(csToday, "closing"),
     };
 
-    // Use CS lead_masuk as the primary "lead_masuk" (consistent with dashboard)
     const lead_masuk = dayTotals.lead_masuk_cs;
     const closing = dayTotals.closing_cs;
     const omset = dayTotals.omset;
@@ -220,24 +216,26 @@ export async function GET(request: NextRequest) {
       })
       .sort((a, b) => b.closing - a.closing);
 
-    // ── 6. 7-day trend ────────────────────────────────────────────────────────
-    //    Aggregate allMkt + allCs per day — same as monthly in /api/stats
-    const trend = days7.map((day) => {
-      const csDay = allCs.filter((r) => r.input_date === day);
-      const dayOmset = sumField(csDay, "omset");
-      return {
-        date: day,
-        label: makeLabel(day),
-        lead_masuk: sumField(csDay, "lead_masuk"),
-        closing: sumField(csDay, "closing"),
-        omset: dayOmset,
-        gross_profit: Math.round(dayOmset * 0.5),
-      };
-    });
+    // ── 6. Trend ──────────────────────────────────────────────────────────────
+    const trend = isAll
+      ? []
+      : days7.map((day) => {
+          const csDay = allCs.filter((r) => r.input_date === day);
+          const dayOmset = sumField(csDay, "omset");
+          return {
+            date: day,
+            label: makeLabel(day),
+            lead_masuk: sumField(csDay, "lead_masuk"),
+            closing: sumField(csDay, "closing"),
+            omset: dayOmset,
+            gross_profit: Math.round(dayOmset * 0.5),
+          };
+        });
 
     // ── 7. Build response ─────────────────────────────────────────────────────
+    const responseDate = isAll ? "all" : dateStr;
     return NextResponse.json({
-      date: dateStr,
+      date: responseDate,
       totals: {
         lead_masuk,
         lead_serius,

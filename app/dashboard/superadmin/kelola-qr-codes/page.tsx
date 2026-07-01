@@ -198,7 +198,7 @@ export default function KelolaQRPage() {
   });
 
   const {
-    data: roles = [],
+    data: rolesData,
     isLoading: isRolesLoading,
   } = useQuery<Role[]>({
     queryKey: ["roles"],
@@ -209,6 +209,7 @@ export default function KelolaQRPage() {
         ),
       ),
   });
+  const roles = Array.isArray(rolesData) ? rolesData : [];
 
   const { data: scansToday = 0 } = useQuery<number>({
     queryKey: ["scans-today"],

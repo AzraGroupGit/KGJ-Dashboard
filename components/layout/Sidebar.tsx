@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect, startTransition } from "react";
+import { useState, useEffect, useRef, startTransition } from "react";
 import {
   SUPERADMIN_ROUTES,
   CS_ROUTES,
@@ -203,6 +203,31 @@ export default function Sidebar({ role }: { role: string }) {
     OPRPRD: true,
   });
 
+  const sidebarRef = useRef<HTMLElement>(null);
+  const [buttonLeft, setButtonLeft] = useState<number | null>(null);
+  const [headerBottom, setHeaderBottom] = useState<number | null>(null);
+
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
+    const observer = new ResizeObserver(() => {
+      const rect = sidebar.getBoundingClientRect();
+      setButtonLeft(rect.right - 11);
+    });
+    observer.observe(sidebar);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const header = document.getElementById("dashboard-header");
+    if (!header) return;
+    const observer = new ResizeObserver(() => {
+      setHeaderBottom(header.getBoundingClientRect().bottom);
+    });
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     startTransition(() => {
       setMobileOpen(false);
@@ -385,6 +410,7 @@ export default function Sidebar({ role }: { role: string }) {
       </button>
 
       <aside
+        ref={sidebarRef}
         className={`
           fixed top-0 left-0 z-50 h-full bg-white flex flex-col overflow-hidden
           transform transition-transform duration-300 ease-in-out
@@ -466,11 +492,16 @@ export default function Sidebar({ role }: { role: string }) {
       {/* Collapse toggle — outside aside to avoid sticky stacking context */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="hidden md:flex fixed z-50 w-6 h-6 bg-white border border-gray-200 rounded-full items-center justify-center shadow-md hover:shadow-lg transition-all duration-200"
-        style={{ left: isCollapsed ? "68px" : "244px", top: "84px" }}
+        className="hidden md:flex fixed z-50 w-8 h-8 bg-white border border-gray-200 rounded-full items-center justify-center shadow-md hover:shadow-lg transition-all duration-200"
+        style={{
+          left: buttonLeft ?? (isCollapsed ? 67 : 243),
+          top: headerBottom != null ? headerBottom - 14 : 84,
+        }}
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
-        <ChevronLeft className={`w-3 h-3 text-gray-600 transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`} />
+        <ChevronLeft
+          className={`w-5 h-5 text-gray-600 transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`}
+        />
       </button>
     </>
   );

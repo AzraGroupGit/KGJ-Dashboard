@@ -301,7 +301,7 @@ export default function Header({
 
   return (
     <>
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 h-16 md:h-24">
+      <header id="dashboard-header" className="bg-white border-b border-gray-200 sticky top-0 z-30 h-16 md:h-24">
         <div className="h-full pl-14 pr-4 md:px-6">
           <div className="flex justify-between items-center h-full">
             {/* Left: hamburger + role + greeting */}
@@ -441,6 +441,7 @@ export default function Header({
                 >
                   <div
                     className={`w-9 h-9 bg-gradient-to-br ${getRoleBadgeColor()} rounded-full flex items-center justify-center text-white text-sm font-semibold shadow-md`}
+                    suppressHydrationWarning
                   >
                     {getUserInitials()}
                   </div>
