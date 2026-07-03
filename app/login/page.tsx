@@ -89,6 +89,7 @@ export default function LoginPage() {
   const [role, setRole] = useState<LoginRole>("superadmin");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showForgotDialog, setShowForgotDialog] = useState(false);
 
   useEffect(() => {
     const roleFromParam = queryParamToAppRole(searchParams.get("role"));
@@ -193,12 +194,19 @@ export default function LoginPage() {
         }
       `}</style>
 
-      <div className="fixed inset-0 flex items-center justify-center bg-[#15130f] text-[#e8e2d4] font-[var(--font-dm-sans)]">
-        {/* Background */}
-        <div className="bgDust" />
-        <div className="orbGold" />
-        <div className="orbAccent" />
-        <div className="orbWarm" />
+      <div className="fixed inset-0 flex items-center justify-center bg-[#1C1917] text-[#FAFAF9] font-[var(--font-dm-sans)]">
+        {/* Background - visible geometric pattern + orbs */}
+        <div className="fixed inset-0 z-0 pointer-events-none">
+          {/* Crosshatch geometric texture */}
+          <div className="absolute inset-0 opacity-40" style={{
+            background: `
+              linear-gradient(45deg, rgba(201, 162, 39, 0.12) 25%, transparent 25%, transparent 75%, rgba(201, 162, 39, 0.12) 75%),
+              linear-gradient(-45deg, rgba(201, 162, 39, 0.12) 25%, transparent 25%, transparent 75%, rgba(201, 162, 39, 0.12) 75%)`
+              , backgroundSize: '40px 40px', backgroundPosition: '0 0, 20px 20px'
+          }} />
+          <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full opacity-40 blur-[120px]" style={{ background: "radial-gradient(circle, rgba(201,162,39,.12) 0%, transparent 70%)" }} />
+          <div className="absolute bottom-[-160px] left-1/4 h-[480px] w-[480px] rounded-full opacity-30 blur-[100px]" style={{ background: "radial-gradient(circle, rgba(74,31,31,.08) 0%, transparent 70%)" }} />
+        </div>
 
         {/* Back link — floating chip top-left */}
         <Link
@@ -209,28 +217,30 @@ export default function LoginPage() {
           Kembali
         </Link>
 
-        {/* Main content column */}
-        <div         className="relative z-10 flex flex-col items-center w-full max-w-[540px] px-4 sm:px-10 py-6 gap-y-2 sm:gap-y-3 md:gap-y-4">
+        {/* Main content column - larger spacing to fill page */}
+        <div className="relative z-10 flex flex-col items-center w-full max-w-[580px] px-6 sm:px-12 py-6 sm:py-8 gap-y-4 sm:gap-y-5">
           {/* Logo */}
           <Image
             src="/logo.png"
             alt="KGJ"
-            width={96}
-            height={96}
-            className="w-16 h-16 sm:w-20 sm:h-20 md:w-28 md:h-28 object-contain shrink-0"
+            width={80}
+            height={80}
+            className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 object-contain shrink-0"
             priority
           />
 
           {/* Brand title */}
-          <h1 className="font-[var(--font-dm-serif)] text-base sm:text-lg md:text-2xl text-[#c9a227] tracking-[0.08em]">
+          <h1 className="font-[var(--font-dm-serif)] text-base sm:text-lg md:text-2xl text-[#c9a227] tracking-[0.1em]">
             Kotagede Jewellery
           </h1>
 
           {/* Gold divider with diamond accent */}
-          <div className="divider mt-1" />
+          <div className="divider mt-2 mb-1" />
 
-          {/* Frosted glass card */}
-          <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-4 sm:px-8 md:px-12 py-3 sm:py-5 md:py-6 bg-[#15130f]/75 backdrop-blur-[20px] relative min-h-[340px] sm:min-h-[380px]">
+          {/* Frosted glass card - gold border + true glassmorphism with inner border */}
+          <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-6 sm:px-8 md:px-10 py-5 sm:py-6 md:py-8 bg-[#1C1917]/70 backdrop-blur-[20px] relative min-h-[380px] sm:min-h-[420px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_rgba(0,0,0,0.35)]">
+            {/* Inner 1px border for glass refraction */}
+            <div className="absolute inset-[1px] rounded-[19px] border border-white/[0.03] pointer-events-none" />
             <h2 className="font-[var(--font-dm-serif)] text-lg sm:text-2xl text-[#f0f4ff] text-center mb-3 tracking-[-0.01em] [text-wrap:balance]">
               Selamat Datang
             </h2>
@@ -239,9 +249,9 @@ export default function LoginPage() {
             </p>
 
             {error && (
-              <div className="flex items-center gap-2 rounded-lg bg-red-500/[0.08] border border-red-500/[0.15] px-3 py-2.5 mb-3 text-[12px] text-red-300">
-                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                {error}
+              <div className="flex items-start gap-2.5 rounded-lg bg-red-500/[0.08] border border-red-500/[0.15] px-3.5 py-3 mb-4 text-[13px] text-red-300 leading-relaxed">
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-400" />
+                <span>{error}</span>
               </div>
             )}
 
@@ -249,33 +259,39 @@ export default function LoginPage() {
               <p className="text-xs font-semibold text-white/35 text-center tracking-[0.06em] uppercase mb-2.5">
                 Pilih Role
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                {ROLE_CONFIGS.map((config) => (
-                  <button
-                    key={config.value}
-                    type="button"
-                    onClick={() => setRole(config.value)}
-                    disabled={isLoading}
-                    className={`flex flex-col items-center justify-center gap-1 py-2.5 sm:py-3.5 px-2 sm:px-2.5 rounded-xl border border-white/[0.06] bg-white/[0.04] text-white/35 text-[11px] sm:text-[13px] font-medium transition-all hover:bg-white/[0.08] hover:border-white/[0.12] hover:text-white/50 active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed min-h-[56px] sm:min-h-[76px] ${
-                      role === config.value ? "" : ""
-                    }`}
-                    style={
-                      role === config.value
-                        ? {
-                            borderColor: config.colors.border,
-                            background: config.colors.bg,
-                            color: config.colors.text,
-                            boxShadow: "0 0 12px rgba(201,162,39,0.1)",
-                          }
-                        : undefined
-                    }
-                  >
-                    <div className="w-6 h-6 flex-shrink-0">{config.icon}</div>
-                    <span className="text-center leading-tight">
-                      {config.label}
-                    </span>
-                  </button>
-                ))}
+              {/* Role selection - strict horizontal row with per-role colors */}
+              <div className="flex justify-center gap-3 mb-6">
+                {ROLE_CONFIGS.map((config) => {
+                  const isActive = role === config.value;
+                  return (
+                    <button
+                      key={config.value}
+                      type="button"
+                      onClick={() => setRole(config.value)}
+                      disabled={isLoading}
+                      className={`flex flex-col items-center justify-center gap-1.5 py-3 px-4 rounded-xl border-2 text-[13px] font-medium transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed w-[100px] sm:w-[110px] ${
+                        isActive
+                          ? "text-white"
+                          : "border-white/10 bg-white/[0.03] text-white/50 hover:bg-white/[0.06]"
+                      }`}
+                      style={
+                        isActive
+                          ? {
+                              borderColor: config.colors.border,
+                              backgroundColor: config.colors.bg,
+                              color: config.colors.text,
+                              boxShadow: `0 0 16px ${config.colors.border}40`,
+                            }
+                          : undefined
+                      }
+                    >
+                      <div className="w-5 h-5 flex-shrink-0">{config.icon}</div>
+                      <span className="text-center leading-tight">
+                        {config.label}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="mb-3">
@@ -328,20 +344,21 @@ export default function LoginPage() {
                     )}
                   </button>
                 </div>
-                <div className="flex justify-end mt-[-2px]">
-                  <Link
-                    href="/forgot-password"
-                    className="text-[11.5px] text-[#c9a227] hover:text-[#b8921e] font-medium no-underline transition-colors"
+                <div className="flex justify-end mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotDialog(true)}
+                    className="text-[12px] text-[#c9a227] hover:text-[#b8921e] font-medium underline-offset-2 hover:underline transition-colors bg-transparent border-none cursor-pointer"
                   >
                     Lupa password?
-                  </Link>
+                  </button>
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full rounded-[10px] bg-[#c9a227] py-3 sm:py-3.5 text-[14px] sm:text-[15px] font-semibold text-[#15130f] transition-all hover:bg-[#d4ae3a] active:scale-[0.98] disabled:opacity-30 flex items-center justify-center gap-2 mt-3"
+                className="w-full rounded-xl bg-[#CA8A04] py-3.5 text-[15px] font-semibold text-[#1a1a1a] transition-all duration-200 hover:bg-[#d4ae3a] hover:shadow-[0_0_24px_rgba(202,138,4,0.3)] active:scale-[0.98] disabled:opacity-40 disabled:shadow-none flex items-center justify-center gap-2 mt-3"
               >
                 {isLoading ? (
                   <>
@@ -368,6 +385,31 @@ export default function LoginPage() {
             )}
           </div>
         </div>
+
+        {/* Forgot Password Dialog */}
+        {showForgotDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowForgotDialog(false)}>
+            <div className="relative rounded-[16px] border border-[#c9a227]/30 bg-[#1C1917] px-8 py-6 max-w-[380px] w-full mx-4 shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+              {/* Inner border for refraction */}
+              <div className="absolute inset-[1px] rounded-[15px] border border-white/[0.03] pointer-events-none" />
+              <div className="relative z-10 flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-full bg-[#c9a227]/10 flex items-center justify-center mb-4">
+                  <Lock className="w-6 h-6 text-[#c9a227]" />
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">Fitur Belum Tersedia</h3>
+                <p className="text-sm text-white/60 mb-6 leading-relaxed">
+                  Mohon maaf, fitur lupa password sedang dalam pengembangan. Silahkan hubungi administrator untuk reset password.
+                </p>
+                <button
+                  onClick={() => setShowForgotDialog(false)}
+                  className="w-full rounded-xl bg-[#c9a227] py-3 text-[15px] font-semibold text-[#1a1a1a] transition-all hover:bg-[#d4ae3a] active:scale-[0.98]"
+                >
+                  Mengerti
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
