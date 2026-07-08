@@ -102,7 +102,7 @@ export async function GET(request?: NextRequest) {
     const fromISO = fromParam ? new Date(fromParam).toISOString() : todayStart.toISOString();
     const toISO = toParam ? new Date(toParam + "T23:59:59").toISOString() : now.toISOString();
 
-    const [ordersResult, completedResult, submissionsTodayResult] = await Promise.allSettled([
+    const [ordersResult, completedResult, submissionsTodayResult, ordersCreatedTodayResult, ordersCompletedTodayResult] = await Promise.allSettled([
       admin
         .from("cs_orders")
         .select(
@@ -134,6 +134,21 @@ export async function GET(request?: NextRequest) {
         .lte("finished_at", toISO)
         .not("finished_at", "is", null)
         .limit(1),
+
+      admin
+        .from("cs_orders")
+        .select("id", { count: "exact" })
+        .gte("created_at", todayStart.toISOString())
+        .is("deleted_at", null)
+        .limit(1),
+
+      admin
+        .from("cs_orders")
+        .select("id", { count: "exact" })
+        .eq("status", "completed")
+        .gte("completed_at", todayStart.toISOString())
+        .is("deleted_at", null)
+        .limit(1),
     ]);
 
     const orders =
@@ -143,6 +158,14 @@ export async function GET(request?: NextRequest) {
     const submissionsToday =
       submissionsTodayResult.status === "fulfilled"
         ? submissionsTodayResult.value.count || 0
+        : 0;
+    const ordersCreatedToday =
+      ordersCreatedTodayResult.status === "fulfilled"
+        ? ordersCreatedTodayResult.value.count || 0
+        : 0;
+    const ordersCompletedToday =
+      ordersCompletedTodayResult.status === "fulfilled"
+        ? ordersCompletedTodayResult.value.count || 0
         : 0;
 
     // ── Cumulative processing time for completed orders ─────────────────────────
@@ -308,6 +331,8 @@ export async function GET(request?: NextRequest) {
             supervisorApprovalStages.has(o.current_stage),
           ).length,
           submissionsToday,
+          ordersCreatedToday,
+          ordersCompletedToday,
           pendingApprovals: pendingCount,
         },
         orders: scopedOrders,

@@ -69,7 +69,7 @@ export default function ProfileModal({
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: P.purple }}>Profil Saya</p>
             <p className="text-lg font-bold" style={{ color: P.ink }}>{profile.full_name}</p>
           </div>
-          <button onClick={onClose} className="rounded-xl p-2 transition-all active:scale-[0.92] hover:bg-white" style={{ color: P.gray }} aria-label="Close">
+          <button onClick={onClose} className="rounded-xl p-2 transition-all active:scale-[0.92] hover:bg-[#2a2522]" style={{ color: P.gray }} aria-label="Close">
             <X className="h-5 w-5" />
           </button>
         </div>

@@ -384,7 +384,7 @@ function StageInfoPopup({
                           ? "bg-emerald-50 border-emerald-100"
                           : passed === false
                             ? "bg-rose-50 border-rose-100"
-                            : "bg-slate-50 border-slate-100"
+                            : "bg-[#26211c] border-slate-100"
                       }`}>
                         <span className="text-[10px] text-slate-400 uppercase">Data: </span>
                         <span className={`text-[12px] font-semibold ${
@@ -666,7 +666,7 @@ function WorkOrderCard({ wo }: { wo: WorkOrder }) {
   const hasWanita = wo.ukuran_wanita || wo.jenis_cincin_wanita || wo.ukiran_wanita;
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 overflow-hidden mb-3">
+    <div className="rounded-lg border border-slate-200 bg-[#26211c] overflow-hidden mb-3">
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-slate-100 transition-colors"
@@ -887,7 +887,7 @@ function PendingCard({
         className={`rounded-lg border p-3 sm:p-4 transition-all ${
           state.result === "approved"
             ? "border-emerald-200 bg-emerald-50/60"
-            : "border-slate-200 bg-slate-50/60"
+            : "border-slate-200 bg-[#26211c]/60"
         }`}
       >
         <div className="flex items-center gap-2">
@@ -952,7 +952,7 @@ function PendingCard({
         {item.work_order && <WorkOrderCard wo={item.work_order} />}
 
         {/* Submitted data */}
-        <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2.5 mb-3">
+        <div className="rounded-lg bg-[#26211c] border border-slate-100 px-3 py-2.5 mb-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
               Data disubmit
@@ -1004,7 +1004,7 @@ function PendingCard({
               </button>
               <button
                 onClick={() => setState({ type: "idle" })}
-                className="flex-1 rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 active:scale-[0.98]"
+                className="flex-1 rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-600 transition-all hover:bg-[#26211c] active:scale-[0.98]"
               >
                 Batal
               </button>
@@ -1051,7 +1051,7 @@ function PendingCard({
                   setRejectNotes("");
                   setReworkStage("");
                 }}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-3 sm:py-2 text-sm text-slate-600 hover:bg-slate-50 min-h-[44px]"
+                className="rounded-lg border border-slate-200 bg-white px-4 py-3 sm:py-2 text-sm text-slate-600 hover:bg-[#26211c] min-h-[44px]"
               >
                 Batal
               </button>
@@ -1238,6 +1238,15 @@ export default function SupervisorApprovalPage() {
     (i) => i.stage_group === "operational",
   ).length;
 
+  // ── Summary stats ──────────────────────────────────────────────────────────
+  const totalWaiting = items.length;
+  const oldestWaiting = items.length > 0
+    ? Math.max(...items.map((i) => new Date(i.waiting_since).getTime()), 0)
+    : 0;
+  const oldestWaitingHours = oldestWaiting
+    ? Math.round((Date.now() - oldestWaiting) / 36e5)
+    : 0;
+
   const allTabs: {
     key: FilterTab;
     label: string;
@@ -1252,7 +1261,7 @@ export default function SupervisorApprovalPage() {
   const tabs = supervisorGroup === "all" ? allTabs : [];
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50">
+    <div className="flex flex-col md:flex-row h-screen bg-[#26211c]">
       {/* Sidebar */}
       <Sidebar
         role="supervisor"
@@ -1304,7 +1313,7 @@ export default function SupervisorApprovalPage() {
               <button
                 onClick={() => fetchPending(true)}
                 disabled={refreshing}
-                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 sm:py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60 min-h-[36px] sm:min-h-0"
+                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 sm:py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-[#26211c] disabled:opacity-60 min-h-[36px] sm:min-h-0"
               >
                 <RefreshCw
                   className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
@@ -1324,13 +1333,49 @@ export default function SupervisorApprovalPage() {
               </p>
               <button
                 onClick={() => fetchPending(true)}
-                className="mt-4 rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px]"
+                className="mt-4 rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-[#26211c] min-h-[44px]"
               >
                 Coba lagi
               </button>
             </div>
           ) : (
             <div className="space-y-4 sm:space-y-5">
+              {/* Summary cards */}
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                <InfoCard
+                  label="Total Menunggu"
+                  value={totalWaiting}
+                  icon={Clock}
+                  tone={totalWaiting > 0 ? "amber" : "emerald"}
+                />
+                <InfoCard
+                  label="Produksi"
+                  value={productionCount}
+                  icon={Hammer}
+                  tone={productionCount > 0 ? "amber" : "emerald"}
+                />
+                <InfoCard
+                  label="Operasional"
+                  value={operationalCount}
+                  icon={Settings}
+                  tone={operationalCount > 0 ? "amber" : "emerald"}
+                />
+                <InfoCard
+                  label="Paling Lama"
+                  value={oldestWaitingHours > 0 ? `${oldestWaitingHours}j` : "—"}
+                  subtitle="Menunggu aktif"
+                  icon={AlertTriangle}
+                  tone={oldestWaitingHours > 24 ? "rose" : oldestWaitingHours > 8 ? "amber" : "emerald"}
+                />
+                <InfoCard
+                  label="Terbaru"
+                  value={items.length > 0 ? new Date(items[0].waiting_since).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) : "—"}
+                  subtitle="Submission"
+                  icon={CheckCircle2}
+                  tone="slate"
+                />
+              </div>
+
               {tabs.length > 0 && (
                 <div className="border-b border-slate-200 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                   <div className="flex items-center gap-1 min-w-max">
@@ -1354,7 +1399,7 @@ export default function SupervisorApprovalPage() {
                                 ? "bg-slate-800 text-white"
                                 : tab.count > 0
                                   ? "bg-slate-100 text-slate-700"
-                                  : "bg-slate-50 text-slate-400"
+                                  : "bg-[#26211c] text-slate-400"
                             }`}
                           >
                             {tab.count}
@@ -1394,6 +1439,50 @@ export default function SupervisorApprovalPage() {
             </div>
           )}
         </main>
+      </div>
+    </div>
+  );
+}
+
+function InfoCard({
+  label,
+  value,
+  subtitle,
+  icon: Icon,
+  tone,
+}: {
+  label: string;
+  value: string | number;
+  subtitle?: string;
+  icon: React.ElementType;
+  tone: "slate" | "rose" | "amber" | "emerald";
+}) {
+  const toneMap = {
+    slate: { bg: "bg-[#26211c]", icon: "text-slate-500", ring: "ring-slate-200" },
+    rose: { bg: "bg-rose-50", icon: "text-rose-600", ring: "ring-rose-200" },
+    amber: { bg: "bg-amber-50", icon: "text-amber-600", ring: "ring-amber-200" },
+    emerald: { bg: "bg-emerald-50", icon: "text-emerald-600", ring: "ring-emerald-200" },
+  };
+  const t = toneMap[tone];
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3 sm:p-4">
+      <div className="flex items-start justify-between">
+        <div className="min-w-0">
+          <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-slate-500">
+            {label}
+          </p>
+          <p className="mt-1 sm:mt-2 text-xl sm:text-2xl font-semibold tabular-nums text-slate-900">
+            {value}
+          </p>
+          {subtitle && (
+            <p className="mt-0.5 text-[10px] sm:text-xs text-slate-400">
+              {subtitle}
+            </p>
+          )}
+        </div>
+        <div className={`flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset ${t.bg} ${t.ring} ml-2`}>
+          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${t.icon}`} />
+        </div>
       </div>
     </div>
   );

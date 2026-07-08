@@ -81,7 +81,7 @@ function StatusBadge({ status }: { status: string | null }) {
   return (
     <span
       className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-        styles[s] || "bg-gray-50 text-gray-500"
+        styles[s] || "bg-[#26211c] text-gray-500"
       }`}
     >
       {labels[s] || s}
@@ -132,7 +132,7 @@ export default function PelangganPage() {
 
   if (!user) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-[#26211c]">
         <Sidebar role="customer_service" />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header userEmail="" role="customer_service" />
@@ -145,7 +145,7 @@ export default function PelangganPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-[#26211c]">
       <Sidebar role="customer_service" />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail={user.email} role="customer_service" />
@@ -249,7 +249,7 @@ export default function PelangganPage() {
                   <div key={key}>
                     <button
                       onClick={() => toggleExpand(key)}
-                      className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors border-t border-gray-50 first:border-t-0"
+                      className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-[#26211c] transition-colors border-t border-gray-50 first:border-t-0"
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center flex-shrink-0">
@@ -306,7 +306,7 @@ export default function PelangganPage() {
                     </div>
 
                     {open && (
-                      <div className="border-t border-gray-50 bg-gray-50/30">
+                      <div className="border-t border-gray-50 bg-[#26211c]/30">
                         <div className="px-6 py-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-400">
                           {group.customer_email && (
                             <span>{group.customer_email}</span>

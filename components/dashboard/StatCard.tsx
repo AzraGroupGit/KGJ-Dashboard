@@ -22,13 +22,13 @@ export default function StatCard({
   higherIsBetter = true,
 }: StatCardProps) {
   const colors = {
-    blue: "bg-blue-50 border-blue-200",
-    green: "bg-green-50 border-green-200",
-    purple: "bg-purple-50 border-purple-200",
-    orange: "bg-orange-50 border-orange-200",
-    red: "bg-red-50 border-red-200",
-    indigo: "bg-indigo-50 border-indigo-200",
-    yellow: "bg-yellow-50 border-yellow-200",
+    blue: "bg-[#c9a227]/10 border-blue-200",
+    green: "bg-[#c9a227]/10 border-green-200",
+    purple: "bg-[#c9a227]/10 border-purple-200",
+    orange: "bg-orange-500/[0.08] border-orange-200",
+    red: "bg-red-500/[0.08] border-red-200",
+    indigo: "bg-[#c9a227]/10 border-indigo-200",
+    yellow: "bg-yellow-500/[0.08] border-yellow-200",
   };
 
   const isGood =
@@ -41,13 +41,13 @@ export default function StatCard({
   return (
     <div className={`${colors[color]} rounded-xl border p-6`}>
       <div className="flex items-start justify-between mb-1">
-        <h3 className="text-sm font-medium text-gray-600">{title}</h3>
+        <h3 className="text-sm font-medium text-[#e8e2d4]">{title}</h3>
         {delta !== undefined && delta !== null && (
           <span
             className={`inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
               isGood
                 ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
+                : "bg-red-500/[0.12] text-red-300"
             }`}
           >
             {delta >= 0 ? (
@@ -59,8 +59,8 @@ export default function StatCard({
           </span>
         )}
       </div>
-      <p className="text-2xl font-bold text-gray-800">{value}</p>
-      {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+      <p className="text-2xl font-bold text-[#f0f4ff]">{value}</p>
+      {subtitle && <p className="text-xs text-white/40 mt-1">{subtitle}</p>}
     </div>
   );
 }

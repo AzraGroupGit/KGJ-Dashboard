@@ -181,7 +181,7 @@ export default function AnalisisPage() {
   );
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-[#26211c]">
       <Sidebar role="superadmin" />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
@@ -215,7 +215,7 @@ export default function AnalisisPage() {
               <button
                 onClick={() => refetch()}
                 disabled={isFetching}
-                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-[#26211c] disabled:opacity-50"
               >
                 <RefreshCw
                   className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`}
@@ -364,7 +364,7 @@ export default function AnalisisPage() {
                           return (
                             <tr
                               key={expert.userId}
-                              className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors"
+                              className="border-b border-slate-50 last:border-0 hover:bg-[#26211c] transition-colors"
                             >
                               <td className="px-5 py-2.5 text-sm font-medium text-slate-900">
                                 {expert.fullName}
@@ -452,7 +452,7 @@ export default function AnalisisPage() {
                           {data.stageEfficiency.slice(0, 12).map((s) => (
                             <tr
                               key={s.stage}
-                              className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors"
+                              className="border-b border-slate-50 last:border-0 hover:bg-[#26211c] transition-colors"
                             >
                               <td className="px-5 py-2.5 text-xs font-medium text-slate-800">
                                 {STAGE_LABELS[s.stage] ?? s.stage}
@@ -503,7 +503,7 @@ export default function AnalisisPage() {
                         slate: {
                           bar: "bg-slate-200",
                           text: "text-slate-400",
-                          bg: "bg-slate-50",
+                          bg: "bg-[#26211c]",
                         },
                         emerald: {
                           bar: "bg-emerald-500",

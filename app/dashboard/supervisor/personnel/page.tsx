@@ -111,7 +111,7 @@ export default function PersonnelPage() {
   // ── UI ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50">
+    <div className="flex flex-col md:flex-row h-screen bg-[#26211c]">
         <Sidebar role="supervisor" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
@@ -158,7 +158,7 @@ export default function PersonnelPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-gray-50 border-b border-gray-200">
+                      <tr className="bg-[#26211c] border-b border-gray-200">
                         <th className="text-left px-4 py-3 font-semibold text-gray-600">Nama</th>
                         <th className="text-left px-4 py-3 font-semibold text-gray-600">Role</th>
                         <th className="text-left px-4 py-3 font-semibold text-gray-600">Group</th>
@@ -168,7 +168,7 @@ export default function PersonnelPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {filtered.map((u) => (
-                        <tr key={u.id} className="hover:bg-gray-50">
+                        <tr key={u.id} className="hover:bg-[#26211c]">
                           <td className="px-4 py-3">
                             <div className="font-medium text-gray-900">{u.full_name}</div>
                             <div className="text-xs text-gray-500">{u.username || u.email}</div>
@@ -288,11 +288,11 @@ export default function PersonnelPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50 rounded-b-xl border-t border-gray-200">
+              <div className="flex items-center justify-end gap-3 px-6 py-4 bg-[#26211c] rounded-b-xl border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setAssignModal(null)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-[#26211c]"
                 >
                   Batal
                 </button>

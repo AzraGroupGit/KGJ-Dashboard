@@ -89,7 +89,7 @@ export default function CustomerTimeline({
         <div className="h-2.5 rounded-full bg-stone-100 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
-              isComplete ? "bg-emerald-500" : "bg-amber-500"
+              isComplete ? "bg-emerald-500/[0.08]0" : "bg-[#c9a227]/100"
             }`}
             style={{ width: `${isComplete ? 100 : progress}%` }}
           />
@@ -105,7 +105,7 @@ export default function CustomerTimeline({
           </div>
         ) : currentStage ? (
           <span className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-1.5 text-sm font-medium text-amber-800">
-            <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+            <span className="h-2 w-2 rounded-full bg-[#c9a227]/100 animate-pulse" />
             Sedang: {getStageLabel(currentStage)}
           </span>
         ) : (
@@ -127,7 +127,7 @@ export default function CustomerTimeline({
                 done
                   ? "text-stone-500"
                   : active
-                    ? "bg-amber-50 text-stone-800 font-medium"
+                    ? "bg-[#c9a227]/10 text-stone-800 font-medium"
                     : "text-stone-400"
               }`}
             >
@@ -136,7 +136,7 @@ export default function CustomerTimeline({
                   <Check className="h-5 w-5 text-emerald-500" strokeWidth={2.5} />
                 ) : active ? (
                   <span className="flex h-5 w-5 items-center justify-center">
-                    <span className="h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#c9a227]/100 animate-pulse" />
                   </span>
                 ) : (
                   <span className="flex h-5 w-5 items-center justify-center">

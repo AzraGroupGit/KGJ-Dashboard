@@ -71,6 +71,11 @@ export async function proxy(req: NextRequest) {
   //    redirect ke dashboard sesuai role
   // ──────────────────────────────────────────────────────────────────────────
   if (pathIsAuthOnly && user) {
+    // Biarkan halaman login handle redirect untuk integrated-system flow
+    if (req.nextUrl.searchParams.get("from") === "integrated-system") {
+      return NextResponse.next({ request: { headers: req.headers } });
+    }
+
     const roleInfo = await fetchUserRoleName(supabase, user.id);
 
     const dashboardPath = resolveDashboardPath(roleInfo);

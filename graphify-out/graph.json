@@ -21,6 +21,46 @@
   },
   "nodes": [
     {
+      "label": "page.tsx",
+      "file_type": "code",
+      "source_file": "app/login/page.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "app_login_page",
+      "community": 73,
+      "norm_label": "page.tsx"
+    },
+    {
+      "label": "RoleConfig",
+      "file_type": "code",
+      "source_file": "app/login/page.tsx",
+      "source_location": "L29",
+      "_origin": "ast",
+      "id": "app_login_page_roleconfig",
+      "community": 73,
+      "norm_label": "roleconfig"
+    },
+    {
+      "label": "ROLE_CONFIGS",
+      "file_type": "code",
+      "source_file": "app/login/page.tsx",
+      "source_location": "L36",
+      "_origin": "ast",
+      "id": "app_login_page_role_configs",
+      "community": 73,
+      "norm_label": "role_configs"
+    },
+    {
+      "label": "LoginPage()",
+      "file_type": "code",
+      "source_file": "app/login/page.tsx",
+      "source_location": "L83",
+      "_origin": "ast",
+      "id": "app_login_page_loginpage",
+      "community": 73,
+      "norm_label": "loginpage()"
+    },
+    {
       "label": "route.ts",
       "file_type": "code",
       "source_file": "app/api/analyst-oprprd/route.ts",
@@ -114,7 +154,7 @@
       "source_file": "app/api/analytics/cycle-time/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 0,
+      "community": 25,
       "norm_label": "route.ts",
       "community_name": "Supervisor API Routes",
       "id": "app_api_analytics_cycle_time_route"
@@ -125,7 +165,7 @@
       "source_file": "app/api/analytics/cycle-time/route.ts",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 0,
+      "community": 25,
       "norm_label": "get()",
       "community_name": "Supervisor API Routes",
       "id": "app_api_analytics_cycle_time_route_get"
@@ -224,7 +264,7 @@
       "source_file": "app/api/auth/pin-login/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "route.ts",
       "community_name": "Production Reporting API",
       "id": "app_api_auth_pin_login_route"
@@ -235,7 +275,7 @@
       "source_file": "app/api/auth/pin-login/route.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "post()",
       "community_name": "Production Reporting API",
       "id": "app_api_auth_pin_login_route_post"
@@ -268,7 +308,7 @@
       "source_file": "app/api/auth/workshop-pin/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 12,
+      "community": 0,
       "norm_label": "route.ts",
       "community_name": "Production Reporting API",
       "id": "app_api_auth_workshop_pin_route"
@@ -279,7 +319,7 @@
       "source_file": "app/api/auth/workshop-pin/route.ts",
       "source_location": "L7",
       "_origin": "ast",
-      "community": 12,
+      "community": 0,
       "norm_label": "post()",
       "community_name": "Production Reporting API",
       "id": "app_api_auth_workshop_pin_route_post"
@@ -290,7 +330,7 @@
       "source_file": "app/api/bottleneck/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "route.ts",
       "community_name": "Production Reporting API",
       "id": "app_api_bottleneck_route"
@@ -301,7 +341,7 @@
       "source_file": "app/api/bottleneck/route.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "active_stages",
       "community_name": "Production Reporting API",
       "id": "app_api_bottleneck_route_active_stages"
@@ -312,7 +352,7 @@
       "source_file": "app/api/bottleneck/route.ts",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "stagebottleneck",
       "community_name": "Production Reporting API",
       "id": "app_api_bottleneck_route_stagebottleneck"
@@ -323,7 +363,7 @@
       "source_file": "app/api/bottleneck/route.ts",
       "source_location": "L28",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "get()",
       "community_name": "Production Reporting API",
       "id": "app_api_bottleneck_route_get"
@@ -433,7 +473,7 @@
       "source_file": "app/api/cs/inputs/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "route.ts",
       "community_name": "Production Reporting API",
       "id": "app_api_cs_inputs_route"
@@ -444,7 +484,7 @@
       "source_file": "app/api/cs/inputs/route.ts",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "get()",
       "community_name": "Production Reporting API",
       "id": "app_api_cs_inputs_route_get"
@@ -455,7 +495,7 @@
       "source_file": "app/api/cs/inputs/route.ts",
       "source_location": "L130",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "post()",
       "community_name": "Production Reporting API",
       "id": "app_api_cs_inputs_route_post"
@@ -730,7 +770,7 @@
       "source_file": "app/api/cs/users/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "route.ts",
       "community_name": "Production Reporting API",
       "id": "app_api_cs_users_route"
@@ -741,7 +781,7 @@
       "source_file": "app/api/cs/users/route.ts",
       "source_location": "L14",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "get()",
       "community_name": "Production Reporting API",
       "id": "app_api_cs_users_route_get"
@@ -1038,7 +1078,7 @@
       "source_file": "app/api/management/tasks/items/[id]/attachments/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 11,
+      "community": 9,
       "norm_label": "route.ts",
       "community_name": "User Administration API",
       "id": "app_api_management_tasks_items_id_attachments_route"
@@ -1049,7 +1089,7 @@
       "source_file": "app/api/management/tasks/items/[id]/attachments/route.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 11,
+      "community": 9,
       "norm_label": "allowed_types",
       "community_name": "User Administration API",
       "id": "app_api_management_tasks_items_id_attachments_route_allowed_types"
@@ -1060,7 +1100,7 @@
       "source_file": "app/api/management/tasks/items/[id]/attachments/route.ts",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 11,
+      "community": 9,
       "norm_label": "post()",
       "community_name": "User Administration API",
       "id": "app_api_management_tasks_items_id_attachments_route_post"
@@ -1071,7 +1111,7 @@
       "source_file": "app/api/management/tasks/items/[id]/attachments/route.ts",
       "source_location": "L108",
       "_origin": "ast",
-      "community": 11,
+      "community": 9,
       "norm_label": "get()",
       "community_name": "User Administration API",
       "id": "app_api_management_tasks_items_id_attachments_route_get"
@@ -1082,7 +1122,7 @@
       "source_file": "app/api/management/tasks/items/[id]/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 9,
+      "community": 11,
       "norm_label": "route.ts",
       "community_name": "Superadmin QR API",
       "id": "app_api_management_tasks_items_id_route"
@@ -1093,7 +1133,7 @@
       "source_file": "app/api/management/tasks/items/[id]/route.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 9,
+      "community": 11,
       "norm_label": "patch()",
       "community_name": "Superadmin QR API",
       "id": "app_api_management_tasks_items_id_route_patch"
@@ -1104,7 +1144,7 @@
       "source_file": "app/api/management/tasks/items/[id]/route.ts",
       "source_location": "L97",
       "_origin": "ast",
-      "community": 9,
+      "community": 11,
       "norm_label": "delete()",
       "community_name": "Superadmin QR API",
       "id": "app_api_management_tasks_items_id_route_delete"
@@ -1357,7 +1397,7 @@
       "source_file": "app/api/operational/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "route.ts",
       "community_name": "Production Reporting API",
       "id": "app_api_operational_route"
@@ -1368,7 +1408,7 @@
       "source_file": "app/api/operational/route.ts",
       "source_location": "L8",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "get()",
       "community_name": "Production Reporting API",
       "id": "app_api_operational_route_get"
@@ -2215,7 +2255,7 @@
       "source_file": "app/api/reports/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "route.ts",
       "community_name": "Production Reporting API",
       "id": "app_api_reports_route"
@@ -2226,7 +2266,7 @@
       "source_file": "app/api/reports/route.ts",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "generatereportcontent()",
       "community_name": "Production Reporting API",
       "id": "app_api_reports_route_generatereportcontent"
@@ -2237,7 +2277,7 @@
       "source_file": "app/api/reports/route.ts",
       "source_location": "L130",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "generatemonthlycsv()",
       "community_name": "Production Reporting API",
       "id": "app_api_reports_route_generatemonthlycsv"
@@ -2248,7 +2288,7 @@
       "source_file": "app/api/reports/route.ts",
       "source_location": "L240",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "get()",
       "community_name": "Production Reporting API",
       "id": "app_api_reports_route_get"
@@ -2259,7 +2299,7 @@
       "source_file": "app/api/reports/route.ts",
       "source_location": "L308",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "post()",
       "community_name": "Production Reporting API",
       "id": "app_api_reports_route_post"
@@ -2270,7 +2310,7 @@
       "source_file": "app/api/rework-overview/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 0,
+      "community": 6,
       "norm_label": "route.ts",
       "community_name": "Supervisor API Routes",
       "id": "app_api_rework_overview_route"
@@ -2281,7 +2321,7 @@
       "source_file": "app/api/rework-overview/route.ts",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 0,
+      "community": 6,
       "norm_label": "get()",
       "community_name": "Supervisor API Routes",
       "id": "app_api_rework_overview_route_get"
@@ -2820,7 +2860,7 @@
       "source_file": "app/api/stages/submit/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 8,
+      "community": 64,
       "norm_label": "route.ts",
       "community_name": "Data Normalization Utilities",
       "id": "app_api_stages_submit_route"
@@ -2831,7 +2871,7 @@
       "source_file": "app/api/stages/submit/route.ts",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 8,
+      "community": 64,
       "norm_label": "role_stages",
       "community_name": "Data Normalization Utilities",
       "id": "app_api_stages_submit_route_role_stages"
@@ -2842,7 +2882,7 @@
       "source_file": "app/api/stages/submit/route.ts",
       "source_location": "L16",
       "_origin": "ast",
-      "community": 8,
+      "community": 64,
       "norm_label": "hasaccess()",
       "community_name": "Data Normalization Utilities",
       "id": "app_api_stages_submit_route_hasaccess"
@@ -2853,7 +2893,7 @@
       "source_file": "app/api/stages/submit/route.ts",
       "source_location": "L29",
       "_origin": "ast",
-      "community": 8,
+      "community": 64,
       "norm_label": "worker_stages",
       "community_name": "Data Normalization Utilities",
       "id": "app_api_stages_submit_route_worker_stages"
@@ -2864,7 +2904,7 @@
       "source_file": "app/api/stages/submit/route.ts",
       "source_location": "L31",
       "_origin": "ast",
-      "community": 8,
+      "community": 64,
       "norm_label": "approval_gate_map",
       "community_name": "Data Normalization Utilities",
       "id": "app_api_stages_submit_route_approval_gate_map"
@@ -2875,7 +2915,7 @@
       "source_file": "app/api/stages/submit/route.ts",
       "source_location": "L41",
       "_origin": "ast",
-      "community": 8,
+      "community": 64,
       "norm_label": "getattemptnumber()",
       "community_name": "Data Normalization Utilities",
       "id": "app_api_stages_submit_route_getattemptnumber"
@@ -2886,7 +2926,7 @@
       "source_file": "app/api/stages/submit/route.ts",
       "source_location": "L57",
       "_origin": "ast",
-      "community": 8,
+      "community": 64,
       "norm_label": "nextinsequence()",
       "community_name": "Data Normalization Utilities",
       "id": "app_api_stages_submit_route_nextinsequence"
@@ -2908,7 +2948,7 @@
       "source_file": "app/api/stages/submit/route.ts",
       "source_location": "L67",
       "_origin": "ast",
-      "community": 8,
+      "community": 64,
       "norm_label": "advanceorder()",
       "community_name": "Data Normalization Utilities",
       "id": "app_api_stages_submit_route_advanceorder"
@@ -2919,7 +2959,7 @@
       "source_file": "app/api/stages/submit/route.ts",
       "source_location": "L103",
       "_origin": "ast",
-      "community": 8,
+      "community": 64,
       "norm_label": "post()",
       "community_name": "Data Normalization Utilities",
       "id": "app_api_stages_submit_route_post"
@@ -3018,7 +3058,7 @@
       "source_file": "app/api/superadmin/management-tasks/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 11,
+      "community": 9,
       "norm_label": "route.ts",
       "community_name": "User Administration API",
       "id": "app_api_superadmin_management_tasks_route"
@@ -3029,7 +3069,7 @@
       "source_file": "app/api/superadmin/management-tasks/route.ts",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 11,
+      "community": 9,
       "norm_label": "get()",
       "community_name": "User Administration API",
       "id": "app_api_superadmin_management_tasks_route_get"
@@ -3040,7 +3080,7 @@
       "source_file": "app/api/superadmin/management-tasks/route.ts",
       "source_location": "L69",
       "_origin": "ast",
-      "community": 11,
+      "community": 9,
       "norm_label": "patch()",
       "community_name": "User Administration API",
       "id": "app_api_superadmin_management_tasks_route_patch"
@@ -3106,7 +3146,7 @@
       "source_file": "app/api/supervisor/accounts/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 73,
+      "community": 11,
       "norm_label": "route.ts",
       "community_name": "Account Mapping API",
       "id": "app_api_supervisor_accounts_route"
@@ -3117,7 +3157,7 @@
       "source_file": "app/api/supervisor/accounts/route.ts",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 73,
+      "community": 11,
       "norm_label": "verifysupervisorscope()",
       "community_name": "Account Mapping API",
       "id": "app_api_supervisor_accounts_route_verifysupervisorscope"
@@ -3128,7 +3168,7 @@
       "source_file": "app/api/supervisor/accounts/route.ts",
       "source_location": "L36",
       "_origin": "ast",
-      "community": 73,
+      "community": 11,
       "norm_label": "mapaccount()",
       "community_name": "Account Mapping API",
       "id": "app_api_supervisor_accounts_route_mapaccount"
@@ -3139,7 +3179,7 @@
       "source_file": "app/api/supervisor/accounts/route.ts",
       "source_location": "L57",
       "_origin": "ast",
-      "community": 73,
+      "community": 11,
       "norm_label": "get()",
       "community_name": "Account Mapping API",
       "id": "app_api_supervisor_accounts_route_get"
@@ -3150,7 +3190,7 @@
       "source_file": "app/api/supervisor/accounts/route.ts",
       "source_location": "L119",
       "_origin": "ast",
-      "community": 73,
+      "community": 11,
       "norm_label": "post()",
       "community_name": "Account Mapping API",
       "id": "app_api_supervisor_accounts_route_post"
@@ -3216,7 +3256,7 @@
       "source_file": "app/api/supervisor/pending/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 64,
+      "community": 6,
       "norm_label": "route.ts",
       "community_name": "Stage Visibility API",
       "id": "app_api_supervisor_pending_route"
@@ -3227,7 +3267,7 @@
       "source_file": "app/api/supervisor/pending/route.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 64,
+      "community": 6,
       "norm_label": "approval_stages_array",
       "community_name": "Stage Visibility API",
       "id": "app_api_supervisor_pending_route_approval_stages_array"
@@ -3238,7 +3278,7 @@
       "source_file": "app/api/supervisor/pending/route.ts",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 64,
+      "community": 6,
       "norm_label": "production_to_approval_stage",
       "community_name": "Stage Visibility API",
       "id": "app_api_supervisor_pending_route_production_to_approval_stage"
@@ -3249,7 +3289,7 @@
       "source_file": "app/api/supervisor/pending/route.ts",
       "source_location": "L19",
       "_origin": "ast",
-      "community": 64,
+      "community": 6,
       "norm_label": "approval_to_production_stage",
       "community_name": "Stage Visibility API",
       "id": "app_api_supervisor_pending_route_approval_to_production_stage"
@@ -3260,7 +3300,7 @@
       "source_file": "app/api/supervisor/pending/route.ts",
       "source_location": "L23",
       "_origin": "ast",
-      "community": 64,
+      "community": 6,
       "norm_label": "approval_stages",
       "community_name": "Stage Visibility API",
       "id": "app_api_supervisor_pending_route_approval_stages"
@@ -3271,7 +3311,7 @@
       "source_file": "app/api/supervisor/pending/route.ts",
       "source_location": "L25",
       "_origin": "ast",
-      "community": 64,
+      "community": 6,
       "norm_label": "supervisor_visible_stages",
       "community_name": "Stage Visibility API",
       "id": "app_api_supervisor_pending_route_supervisor_visible_stages"
@@ -3282,7 +3322,7 @@
       "source_file": "app/api/supervisor/pending/route.ts",
       "source_location": "L30",
       "_origin": "ast",
-      "community": 64,
+      "community": 6,
       "norm_label": "get()",
       "community_name": "Stage Visibility API",
       "id": "app_api_supervisor_pending_route_get"
@@ -3898,7 +3938,7 @@
       "source_file": "app/api/workshop/orders/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 83,
+      "community": 6,
       "norm_label": "route.ts",
       "community_name": "Approval Stage API",
       "id": "app_api_workshop_orders_route"
@@ -3909,7 +3949,7 @@
       "source_file": "app/api/workshop/orders/route.ts",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 83,
+      "community": 6,
       "norm_label": "approval_stages",
       "community_name": "Approval Stage API",
       "id": "app_api_workshop_orders_route_approval_stages"
@@ -3920,7 +3960,7 @@
       "source_file": "app/api/workshop/orders/route.ts",
       "source_location": "L14",
       "_origin": "ast",
-      "community": 83,
+      "community": 6,
       "norm_label": "get()",
       "community_name": "Approval Stage API",
       "id": "app_api_workshop_orders_route_get"
@@ -8386,7 +8426,7 @@
       "source_file": "app/dashboard/supervisor/slot-management/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 75,
+      "community": 53,
       "norm_label": "page.tsx",
       "community_name": "Slot Management Page",
       "id": "app_dashboard_supervisor_slot_management_page"
@@ -8397,7 +8437,7 @@
       "source_file": "app/dashboard/supervisor/slot-management/page.tsx",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 75,
+      "community": 53,
       "norm_label": "slotcategory",
       "community_name": "Slot Management Page",
       "id": "app_dashboard_supervisor_slot_management_page_slotcategory"
@@ -8408,7 +8448,7 @@
       "source_file": "app/dashboard/supervisor/slot-management/page.tsx",
       "source_location": "L25",
       "_origin": "ast",
-      "community": 75,
+      "community": 53,
       "norm_label": "slotoverride",
       "community_name": "Slot Management Page",
       "id": "app_dashboard_supervisor_slot_management_page_slotoverride"
@@ -8419,7 +8459,7 @@
       "source_file": "app/dashboard/supervisor/slot-management/page.tsx",
       "source_location": "L34",
       "_origin": "ast",
-      "community": 75,
+      "community": 53,
       "norm_label": "userinfo",
       "community_name": "Slot Management Page",
       "id": "app_dashboard_supervisor_slot_management_page_userinfo"
@@ -8430,7 +8470,7 @@
       "source_file": "app/dashboard/supervisor/slot-management/page.tsx",
       "source_location": "L40",
       "_origin": "ast",
-      "community": 75,
+      "community": 53,
       "norm_label": "slotmanagementpage()",
       "community_name": "Slot Management Page",
       "id": "app_dashboard_supervisor_slot_management_page_slotmanagementpage"
@@ -8566,50 +8606,6 @@
       "norm_label": "rootloading()",
       "community_name": "Marketing Channel Dashboard",
       "id": "app_loading_rootloading"
-    },
-    {
-      "label": "page.tsx",
-      "file_type": "code",
-      "source_file": "app/login/page.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "community": 5,
-      "norm_label": "page.tsx",
-      "community_name": "Workshop Login Pages",
-      "id": "app_login_page"
-    },
-    {
-      "label": "RoleConfig",
-      "file_type": "code",
-      "source_file": "app/login/page.tsx",
-      "source_location": "L29",
-      "_origin": "ast",
-      "community": 5,
-      "norm_label": "roleconfig",
-      "community_name": "Workshop Login Pages",
-      "id": "app_login_page_roleconfig"
-    },
-    {
-      "label": "ROLE_CONFIGS",
-      "file_type": "code",
-      "source_file": "app/login/page.tsx",
-      "source_location": "L36",
-      "_origin": "ast",
-      "community": 5,
-      "norm_label": "role_configs",
-      "community_name": "Workshop Login Pages",
-      "id": "app_login_page_role_configs"
-    },
-    {
-      "label": "LoginPage()",
-      "file_type": "code",
-      "source_file": "app/login/page.tsx",
-      "source_location": "L83",
-      "_origin": "ast",
-      "community": 5,
-      "norm_label": "loginpage()",
-      "community_name": "Workshop Login Pages",
-      "id": "app_login_page_loginpage"
     },
     {
       "label": "page.tsx",
@@ -9321,7 +9317,7 @@
       "source_file": "components/analytics/BottleneckHeatmap.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 79,
+      "community": 57,
       "norm_label": "bottleneckheatmap.tsx",
       "community_name": "Bottleneck Heatmap Component",
       "id": "components_analytics_bottleneckheatmap"
@@ -9332,7 +9328,7 @@
       "source_file": "components/analytics/BottleneckHeatmap.tsx",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 79,
+      "community": 57,
       "norm_label": "heatmapdata",
       "community_name": "Bottleneck Heatmap Component",
       "id": "components_analytics_bottleneckheatmap_heatmapdata"
@@ -9343,7 +9339,7 @@
       "source_file": "components/analytics/BottleneckHeatmap.tsx",
       "source_location": "L26",
       "_origin": "ast",
-      "community": 79,
+      "community": 57,
       "norm_label": "fmtcount()",
       "community_name": "Bottleneck Heatmap Component",
       "id": "components_analytics_bottleneckheatmap_fmtcount"
@@ -9354,7 +9350,7 @@
       "source_file": "components/analytics/BottleneckHeatmap.tsx",
       "source_location": "L31",
       "_origin": "ast",
-      "community": 79,
+      "community": 57,
       "norm_label": "bottleneckheatmap()",
       "community_name": "Bottleneck Heatmap Component",
       "id": "components_analytics_bottleneckheatmap_bottleneckheatmap"
@@ -10564,7 +10560,7 @@
       "source_file": "components/layout/SettingsModal.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 47,
+      "community": 75,
       "norm_label": "settingsmodal.tsx",
       "community_name": "User Profile Modals",
       "id": "components_layout_settingsmodal"
@@ -10575,7 +10571,7 @@
       "source_file": "components/layout/SettingsModal.tsx",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 47,
+      "community": 75,
       "norm_label": "profiledata",
       "community_name": "User Profile Modals",
       "id": "components_layout_settingsmodal_profiledata"
@@ -10586,7 +10582,7 @@
       "source_file": "components/layout/SettingsModal.tsx",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 47,
+      "community": 75,
       "norm_label": "settingsmodalprops",
       "community_name": "User Profile Modals",
       "id": "components_layout_settingsmodal_settingsmodalprops"
@@ -10597,7 +10593,7 @@
       "source_file": "components/layout/SettingsModal.tsx",
       "source_location": "L19",
       "_origin": "ast",
-      "community": 47,
+      "community": 75,
       "norm_label": "settingsmodal()",
       "community_name": "User Profile Modals",
       "id": "components_layout_settingsmodal_settingsmodal"
@@ -12170,7 +12166,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L284",
       "_origin": "ast",
-      "community": 12,
+      "community": 6,
       "norm_label": "getroleprops()",
       "community_name": "Production Reporting API",
       "id": "lib_auth_session_getroleprops"
@@ -13688,7 +13684,7 @@
       "source_file": "types/layout.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 53,
+      "community": 47,
       "norm_label": "layout.ts",
       "community_name": "Mobile Navigation Sidebar",
       "id": "types_layout"
@@ -13699,7 +13695,7 @@
       "source_file": "types/layout.ts",
       "source_location": "L3",
       "_origin": "ast",
-      "community": 53,
+      "community": 47,
       "norm_label": "menuitem",
       "community_name": "Mobile Navigation Sidebar",
       "id": "types_layout_menuitem"
@@ -13710,7 +13706,7 @@
       "source_file": "types/layout.ts",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 53,
+      "community": 47,
       "norm_label": "collapsestate",
       "community_name": "Mobile Navigation Sidebar",
       "id": "types_layout_collapsestate"
@@ -13721,7 +13717,7 @@
       "source_file": "types/layout.ts",
       "source_location": "L14",
       "_origin": "ast",
-      "community": 53,
+      "community": 47,
       "norm_label": "notification",
       "community_name": "Mobile Navigation Sidebar",
       "id": "types_layout_notification"
@@ -13864,7 +13860,7 @@
       "source_file": "types/roles.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 34,
+      "community": 78,
       "norm_label": "roles.ts",
       "community_name": "Supervisor Order Monitoring",
       "id": "types_roles"
@@ -13875,7 +13871,7 @@
       "source_file": "types/roles.ts",
       "source_location": "L3",
       "_origin": "ast",
-      "community": 34,
+      "community": 78,
       "norm_label": "supervisorgroup",
       "community_name": "Supervisor Order Monitoring",
       "id": "types_roles_supervisorgroup"
@@ -13886,7 +13882,7 @@
       "source_file": "types/roles.ts",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 34,
+      "community": 78,
       "norm_label": "filtertab",
       "community_name": "Supervisor Order Monitoring",
       "id": "types_roles_filtertab"
@@ -14887,7 +14883,7 @@
       "source_file": "proxy.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 78,
+      "community": 0,
       "norm_label": "proxy.ts",
       "community_name": "Auth Proxy Middleware",
       "id": "proxy"
@@ -14898,7 +14894,7 @@
       "source_file": "proxy.ts",
       "source_location": "L15",
       "_origin": "ast",
-      "community": 78,
+      "community": 0,
       "norm_label": "proxy()",
       "community_name": "Auth Proxy Middleware",
       "id": "proxy_proxy"
@@ -14909,7 +14905,7 @@
       "source_file": "proxy.ts",
       "source_location": "L128",
       "_origin": "ast",
-      "community": 78,
+      "community": 0,
       "norm_label": "fetchuserrolename()",
       "community_name": "Auth Proxy Middleware",
       "id": "proxy_fetchuserrolename"
@@ -14920,7 +14916,7 @@
       "source_file": "proxy.ts",
       "source_location": "L165",
       "_origin": "ast",
-      "community": 78,
+      "community": 0,
       "norm_label": "resolvedashboardpath()",
       "community_name": "Auth Proxy Middleware",
       "id": "proxy_resolvedashboardpath"
@@ -14931,7 +14927,7 @@
       "source_file": "proxy.ts",
       "source_location": "L175",
       "_origin": "ast",
-      "community": 78,
+      "community": 0,
       "norm_label": "config",
       "community_name": "Auth Proxy Middleware",
       "id": "proxy_config"
@@ -15306,6 +15302,36 @@
     }
   ],
   "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/login/page.tsx",
+      "source_location": "L83",
+      "weight": 1.0,
+      "source": "app_login_page",
+      "target": "app_login_page_loginpage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/login/page.tsx",
+      "source_location": "L36",
+      "weight": 1.0,
+      "source": "app_login_page",
+      "target": "app_login_page_role_configs",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/login/page.tsx",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "app_login_page",
+      "target": "app_login_page_roleconfig",
+      "confidence_score": 1.0
+    },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
@@ -32849,69 +32875,6 @@
       "target": "app_loading_rootloading"
     },
     {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/login/page.tsx",
-      "source_location": "L9",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_login_page",
-      "target": "app_loading"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/login/page.tsx",
-      "source_location": "L83",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_login_page",
-      "target": "app_login_page_loginpage"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/login/page.tsx",
-      "source_location": "L36",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_login_page",
-      "target": "app_login_page_role_configs"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/login/page.tsx",
-      "source_location": "L29",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_login_page",
-      "target": "app_login_page_roleconfig"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/login/page.tsx",
-      "source_location": "L11",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_login_page",
-      "target": "lib_auth_session"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/login/page.tsx",
-      "source_location": "L10",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_login_page",
-      "target": "lib_routes"
-    },
-    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/order-form/[token]/page.tsx",
@@ -40165,5 +40128,5 @@
       "source_file": ".github/workflows/ci.yml"
     }
   ],
-  "built_at_commit": "74c941bd192dd441a6a957968c4d9152bf9cd7c7"
+  "built_at_commit": "d3848f42527f1cd5c8cbec82658e9c2227a6cdea"
 }

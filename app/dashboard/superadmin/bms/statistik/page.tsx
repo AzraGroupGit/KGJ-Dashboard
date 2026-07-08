@@ -441,7 +441,7 @@ export default function StatistikPage() {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-[#26211c]">
       <Sidebar role="superadmin" />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
@@ -766,7 +766,7 @@ export default function StatistikPage() {
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                          <thead className="bg-gray-50">
+                          <thead className="bg-[#26211c]">
                             <tr>
                               {[
                                 "Cabang",
@@ -786,7 +786,7 @@ export default function StatistikPage() {
                           </thead>
                           <tbody className="divide-y divide-gray-100">
                             {dailyStatsB.staff.map((s) => (
-                              <tr key={s.id} className="hover:bg-gray-50">
+                              <tr key={s.id} className="hover:bg-[#26211c]">
                                 <td className="px-6 py-3 font-medium text-gray-800">
                                   {s.name}
                                 </td>

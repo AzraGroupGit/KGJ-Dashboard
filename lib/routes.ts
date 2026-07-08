@@ -136,6 +136,22 @@ export const MANAGEMENT_ROUTES = {
   HISTORY: "/dashboard/management/history",
 } as const;
 
+export const INTEGRATED_SYSTEM_ROUTES = {
+  ADMIN: "/integrated-system/dashboard/admin",
+  ADMIN_OPRPRD: "/integrated-system/dashboard/admin/oprprd",
+  ADMIN_OPRPRD_MONITORING: "/integrated-system/dashboard/admin/oprprd/monitoring",
+  ADMIN_OPRPRD_ANALISIS: "/integrated-system/dashboard/admin/oprprd/analisis",
+  ADMIN_OPRPRD_LAPORAN: "/integrated-system/dashboard/admin/oprprd/laporan",
+  SUPERVISOR: "/integrated-system/dashboard/supervisor",
+  SUPERVISOR_PERSETUJUAN: "/integrated-system/dashboard/supervisor/persetujuan",
+  SUPERVISOR_BOTTLENECK: "/integrated-system/dashboard/supervisor/bottleneck",
+  SUPERVISOR_MONITORING: "/integrated-system/dashboard/supervisor/monitoring",
+  SUPERVISOR_QR_CODES: "/integrated-system/dashboard/supervisor/qr-codes",
+  WORKER: "/integrated-system/dashboard/worker",
+  ORDERS: "/integrated-system/orders",
+  TRACKING: "/integrated-system/tracking",
+} as const;
+
 // ════════════════════════════════════════════════════════════════════════════
 // PROTECTED & AUTH-ONLY PATHS
 // ════════════════════════════════════════════════════════════════════════════
@@ -233,6 +249,9 @@ export function getDashboardPath(role: unknown): string | null {
 
       case "management":
         return "/dashboard/management";
+
+      case "supervisor":
+        return SUPERVISOR_ROUTES.DASHBOARD;
 
       default: {
         const _exhaustive: never = role;

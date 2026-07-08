@@ -87,7 +87,7 @@ export default function SettingsModal({ profile, onClose, onSaved }: SettingsMod
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: P.purple }}>Pengaturan Profil</p>
             <p className="text-lg font-bold" style={{ color: P.ink }}>Edit Data</p>
           </div>
-          <button onClick={onClose} disabled={isSaving} className="rounded-xl p-2 transition-all active:scale-[0.92] hover:bg-white disabled:opacity-50" style={{ color: P.gray }} aria-label="Close">
+          <button onClick={onClose} disabled={isSaving} className="rounded-xl p-2 transition-all active:scale-[0.92] hover:bg-[#2a2522] disabled:opacity-50" style={{ color: P.gray }} aria-label="Close">
             <X className="h-5 w-5" />
           </button>
         </div>

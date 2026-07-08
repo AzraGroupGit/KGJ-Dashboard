@@ -124,7 +124,7 @@ export default function SlotManagementPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
+      <div className="flex items-center justify-center h-screen bg-[#26211c]">
         <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
       </div>
     );
@@ -132,7 +132,7 @@ export default function SlotManagementPage() {
 
   if (!userInfo) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
+      <div className="flex items-center justify-center h-screen bg-[#26211c]">
         <p className="text-red-500">Gagal memuat data user.</p>
       </div>
     );
@@ -140,7 +140,7 @@ export default function SlotManagementPage() {
 
   if (userInfo.roleName !== "operational_supervisor") {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
+      <div className="flex items-center justify-center h-screen bg-[#26211c]">
         <div className="text-center max-w-md p-8">
           <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-800 mb-2">Akses Terbatas</h2>
@@ -221,7 +221,7 @@ export default function SlotManagementPage() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50">
+    <div className="flex flex-col md:flex-row h-screen bg-[#26211c]">
       <Sidebar role="supervisor" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header
@@ -277,7 +277,7 @@ export default function SlotManagementPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50">
+                  <tr className="border-b border-gray-100 bg-[#26211c]">
                     <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Kategori</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Lead Time (hari)</th>
                     <th className="text-center px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Max Slot</th>
@@ -293,7 +293,7 @@ export default function SlotManagementPage() {
                     const barColor =
                       usagePct >= 100 ? "bg-red-500" : usagePct >= 80 ? "bg-amber-500" : "bg-emerald-500";
                     return (
-                      <tr key={cat.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                      <tr key={cat.id} className="border-b border-gray-50 hover:bg-[#26211c]/50 transition-colors">
                         <td className="px-4 py-3">
                           <span className="font-medium text-gray-800">{cat.label}</span>
                           <span className="ml-2 text-[11px] text-gray-400 uppercase">{cat.key}</span>
@@ -425,7 +425,7 @@ export default function SlotManagementPage() {
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setEditModal(null)} disabled={saving}
-                className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50">
+                className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-[#26211c] transition-colors disabled:opacity-50">
                 Batal
               </button>
               <button onClick={handleEditSave} disabled={saving}
@@ -454,7 +454,7 @@ export default function SlotManagementPage() {
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => { setForceModal(null); setForceNote(""); }} disabled={saving}
-                className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50">
+                className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-[#26211c] transition-colors disabled:opacity-50">
                 Batal
               </button>
               <button onClick={handleForceAdd} disabled={saving}

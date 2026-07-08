@@ -9,6 +9,7 @@ export const LOGIN_ROLES = [
   "customer_service",
   "marketing",
   "management",
+  "supervisor",
 ] as const;
 
 export type LoginRole = (typeof LOGIN_ROLES)[number];
@@ -301,6 +302,7 @@ export function getRoleDisplayName(role: LoginRole): string {
     customer_service: "Customer Service",
     marketing: "Marketing",
     management: "Management",
+    supervisor: "Supervisor",
   };
   return map[role];
 }

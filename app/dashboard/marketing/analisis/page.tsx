@@ -216,7 +216,7 @@ export default function AnalisisChannelPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-[#26211c]">
         <Sidebar role="marketing" />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header userEmail="marketing@company.com" role="marketing" />
@@ -229,7 +229,7 @@ export default function AnalisisChannelPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-[#26211c]">
       <Sidebar role="marketing" />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail="marketing@company.com" role="marketing" />
@@ -355,7 +355,7 @@ export default function AnalisisChannelPage() {
                           ? "bg-blue-600 text-white shadow-sm"
                           : hasData
                             ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                            : "bg-gray-50 text-gray-400"
+                            : "bg-[#26211c] text-gray-400"
                       }`}
                     >
                       {channelName}
@@ -460,7 +460,7 @@ export default function AnalisisChannelPage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-[#26211c]">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Channel
@@ -492,7 +492,7 @@ export default function AnalisisChannelPage() {
                     );
 
                     return (
-                      <tr key={item.channel} className="hover:bg-gray-50">
+                      <tr key={item.channel} className="hover:bg-[#26211c]">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-gray-900">

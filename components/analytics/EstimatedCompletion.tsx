@@ -104,10 +104,10 @@ export default function EstimatedCompletion({
   if (compact) {
     return (
       <div className="inline-flex items-center gap-1.5 text-xs">
-        <Clock className="h-3 w-3 text-slate-400" />
-        <span className="text-slate-600">
+        <Clock className="h-3 w-3 text-white/40" />
+        <span className="text-white/40">
           Estimasi:{" "}
-          <span className="font-semibold text-slate-800">
+          <span className="font-semibold text-[#f0f4ff]">
             {avgDeadline
               ? avgDeadline.toLocaleDateString("id-ID", {
                   day: "numeric",
@@ -124,20 +124,20 @@ export default function EstimatedCompletion({
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
+    <div className="rounded-lg border border-slate-200 bg-[#2a2522] p-4">
       <div className="flex items-center gap-2 mb-3">
-        <CalendarDays className="h-4 w-4 text-slate-400" />
-        <h3 className="text-sm font-semibold text-slate-900">
+        <CalendarDays className="h-4 w-4 text-white/40" />
+        <h3 className="text-sm font-semibold text-[#f0f4ff]">
           Estimasi Selesai
         </h3>
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-white/40">
             Rata-rata (sisa {estimate.remainingStageCount} tahap)
           </span>
-          <span className="text-sm font-semibold text-slate-900">
+          <span className="text-sm font-semibold text-[#f0f4ff]">
             {estimate.avgRemaining != null
               ? fmtDuration(estimate.avgRemaining)
               : "—"}
@@ -145,7 +145,7 @@ export default function EstimatedCompletion({
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-white/40">
             Optimis (P75)
           </span>
           <span className="text-sm font-semibold text-emerald-600">
@@ -156,10 +156,10 @@ export default function EstimatedCompletion({
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-white/40">
             Perkiraan selesai
           </span>
-          <span className="text-sm font-semibold text-slate-900">
+          <span className="text-sm font-semibold text-[#f0f4ff]">
             {avgDeadline
               ? avgDeadline.toLocaleDateString("id-ID", {
                   day: "numeric",
@@ -172,7 +172,7 @@ export default function EstimatedCompletion({
 
         {deadline && (
           <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-            <span className="text-xs text-slate-500">Deadline</span>
+            <span className="text-xs text-white/40">Deadline</span>
             <span
               className={`text-sm font-semibold ${
                 isOverdue ? "text-rose-600" : "text-emerald-600"
@@ -191,7 +191,7 @@ export default function EstimatedCompletion({
         )}
 
         {(estimate.stagesMissing ?? 0) > 0 && (
-          <p className="text-[10px] text-slate-400 mt-2">
+          <p className="text-[10px] text-white/40 mt-2">
             *{estimate.stagesMissing} tahap tanpa data historis
           </p>
         )}

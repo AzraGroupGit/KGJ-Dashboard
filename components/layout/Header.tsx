@@ -226,13 +226,13 @@ export default function Header({
   const getRoleBadgeColor = () => {
     switch (role) {
       case "superadmin":
-        return "from-purple-600 to-indigo-600";
+        return "from-[#e8c547] to-[#c9a227]";
       case "customer_service":
-        return "from-blue-600 to-cyan-600";
+        return "from-[#e8c547] to-[#c9a227]";
       case "marketing":
-        return "from-green-600 to-emerald-600";
+        return "from-[#e8c547] to-[#c9a227]";
       case "supervisor":
-        return "from-amber-600 to-orange-600";
+        return "from-[#e8c547] to-[#c9a227]";
       case "management":
         return "from-violet-600 to-purple-600";
       default:
@@ -277,13 +277,13 @@ export default function Header({
         icon: <AlertTriangle className="w-4 h-4" />,
       },
       error: {
-        bg: "bg-red-100",
-        color: "text-red-600",
+        bg: "bg-red-500/[0.12]",
+        color: "text-red-300",
         icon: <XCircle className="w-4 h-4" />,
       },
       info: {
         bg: "bg-blue-100",
-        color: "text-blue-600",
+        color: "text-[#e8e2d4]",
         icon: <Info className="w-4 h-4" />,
       },
     };
@@ -301,7 +301,7 @@ export default function Header({
 
   return (
     <>
-      <header id="dashboard-header" className="bg-white border-b border-gray-200 sticky top-0 z-30 h-16 md:h-24">
+      <header id="dashboard-header" className="bg-[#1C1917] border-b border-[#c9a227]/10 sticky top-0 z-30 h-16 md:h-24">
         <div className="h-full pl-14 pr-4 md:px-6">
           <div className="flex justify-between items-center h-full">
             {/* Left: hamburger + role + greeting */}
@@ -309,22 +309,22 @@ export default function Header({
               {onMenuClick && (
                 <button
                   onClick={onMenuClick}
-                  className="md:hidden h-10 w-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center shrink-0"
+                  className="md:hidden h-10 w-10 bg-[#1C1917] border border-[#c9a227]/10 rounded-xl flex items-center justify-center shrink-0"
                   aria-label="Buka menu"
                 >
-                  <Menu className="w-5 h-5 text-gray-600" />
+                  <Menu className="w-5 h-5 text-[#e8e2d4]" />
                 </button>
               )}
               <div>
-                <h1 className="text-lg font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                <h1 className="text-lg font-bold bg-gradient-to-r from-[#e8e2d4] to-[#c9a227] bg-clip-text text-transparent">
                   {profile ? formatRoleName(profile.role.name) : getRoleLabel()}
                 </h1>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">{greeting}</span>
+                  <span className="text-xs text-white/40">{greeting}</span>
                   {greeting && profile?.full_name && (
                     <>
-                      <span className="text-xs text-gray-300">•</span>
-                      <span className="text-xs font-medium text-gray-700">
+                      <span className="text-xs text-white/20">•</span>
+                      <span className="text-xs font-medium text-[#e8e2d4]">
                         {profile.full_name}
                       </span>
                     </>
@@ -339,26 +339,26 @@ export default function Header({
               <div className="relative" ref={notificationRef}>
                 <button
                   onClick={() => setIsNotificationOpen((o) => !o)}
-                  className="relative p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200"
+                  className="relative p-2 text-[#e8e2d4] hover:text-[#c9a227] hover:bg-[#c9a227]/10 rounded-lg transition-all duration-200"
                   aria-label="Notifikasi"
                 >
                   <Bell className="w-5 h-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center leading-none">
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500/[0.08]0/[0.08]0 text-white text-xs rounded-full flex items-center justify-center leading-none">
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
                 </button>
 
                 {isNotificationOpen && (
-                  <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-96 sm:w-96 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-slide-down">
-                    <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                  <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-96 sm:w-96 bg-[#1C1917] rounded-xl shadow-xl border border-[#c9a227]/5 overflow-hidden z-50 animate-slide-down">
+                    <div className="px-4 py-3 border-b border-[#c9a227]/5 flex justify-between items-center">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-gray-800 text-sm sm:text-base">
+                        <h3 className="font-semibold text-[#f0f4ff] text-sm sm:text-base">
                           Notifikasi
                         </h3>
                         {unreadCount > 0 && (
-                          <span className="px-1.5 py-0.5 text-[10px] sm:text-xs font-bold bg-red-100 text-red-600 rounded-full">
+                          <span className="px-1.5 py-0.5 text-[10px] sm:text-xs font-bold bg-red-500/[0.12] text-red-300 rounded-full">
                             {unreadCount}
                           </span>
                         )}
@@ -366,7 +366,7 @@ export default function Header({
                       {unreadCount > 0 && (
                         <button
                           onClick={handleMarkAllAsRead}
-                          className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                          className="text-xs text-[#c9a227] hover:text-[#c9a227] font-medium"
                         >
                           Tandai semua dibaca
                         </button>
@@ -376,8 +376,8 @@ export default function Header({
                     <div className="max-h-[60vh] sm:max-h-96 overflow-y-auto">
                       {notifications.length === 0 ? (
                         <div className="p-6 sm:p-8 text-center">
-                          <Bell className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm text-gray-500">
+                          <Bell className="w-10 h-10 sm:w-12 sm:h-12 text-white/20 mx-auto mb-3" />
+                          <p className="text-sm text-white/40">
                             Tidak ada notifikasi
                           </p>
                         </div>
@@ -386,8 +386,8 @@ export default function Header({
                           <div
                             key={n.id}
                             onClick={() => handleNotificationClick(n)}
-                            className={`p-3 sm:p-4 border-b border-gray-50 cursor-pointer transition-colors hover:bg-gray-50 active:bg-gray-100 ${
-                              !n.is_read ? "bg-indigo-50/40" : ""
+                            className={`p-3 sm:p-4 border-b border-gray-50 cursor-pointer transition-colors hover:bg-[#2a2522]/[0.04] active:bg-[#2a2522]/[0.04] ${
+                              !n.is_read ? "bg-[#c9a227]/10/40" : ""
                             }`}
                           >
                             <div className="flex gap-3">
@@ -395,20 +395,20 @@ export default function Header({
                               <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-start mb-1">
                                   <p
-                                    className={`text-sm font-medium truncate ${!n.is_read ? "text-gray-900" : "text-gray-600"}`}
+                                    className={`text-sm font-medium truncate ${!n.is_read ? "text-[#f0f4ff]" : "text-[#e8e2d4]"}`}
                                   >
                                     {n.title}
                                   </p>
-                                  <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap ml-2 shrink-0">
+                                  <span className="text-[10px] sm:text-xs text-white/30 whitespace-nowrap ml-2 shrink-0">
                                     {formatTime(n.created_at)}
                                   </span>
                                 </div>
-                                <p className="text-xs text-gray-500 line-clamp-2">
+                                <p className="text-xs text-white/40 line-clamp-2">
                                   {n.message}
                                 </p>
                               </div>
                               {!n.is_read && (
-                                <div className="w-2 h-2 bg-indigo-500 rounded-full mt-1.5 shrink-0" />
+                                <div className="w-2 h-2 bg-[#c9a227]/100 rounded-full mt-1.5 shrink-0" />
                               )}
                             </div>
                           </div>
@@ -417,12 +417,12 @@ export default function Header({
                     </div>
 
                     {notifications.length > 0 && (
-                      <div className="px-4 py-2.5 border-t border-gray-100 text-center">
+                      <div className="px-4 py-2.5 border-t border-[#c9a227]/5 text-center">
                         <button
                           onClick={() => {
                             refetch();
                           }}
-                          className="text-xs text-gray-400 hover:text-indigo-600 transition-colors inline-flex items-center gap-1"
+                          className="text-xs text-white/30 hover:text-[#c9a227] transition-colors inline-flex items-center gap-1"
                         >
                           <RefreshCw className="w-3 h-3" />
                           Refresh notifikasi
@@ -437,7 +437,7 @@ export default function Header({
               <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setIsProfileOpen((o) => !o)}
-                  className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-gray-50 transition-all duration-200"
+                  className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-[#2a2522]/[0.04] transition-all duration-200"
                 >
                   <div
                     className={`w-9 h-9 bg-gradient-to-br ${getRoleBadgeColor()} rounded-full flex items-center justify-center text-white text-sm font-semibold shadow-md`}
@@ -446,44 +446,44 @@ export default function Header({
                     {getUserInitials()}
                   </div>
                   <div className="hidden md:block text-left">
-                    <p className="text-sm font-medium text-gray-800">
+                    <p className="text-sm font-medium text-[#f0f4ff]">
                       {profile?.full_name || getDisplayName()}
                     </p>
-                    <p className="text-xs text-gray-500">{getRoleLabel()}</p>
+                    <p className="text-xs text-white/40">{getRoleLabel()}</p>
                   </div>
-                  <ChevronDown className="w-4 h-4 text-gray-400 hidden md:block" />
+                  <ChevronDown className="w-4 h-4 text-white/30 hidden md:block" />
                 </button>
 
                 {isProfileOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-slide-down">
+                  <div className="absolute right-0 mt-2 w-64 bg-[#1C1917] rounded-xl shadow-xl border border-[#c9a227]/5 overflow-hidden z-50 animate-slide-down">
                     <div
-                      className={`px-4 py-3 border-b border-gray-100 bg-gradient-to-r ${getRoleBadgeColor()} bg-opacity-10`}
+                      className={`px-4 py-3 border-b border-[#c9a227]/5 bg-gradient-to-r ${getRoleBadgeColor()} bg-opacity-10`}
                     >
-                      <p className="text-sm font-semibold text-gray-800 truncate">
+                      <p className="text-sm font-semibold text-[#f0f4ff] truncate">
                         {profile?.email || userEmail}
                       </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-xs text-white/40 mt-0.5">
                         Role: {getRoleLabel()}
                       </p>
                     </div>
                     <div className="py-2">
                       <button
                         onClick={() => { setIsProfileOpen(false); setIsProfileModalOpen(true); }}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3">
-                        <User className="w-4 h-4 text-gray-400" />
+                        className="w-full px-4 py-2 text-left text-sm text-[#e8e2d4] hover:bg-[#2a2522]/[0.04] transition-colors flex items-center gap-3">
+                        <User className="w-4 h-4 text-white/30" />
                         Profil Saya
                       </button>
                       <button
                         onClick={() => { setIsProfileOpen(false); setIsSettingsModalOpen(true); }}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3">
-                        <Settings className="w-4 h-4 text-gray-400" />
+                        className="w-full px-4 py-2 text-left text-sm text-[#e8e2d4] hover:bg-[#2a2522]/[0.04] transition-colors flex items-center gap-3">
+                        <Settings className="w-4 h-4 text-white/30" />
                         Pengaturan
                       </button>
                     </div>
-                    <div className="border-t border-gray-100 py-2">
+                    <div className="border-t border-[#c9a227]/5 py-2">
                       <button
                         onClick={openLogoutConfirm}
-                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3"
+                        className="w-full px-4 py-2 text-left text-sm text-red-300 hover:bg-red-500/[0.08]0/[0.08] transition-colors flex items-center gap-3"
                       >
                         <LogOut className="w-4 h-4" />
                         Logout

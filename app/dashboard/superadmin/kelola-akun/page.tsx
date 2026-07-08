@@ -589,7 +589,7 @@ export default function KelolaAkunPage() {
 
   if (isQueriesLoading) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-[#26211c]">
         <Sidebar role="superadmin" />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
@@ -603,7 +603,7 @@ export default function KelolaAkunPage() {
 
   return (
     <>
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-[#26211c]">
         <Sidebar role="superadmin" />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
@@ -712,7 +712,7 @@ export default function KelolaAkunPage() {
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-[#26211c]">
                         <tr>
                           {["Nama / Identitas", "Email / Username", "Role", "Status", "Terakhir Login", "Aksi"].map((h) => (
                             <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
@@ -724,7 +724,7 @@ export default function KelolaAkunPage() {
                           <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-500 text-sm">Tidak ada data user.</td></tr>
                         ) : (
                           displayUsers.map((user) => (
-                            <tr key={user.id} className="hover:bg-gray-50">
+                            <tr key={user.id} className="hover:bg-[#26211c]">
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="font-medium text-gray-900">{user.full_name}</div>
                                 <div className="text-xs text-gray-400 font-mono">{user.id.slice(0, 8)}…</div>
