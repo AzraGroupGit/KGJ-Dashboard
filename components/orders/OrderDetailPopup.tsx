@@ -106,7 +106,7 @@ export interface OrderDetail {
 const STAGE_COLORS: Record<string, string> = {
   production: "bg-amber-100 text-amber-800 border-amber-200",
   operational: "bg-blue-100 text-blue-800 border-blue-200",
-  other: "bg-slate-100 text-slate-700 border-slate-200",
+  other: "bg-slate-100 text-[#e8e2d4] border-slate-200",
 };
 
 function formatCurrency(val: number | null) {
@@ -141,9 +141,9 @@ function InfoRow({
 }) {
   if (!value) return null;
   return (
-    <div className="bg-slate-50 rounded p-2 text-xs">
-      <span className="text-slate-400">{label}</span>
-      <p className="font-medium text-slate-700 mt-0.5">{value}</p>
+    <div className="bg-[#1C1917] rounded p-2 text-xs">
+      <span className="text-white/40">{label}</span>
+      <p className="font-medium text-[#e8e2d4] mt-0.5">{value}</p>
     </div>
   );
 }
@@ -165,36 +165,36 @@ function RingSpecSection({
     ukuran || jenis || ukiran || (keterangan && keterangan.length > 0);
   if (!hasData) return null;
   return (
-    <div className="rounded-lg bg-slate-50 p-3 space-y-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+    <div className="rounded-lg bg-[#1C1917] p-3 space-y-1.5">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
         {title}
       </p>
       <div className="grid grid-cols-2 gap-1.5 text-xs">
         {ukuran && (
           <div>
-            <span className="text-slate-400">Ukuran</span>
-            <p className="font-semibold text-slate-700">{ukuran}</p>
+            <span className="text-white/40">Ukuran</span>
+            <p className="font-semibold text-[#e8e2d4]">{ukuran}</p>
           </div>
         )}
         {jenis && (
           <div>
-            <span className="text-slate-400">Jenis</span>
-            <p className="font-semibold text-slate-700">{jenis}</p>
+            <span className="text-white/40">Jenis</span>
+            <p className="font-semibold text-[#e8e2d4]">{jenis}</p>
           </div>
         )}
       </div>
       {ukiran && (
         <div className="text-xs">
-          <span className="text-slate-400">Ukiran</span>
-          <p className="font-mono font-semibold text-slate-700">{ukiran}</p>
+          <span className="text-white/40">Ukiran</span>
+          <p className="font-mono font-semibold text-[#e8e2d4]">{ukiran}</p>
         </div>
       )}
       {keterangan && keterangan.length > 0 && (
         <div className="text-xs">
-          <span className="text-slate-400">Keterangan</span>
+          <span className="text-white/40">Keterangan</span>
           <ul className="mt-0.5 space-y-0.5">
             {keterangan.map((k, _i) => (
-              <li key={_i} className="text-slate-600">
+              <li key={_i} className="text-white/40">
                 {"\u2022"} {k}
               </li>
             ))}
@@ -230,17 +230,17 @@ export default function OrderDetailPopup({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-xl bg-white shadow-xl"
+        className="relative w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-xl bg-[#2a2522] shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-5 py-4 rounded-t-xl">
+        <div className="sticky top-0 z-10 bg-[#2a2522] border-b border-slate-100 px-5 py-4 rounded-t-xl">
           <div className="flex items-center justify-between">
             <div className="min-w-0 pr-3">
-              <span className="font-mono text-xs font-semibold text-slate-500">
+              <span className="font-mono text-xs font-semibold text-white/40">
                 {orderNumber}
               </span>
-              <h3 className="text-sm font-semibold text-slate-800 mt-0.5 truncate">
+              <h3 className="text-sm font-semibold text-[#f0f4ff] mt-0.5 truncate">
                 {o?.customer_name || "Memuat..."}
               </h3>
               {o && (
@@ -257,7 +257,7 @@ export default function OrderDetailPopup({
             </div>
             <button
               onClick={onClose}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/40 hover:bg-slate-100"
             >
               <X className="h-5 w-5" />
             </button>
@@ -271,7 +271,7 @@ export default function OrderDetailPopup({
         ) : error ? (
           <div className="py-12 text-center">
             <AlertTriangle className="mx-auto h-8 w-8 text-rose-400 mb-2" />
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-white/40">
               {error instanceof Error ? error.message : "Gagal memuat"}
             </p>
           </div>
@@ -285,8 +285,8 @@ export default function OrderDetailPopup({
                   onClick={() => setTab(t)}
                   className={`px-3 py-2.5 text-xs font-medium border-b-2 transition-colors ${
                     tab === t
-                      ? "border-slate-800 text-slate-900"
-                      : "border-transparent text-slate-500 hover:text-slate-700"
+                      ? "border-slate-800 text-[#f0f4ff]"
+                      : "border-transparent text-white/40 hover:text-[#e8e2d4]"
                   }`}
                 >
                   {t === "info"
@@ -304,25 +304,25 @@ export default function OrderDetailPopup({
                 <>
                   {/* Customer */}
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">
                       Pelanggan
                     </p>
-                    <div className="rounded-lg bg-slate-50 p-3 space-y-1">
-                      <p className="text-sm font-semibold text-slate-800">
+                    <div className="rounded-lg bg-[#1C1917] p-3 space-y-1">
+                      <p className="text-sm font-semibold text-[#f0f4ff]">
                         {o.customer_name}
                       </p>
                       {o.customer_wa && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-white/40">
                           WhatsApp: {o.customer_wa}
                         </p>
                       )}
                       {o.customer_email && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-white/40">
                           Email: {o.customer_email}
                         </p>
                       )}
                       {o.customer_instagram && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-white/40">
                           Instagram: {o.customer_instagram}
                         </p>
                       )}
@@ -331,7 +331,7 @@ export default function OrderDetailPopup({
 
                   {/* Ring specs */}
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">
                       Spesifikasi Cincin
                     </p>
                     <div className="space-y-2">
@@ -368,7 +368,7 @@ export default function OrderDetailPopup({
                   {(o.reference_image_pria_url ||
                     o.reference_image_wanita_url) && (
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">
                         Foto Referensi
                       </p>
                       <div className="flex gap-2">
@@ -377,7 +377,7 @@ export default function OrderDetailPopup({
                             href={o.reference_image_pria_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="w-1/2 rounded-lg border border-blue-200 bg-blue-50 py-2 text-center text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                            className="w-1/2 rounded-lg border border-blue-200 bg-[#c9a227]/10 py-2 text-center text-xs font-medium text-[#e8e2d4] hover:bg-blue-100 transition-colors"
                           >
                             Referensi Pria ↗
                           </a>
@@ -387,7 +387,7 @@ export default function OrderDetailPopup({
                             href={o.reference_image_wanita_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="w-1/2 rounded-lg border border-blue-200 bg-blue-50 py-2 text-center text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                            className="w-1/2 rounded-lg border border-blue-200 bg-[#c9a227]/10 py-2 text-center text-xs font-medium text-[#e8e2d4] hover:bg-blue-100 transition-colors"
                           >
                             Referensi Wanita ↗
                           </a>
@@ -398,19 +398,19 @@ export default function OrderDetailPopup({
 
                   {/* Price */}
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">
                       Harga
                     </p>
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-slate-50 rounded p-2">
-                        <span className="text-slate-400">Total Harga</span>
-                        <p className="font-semibold text-slate-700">
+                      <div className="bg-[#1C1917] rounded p-2">
+                        <span className="text-white/40">Total Harga</span>
+                        <p className="font-semibold text-[#e8e2d4]">
                           {formatCurrency(o.harga)}
                         </p>
                       </div>
-                      <div className="bg-slate-50 rounded p-2">
-                        <span className="text-slate-400">DP</span>
-                        <p className="font-semibold text-slate-700">
+                      <div className="bg-[#1C1917] rounded p-2">
+                        <span className="text-white/40">DP</span>
+                        <p className="font-semibold text-[#e8e2d4]">
                           {formatCurrency(o.dp_amount)}
                         </p>
                       </div>
@@ -419,22 +419,22 @@ export default function OrderDetailPopup({
 
                   {/* Dates & event */}
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">
                       Tanggal & Acara
                     </p>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {o.tgl_order && (
-                        <div className="bg-slate-50 rounded p-2">
-                          <span className="text-slate-400">Tgl Order</span>
-                          <p className="font-medium text-slate-700">
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Tgl Order</span>
+                          <p className="font-medium text-[#e8e2d4]">
                             {formatDate(o.tgl_order)}
                           </p>
                         </div>
                       )}
-                      <div className="bg-slate-50 rounded p-2">
-                        <span className="text-slate-400">Deadline</span>
+                      <div className="bg-[#1C1917] rounded p-2">
+                        <span className="text-white/40">Deadline</span>
                         <p
-                          className={`font-medium ${o.deadline && new Date(o.deadline) < new Date() ? "text-rose-600" : "text-slate-700"}`}
+                          className={`font-medium ${o.deadline && new Date(o.deadline) < new Date() ? "text-rose-600" : "text-[#e8e2d4]"}`}
                         >
                           {formatDate(o.deadline)}
                         </p>
@@ -443,7 +443,7 @@ export default function OrderDetailPopup({
                           if (!dl) return null;
                           return (
                             <span
-                              className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${dl.isOverdue ? "bg-rose-50 text-rose-700 ring-rose-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200"}`}
+                              className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${dl.isOverdue ? "bg-rose-50 text-rose-700 ring-rose-200" : "bg-emerald-500/[0.08] text-emerald-300 ring-emerald-200"}`}
                             >
                               {dl.isOverdue
                                 ? `\u26a0 ${Math.abs(dl.daysRemaining)}h`
@@ -453,51 +453,51 @@ export default function OrderDetailPopup({
                         })()}
                       </div>
                       {o.tgl_acara && (
-                        <div className="bg-slate-50 rounded p-2">
-                          <span className="text-slate-400">Tgl Acara</span>
-                          <p className="font-medium text-slate-700">
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Tgl Acara</span>
+                          <p className="font-medium text-[#e8e2d4]">
                             {formatDate(o.tgl_acara)}
                           </p>
                         </div>
                       )}
                       {o.acara && (
-                        <div className="bg-slate-50 rounded p-2">
-                          <span className="text-slate-400">Acara</span>
-                          <p className="font-medium text-slate-700">
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Acara</span>
+                          <p className="font-medium text-[#e8e2d4]">
                             {o.acara}
                           </p>
                         </div>
                       )}
                       {o.kategori && (
-                        <div className="bg-slate-50 rounded p-2">
-                          <span className="text-slate-400">Kategori</span>
-                          <p className="font-medium text-slate-700 text-[10px] uppercase tracking-wider">
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Kategori</span>
+                          <p className="font-medium text-[#e8e2d4] text-[10px] uppercase tracking-wider">
                             {o.kategori}
                           </p>
                         </div>
                       )}
                       {o.jenis_cincin_features?.length ? (
-                        <div className="bg-slate-50 rounded p-2">
-                          <span className="text-slate-400">Adds-On</span>
-                          <p className="font-medium text-slate-700 break-words">
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Adds-On</span>
+                          <p className="font-medium text-[#e8e2d4] break-words">
                             {formatAddsOnList(o.jenis_cincin_features)}
                           </p>
                         </div>
                       ) : null}
                       {o.transfer_ke_bank && (
-                        <div className="bg-slate-50 rounded p-2">
-                          <span className="text-slate-400">
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">
                             Transfer ke Bank
                           </span>
-                          <p className="font-medium text-slate-700">
+                          <p className="font-medium text-[#e8e2d4]">
                             {o.transfer_ke_bank}
                           </p>
                         </div>
                       )}
                       {o.dari_artis_detail && (
-                        <div className="bg-slate-50 rounded p-2">
-                          <span className="text-slate-400">Dari Artis</span>
-                          <p className="font-medium text-slate-700">
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Dari Artis</span>
+                          <p className="font-medium text-[#e8e2d4]">
                             {o.dari_artis_detail}
                           </p>
                         </div>
@@ -508,26 +508,26 @@ export default function OrderDetailPopup({
                   {/* Shipping */}
                   {(o.pengiriman || o.alamat_pengiriman) && (
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">
                         Pengiriman
                       </p>
-                      <div className="rounded-lg bg-slate-50 p-3 space-y-1 text-xs">
+                      <div className="rounded-lg bg-[#1C1917] p-3 space-y-1 text-xs">
                         {o.pengiriman && o.pengiriman !== "Alamat Customer" && (
-                          <p className="font-medium text-slate-700">
+                          <p className="font-medium text-[#e8e2d4]">
                             {o.pengiriman}
                           </p>
                         )}
                         {(o.pengiriman === "Alamat Customer" || !o.pengiriman) && (
                           <>
                             {o.alamat_pengiriman && (
-                              <p className="text-slate-500">
+                              <p className="text-white/40">
                                 {o.alamat_pengiriman}
                               </p>
                             )}
                             {(o.kelurahan ||
                               o.kecamatan ||
                               o.kabupaten_kota) && (
-                              <p className="text-slate-500">
+                              <p className="text-white/40">
                                 {[
                                   o.kelurahan,
                                   o.kecamatan,
@@ -548,7 +548,7 @@ export default function OrderDetailPopup({
                   {/* Deliveries */}
                   {detail.deliveries.length > 0 && (
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">
                         Riwayat Pengiriman
                       </p>
                       <div className="space-y-2">
@@ -558,33 +558,33 @@ export default function OrderDetailPopup({
                             className="rounded-lg border border-slate-200 p-2.5 text-xs"
                           >
                             <div className="flex items-center justify-between mb-1">
-                              <span className="font-medium text-slate-700">
+                              <span className="font-medium text-[#e8e2d4]">
                                 {d.delivery_method}
                               </span>
                               <span
                                 className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
                                   d.status === "delivered"
-                                    ? "bg-emerald-100 text-emerald-700"
+                                    ? "bg-emerald-100 text-emerald-300"
                                     : d.status === "dispatched"
-                                      ? "bg-blue-100 text-blue-700"
-                                      : "bg-slate-100 text-slate-600"
+                                      ? "bg-blue-100 text-[#e8e2d4]"
+                                      : "bg-slate-100 text-white/40"
                                 }`}
                               >
                                 {d.status}
                               </span>
                             </div>
                             {d.courier_name && (
-                              <p className="text-slate-500">
+                              <p className="text-white/40">
                                 Kurir: {d.courier_name}
                               </p>
                             )}
                             {d.tracking_number && (
-                              <p className="text-slate-500">
+                              <p className="text-white/40">
                                 Resi: {d.tracking_number}
                               </p>
                             )}
                             {d.delivered_at && (
-                              <p className="text-slate-400">
+                              <p className="text-white/40">
                                 Diterima: {formatDateTime(d.delivered_at)}
                               </p>
                             )}
@@ -619,7 +619,7 @@ export default function OrderDetailPopup({
               {tab === "approvals" && (
                 <>
                   {detail.approvals.length === 0 ? (
-                    <p className="text-sm text-slate-400 text-center py-8">
+                    <p className="text-sm text-white/40 text-center py-8">
                       Belum ada riwayat persetujuan
                     </p>
                   ) : (
@@ -630,13 +630,13 @@ export default function OrderDetailPopup({
                           className="rounded-lg border border-slate-200 p-3 text-xs"
                         >
                           <div className="flex items-center justify-between mb-1">
-                            <span className="font-medium text-slate-700">
+                            <span className="font-medium text-[#e8e2d4]">
                               {getStageLabel(a.stage)}
                             </span>
                             <span
                               className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                                 a.decision === "approved"
-                                  ? "bg-emerald-100 text-emerald-700"
+                                  ? "bg-emerald-100 text-emerald-300"
                                   : "bg-rose-100 text-rose-700"
                               }`}
                             >
@@ -645,12 +645,12 @@ export default function OrderDetailPopup({
                                 : "Ditolak"}
                             </span>
                           </div>
-                          <p className="text-slate-500">
+                          <p className="text-white/40">
                             {a.users?.full_name || "\u2014"} &middot;{" "}
                             {formatDateTime(a.decided_at)}
                           </p>
                           {a.remarks && (
-                            <p className="text-slate-500 mt-1 italic">
+                            <p className="text-white/40 mt-1 italic">
                               &ldquo;{a.remarks}&rdquo;
                             </p>
                           )}

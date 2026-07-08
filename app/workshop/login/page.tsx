@@ -4,9 +4,10 @@ import { useState, useCallback, useEffect, useRef, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 import Image from "next/image";
-import { Loader2, Check, Delete, User, Lock, Eye, EyeOff, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Loader2, Check, Delete, User, Lock, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { getDashboardPath } from "@/lib/routes";
 
 type Step = "loading" | "workers" | "pin" | "setup" | "manual";
@@ -407,76 +408,69 @@ function WorkshopLoginContent() {
   const stageLabel = stage ? stage.replace(/_/g, " ") : null;
 
   return (
-    <>
-      <style>{`
-        .bgDust {
-          position: fixed; inset: 0; pointer-events: none; z-index: 0;
-          background:
-            linear-gradient(45deg, rgba(201, 162, 39, 0.06) 25%, transparent 25%, transparent 75%, rgba(201, 162, 39, 0.06) 75%),
-            linear-gradient(-45deg, rgba(201, 162, 39, 0.06) 25%, transparent 25%, transparent 75%, rgba(201, 162, 39, 0.06) 75%);
-          background-size: 80px 80px;
-          background-position: 0 0, 40px 40px;
-        }
-        .orbGold {
-          position: fixed; width: 520px; height: 520px; border-radius: 50%; pointer-events: none; z-index: 0;
-          background: radial-gradient(circle, rgba(201, 162, 39, 0.1) 0%, transparent 70%);
-          top: -160px; right: -100px;
-        }
-        .orbAccent {
-          position: fixed; width: 400px; height: 400px; border-radius: 50%; pointer-events: none; z-index: 0;
-          background: radial-gradient(circle, rgba(74, 31, 31, 0.06) 0%, transparent 70%);
-          bottom: -120px; left: 20%;
-        }
-        .orbWarm {
-          position: fixed; width: 300px; height: 300px; border-radius: 50%; pointer-events: none; z-index: 0;
-          background: radial-gradient(circle, rgba(201, 162, 39, 0.05) 0%, transparent 70%);
-          top: 40%; left: -60px;
-        }
-        .divider {
-          width: 48px; height: 1px; background: rgba(201, 162, 39, 0.4);
-          margin-bottom: 20px; position: relative;
-        }
-        .divider::after {
-          content: ""; position: absolute; top: 50%; left: 50%;
-          transform: translate(-50%, -50%) rotate(45deg);
-          width: 5px; height: 5px; background: #c9a227;
-          box-shadow: 0 0 10px rgba(201, 162, 39, 0.4), 0 0 24px rgba(201, 162, 39, 0.15);
-        }
-      `}</style>
+    <div className="fixed inset-0 flex items-center justify-center bg-[#1C1917] text-[#FAFAF9] font-[var(--font-dm-sans)]">
+        {/* Background - visible geometric pattern + orbs */}
+        <div className="fixed inset-0 z-0 pointer-events-none">
+          {/* Crosshatch geometric texture */}
+          <div className="absolute inset-0 opacity-40" style={{
+            background: `
+              linear-gradient(45deg, rgba(201, 162, 39, 0.12) 25%, transparent 25%, transparent 75%, rgba(201, 162, 39, 0.12) 75%),
+              linear-gradient(-45deg, rgba(201, 162, 39, 0.12) 25%, transparent 25%, transparent 75%, rgba(201, 162, 39, 0.12) 75%)`
+              , backgroundSize: '40px 40px', backgroundPosition: '0 0, 20px 20px'
+          }} />
+          <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full opacity-40 blur-[120px]" style={{ background: "radial-gradient(circle, rgba(201,162,39,.12) 0%, transparent 70%)" }} />
+          <div className="absolute bottom-[-160px] left-1/4 h-[480px] w-[480px] rounded-full opacity-30 blur-[100px]" style={{ background: "radial-gradient(circle, rgba(74,31,31,.08) 0%, transparent 70%)" }} />
+        </div>
 
-      <div className="fixed inset-0 flex items-center justify-center bg-[#15130f] text-[#e8e2d4] font-[var(--font-dm-sans)]">
-        {/* Background */}
-        <div className="bgDust" />
-        <div className="orbGold" />
-        <div className="orbAccent" />
-        <div className="orbWarm" />
+        {/* Back link - floating chip top-left */}
+        <Link
+          href="/"
+          className="absolute top-5 left-5 inline-flex items-center gap-1.5 text-xs text-white/35 bg-white/[0.04] border border-white/[0.07] rounded-full px-3.5 py-1.5 transition-all hover:text-[#e8e2d4] hover:bg-white/[0.07] hover:border-white/[0.12] z-20 no-underline"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Kembali
+        </Link>
 
-        {/* Main column */}
-        <div className="relative z-10 flex flex-col items-center w-full max-w-[540px] px-4 py-5 gap-y-2">
+        {/* Main content column */}
+        <div className="relative z-10 flex flex-col items-center w-full max-w-[580px] px-6 sm:px-12 pt-0 pb-6 sm:pt-0 sm:pb-8 gap-y-3 sm:gap-y-4">
           {/* Logo */}
-          <Image src="/logo.png" alt="KGJ" width={72} height={72} className="object-contain shrink-0 sm:w-24 sm:h-24" priority />
+          <Image src="/logo.png" alt="KGJ" width={80} height={80} className="w-36 h-36 sm:w-44 sm:h-44 md:w-52 md:h-52 object-contain shrink-0 -mt-8 sm:-mt-12" priority />
 
           {/* Brand title */}
-          <h1 className="font-[var(--font-dm-serif)] text-base sm:text-lg text-[#c9a227] tracking-[0.08em]">
+          <h1 className="font-[var(--font-dm-serif)] text-base sm:text-lg md:text-2xl text-[#c9a227] tracking-[0.1em]">
             Kotagede Jewellery
           </h1>
 
-          {/* Subtitle */}
-          <p className="text-[10px] sm:text-xs text-white/25 tracking-[0.15em] uppercase">Workshop Access Point</p>
+          {/* Gold filigree ornament */}
+          <div className="w-48 sm:w-56 h-4 opacity-60">
+            <svg viewBox="0 0 200 12" className="w-full h-full text-[#c9a227]" fill="none">
+              <line x1="0" y1="6" x2="72" y2="6" stroke="currentColor" strokeWidth="0.5" />
+              <path d="M72 6 Q80 0 88 6" stroke="currentColor" strokeWidth="0.5" />
+              <path d="M72 6 Q80 12 88 6" stroke="currentColor" strokeWidth="0.5" />
+              <polygon points="100,1.5 107,6 100,10.5 93,6" fill="currentColor" opacity="0.8" />
+              <path d="M112 6 Q120 0 128 6" stroke="currentColor" strokeWidth="0.5" />
+              <path d="M112 6 Q120 12 128 6" stroke="currentColor" strokeWidth="0.5" />
+              <line x1="128" y1="6" x2="200" y2="6" stroke="currentColor" strokeWidth="0.5" />
+            </svg>
+          </div>
 
-          {/* Stage info */}
-          {stageLabel && (
-            <div className="rounded-xl border border-[#c9a227]/[0.15] bg-[#c9a227]/[0.06] px-5 py-2.5 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#c9a227]/70">Akses Stage</p>
-              <p className="mt-0.5 text-sm font-medium text-[#e8e2d4] capitalize">{stageLabel}</p>
+           {/* Stage info */}
+           {stageLabel && (
+             <div className="rounded-xl border border-[#c9a227]/[0.15] bg-[#c9a227]/[0.06] px-5 py-2.5 text-center">
+               <p className="text-[10px] font-semibold uppercase tracking-wider text-[#c9a227]/70">Akses Stage</p>
+               <p className="mt-0.5 text-sm font-medium text-[#e8e2d4] capitalize">{stageLabel}</p>
+             </div>
+           )}
+
+           {/* Frosted glass card - gold border + true glassmorphism with inner border */}
+            <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-6 sm:px-8 md:px-10 py-5 sm:py-6 md:py-8 bg-[#1C1917]/40 backdrop-blur-[20px] relative shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_rgba(0,0,0,0.35)]">
+            {/* Inner 1px border for glass refraction */}
+            <div className="absolute inset-[1px] rounded-[19px] border border-white/[0.03] pointer-events-none" />
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+              <span className="rounded-full border border-[#c9a227]/40 bg-[#1C1917] px-4 py-0.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#c9a227]">
+                Workshop Access
+              </span>
             </div>
-          )}
-
-          {/* Gold divider */}
-          <div className="divider mt-1" />
-
-          {/* Frosted glass card */}
-          <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-6 sm:px-12 py-6 bg-[#15130f]/75 backdrop-blur-[20px] min-h-[320px] flex flex-col justify-center">
             {/* Worker select */}
             {step === "workers" && (
               <div>
@@ -610,7 +604,6 @@ function WorkshopLoginContent() {
           </p>
         </div>
       </div>
-    </>
   );
 }
 

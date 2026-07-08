@@ -126,6 +126,18 @@ export async function POST(request: Request) {
           { status: 403 },
         );
       }
+    } else if (role === "supervisor") {
+      // Role "supervisor": only operational_supervisor or production_supervisor
+      if (
+        userRoleName !== "operational_supervisor" &&
+        userRoleName !== "production_supervisor"
+      ) {
+        await supabase.auth.signOut();
+        return NextResponse.json(
+          { error: "Akun Anda bukan Supervisor (operational/production)." },
+          { status: 403 },
+        );
+      }
     } else {
       // Standard login roles: superadmin / customer_service / marketing
       if (!isLoginRole(userRoleName)) {
@@ -172,7 +184,7 @@ export async function POST(request: Request) {
           email: userData.email,
           fullName: userData.full_name,
           username: userData.username ?? null,
-          role: role === "management" ? "management" : userRoleName,
+          role: role === "management" ? "management" : role === "supervisor" ? "supervisor" : userRoleName,
           roleDetail: {
             id: roleProps.id,
             name: roleProps.name,

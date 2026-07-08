@@ -230,7 +230,7 @@ export default function LaporanPage() {
 
   return (
     <>
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-[#26211c]">
         <Sidebar role="superadmin" />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
@@ -443,7 +443,7 @@ export default function LaporanPage() {
                   {reports.map((report) => (
                     <div
                       key={report.id}
-                      className="px-6 py-4 hover:bg-gray-50/60 transition-colors"
+                      className="px-6 py-4 hover:bg-[#26211c]/60 transition-colors"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-4 min-w-0">

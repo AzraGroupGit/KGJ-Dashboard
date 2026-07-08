@@ -347,7 +347,7 @@ export default function InputOrderPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-[#26211c]">
         <Sidebar role="customer_service" />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header userEmail="" role="customer_service" />
@@ -362,7 +362,7 @@ export default function InputOrderPage() {
   // ── Render ─────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-[#26211c]">
       <Sidebar role="customer_service" />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail={user?.email || ""} role="customer_service" />
@@ -410,7 +410,7 @@ export default function InputOrderPage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-[#26211c]">
                     <tr>
                       {["No Order", "Nama Customer", "Tgl Order", "Deadline", "Harga", "Status Form", "Aksi"].map((h) => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
@@ -424,7 +424,7 @@ export default function InputOrderPage() {
                       </td></tr>
                     ) : (
                       orders.map((order) => (
-                        <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                        <tr key={order.id} className="hover:bg-[#26211c] transition-colors">
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className="font-mono text-sm font-medium text-indigo-600">{order.order_number}</span>
                             {order.transfer_ke_bank && (
@@ -492,7 +492,7 @@ export default function InputOrderPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Link Formulir (salin & kirim ke pelanggan):</label>
               <div className="flex gap-2">
-                <input type="text" readOnly value={getFormUrl(generatedOrder)} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-700 font-mono" />
+                <input type="text" readOnly value={getFormUrl(generatedOrder)} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-[#26211c] text-sm text-gray-700 font-mono" />
                 <button onClick={() => copyLink(generatedOrder)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${linkCopied ? "bg-green-600 text-white" : "bg-indigo-600 hover:bg-indigo-700 text-white"}`}>{linkCopied ? "Tersalin!" : "Salin"}</button>
               </div>
               <p className="text-xs text-gray-500 mt-1.5">Link ini bisa dilihat kembali melalui tombol salin di tabel order.</p>
@@ -557,7 +557,7 @@ export default function InputOrderPage() {
             <p className="text-xs text-amber-800">Yakin hapus draft? Semua perubahan yang belum disimpan akan hilang.</p>
             <div className="flex gap-2">
               <button onClick={() => { clearDraft(); setShowClearDraftConfirm(false); }} className="rounded px-3 py-1.5 text-[11px] font-medium bg-red-600 text-white hover:bg-red-700 transition-colors">Ya, Hapus</button>
-              <button onClick={() => setShowClearDraftConfirm(false)} className="rounded px-3 py-1.5 text-[11px] font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors">Batal</button>
+              <button onClick={() => setShowClearDraftConfirm(false)} className="rounded px-3 py-1.5 text-[11px] font-medium border border-slate-200 bg-white text-slate-600 hover:bg-[#26211c] transition-colors">Batal</button>
             </div>
           </div>
         )}

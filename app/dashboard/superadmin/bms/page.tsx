@@ -402,7 +402,7 @@ export default function DailyAnalysisPage() {
               className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
                 showAll
                   ? "text-white shadow-sm"
-                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+                  : "bg-white border border-gray-200 text-gray-600 hover:bg-[#26211c]"
               }`}
               style={showAll ? { background: P.purple } : undefined}
             >

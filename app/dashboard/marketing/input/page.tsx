@@ -327,7 +327,7 @@ export default function InputMarketingPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-[#26211c]">
         <Sidebar role="marketing" />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header userEmail={user?.email || ""} role="marketing" />
@@ -340,7 +340,7 @@ export default function InputMarketingPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-[#26211c]">
       <Sidebar role="marketing" />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail="marketing@company.com" role="marketing" />
@@ -431,7 +431,7 @@ export default function InputMarketingPage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-[#26211c]">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Tanggal
@@ -463,7 +463,7 @@ export default function InputMarketingPage() {
                   {marketingInputs.map((item) => {
                     const metrics = calculateMetrics(item);
                     return (
-                      <tr key={item.id} className="hover:bg-gray-50">
+                      <tr key={item.id} className="hover:bg-[#26211c]">
                         <td className="px-6 py-4 whitespace-nowrap text-gray-600">
                           {new Date(item.input_date).toLocaleDateString(
                             "id-ID",

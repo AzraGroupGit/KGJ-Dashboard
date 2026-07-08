@@ -11,6 +11,7 @@ import {
   MARKETING_ROUTES,
   SUPERVISOR_ROUTES,
   MANAGEMENT_ROUTES,
+  INTEGRATED_SYSTEM_ROUTES,
 } from "@/lib/routes";
 import {
   LayoutDashboard,
@@ -168,6 +169,66 @@ const menuItems: Record<string, MenuItem[]> = {
     { name: "Tugas", icon: "checklist", href: MANAGEMENT_ROUTES.TASKS },
     { name: "Riwayat", icon: "order", href: MANAGEMENT_ROUTES.HISTORY },
   ],
+  integrated_superadmin: [
+    {
+      name: "Dashboard",
+      icon: "dashboard",
+      href: INTEGRATED_SYSTEM_ROUTES.ADMIN,
+    },
+    {
+      name: "OPR-PRD",
+      icon: "oprprd",
+      submenu: [
+        {
+          name: "Dashboard",
+          icon: "dashboard",
+          href: INTEGRATED_SYSTEM_ROUTES.ADMIN_OPRPRD,
+        },
+        {
+          name: "Monitoring OPR-PRD",
+          icon: "monitor",
+          href: INTEGRATED_SYSTEM_ROUTES.ADMIN_OPRPRD_MONITORING,
+        },
+        {
+          name: "Analisis Kinerja",
+          icon: "analisis",
+          href: INTEGRATED_SYSTEM_ROUTES.ADMIN_OPRPRD_ANALISIS,
+        },
+        {
+          name: "Laporan",
+          icon: "report",
+          href: INTEGRATED_SYSTEM_ROUTES.ADMIN_OPRPRD_LAPORAN,
+        },
+      ],
+    },
+  ],
+  integrated_supervisor: [
+    {
+      name: "Dashboard",
+      icon: "dashboard",
+      href: INTEGRATED_SYSTEM_ROUTES.SUPERVISOR,
+    },
+    {
+      name: "Persetujuan",
+      icon: "approval",
+      href: INTEGRATED_SYSTEM_ROUTES.SUPERVISOR_PERSETUJUAN,
+    },
+    {
+      name: "Bottleneck",
+      icon: "scan",
+      href: INTEGRATED_SYSTEM_ROUTES.SUPERVISOR_BOTTLENECK,
+    },
+    {
+      name: "Monitoring",
+      icon: "monitor",
+      href: INTEGRATED_SYSTEM_ROUTES.SUPERVISOR_MONITORING,
+    },
+    {
+      name: "QR Code",
+      icon: "qr",
+      href: INTEGRATED_SYSTEM_ROUTES.SUPERVISOR_QR_CODES,
+    },
+  ],
 };
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -276,8 +337,8 @@ export default function Sidebar({ role }: { role: string }) {
               transition-all duration-200 group
               ${
                 submenuActive
-                  ? "bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-600"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-indigo-600"
+                  ? "bg-gradient-to-r from-[#c9a227]/10 to-[#c9a227]/10 text-[#c9a227]"
+                  : "text-[#e8e2d4] hover:bg-[#2a2522]/[0.04] hover:text-[#c9a227]"
               }
               ${isCollapsed ? "justify-center" : ""}
             `}
@@ -286,8 +347,8 @@ export default function Sidebar({ role }: { role: string }) {
             <span
               className={`${
                 submenuActive
-                  ? "text-indigo-600"
-                  : "text-gray-500 group-hover:text-indigo-600"
+                  ? "text-[#c9a227]"
+                  : "text-white/40 group-hover:text-[#c9a227]"
               } transition-colors flex-shrink-0`}
             >
               {iconMap[item.icon as keyof typeof iconMap] || iconMap.dashboard}
@@ -297,19 +358,19 @@ export default function Sidebar({ role }: { role: string }) {
                 <span className="text-sm font-medium whitespace-nowrap flex-1 text-left">
                   {item.name}
                 </span>
-                <span className="flex-shrink-0 text-gray-400">
+                <span className="flex-shrink-0 text-white/30">
                   {isExpanded ? iconMap.chevronDown : iconMap.chevronRight}
                 </span>
               </>
             )}
             {submenuActive && !isCollapsed && (
-              <div className="ml-auto w-1.5 h-1.5 bg-indigo-600 rounded-full"></div>
+              <div className="ml-auto w-1.5 h-1.5 bg-[#c9a227] rounded-full"></div>
             )}
           </button>
 
           {/* Submenu Items */}
           {!isCollapsed && isExpanded && (
-            <div className="ml-4 pl-4 border-l-2 border-gray-200 space-y-1 mb-1">
+            <div className="ml-4 pl-4 border-l-2 border-[#c9a227]/10 space-y-1 mb-1">
               {item.submenu!.map((subItem, subIndex) => {
                 const isSubActive = subItem.href && pathname === subItem.href;
                 return (
@@ -321,16 +382,16 @@ export default function Sidebar({ role }: { role: string }) {
                       transition-all duration-200 group
                       ${
                         isSubActive
-                          ? "bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-600 shadow-sm"
-                          : "text-gray-500 hover:bg-gray-50 hover:text-indigo-600"
+                          ? "bg-gradient-to-r from-[#c9a227]/10 to-[#c9a227]/10 text-[#c9a227] shadow-sm"
+                          : "text-white/40 hover:bg-[#2a2522]/[0.04] hover:text-[#c9a227]"
                       }
                     `}
                   >
                     <span
                       className={`${
                         isSubActive
-                          ? "text-indigo-600"
-                          : "text-gray-400 group-hover:text-indigo-600"
+                          ? "text-[#c9a227]"
+                          : "text-white/30 group-hover:text-[#c9a227]"
                       } transition-colors flex-shrink-0`}
                     >
                       {iconMap[subItem.icon as keyof typeof iconMap] ||
@@ -340,7 +401,7 @@ export default function Sidebar({ role }: { role: string }) {
                       {subItem.name}
                     </span>
                     {isSubActive && (
-                      <div className="ml-auto w-1.5 h-1.5 bg-indigo-600 rounded-full"></div>
+                      <div className="ml-auto w-1.5 h-1.5 bg-[#c9a227] rounded-full"></div>
                     )}
                   </Link>
                 );
@@ -362,8 +423,8 @@ export default function Sidebar({ role }: { role: string }) {
           transition-all duration-200 group
           ${
             isActive
-              ? "bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-600 shadow-sm"
-              : "text-gray-600 hover:bg-gray-50 hover:text-indigo-600"
+              ? "bg-gradient-to-r from-[#c9a227]/10 to-[#c9a227]/10 text-[#c9a227] shadow-sm"
+              : "text-[#e8e2d4] hover:bg-[#2a2522]/[0.04] hover:text-[#c9a227]"
           }
           ${isCollapsed ? "justify-center" : ""}
         `}
@@ -372,8 +433,8 @@ export default function Sidebar({ role }: { role: string }) {
         <span
           className={`${
             isActive
-              ? "text-indigo-600"
-              : "text-gray-500 group-hover:text-indigo-600"
+              ? "text-[#c9a227]"
+              : "text-white/40 group-hover:text-[#c9a227]"
           } transition-colors flex-shrink-0`}
         >
           {iconMap[item.icon as keyof typeof iconMap] || iconMap.dashboard}
@@ -384,7 +445,7 @@ export default function Sidebar({ role }: { role: string }) {
           </span>
         )}
         {isActive && !isCollapsed && (
-          <div className="ml-auto w-1.5 h-1.5 bg-indigo-600 rounded-full"></div>
+          <div className="ml-auto w-1.5 h-1.5 bg-[#c9a227] rounded-full"></div>
         )}
       </Link>
     );
@@ -403,38 +464,38 @@ export default function Sidebar({ role }: { role: string }) {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed top-3 left-3 z-50 md:hidden h-10 w-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center shadow-md"
+        className="fixed top-3 left-3 z-50 md:hidden h-10 w-10 bg-[#1C1917] border border-[#c9a227]/10 rounded-xl flex items-center justify-center shadow-md"
         aria-label="Buka menu"
       >
-        <Menu className="w-5 h-5 text-gray-600" />
+        <Menu className="w-5 h-5 text-[#e8e2d4]" />
       </button>
 
       <aside
         ref={sidebarRef}
         className={`
-          fixed top-0 left-0 z-50 h-full bg-white flex flex-col overflow-hidden
+          fixed top-0 left-0 z-50 h-full bg-[#1C1917] flex flex-col overflow-hidden
           transform transition-transform duration-300 ease-in-out
           md:sticky md:top-0 md:translate-x-0 md:flex-shrink-0
           ${isCollapsed ? "md:w-20" : "md:w-64"}
           w-72
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
-          border-r border-gray-200 shadow-xl md:shadow-none
+          border-r border-[#c9a227]/10 shadow-xl md:shadow-none
         `}
       >
         {/* Mobile close */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 md:hidden">
-          <span className="text-sm font-bold text-gray-800">Menu</span>
+        <div className="flex items-center justify-between h-16 px-4 border-b border-[#c9a227]/10 md:hidden">
+          <span className="text-sm font-bold text-[#f0f4ff]">Menu</span>
           <button
             onClick={() => setMobileOpen(false)}
-            className="p-2 -mr-2 rounded-lg hover:bg-gray-100"
+            className="p-2 -mr-2 rounded-lg hover:bg-[#2a2522]/[0.04]"
           >
-            <X className="w-5 h-5 text-gray-600" />
+            <X className="w-5 h-5 text-[#e8e2d4]" />
           </button>
         </div>
 
         {/* Logo Section */}
         <div
-          className={`h-24 flex items-center border-b border-gray-200 ${
+          className={`h-24 flex items-center border-b border-[#c9a227]/10 ${
             isCollapsed ? "px-4 justify-center" : "px-6"
           }`}
         >
@@ -451,10 +512,10 @@ export default function Sidebar({ role }: { role: string }) {
             </div>
             {!isCollapsed && (
               <div className="min-w-0">
-                <h2 className="text-base font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent whitespace-nowrap">
+                <h2 className="text-base font-bold bg-gradient-to-r from-[#e8e2d4] to-[#c9a227] bg-clip-text text-transparent whitespace-nowrap">
                   KGJ Dashboard
                 </h2>
-                <p className="text-sm font-semibold text-gray-600 whitespace-nowrap">
+                <p className="text-sm font-semibold text-[#e8e2d4] whitespace-nowrap">
                   ERP System
                 </p>
               </div>
@@ -474,13 +535,13 @@ export default function Sidebar({ role }: { role: string }) {
               isCollapsed ? "justify-center" : "gap-3"
             }`}
           >
-            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <Info className="w-4 h-4 text-gray-500" />
+            <div className="w-8 h-8 bg-[#2a2522]/[0.04] rounded-full flex items-center justify-center flex-shrink-0">
+              <Info className="w-4 h-4 text-white/40" />
             </div>
             {!isCollapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-500">Need help?</p>
-                <p className="text-xs font-medium text-gray-700">
+                <p className="text-xs text-white/40">Need help?</p>
+                <p className="text-xs font-medium text-[#e8e2d4]">
                   Support Center
                 </p>
               </div>
@@ -492,7 +553,7 @@ export default function Sidebar({ role }: { role: string }) {
       {/* Collapse toggle — outside aside to avoid sticky stacking context */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="hidden md:flex fixed z-50 w-8 h-8 bg-white border border-gray-200 rounded-full items-center justify-center shadow-md hover:shadow-lg transition-all duration-200"
+        className="hidden md:flex fixed z-50 w-8 h-8 bg-[#1C1917] border border-[#c9a227]/10 rounded-full items-center justify-center shadow-md hover:shadow-lg transition-all duration-200"
         style={{
           left: buttonLeft ?? (isCollapsed ? 67 : 243),
           top: headerBottom != null ? headerBottom - 14 : 84,
@@ -500,7 +561,7 @@ export default function Sidebar({ role }: { role: string }) {
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         <ChevronLeft
-          className={`w-5 h-5 text-gray-600 transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`}
+          className={`w-5 h-5 text-[#e8e2d4] transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`}
         />
       </button>
     </>

@@ -50,6 +50,8 @@ interface MonitoringStats {
   productionCount: number;
   operationalCount: number;
   submissionsToday: number;
+  ordersCreatedToday: number;
+  ordersCompletedToday: number;
   pendingApprovals: number;
 }
 
@@ -123,7 +125,7 @@ function StatCard({
 }) {
   const toneMap = {
     slate: {
-      bg: "bg-slate-50",
+      bg: "bg-[#26211c]",
       icon: "text-slate-500",
       ring: "ring-slate-200",
     },
@@ -247,7 +249,7 @@ export default function SupervisorMonitoringPage() {
   }, [filter, availableKeys]);
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50">
+    <div className="flex flex-col md:flex-row h-screen bg-[#26211c]">
       <Sidebar
         role="supervisor"
         isOpen={sidebarOpen}
@@ -310,7 +312,7 @@ export default function SupervisorMonitoringPage() {
               <button
                 onClick={() => refetch()}
                 disabled={isRefetching}
-                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 sm:px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60 whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 sm:px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-[#26211c] disabled:opacity-60 whitespace-nowrap"
               >
                 <RefreshCw
                   className={`h-3.5 w-3.5 ${isRefetching ? "animate-spin" : ""}`}
@@ -328,13 +330,40 @@ export default function SupervisorMonitoringPage() {
               <p className="text-sm font-medium text-slate-700">{error instanceof Error ? error.message : "Terjadi kesalahan"}</p>
               <button
                 onClick={() => refetch()}
-                className="mt-4 rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px]"
+                className="mt-4 rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-[#26211c] min-h-[44px]"
               >
                 Coba lagi
               </button>
             </div>
           ) : !data ? null : (
             <div className="space-y-4 sm:space-y-6">
+              {/* Hari Ini */}
+              <div>
+                <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 mb-2">
+                  Hari Ini
+                </h3>
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  <StatCard
+                    label="Masuk"
+                    value={data.stats.ordersCreatedToday}
+                    icon={Activity}
+                    tone="blue"
+                  />
+                  <StatCard
+                    label="Keluar"
+                    value={data.stats.ordersCompletedToday}
+                    icon={CheckCircle2}
+                    tone="emerald"
+                  />
+                  <StatCard
+                    label="Dalam Proses"
+                    value={data.stats.totalActive}
+                    icon={Clock}
+                    tone="amber"
+                  />
+                </div>
+              </div>
+
               {/* Stats */}
               <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 <StatCard
@@ -391,7 +420,7 @@ export default function SupervisorMonitoringPage() {
                               ? "bg-slate-800 text-white"
                               : tab.count > 0
                                 ? "bg-slate-100 text-slate-700"
-                                : "bg-slate-50 text-slate-400"
+                                : "bg-[#26211c] text-slate-400"
                           }`}
                         >
                           {tab.count}
@@ -437,7 +466,7 @@ export default function SupervisorMonitoringPage() {
                               setDetailOrderId(order.id);
                               setDetailOrderNumber(order.order_number);
                             }}
-                            className="w-full text-left rounded-lg border border-slate-200 bg-white p-3 sm:p-4 active:bg-slate-50 transition-colors hover:border-slate-300"
+                            className="w-full text-left rounded-lg border border-slate-200 bg-white p-3 sm:p-4 active:bg-[#26211c] transition-colors hover:border-slate-300"
                           >
                             <div className="flex items-start justify-between gap-2 mb-1.5">
                               <div className="min-w-0">
@@ -490,7 +519,7 @@ export default function SupervisorMonitoringPage() {
                             setDetailOrderId(order.id);
                             setDetailOrderNumber(order.order_number);
                           }}
-                          className="w-full text-left rounded-lg border border-slate-200 bg-white p-3 sm:p-4 active:bg-slate-50 transition-colors hover:border-slate-300"
+                          className="w-full text-left rounded-lg border border-slate-200 bg-white p-3 sm:p-4 active:bg-[#26211c] transition-colors hover:border-slate-300"
                         >
                           <div className="flex items-start justify-between gap-2 mb-1.5">
                             <div className="min-w-0">
@@ -545,7 +574,7 @@ export default function SupervisorMonitoringPage() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-slate-100 bg-slate-50/70">
+                          <tr className="border-b border-slate-100 bg-[#26211c]/70">
                             <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                               Order / Customer
                             </th>
@@ -603,7 +632,7 @@ export default function SupervisorMonitoringPage() {
                                 <tr
                                   key={order.id}
                                   onClick={() => { setDetailOrderId(order.id); setDetailOrderNumber(order.order_number); }}
-                                  className="hover:bg-slate-50/60 transition-colors cursor-pointer"
+                                  className="hover:bg-[#26211c]/60 transition-colors cursor-pointer"
                                 >
                                   <td className="px-4 py-3">
                                     <span className="font-mono text-xs font-semibold text-slate-800">{order.order_number}</span>
@@ -652,7 +681,7 @@ export default function SupervisorMonitoringPage() {
                               <tr
                                 key={order.id}
                                 onClick={() => { setDetailOrderId(order.id); setDetailOrderNumber(order.order_number); }}
-                                className="hover:bg-slate-50/60 transition-colors cursor-pointer"
+                                className="hover:bg-[#26211c]/60 transition-colors cursor-pointer"
                               >
                                 <td className="px-4 py-3">
                                   <span className="font-mono text-xs font-semibold text-slate-800">{order.order_number}</span>

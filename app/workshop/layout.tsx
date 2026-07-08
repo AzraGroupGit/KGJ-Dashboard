@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function WorkshopLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-stone-50 font-sans antialiased">
+    <div className="min-h-screen bg-stone-50 font-sans antialiased flex flex-col">
       {/* Subtle texture overlay */}
       <div
         className="fixed inset-0 pointer-events-none opacity-[0.015]"
@@ -19,12 +19,12 @@ export default function WorkshopLayout({ children }: { children: React.ReactNode
       />
 
       {/* Main content */}
-      <main className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 py-4 sm:py-6">
+      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pb-4 pt-1 sm:px-6 sm:pb-6 sm:pt-2">
         {children}
       </main>
 
       {/* Footer branding */}
-      <footer className="relative z-10 pb-3 text-center">
+      <footer className="relative z-10 mt-auto pb-3 text-center">
         <p className="text-[11px] uppercase tracking-[0.2em] text-stone-300">
           Workshop Management System
         </p>

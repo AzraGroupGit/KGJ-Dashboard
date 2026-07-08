@@ -66,9 +66,9 @@ export default function BottleneckHeatmap() {
 
   if (!data) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-12 text-center">
+      <div className="rounded-lg border border-slate-200 bg-[#2a2522] p-12 text-center">
         <BarChart3 className="mx-auto mb-3 h-8 w-8 text-slate-300" />
-        <p className="text-sm text-slate-500">Belum ada data</p>
+        <p className="text-sm text-white/40">Belum ada data</p>
       </div>
     );
   }
@@ -80,7 +80,7 @@ export default function BottleneckHeatmap() {
   });
 
   function colorFor(count: number): string {
-    if (count === 0) return "bg-slate-50";
+    if (count === 0) return "bg-[#1C1917]";
     const intensity = maxCount > 0 ? count / maxCount : 0;
     if (intensity < 0.1) return "bg-sky-100";
     if (intensity < 0.25) return "bg-sky-200";
@@ -116,29 +116,29 @@ export default function BottleneckHeatmap() {
     <div className="space-y-6">
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="text-[10px] uppercase tracking-wide text-slate-500">
+        <div className="rounded-lg border border-slate-200 bg-[#2a2522] p-4">
+          <p className="text-[10px] uppercase tracking-wide text-white/40">
             Rentang Data
           </p>
-          <p className="mt-0.5 text-sm font-semibold text-slate-900">
+          <p className="mt-0.5 text-sm font-semibold text-[#f0f4ff]">
             {data.dateRange.from} — {data.dateRange.to}
           </p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="text-[10px] uppercase tracking-wide text-slate-500">
+        <div className="rounded-lg border border-slate-200 bg-[#2a2522] p-4">
+          <p className="text-[10px] uppercase tracking-wide text-white/40">
             Total Order-Hari
           </p>
-          <p className="mt-0.5 text-xl font-bold text-slate-900">
+          <p className="mt-0.5 text-xl font-bold text-[#f0f4ff]">
             {fmtCount(
               data.stageSummary.reduce((s, x) => s + x.totalOrderDays, 0),
             )}
           </p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="text-[10px] uppercase tracking-wide text-slate-500">
+        <div className="rounded-lg border border-slate-200 bg-[#2a2522] p-4">
+          <p className="text-[10px] uppercase tracking-wide text-white/40">
             Rata-rata Harian
           </p>
-          <p className="mt-0.5 text-xl font-bold text-slate-900">
+          <p className="mt-0.5 text-xl font-bold text-[#f0f4ff]">
             {data.stageSummary.length > 0
               ? (
                   data.stageSummary.reduce((s, x) => s + x.avgDailyOrders, 0) /
@@ -147,11 +147,11 @@ export default function BottleneckHeatmap() {
               : "0"}
           </p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="text-[10px] uppercase tracking-wide text-slate-500">
+        <div className="rounded-lg border border-slate-200 bg-[#2a2522] p-4">
+          <p className="text-[10px] uppercase tracking-wide text-white/40">
             Tahap Tersibak
           </p>
-          <p className="mt-0.5 text-sm font-semibold text-slate-900">
+          <p className="mt-0.5 text-sm font-semibold text-[#f0f4ff]">
             {data.stageSummary.length > 0
               ? data.stageSummary.reduce((a, b) =>
                   a.avgDailyOrders > b.avgDailyOrders ? a : b,
@@ -162,13 +162,13 @@ export default function BottleneckHeatmap() {
       </div>
 
       {/* Stage summary table */}
-      <section className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+      <section className="rounded-lg border border-slate-200 bg-[#2a2522] overflow-hidden">
         <header className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
-          <BarChart3 className="h-4 w-4 text-slate-400" />
-          <h2 className="text-sm font-semibold text-slate-900">
+          <BarChart3 className="h-4 w-4 text-white/40" />
+          <h2 className="text-sm font-semibold text-[#f0f4ff]">
             Ringkasan per Tahap
           </h2>
-          <span className="text-xs text-slate-400 ml-auto">
+          <span className="text-xs text-white/40 ml-auto">
             90 hari terakhir
           </span>
         </header>
@@ -176,19 +176,19 @@ export default function BottleneckHeatmap() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 text-xs">
-                <th className="px-5 py-2.5 text-left font-medium text-slate-500">
+                <th className="px-5 py-2.5 text-left font-medium text-white/40">
                   Tahap
                 </th>
-                <th className="px-3 py-2.5 text-right font-medium text-slate-500">
+                <th className="px-3 py-2.5 text-right font-medium text-white/40">
                   Order-Hari
                 </th>
-                <th className="px-3 py-2.5 text-right font-medium text-slate-500">
+                <th className="px-3 py-2.5 text-right font-medium text-white/40">
                   Rata-rata/hari
                 </th>
-                <th className="px-3 py-2.5 text-right font-medium text-slate-500">
+                <th className="px-3 py-2.5 text-right font-medium text-white/40">
                   Puncak
                 </th>
-                <th className="px-5 py-2.5 text-right font-medium text-slate-500">
+                <th className="px-5 py-2.5 text-right font-medium text-white/40">
                   Saat Ini
                 </th>
               </tr>
@@ -204,17 +204,17 @@ export default function BottleneckHeatmap() {
                 return (
                   <tr
                     key={s.stage}
-                    className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors"
+                    className="border-b border-slate-50 last:border-0 hover:bg-[#1C1917] transition-colors"
                   >
-                    <td className="px-5 py-2.5 text-xs font-medium text-slate-800">
+                    <td className="px-5 py-2.5 text-xs font-medium text-[#f0f4ff]">
                       {s.label}
                     </td>
-                    <td className="px-3 py-2.5 text-right text-xs text-slate-600">
+                    <td className="px-3 py-2.5 text-right text-xs text-white/40">
                       {fmtCount(s.totalOrderDays)}
                     </td>
                     <td className="px-3 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <span className="text-xs font-semibold text-slate-900">
+                        <span className="text-xs font-semibold text-[#f0f4ff]">
                           {s.avgDailyOrders.toFixed(1)}
                         </span>
                         <div className="w-12 h-1.5 rounded-full bg-slate-100 overflow-hidden">
@@ -225,7 +225,7 @@ export default function BottleneckHeatmap() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-2.5 text-right text-xs font-medium text-slate-700">
+                    <td className="px-3 py-2.5 text-right text-xs font-medium text-[#e8e2d4]">
                       {s.peakDailyOrders}
                     </td>
                     <td className="px-5 py-2.5 text-right">
@@ -233,7 +233,7 @@ export default function BottleneckHeatmap() {
                         className={`text-xs font-semibold ${
                           (data.currentCounts[s.stage] || 0) > s.avgDailyOrders * 1.5
                             ? "text-rose-600"
-                            : "text-slate-700"
+                            : "text-[#e8e2d4]"
                         }`}
                       >
                         {data.currentCounts[s.stage] || 0}
@@ -248,13 +248,13 @@ export default function BottleneckHeatmap() {
       </section>
 
       {/* Heatmap */}
-      <section className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+      <section className="rounded-lg border border-slate-200 bg-[#2a2522] overflow-hidden">
         <header className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
-          <TrendingUp className="h-4 w-4 text-slate-400" />
-          <h2 className="text-sm font-semibold text-slate-900">
+          <TrendingUp className="h-4 w-4 text-white/40" />
+          <h2 className="text-sm font-semibold text-[#f0f4ff]">
             Heatmap Kepadatan Order
           </h2>
-          <span className="text-xs text-slate-400 ml-auto">
+          <span className="text-xs text-white/40 ml-auto">
             Semakin pekat = semakin banyak order
           </span>
         </header>
@@ -267,7 +267,7 @@ export default function BottleneckHeatmap() {
                 {weekGroups.map((wg, wi) => (
                   <div
                     key={wi}
-                    className="text-[9px] text-slate-400 text-center font-medium"
+                    className="text-[9px] text-white/40 text-center font-medium"
                     style={{
                       flex: `${wg.endIdx - wg.startIdx + 1} 0 auto`,
                     }}
@@ -285,7 +285,7 @@ export default function BottleneckHeatmap() {
               return (
                 <div key={stage} className="flex items-center mb-0.5">
                   <div className="w-36 flex-shrink-0 pr-2">
-                    <span className="text-[10px] text-slate-600 leading-none block truncate">
+                    <span className="text-[10px] text-white/40 leading-none block truncate">
                       {getStageLabel(stage)}
                     </span>
                   </div>

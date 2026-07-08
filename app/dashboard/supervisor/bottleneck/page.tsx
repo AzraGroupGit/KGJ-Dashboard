@@ -90,7 +90,7 @@ function StatCard({
 }) {
   const toneMap = {
     slate: {
-      bg: "bg-slate-50",
+      bg: "bg-[#26211c]",
       icon: "text-slate-500",
       ring: "ring-slate-200",
     },
@@ -147,7 +147,9 @@ function BottleneckTableRow({
   const status = getStatusInfo(stage.avg_hours);
   const StatusIcon = status.Icon;
   const isProduction = stage.stage_group === "production";
-  const hasBottlenecks = stage.bottlenecks.length > 0;
+  const isApproval = stage.stage_group === "approval" || stage.stage.startsWith("approval_");
+  const displayItems = isApproval ? stage.orders : stage.bottlenecks;
+  const hasData = displayItems.length > 0;
 
   return (
     <>
@@ -158,7 +160,7 @@ function BottleneckTableRow({
             ? "bg-rose-50/30 hover:bg-rose-50/50"
             : status.label === "Lambat"
               ? "bg-amber-50/20 hover:bg-amber-50/40"
-              : "hover:bg-slate-50/60"
+              : "hover:bg-[#26211c]/60"
         }`}
       >
         <td className="px-4 py-3">
@@ -216,7 +218,7 @@ function BottleneckTableRow({
           </span>
         </td>
         <td className="px-2 py-3 text-center">
-          {hasBottlenecks &&
+          {hasData &&
             (isExpanded ? (
               <ChevronUp className="h-4 w-4 text-slate-400" />
             ) : (
@@ -225,8 +227,8 @@ function BottleneckTableRow({
         </td>
       </tr>
       {/* Expanded detail rows */}
-      {isExpanded && hasBottlenecks && (
-        <tr className="bg-slate-50/50">
+      {isExpanded && hasData && (
+        <tr className="bg-[#26211c]/50">
           <td colSpan={6} className="px-4 py-3">
             <div className="overflow-x-auto">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
@@ -245,7 +247,7 @@ function BottleneckTableRow({
                   </tr>
                 </thead>
                 <tbody>
-                  {stage.bottlenecks.map((item, idx) => (
+                  {displayItems.map((item, idx) => (
                     <tr
                       key={idx}
                       onClick={() => onOrderClick(item.order_id, item.order_number)}
@@ -320,8 +322,8 @@ function BottleneckTableRow({
           </td>
         </tr>
       )}
-      {isExpanded && !hasBottlenecks && (
-        <tr className="bg-slate-50/50">
+      {isExpanded && !hasData && (
+        <tr className="bg-[#26211c]/50">
           <td colSpan={6} className="px-4 py-3 text-center">
             <p className="text-xs text-slate-400">
               Tidak ada order terlambat signifikan
@@ -422,7 +424,11 @@ export default function SupervisorBottleneckPage() {
   };
 
   const filteredBn = data?.bottlenecks.filter((b) =>
-    filterGroup === "all" ? true : b.stage_group === filterGroup
+    filterGroup === "all"
+      ? true
+      : filterGroup === "approval"
+        ? b.stage_group === "approval" || b.stage.startsWith("approval_")
+        : b.stage_group === filterGroup
   ) || [];
 
   const criticalCount =
@@ -443,7 +449,7 @@ export default function SupervisorBottleneckPage() {
     filteredBn.reduce((s, b) => s + (b.waiting_orders || 0), 0) || 0;
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50">
+    <div className="flex flex-col md:flex-row h-screen bg-[#26211c]">
       <Sidebar
         role="supervisor"
         isOpen={sidebarOpen}
@@ -493,7 +499,7 @@ export default function SupervisorBottleneckPage() {
               <button
                 onClick={() => refetch()}
                 disabled={isRefetching}
-                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 sm:px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60 whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 sm:px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-[#26211c] disabled:opacity-60 whitespace-nowrap"
               >
                 <RefreshCw
                   className={`h-3.5 w-3.5 ${isRefetching ? "animate-spin" : ""}`}
@@ -511,7 +517,7 @@ export default function SupervisorBottleneckPage() {
               <p className="text-sm font-medium text-slate-700">{error instanceof Error ? error.message : "Terjadi kesalahan"}</p>
               <button
                 onClick={() => refetch()}
-                className="mt-4 rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px]"
+                className="mt-4 rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-[#26211c] min-h-[44px]"
               >
                 Coba lagi
               </button>
@@ -590,7 +596,7 @@ export default function SupervisorBottleneckPage() {
               <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
                 <button
                   onClick={() => setShowHeatmap(!showHeatmap)}
-                  className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
+                  className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-semibold text-slate-900 hover:bg-[#26211c] transition-colors"
                 >
                   <span>Heatmap Kepadatan Order (90 hari)</span>
                   <ChevronDown
@@ -608,22 +614,38 @@ export default function SupervisorBottleneckPage() {
 
               {/* Main table */}
               <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    Detail Per Tahap
-                  </h3>
-                  <div className="flex items-center gap-1">
-                    {(["all", "production", "operational"] as const).map((g) => (
+                <div className="border-b border-slate-100 px-5 py-3.5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      Detail Per Tahap
+                    </h3>
+                  </div>
+                  {/* Tabbed layout for grouping */}
+                  <div className="flex items-center gap-1 mt-3 border-b border-slate-200 overflow-x-auto -mx-5 px-5">
+                    {([
+                      { key: "all", label: "Semua Tahap" },
+                      { key: "production", label: "Produksi" },
+                      { key: "operational", label: "Operasional" },
+                      { key: "approval", label: "Approval" },
+                    ] as const).map((tab) => (
                       <button
-                        key={g}
-                        onClick={() => setFilterGroup(g)}
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                          filterGroup === g
-                            ? "bg-slate-800 text-white"
-                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        key={tab.key}
+                        onClick={() => setFilterGroup(tab.key as SupervisorGroup)}
+                        className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                          filterGroup === tab.key
+                            ? "border-slate-800 text-slate-900"
+                            : "border-transparent text-slate-500 hover:text-slate-700"
                         }`}
                       >
-                        {g === "all" ? "Semua" : g === "production" ? "Produksi" : "Operasional"}
+                        <span>{tab.label}</span>
+                        <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                          filterGroup === tab.key ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-700"
+                        }`}>
+                          {(() => {
+                            if (tab.key === "all") return data?.bottlenecks.length ?? 0;
+                            return data?.bottlenecks.filter((b) => b.stage_group === tab.key).length ?? 0;
+                          })()}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -643,7 +665,7 @@ export default function SupervisorBottleneckPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-slate-100 bg-slate-50/70">
+                        <tr className="border-b border-slate-100 bg-[#26211c]/70">
                           <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                             Tahap
                           </th>

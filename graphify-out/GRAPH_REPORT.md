@@ -1,15 +1,16 @@
-# Graph Report - .  (2026-07-02)
+# Graph Report - erp-system  (2026-07-03)
 
 ## Corpus Check
-- cluster-only mode — file stats not available
+- 253 files · ~203,721 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1387 nodes · 2362 edges · 100 communities (84 shown, 16 thin omitted)
+- 1387 nodes · 2359 edges · 98 communities (80 shown, 18 thin omitted)
 - Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 258 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `74c941bd`
+- Built from commit: `d3848f42`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -93,11 +94,9 @@
 - [[_COMMUNITY_Completion Estimation Component|Completion Estimation Component]]
 - [[_COMMUNITY_Address Autocomplete Utility|Address Autocomplete Utility]]
 - [[_COMMUNITY_Auth Proxy Middleware|Auth Proxy Middleware]]
-- [[_COMMUNITY_Bottleneck Heatmap Component|Bottleneck Heatmap Component]]
 - [[_COMMUNITY_Worker Selection Component|Worker Selection Component]]
 - [[_COMMUNITY_Slot Availability Logic|Slot Availability Logic]]
 - [[_COMMUNITY_Package Metadata|Package Metadata]]
-- [[_COMMUNITY_Approval Stage API|Approval Stage API]]
 - [[_COMMUNITY_Workshop Layout Wrapper|Workshop Layout Wrapper]]
 - [[_COMMUNITY_Font Selection Component|Font Selection Component]]
 - [[_COMMUNITY_Loading Splash Screen|Loading Splash Screen]]
@@ -140,11 +139,11 @@
 ## Hyperedges (group relationships)
 - **CI Pipeline Stages** — github_workflows_ci_job_typecheck, github_workflows_ci_job_lint, github_workflows_ci_job_test, github_workflows_ci_job_e2e [EXTRACTED 1.00]
 
-## Communities (100 total, 16 thin omitted)
+## Communities (98 total, 18 thin omitted)
 
 ### Community 0 - "Supervisor API Routes"
 Cohesion: 0.04
-Nodes (33): GET(), GET(), GET(), POST(), POST(), POST(), POST(), DELETE() (+25 more)
+Nodes (36): GET(), GET(), POST(), POST(), POST(), POST(), POST(), DELETE() (+28 more)
 
 ### Community 1 - "User and Branch Forms"
 Cohesion: 0.06
@@ -163,24 +162,24 @@ Cohesion: 0.11
 Nodes (34): CreateModal(), CreateModalProps, DeactivateModal(), DeactivateModalProps, DeleteModal(), DeleteModalProps, EditModal(), EditModalProps (+26 more)
 
 ### Community 5 - "Workshop Login Pages"
-Cohesion: 0.06
-Nodes (23): ROLE_CONFIGS, RoleConfig, Step, WorkerInfo, ALL_ROLES, AllRole, AppRole, AUTH_ONLY_PATHS (+15 more)
+Cohesion: 0.07
+Nodes (21): Step, WorkerInfo, ALL_ROLES, AllRole, AppRole, AUTH_ONLY_PATHS, canAccessPath(), CS_ROUTES (+13 more)
 
 ### Community 6 - "Client Session Management"
-Cohesion: 0.06
-Nodes (22): GET(), POST(), GET(), EXPERT_ROLES, EXPERT_STAGES, GET(), ROLE_DEFAULT_STAGE, GET() (+14 more)
+Cohesion: 0.04
+Nodes (44): GET(), POST(), POST(), ACTIVE_STAGES, GET(), StageBottleneck, GET(), POST() (+36 more)
 
 ### Community 7 - "Database Schema Definitions"
 Cohesion: 0.06
 Nodes (31): ActivityLogRow, ApprovalRow, ApprovalWithUser, AttachmentRow, BranchRow, CsInputRow, CsOrderRow, CsOrderWithUser (+23 more)
 
 ### Community 8 - "Data Normalization Utilities"
-Cohesion: 0.10
-Nodes (27): filterArr(), GET(), normalizeDariArtis(), normalizeLaser(), normalizeSumber(), PUBLIC_SELECT, PUT(), SOURCE_MAP (+19 more)
+Cohesion: 0.13
+Nodes (19): filterArr(), GET(), normalizeDariArtis(), normalizeLaser(), normalizeSumber(), PUBLIC_SELECT, PUT(), SOURCE_MAP (+11 more)
 
 ### Community 9 - "Superadmin QR API"
-Cohesion: 0.10
-Nodes (24): DELETE(), Params, PATCH(), PUT(), requireSuperadmin(), GET(), POST(), DELETE() (+16 more)
+Cohesion: 0.09
+Nodes (27): DELETE(), Params, PATCH(), PUT(), requireSuperadmin(), GET(), POST(), ALLOWED_TYPES (+19 more)
 
 ### Community 10 - "Expert Performance Analytics"
 Cohesion: 0.07
@@ -188,11 +187,11 @@ Nodes (18): AnalisisPage(), AnalystData, currentPeriod(), ExpertPerformance, Ord
 
 ### Community 11 - "User Administration API"
 Cohesion: 0.12
-Nodes (23): ALLOWED_TYPES, GET(), POST(), DELETE(), GET(), POST(), SKIP_NOTIFY_STATUSES, GET() (+15 more)
+Nodes (24): DELETE(), PATCH(), DELETE(), GET(), POST(), SKIP_NOTIFY_STATUSES, GET(), PUT() (+16 more)
 
 ### Community 12 - "Production Reporting API"
-Cohesion: 0.09
-Nodes (20): POST(), POST(), ACTIVE_STAGES, GET(), StageBottleneck, GET(), POST(), GET() (+12 more)
+Cohesion: 0.33
+Nodes (6): APPROVAL_STAGES, APPROVAL_TO_PRODUCTION_STAGE, GET(), OPERATIONAL_APPROVAL_STAGES, PRODUCTION_APPROVAL_STAGES, verifySupervisor()
 
 ### Community 13 - "BMS Role Management"
 Cohesion: 0.13
@@ -243,8 +242,8 @@ Cohesion: 0.16
 Nodes (16): GET(), getClientIP(), handleDeleteOrder(), handleEditWork(), handleReadOrder(), handleRejectOrder(), handleStartWork(), isValidAction() (+8 more)
 
 ### Community 25 - "Customer Stage Progress"
-Cohesion: 0.14
-Nodes (14): _prevInSequence(), CustomerTimeline(), StageProgressBar(), CUSTOMER_STAGE_SEQUENCE, getProgressPercent(), getStageIndex(), getStageLabel(), isStageCompleted() (+6 more)
+Cohesion: 0.12
+Nodes (15): GET(), _prevInSequence(), CustomerTimeline(), StageProgressBar(), CUSTOMER_STAGE_SEQUENCE, getProgressPercent(), getStageIndex(), getStageLabel() (+7 more)
 
 ### Community 26 - "Dashboard Activity Feed"
 Cohesion: 0.12
@@ -279,8 +278,8 @@ Cohesion: 0.13
 Nodes (8): ACTION_STYLES, AlertState, EMPTY_GENERATE_FORM, KelolaQRPage(), QRCodeCardProps, ROLE_GROUP_STYLES, ScanEvent, STAGE_LABELS
 
 ### Community 34 - "Supervisor Order Monitoring"
-Cohesion: 0.13
-Nodes (8): APPROVAL_STAGES, FilterTab, MonitoringData, MonitoringStats, OrderRow, STAGE_COLORS, FilterTab, SupervisorGroup
+Cohesion: 0.17
+Nodes (6): APPROVAL_STAGES, FilterTab, MonitoringData, MonitoringStats, OrderRow, STAGE_COLORS
 
 ### Community 35 - "Development Dependencies"
 Cohesion: 0.13
@@ -332,7 +331,7 @@ Nodes (4): Mode, Step, UserProfile, BrandHeaderProps
 
 ### Community 47 - "User Profile Modals"
 Cohesion: 0.20
-Nodes (4): HeaderProps, ProfileData, ProfileData, SettingsModalProps
+Nodes (5): HeaderProps, ProfileData, CollapseState, MenuItem, Notification
 
 ### Community 48 - "CI/CD Test Workflow"
 Cohesion: 0.20
@@ -355,8 +354,8 @@ Cohesion: 0.25
 Nodes (6): AlertState, buildTitle(), LaporanPage(), MONTH_NAMES, Report, ReportType
 
 ### Community 53 - "Mobile Navigation Sidebar"
-Cohesion: 0.22
-Nodes (6): iconMap, menuItems, SidebarProps, CollapseState, MenuItem, Notification
+Cohesion: 0.20
+Nodes (6): SlotCategory, SlotOverride, UserInfo, iconMap, menuItems, SidebarProps
 
 ### Community 54 - "Order Detail Popup"
 Cohesion: 0.28
@@ -371,8 +370,8 @@ Cohesion: 0.32
 Nodes (7): currentPeriod(), LaporanPage(), periodLabel(), ReportCard, REPORTS, ReportType, TONE_MAP
 
 ### Community 57 - "Bottleneck Monitoring Page"
-Cohesion: 0.32
-Nodes (3): BottleneckTableRow(), formatHours(), getStatusInfo()
+Cohesion: 0.21
+Nodes (6): BottleneckTableRow(), formatHours(), getStatusInfo(), BottleneckHeatmap(), fmtCount(), HeatmapData
 
 ### Community 58 - "Supervisor QR Codes"
 Cohesion: 0.25
@@ -399,8 +398,8 @@ Cohesion: 0.48
 Nodes (5): formatCurrency(), formatNumber(), formatPercentage(), GET(), toCSV()
 
 ### Community 64 - "Stage Visibility API"
-Cohesion: 0.29
-Nodes (6): APPROVAL_STAGES, APPROVAL_STAGES_ARRAY, APPROVAL_TO_PRODUCTION_STAGE, GET(), PRODUCTION_TO_APPROVAL_STAGE, SUPERVISOR_VISIBLE_STAGES
+Cohesion: 0.33
+Nodes (8): advanceOrder(), APPROVAL_GATE_MAP, getAttemptNumber(), hasAccess(), nextInSequence(), POST(), ROLE_STAGES, WORKER_STAGES
 
 ### Community 65 - "Customer Order History"
 Cohesion: 0.33
@@ -430,53 +429,37 @@ Nodes (5): fmtDate(), FONT_SRC, OrderFormPDF(), PDF_CACHE_BUST, s
 Cohesion: 0.33
 Nodes (4): OrderFormData, OrderFormDataPublic, OrderFormDataPublicSchema, OrderFormDataSchema
 
-### Community 73 - "Account Mapping API"
-Cohesion: 0.70
-Nodes (4): GET(), mapAccount(), POST(), verifySupervisorScope()
-
 ### Community 74 - "Personnel Management Page"
 Cohesion: 0.40
 Nodes (3): Assignment, PersonnelResponse, PersonnelUser
 
-### Community 75 - "Slot Management Page"
-Cohesion: 0.40
-Nodes (3): SlotCategory, SlotOverride, UserInfo
-
 ### Community 76 - "Completion Estimation Component"
 Cohesion: 0.50
 Nodes (4): EstimatedCompletion(), EstimatedCompletionProps, fmtDuration(), StageStat
-
-### Community 78 - "Auth Proxy Middleware"
-Cohesion: 0.60
-Nodes (4): config, fetchUserRoleName(), proxy(), resolveDashboardPath()
-
-### Community 79 - "Bottleneck Heatmap Component"
-Cohesion: 0.67
-Nodes (3): BottleneckHeatmap(), fmtCount(), HeatmapData
 
 ### Community 82 - "Package Metadata"
 Cohesion: 0.50
 Nodes (3): name, private, version
 
 ## Knowledge Gaps
-- **494 isolated node(s):** `PRODUCTION_ROLES`, `SUSUT_STAGES`, `QC_STAGES`, `ACTIVE_STAGES`, `StageBottleneck` (+489 more)
+- **494 isolated node(s):** `RoleConfig`, `ROLE_CONFIGS`, `PRODUCTION_ROLES`, `SUSUT_STAGES`, `QC_STAGES` (+489 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **16 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **18 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `createClient()` connect `Superadmin QR API` to `Supervisor API Routes`, `Client Session Management`, `Data Normalization Utilities`, `User Administration API`, `Production Reporting API`, `BMS Role Management`, `Order Action Handlers`, `Order Creation API`, `Scan Event Analytics`, `Stage Configuration API`, `Order Detail API`, `User Auth API`, `Monthly Insights API`, `CSV Export Utilities`, `Cycle Time Analytics`, `Weekly Activity API`, `Financial Formatting API`, `Stage Visibility API`, `Production Loss API`, `Order Grouping API`, `Module Activity API`, `Account Mapping API`, `Approval Stage API`?**
-  _High betweenness centrality (0.044) - this node is a cross-community bridge._
-- **Why does `getRoleProps()` connect `Production Reporting API` to `Supervisor API Routes`, `Stage Visibility API`, `Production Loss API`, `Order Creation API`, `Order Grouping API`, `Client Session Management`, `Module Activity API`, `Superadmin QR API`, `Stage Configuration API`, `User Administration API`, `Data Normalization Utilities`, `Account Mapping API`, `BMS Role Management`, `CSV Export Utilities`, `Approval Stage API`, `Cycle Time Analytics`, `Weekly Activity API`, `Financial Formatting API`?**
-  _High betweenness centrality (0.033) - this node is a cross-community bridge._
-- **Why does `createAdminClient()` connect `User Administration API` to `Supervisor API Routes`, `Client Session Management`, `Data Normalization Utilities`, `Superadmin QR API`, `Production Reporting API`, `BMS Role Management`, `Order Creation API`, `Order Status Lookup`, `Scan Event Analytics`, `Stage Configuration API`, `User Auth API`, `CSV Export Utilities`, `Cycle Time Analytics`, `Stage Visibility API`, `Production Loss API`, `Order Grouping API`, `Module Activity API`, `Account Mapping API`, `Approval Stage API`?**
-  _High betweenness centrality (0.015) - this node is a cross-community bridge._
+- **Why does `createClient()` connect `Superadmin QR API` to `Supervisor API Routes`, `Client Session Management`, `Data Normalization Utilities`, `User Administration API`, `Production Reporting API`, `BMS Role Management`, `Order Action Handlers`, `Customer Stage Progress`, `Order Creation API`, `Scan Event Analytics`, `Stage Configuration API`, `Order Detail API`, `User Auth API`, `Monthly Insights API`, `CSV Export Utilities`, `Cycle Time Analytics`, `Weekly Activity API`, `Financial Formatting API`, `Stage Visibility API`, `Production Loss API`, `Order Grouping API`, `Module Activity API`?**
+  _High betweenness centrality (0.048) - this node is a cross-community bridge._
+- **Why does `getRoleProps()` connect `Client Session Management` to `Supervisor API Routes`, `Stage Visibility API`, `Production Loss API`, `Order Creation API`, `Order Grouping API`, `Module Activity API`, `Superadmin QR API`, `Stage Configuration API`, `User Administration API`, `Data Normalization Utilities`, `Production Reporting API`, `BMS Role Management`, `CSV Export Utilities`, `Cycle Time Analytics`, `Weekly Activity API`, `Financial Formatting API`?**
+  _High betweenness centrality (0.032) - this node is a cross-community bridge._
+- **Why does `createAdminClient()` connect `User Administration API` to `Supervisor API Routes`, `Stage Visibility API`, `Production Loss API`, `Order Creation API`, `Order Grouping API`, `Client Session Management`, `Scan Event Analytics`, `Data Normalization Utilities`, `Superadmin QR API`, `Module Activity API`, `Stage Configuration API`, `Production Reporting API`, `User Auth API`, `BMS Role Management`, `Order Status Lookup`, `CSV Export Utilities`, `Cycle Time Analytics`, `Customer Stage Progress`?**
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **Are the 103 inferred relationships involving `createClient()` (e.g. with `GET()` and `GET()`) actually correct?**
   _`createClient()` has 103 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 85 inferred relationships involving `createAdminClient()` (e.g. with `GET()` and `GET()`) actually correct?**
   _`createAdminClient()` has 85 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 41 inferred relationships involving `getRoleProps()` (e.g. with `GET()` and `POST()`) actually correct?**
   _`getRoleProps()` has 41 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `PRODUCTION_ROLES`, `SUSUT_STAGES`, `QC_STAGES` to the rest of the system?**
+- **What connects `RoleConfig`, `ROLE_CONFIGS`, `PRODUCTION_ROLES` to the rest of the system?**
   _494 weakly-connected nodes found - possible documentation gaps or missing edges._

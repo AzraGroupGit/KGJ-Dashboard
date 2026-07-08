@@ -141,7 +141,7 @@ export default function CSDashboard() {
 
   if (isLoading || !user) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-[#26211c]">
         <Sidebar role="customer_service" />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header userEmail={user?.email || ""} role="customer_service" />
@@ -156,7 +156,7 @@ export default function CSDashboard() {
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-[#26211c]">
       <Sidebar role="customer_service" />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail={user.email} role="customer_service" />
@@ -268,7 +268,7 @@ export default function CSDashboard() {
                 </button>
               </div>
             ) : (
-              <div className="flex items-start gap-3 bg-gray-50 border border-gray-200 rounded-xl p-4">
+              <div className="flex items-start gap-3 bg-[#26211c] border border-gray-200 rounded-xl p-4">
                 <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
                   <CheckCircle className="w-4 h-4 text-gray-400" />
                 </div>
@@ -531,7 +531,7 @@ export default function CSDashboard() {
                     return (
                       <div
                         key={order.id}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-200"
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-[#26211c] transition-colors cursor-pointer border border-transparent hover:border-gray-200"
                         onClick={() => router.push(CS_ROUTES.INPUT_ORDER)}
                       >
                         <div

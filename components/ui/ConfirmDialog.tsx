@@ -21,8 +21,8 @@ interface ConfirmDialogProps {
 
 const variantConfig = {
   danger: {
-    iconBg: "bg-red-50",
-    iconColor: "text-red-600",
+    iconBg: "bg-red-500/[0.08]",
+    iconColor: "text-red-300",
     iconRing: "ring-red-100",
     confirmBg:
       "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800",
@@ -30,7 +30,7 @@ const variantConfig = {
     icon: <LogOut className="w-6 h-6" />,
   },
   warning: {
-    iconBg: "bg-yellow-50",
+    iconBg: "bg-yellow-500/[0.08]",
     iconColor: "text-yellow-600",
     iconRing: "ring-yellow-100",
     confirmBg:
@@ -39,12 +39,12 @@ const variantConfig = {
     icon: <AlertTriangle className="w-6 h-6" />,
   },
   info: {
-    iconBg: "bg-indigo-50",
-    iconColor: "text-indigo-600",
-    iconRing: "ring-indigo-100",
+    iconBg: "bg-[#c9a227]/10",
+    iconColor: "text-[#c9a227]",
+    iconRing: "ring-[#c9a227]/10",
     confirmBg:
       "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700",
-    confirmRing: "focus:ring-indigo-500",
+    confirmRing: "focus:ring-[#c9a227]",
     icon: <Info className="w-6 h-6" />,
   },
 };
@@ -98,7 +98,7 @@ export default function ConfirmDialog({
       />
 
       {/* Dialog */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-scale-in">
+      <div className="relative bg-[#2a2522] rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-scale-in">
         {/* Body */}
         <div className="p-6">
           <div className="flex items-start gap-4">
@@ -110,22 +110,22 @@ export default function ConfirmDialog({
             <div className="flex-1 min-w-0 pt-1">
               <h3
                 id="confirm-dialog-title"
-                className="text-base font-semibold text-gray-900 mb-1"
+                className="text-base font-semibold text-[#f0f4ff] mb-1"
               >
                 {title}
               </h3>
-              <p className="text-sm text-gray-500 leading-relaxed">{message}</p>
+              <p className="text-sm text-white/40 leading-relaxed">{message}</p>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-gray-50 flex items-center justify-end gap-2">
+        <div className="px-6 py-4 bg-[#1C1917] flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={onCancel}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-1"
+            className="px-4 py-2 text-sm font-medium text-[#e8e2d4] bg-[#2a2522] border border-[#c9a227]/10 rounded-lg hover:bg-[#1C1917] hover:border-[#c9a227]/15 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-1"
           >
             {cancelText}
           </button>

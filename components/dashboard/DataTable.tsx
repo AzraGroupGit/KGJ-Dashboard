@@ -70,9 +70,9 @@ export default function DataTable({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-wrap gap-4">
-        <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+    <div className="bg-[#2a2522] rounded-xl shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-[#c9a227]/10 flex justify-between items-center flex-wrap gap-4">
+        <h3 className="text-lg font-semibold text-[#f0f4ff]">{title}</h3>
         <div className="flex gap-3">
           {onSearch && (
             <div className="relative">
@@ -84,9 +84,9 @@ export default function DataTable({
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="pl-10 pr-4 py-2 border border-[#c9a227]/15 rounded-lg focus:ring-2 focus:ring-[#c9a227] focus:border-transparent"
               />
-              <Search className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-2.5 w-5 h-5 text-white/30" />
             </div>
           )}
           {onExport && (
@@ -103,26 +103,26 @@ export default function DataTable({
 
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-[#1C1917]">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-6 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider"
                 >
                   {column.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-[#c9a227]/10">
             {paginatedData.length > 0 ? (
               paginatedData.map((row, index) => (
-                <tr key={index} className="hover:bg-gray-50 transition-colors">
+                <tr key={index} className="hover:bg-[#1C1917] transition-colors">
                   {columns.map((column) => (
                     <td
                       key={column.key}
-                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                      className="px-6 py-4 whitespace-nowrap text-sm text-[#f0f4ff]"
                     >
                       {column.format
                         ? column.format(row[column.key])
@@ -135,7 +135,7 @@ export default function DataTable({
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="px-6 py-8 text-center text-gray-500"
+                  className="px-6 py-8 text-center text-white/40"
                 >
                   Tidak ada data yang ditemukan
                 </td>
@@ -147,8 +147,8 @@ export default function DataTable({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-          <div className="text-sm text-gray-600">
+        <div className="px-6 py-4 border-t border-[#c9a227]/10 flex justify-between items-center">
+          <div className="text-sm text-[#e8e2d4]">
             Menampilkan {startIndex + 1} -{" "}
             {Math.min(startIndex + itemsPerPage, filteredData.length)} dari{" "}
             {filteredData.length} data
@@ -157,7 +157,7 @@ export default function DataTable({
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              className="px-3 py-1 border border-[#c9a227]/15 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#1C1917]"
             >
               Previous
             </button>
@@ -166,7 +166,7 @@ export default function DataTable({
                 setCurrentPage(Math.min(totalPages, currentPage + 1))
               }
               disabled={currentPage === totalPages}
-              className="px-3 py-1 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              className="px-3 py-1 border border-[#c9a227]/15 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#1C1917]"
             >
               Next
             </button>

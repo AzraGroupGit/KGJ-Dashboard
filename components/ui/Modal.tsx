@@ -72,15 +72,15 @@ export default function Modal({
       {/* Modal card — flex column, capped height so footer never goes off-screen */}
       <div
         ref={modalRef}
-        className={`${sizes[size]} w-full bg-white rounded-xl shadow-xl flex flex-col max-h-[90vh] relative z-10`}
+        className={`${sizes[size]} w-full bg-[#2a2522] rounded-xl shadow-xl flex flex-col max-h-[90vh] relative z-10`}
       >
         {/* Header — never scrolls */}
-        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 flex-shrink-0">
-          <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
+        <div className="flex justify-between items-center px-6 py-4 border-b border-[#c9a227]/10 flex-shrink-0">
+          <h3 className="text-xl font-semibold text-[#f0f4ff]">{title}</h3>
           {showCloseButton && (
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-white/30 hover:text-[#e8e2d4] transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
@@ -92,7 +92,7 @@ export default function Modal({
 
         {/* Footer — pinned, never scrolls */}
         {footer && (
-          <div className="px-6 py-4 border-t border-gray-200 flex-shrink-0">
+          <div className="px-6 py-4 border-t border-[#c9a227]/10 flex-shrink-0">
             {footer}
           </div>
         )}

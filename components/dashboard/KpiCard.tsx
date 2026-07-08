@@ -91,13 +91,13 @@ export function KpiCards() {
       {/* Main KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Order Aktif */}
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100 hover:shadow-md transition-shadow">
+        <div className="bg-[#2a2522] rounded-xl shadow-sm p-5 border border-[#c9a227]/5 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">
+              <p className="text-sm font-medium text-white/40">
                 Total Order Aktif
               </p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
+              <p className="text-3xl font-bold text-[#f0f4ff] mt-1">
                 {data.totalOrdersAktif}
               </p>
             </div>
@@ -107,25 +107,25 @@ export function KpiCards() {
           </div>
           <div className="flex items-center justify-between mt-3">
             <div className="flex items-center gap-2">
-              <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
-              <p className="text-xs text-gray-500">Order dalam proses</p>
+              <span className="inline-block w-2 h-2 bg-[#c9a227]/100 rounded-full"></span>
+              <p className="text-xs text-white/40">Order dalam proses</p>
             </div>
             {trendIsPositive ? (
               <span className="text-xs text-green-600">
                 ↑ {data.trend.trendPercent}%
               </span>
             ) : (
-              <span className="text-xs text-red-600">
+              <span className="text-xs text-red-300">
                 ↓ {Math.abs(data.trend.trendPercent)}%
               </span>
             )}
           </div>
-          <div className="mt-2 pt-2 border-t border-gray-100">
+          <div className="mt-2 pt-2 border-t border-[#c9a227]/5">
             <div className="flex justify-between text-xs">
-              <span className="text-gray-400">
+              <span className="text-white/30">
                 Hari ini masuk: {data.additional.ordersHariIni}
               </span>
-              <span className="text-gray-400">
+              <span className="text-white/30">
                 Selesai: {data.additional.selesaiHariIni}
               </span>
             </div>
@@ -134,20 +134,20 @@ export function KpiCards() {
 
         {/* Card 2: Potensi Keterlambatan */}
         <div
-          className={`bg-white rounded-xl shadow-sm p-5 border transition-all ${
+          className={`bg-[#2a2522] rounded-xl shadow-sm p-5 border transition-all ${
             hasDelayWarning
               ? "border-orange-200 hover:shadow-md hover:border-orange-300"
-              : "border-gray-100 hover:shadow-md"
+              : "border-[#c9a227]/5 hover:shadow-md"
           }`}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">
+              <p className="text-sm font-medium text-white/40">
                 Potensi Keterlambatan
               </p>
               <p
                 className={`text-3xl font-bold mt-1 ${
-                  hasDelayWarning ? "text-orange-600" : "text-gray-900"
+                  hasDelayWarning ? "text-orange-600" : "text-[#f0f4ff]"
                 }`}
               >
                 {data.potensiKeterlambatan}
@@ -166,14 +166,14 @@ export function KpiCards() {
           <div className="flex items-center gap-2 mt-3">
             <span
               className={`inline-block w-2 h-2 rounded-full ${
-                hasDelayWarning ? "bg-orange-500 animate-pulse" : "bg-gray-400"
+                hasDelayWarning ? "bg-orange-500/[0.08]0 animate-pulse" : "bg-gray-400"
               }`}
             ></span>
             <p
               className={`text-xs ${
                 hasDelayWarning
                   ? "text-orange-600 font-medium"
-                  : "text-gray-500"
+                  : "text-white/40"
               }`}
             >
               {hasDelayWarning
@@ -182,8 +182,8 @@ export function KpiCards() {
             </p>
           </div>
           {data.additional.criticalRework > 0 && (
-            <div className="mt-2 pt-2 border-t border-gray-100">
-              <p className="text-xs text-red-500">
+            <div className="mt-2 pt-2 border-t border-[#c9a227]/5">
+              <p className="text-xs text-red-400">
                 🔴 {data.additional.criticalRework} critical rework
               </p>
             </div>
@@ -191,13 +191,13 @@ export function KpiCards() {
         </div>
 
         {/* Card 3: Nilai Barang WIP */}
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100 hover:shadow-md transition-shadow">
+        <div className="bg-[#2a2522] rounded-xl shadow-sm p-5 border border-[#c9a227]/5 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">
+              <p className="text-sm font-medium text-white/40">
                 Nilai Barang WIP
               </p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
+              <p className="text-2xl font-bold text-[#f0f4ff] mt-1">
                 {formatRupiah(data.nilaiBarangWIP.estimasiRupiah)}
               </p>
             </div>
@@ -208,19 +208,19 @@ export function KpiCards() {
           <div className="flex items-center gap-4 mt-3">
             <div className="flex items-center gap-1">
               <span className="text-yellow-500">🟡</span>
-              <span className="text-xs text-gray-600">
+              <span className="text-xs text-[#e8e2d4]">
                 {formatWeight(data.nilaiBarangWIP.beratEmas)}
               </span>
             </div>
             <div className="flex items-center gap-1">
               <span className="text-blue-500">💎</span>
-              <span className="text-xs text-gray-600">
+              <span className="text-xs text-[#e8e2d4]">
                 {data.nilaiBarangWIP.jumlahPermata} Permata
               </span>
             </div>
           </div>
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <p className="text-xs text-gray-400">
+          <div className="mt-2 pt-2 border-t border-[#c9a227]/5">
+            <p className="text-xs text-white/30">
               Rata-rata {data.nilaiBarangWIP.avgKarat}K • Harga: Rp{" "}
               {data.meta.hargaEmas24kPerGram.toLocaleString("id-ID")}/g (24K)
             </p>
@@ -229,7 +229,7 @@ export function KpiCards() {
 
         {/* Card 4: Rata-rata Cycle Time */}
         <div
-          className={`bg-white rounded-xl shadow-sm p-5 border transition-all ${
+          className={`bg-[#2a2522] rounded-xl shadow-sm p-5 border transition-all ${
             isOverCycle
               ? "border-red-200 hover:shadow-md hover:border-red-300"
               : "border-green-200 hover:shadow-md hover:border-green-300"
@@ -237,17 +237,17 @@ export function KpiCards() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">
+              <p className="text-sm font-medium text-white/40">
                 Rata-rata Cycle Time
               </p>
               <p
                 className={`text-3xl font-bold mt-1 ${
-                  isOverCycle ? "text-red-600" : "text-green-600"
+                  isOverCycle ? "text-red-300" : "text-green-600"
                 }`}
               >
                 {data.rataCycleTime.toFixed(1)}
               </p>
-              <p className="text-xs text-gray-400 mt-0.5">hari</p>
+              <p className="text-xs text-white/30 mt-0.5">hari</p>
             </div>
             <div
               className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm ${
@@ -263,20 +263,20 @@ export function KpiCards() {
           {/* Progress Bar */}
           <div className="mt-3">
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-gray-500">
+              <span className="text-white/40">
                 Target: {data.targetCycleTime} hari
               </span>
-              <span className={isOverCycle ? "text-red-600" : "text-green-600"}>
+              <span className={isOverCycle ? "text-red-300" : "text-green-600"}>
                 {isOverCycle
                   ? `+${(data.rataCycleTime - data.targetCycleTime).toFixed(1)}`
                   : `-${(data.targetCycleTime - data.rataCycleTime).toFixed(1)}`}{" "}
                 hari
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-[#332d29] rounded-full h-2">
               <div
                 className={`h-2 rounded-full transition-all duration-500 ${
-                  isOverCycle ? "bg-red-500" : "bg-green-500"
+                  isOverCycle ? "bg-red-500/[0.08]0" : "bg-[#c9a227]/100"
                 }`}
                 style={{
                   width: `${Math.min((data.rataCycleTime / data.targetCycleTime) * 100, 100)}%`,
@@ -286,8 +286,8 @@ export function KpiCards() {
           </div>
 
           {/* Completed count */}
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <p className="text-xs text-gray-400">
+          <div className="mt-2 pt-2 border-t border-[#c9a227]/5">
+            <p className="text-xs text-white/30">
               📊 {data.additional.completedCount} order selesai (30 hari)
             </p>
           </div>
@@ -296,13 +296,13 @@ export function KpiCards() {
 
       {/* Last Updated Indicator */}
       <div className="flex justify-end">
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-white/30">
           Terakhir diperbarui:{" "}
           {new Date(data.meta.generatedAt).toLocaleTimeString("id-ID")}
-          <span className="ml-2 text-gray-300">|</span>
+          <span className="ml-2 text-white/20">|</span>
           <button
             onClick={() => refetch()}
-            className="ml-2 text-blue-500 hover:text-blue-700 transition-colors"
+            className="ml-2 text-blue-500 hover:text-[#e8e2d4] transition-colors"
           >
             🔄 Refresh
           </button>
@@ -320,20 +320,20 @@ function KpiCardsSkeleton() {
         {[...Array(4)].map((_, index) => (
           <div
             key={index}
-            className="bg-white rounded-xl shadow-sm p-5 border border-gray-100"
+            className="bg-[#2a2522] rounded-xl shadow-sm p-5 border border-[#c9a227]/5"
           >
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="h-4 bg-gray-200 rounded w-2/3 mb-3 animate-pulse"></div>
+                <div className="h-4 bg-[#332d29] rounded w-2/3 mb-3 animate-pulse"></div>
                 <div className="h-8 bg-gray-300 rounded w-1/3 animate-pulse"></div>
               </div>
-              <div className="w-12 h-12 bg-gray-200 rounded-xl animate-pulse"></div>
+              <div className="w-12 h-12 bg-[#332d29] rounded-xl animate-pulse"></div>
             </div>
             <div className="mt-3">
-              <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+              <div className="h-3 bg-[#332d29] rounded w-1/2 animate-pulse"></div>
             </div>
-            <div className="mt-2 pt-2 border-t border-gray-100">
-              <div className="h-3 bg-gray-200 rounded w-full animate-pulse"></div>
+            <div className="mt-2 pt-2 border-t border-[#c9a227]/5">
+              <div className="h-3 bg-[#332d29] rounded w-full animate-pulse"></div>
             </div>
           </div>
         ))}
@@ -351,20 +351,20 @@ function KpiCardsError({
   onRetry: () => void;
 }) {
   return (
-    <div className="bg-red-50 rounded-xl border border-red-200 p-4">
+    <div className="bg-red-500/[0.08] rounded-xl border border-red-200 p-4">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-          <AlertTriangle className="w-5 h-5 text-red-600" />
+        <div className="w-10 h-10 bg-red-500/[0.12] rounded-lg flex items-center justify-center">
+          <AlertTriangle className="w-5 h-5 text-red-300" />
         </div>
         <div className="flex-1">
           <p className="text-sm font-medium text-red-800">
             Gagal memuat data KPI
           </p>
-          <p className="text-xs text-red-600 mt-0.5">{error}</p>
+          <p className="text-xs text-red-300 mt-0.5">{error}</p>
         </div>
         <button
           onClick={onRetry}
-          className="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200 transition-colors"
+          className="text-xs bg-red-500/[0.12] text-red-300 px-3 py-1.5 rounded-lg hover:bg-red-200 transition-colors"
         >
           Coba Lagi
         </button>

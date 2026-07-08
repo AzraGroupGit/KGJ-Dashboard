@@ -111,7 +111,7 @@ export default function MarketingDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-[#26211c]">
         <Sidebar role="marketing" />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header userEmail="marketing@company.com" role="marketing" />
@@ -128,7 +128,7 @@ export default function MarketingDashboard() {
   const channelMetrics = analytics?.channelMetrics || [];
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-[#26211c]">
       <Sidebar role="marketing" />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail="marketing@company.com" role="marketing" />
@@ -292,7 +292,7 @@ export default function MarketingDashboard() {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-[#26211c]">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Channel
@@ -310,7 +310,7 @@ export default function MarketingDashboard() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {channelMetrics.map((channel, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
+                      <tr key={idx} className="hover:bg-[#26211c]">
                         <td className="px-6 py-4 font-medium text-gray-900">
                           {channel.channel}
                         </td>
@@ -343,7 +343,7 @@ export default function MarketingDashboard() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-[#26211c]">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Tanggal
@@ -369,7 +369,7 @@ export default function MarketingDashboard() {
                   {marketingInputs.map((input) => {
                     const { crSerius } = calculateMetrics(input);
                     return (
-                      <tr key={input.id} className="hover:bg-gray-50">
+                      <tr key={input.id} className="hover:bg-[#26211c]">
                         <td className="px-6 py-4 text-gray-600">
                           {new Date(input.input_date).toLocaleDateString(
                             "id-ID",

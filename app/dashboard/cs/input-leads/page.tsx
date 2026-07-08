@@ -206,7 +206,7 @@ export default function InputLeadsPage() {
 
   if (isLoading && !user) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-[#26211c]">
         <Sidebar role="customer_service" />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header userEmail="" role="customer_service" />
@@ -219,7 +219,7 @@ export default function InputLeadsPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-[#26211c]">
       <Sidebar role="customer_service" />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail={user?.email || ""} role="customer_service" />
@@ -309,7 +309,7 @@ export default function InputLeadsPage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-[#26211c]">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Tanggal
@@ -351,7 +351,7 @@ export default function InputLeadsPage() {
                         return (
                           <tr
                             key={item.id}
-                            className={`hover:bg-gray-50 transition-colors ${isToday ? "bg-indigo-50/40" : ""}`}
+                            className={`hover:bg-[#26211c] transition-colors ${isToday ? "bg-indigo-50/40" : ""}`}
                           >
                             <td className="px-6 py-4 whitespace-nowrap text-gray-700">
                               {new Date(item.input_date).toLocaleDateString(
@@ -415,7 +415,7 @@ export default function InputLeadsPage() {
             size="md"
           >
             <div className="space-y-4">
-              <div className="bg-gray-50 rounded-lg p-3 mb-2">
+              <div className="bg-[#26211c] rounded-lg p-3 mb-2">
                 <p className="text-xs text-gray-500 uppercase tracking-wide">
                   Cabang & Tanggal
                 </p>

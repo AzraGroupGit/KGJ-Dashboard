@@ -108,10 +108,10 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const SCAN_ACTION_COLORS: Record<string, string> = {
-  open: "text-blue-500 bg-blue-50",
-  submit: "text-emerald-500 bg-emerald-50",
-  edit: "text-amber-500 bg-amber-50",
-  read: "text-slate-500 bg-slate-50",
+  open: "text-blue-500 bg-[#c9a227]/10",
+  submit: "text-emerald-500 bg-emerald-500/[0.08]",
+  edit: "text-amber-500 bg-[#c9a227]/10",
+  read: "text-white/40 bg-[#1C1917]",
   reject: "text-rose-500 bg-rose-50",
 };
 
@@ -250,15 +250,15 @@ function StageProgressBar({ currentStage }: { currentStage: string }) {
         <div className="relative w-full flex items-center">
           {globalI > 0 && (
             <div
-              className={`h-0.5 flex-1 ${isCompleted || isActive ? "bg-amber-500" : "bg-stone-200"}`}
+              className={`h-0.5 flex-1 ${isCompleted || isActive ? "bg-[#c9a227]/100" : "bg-stone-200"}`}
             />
           )}
           <div
             className={`h-2.5 w-2.5 rounded-full shrink-0 ring-2 ${
               isActive
-                ? "bg-amber-500 ring-amber-200 scale-125"
+                ? "bg-[#c9a227]/100 ring-amber-200 scale-125"
                 : isCompleted
-                  ? `${colors?.dot ?? "bg-amber-500"} ring-white`
+                  ? `${colors?.dot ?? "bg-[#c9a227]/100"} ring-white`
                   : "bg-stone-200 ring-white"
             } transition-all`}
           />
@@ -320,7 +320,7 @@ function TimelineDot({ item }: { item: TimelineItem }) {
       );
     case "scan": {
       const colorClass =
-        SCAN_ACTION_COLORS[item.action] ?? "text-slate-500 bg-slate-50";
+        SCAN_ACTION_COLORS[item.action] ?? "text-white/40 bg-[#1C1917]";
       return (
         <div
           className={`h-6 w-6 rounded-lg ${colorClass} flex items-center justify-center shrink-0 ring-2 ring-white`}
@@ -405,7 +405,7 @@ function TimelineContent({ item }: { item: TimelineItem }) {
             </p>
           )}
           {konfirmasiInfo && (
-            <p className="text-[11px] text-blue-700 mt-1 font-medium">
+            <p className="text-[11px] text-[#e8e2d4] mt-1 font-medium">
               {konfirmasiInfo}
             </p>
           )}
@@ -562,7 +562,7 @@ export default function StageTimeline({
                 <TimelineDot item={item} />
               </div>
               <div className="flex-1 min-w-0 pb-1">
-                <div className="rounded-lg border border-stone-100 bg-white p-2.5 shadow-sm">
+                <div className="rounded-lg border border-stone-100 bg-[#2a2522] p-2.5 shadow-sm">
                   <TimelineContent item={item} />
                 </div>
               </div>

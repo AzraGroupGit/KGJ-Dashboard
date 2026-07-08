@@ -57,7 +57,7 @@ const ACTION_STYLES: Record<string, { label: string; color: string }> = {
   open: { label: "Buka", color: "bg-blue-50 text-blue-700" },
   submit: { label: "Submit", color: "bg-green-50 text-green-700" },
   edit: { label: "Edit", color: "bg-yellow-50 text-yellow-700" },
-  read: { label: "Baca", color: "bg-gray-50 text-gray-700" },
+  read: { label: "Baca", color: "bg-[#26211c] text-gray-700" },
   delete: { label: "Hapus", color: "bg-red-50 text-red-700" },
   reject: { label: "Tolak", color: "bg-orange-50 text-orange-700" },
 };
@@ -402,7 +402,7 @@ export default function KelolaQRPage() {
           dot: "bg-emerald-500",
         }
       : {
-          bg: "bg-slate-50 text-slate-600 border-slate-200",
+          bg: "bg-[#26211c] text-slate-600 border-slate-200",
           label: "Nonaktif",
           dot: "bg-slate-400",
         };
@@ -420,7 +420,7 @@ export default function KelolaQRPage() {
   const getRoleGroupBadge = (group: string) => {
     const config = ROLE_GROUP_STYLES[group] || {
       label: group,
-      bg: "bg-gray-50",
+      bg: "bg-[#26211c]",
       border: "border-gray-200",
     };
     return (
@@ -435,7 +435,7 @@ export default function KelolaQRPage() {
   const getActionBadge = (action: string) => {
     const config = ACTION_STYLES[action] || {
       label: action,
-      color: "bg-gray-50 text-gray-700",
+      color: "bg-[#26211c] text-gray-700",
     };
     return (
       <span
@@ -479,7 +479,7 @@ export default function KelolaQRPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-[#26211c]">
         <Sidebar role="superadmin" />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
@@ -493,7 +493,7 @@ export default function KelolaQRPage() {
 
   return (
     <>
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-[#26211c]">
         <Sidebar role="superadmin" />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header userEmail={clientUser?.email ?? ""} role="superadmin" />
@@ -709,7 +709,7 @@ export default function KelolaQRPage() {
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50/80 border-b border-gray-100">
+                    <thead className="bg-[#26211c]/80 border-b border-gray-100">
                       <tr>
                         {["Waktu", "Workstation", "Order", "User", "Aksi"].map(
                           (header) => (
@@ -735,7 +735,7 @@ export default function KelolaQRPage() {
                         </tr>
                       ) : (
                         scanEvents.map((event) => (
-                          <tr key={event.id} className="hover:bg-gray-50/50">
+                          <tr key={event.id} className="hover:bg-[#26211c]/50">
                             <td className="px-5 py-3.5">
                               <div className="text-sm text-gray-700">
                                 {formatDate(event.scanned_at)}
@@ -900,7 +900,7 @@ export default function KelolaQRPage() {
 
             {/* Detail Info */}
             <div className="space-y-2.5 text-sm">
-              <div className="flex justify-between py-2 px-3 bg-gray-50 rounded-lg">
+              <div className="flex justify-between py-2 px-3 bg-[#26211c] rounded-lg">
                 <span className="text-gray-500">Workstation</span>
                 <span className="font-medium text-gray-800">
                   {selectedQR.workstation_name}
@@ -912,7 +912,7 @@ export default function KelolaQRPage() {
                   {selectedQR.role_name}
                 </span>
               </div>
-              <div className="flex justify-between py-2 px-3 bg-gray-50 rounded-lg">
+              <div className="flex justify-between py-2 px-3 bg-[#26211c] rounded-lg">
                 <span className="text-gray-500">Grup Role</span>
                 {getRoleGroupBadge(selectedQR.role_group || "")}
               </div>
@@ -934,7 +934,7 @@ export default function KelolaQRPage() {
                   <span className="text-gray-700">{selectedQR.location}</span>
                 </div>
               )}
-              <div className="py-2.5 px-3 bg-gray-50 rounded-lg">
+              <div className="py-2.5 px-3 bg-[#26211c] rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-500">Link QR</span>
                   <button
@@ -956,7 +956,7 @@ export default function KelolaQRPage() {
                 <span className="text-gray-500">Status</span>
                 {getStatusBadge(selectedQR)}
               </div>
-              <div className="flex justify-between py-2 px-3 bg-gray-50 rounded-lg">
+              <div className="flex justify-between py-2 px-3 bg-[#26211c] rounded-lg">
                 <span className="text-gray-500">Dibuat</span>
                 <span className="text-gray-700">
                   {formatDate(selectedQR.generated_at)}
@@ -1069,7 +1069,7 @@ function QRCodeCard({
         {/* Header dengan QR preview */}
         <div className="flex items-start gap-3 mb-4">
           {/* Icon QR sebagai ganti preview */}
-          <div className="flex-shrink-0 w-10 h-10 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center">
+          <div className="flex-shrink-0 w-10 h-10 bg-[#26211c] rounded-lg border border-gray-200 flex items-center justify-center">
             <QrCode className="w-5 h-5 text-gray-400" />
           </div>
 

@@ -200,7 +200,7 @@ function ModuleCard({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 border border-slate-100">
+            <div className="w-8 h-8 rounded-lg bg-[#26211c] flex items-center justify-center text-slate-500 border border-slate-100">
               {icon}
             </div>
             <div>
@@ -665,7 +665,7 @@ export default function SuperadminDashboard() {
                   return (
                     <div
                       key={a.id}
-                      className="relative flex items-start gap-3 pl-10 pr-6 py-3 hover:bg-slate-50/70 transition-colors group"
+                      className="relative flex items-start gap-3 pl-10 pr-6 py-3 hover:bg-[#26211c]/70 transition-colors group"
                     >
                       <div className="absolute left-6 top-0 bottom-0 flex flex-col items-center">
                         <span

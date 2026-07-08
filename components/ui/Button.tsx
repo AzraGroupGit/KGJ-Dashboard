@@ -44,19 +44,19 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     const variants = {
       primary:
-        "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-sm hover:shadow-md",
+        "bg-[#c9a227] hover:bg-[#d4ae3a] active:bg-indigo-800 text-white shadow-sm hover:shadow-md",
       secondary:
-        "bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-800",
+        "bg-[#332d29] hover:bg-gray-300 active:bg-gray-400 text-[#f0f4ff]",
       success:
         "bg-green-600 hover:bg-green-700 active:bg-green-800 text-white shadow-sm hover:shadow-md",
       danger:
         "bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-sm hover:shadow-md",
       warning:
-        "bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white shadow-sm hover:shadow-md",
+        "bg-yellow-500/[0.08]0 hover:bg-yellow-600 active:bg-yellow-700 text-white shadow-sm hover:shadow-md",
       outline:
-        "bg-transparent border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 active:bg-indigo-100",
+        "bg-transparent border-2 border-indigo-600 text-[#c9a227] hover:bg-[#c9a227]/10 active:bg-indigo-100",
       ghost:
-        "bg-transparent hover:bg-gray-100 active:bg-gray-200 text-gray-700",
+        "bg-transparent hover:bg-[#332d29] active:bg-[#332d29] text-[#e8e2d4]",
     };
 
     const sizes = {
@@ -71,7 +71,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       inline-flex items-center justify-center
       font-medium
       transition-all duration-200 ease-in-out
-      focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
+      focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#c9a227]
       disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none
       ${fullWidth ? "w-full" : ""}
       ${variants[variant]}
