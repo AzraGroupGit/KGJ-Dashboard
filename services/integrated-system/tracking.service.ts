@@ -1,33 +1,15 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  STAGE_SEQUENCE,
+  STAGE_LABELS,
+  type StageKey,
+} from "@/lib/stages";
 
-export const STAGE_SEQUENCE = [
-  "order_diterima",
-  "persiapan_bahan",
-  "racik_bahan",
-  "cetak",
-  "finishing",
-  "qc",
-  "packing",
-  "pengiriman",
-  "selesai",
-] as const;
-
-export type StageName = (typeof STAGE_SEQUENCE)[number];
-
-export const STAGE_LABELS: Record<StageName, string> = {
-  order_diterima: "Order Diterima",
-  persiapan_bahan: "Persiapan Bahan",
-  racik_bahan: "Racik Bahan",
-  cetak: "Cetak",
-  finishing: "Finishing",
-  qc: "QC",
-  packing: "Packing",
-  pengiriman: "Pengiriman",
-  selesai: "Selesai",
-};
+export { STAGE_SEQUENCE, STAGE_LABELS };
+export type StageName = StageKey;
 
 export function getStageIndex(stage: string): number {
-  return STAGE_SEQUENCE.indexOf(stage as StageName);
+  return STAGE_SEQUENCE.indexOf(stage as StageKey);
 }
 
 export function getProgressPercent(stage: string): number {
@@ -36,7 +18,7 @@ export function getProgressPercent(stage: string): number {
   return Math.round(((idx + 1) / STAGE_SEQUENCE.length) * 100);
 }
 
-export function getNextStage(current: string): StageName | null {
+export function getNextStage(current: string): StageKey | null {
   const idx = getStageIndex(current);
   if (idx < 0 || idx >= STAGE_SEQUENCE.length - 1) return null;
   return STAGE_SEQUENCE[idx + 1];
@@ -44,7 +26,7 @@ export function getNextStage(current: string): StageName | null {
 
 export async function updateOrderStage(
   orderId: string,
-  stage: StageName,
+  stage: StageKey,
   status: string,
   note: string | null,
   userId: string,

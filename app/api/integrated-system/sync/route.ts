@@ -20,8 +20,8 @@ export async function POST() {
       .limit(1);
 
     const since = lastSync?.[0]?.created_at
-      ? new Date(lastSync[0].created_at).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0];
+      ? new Date(lastSync[0].created_at).toISOString().replace("T", " ").split(".")[0]
+      : "2026-01-01 00:00:00";
 
     const result = await syncNewOrders(since);
 

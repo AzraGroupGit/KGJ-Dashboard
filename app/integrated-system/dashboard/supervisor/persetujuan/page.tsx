@@ -52,7 +52,7 @@ export default function SupervisorPersetujuanPage() {
 
   const handleReworkSubmit = async () => {
     if (!reworkOrder) return;
-    const currentStage = reworkOrder.tracking?.[0]?.current_stage ?? "order_diterima";
+    const currentStage = reworkOrder.tracking?.[0]?.current_stage ?? "penerimaan_order";
     const prevIdx = getStageIndex(currentStage);
     const target = reworkTargetStage || (prevIdx > 0 ? STAGE_SEQUENCE[prevIdx - 1] : currentStage);
     setSubmitting(reworkOrder.id); setError("");
@@ -148,7 +148,7 @@ export default function SupervisorPersetujuanPage() {
               <label className="block text-xs font-medium text-gray-600 mb-1">Target Stage</label>
               <select value={reworkTargetStage} onChange={(e) => setReworkTargetStage(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100">
                 {STAGE_SEQUENCE.map((s, idx) => {
-                  const currentIdx = getStageIndex(reworkOrder.tracking?.[0]?.current_stage ?? "order_diterima");
+                  const currentIdx = getStageIndex(reworkOrder.tracking?.[0]?.current_stage ?? "penerimaan_order");
                   if (idx > currentIdx && s !== "selesai") return null;
                   return <option key={s} value={s} disabled={s === reworkOrder.tracking?.[0]?.current_stage}>{STAGE_LABELS[s]} {s === reworkOrder.tracking?.[0]?.current_stage ? "(saat ini)" : idx < currentIdx ? "(mundur)" : ""}</option>;
                 })}

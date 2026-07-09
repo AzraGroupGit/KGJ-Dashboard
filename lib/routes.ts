@@ -138,7 +138,6 @@ export const MANAGEMENT_ROUTES = {
 
 export const INTEGRATED_SYSTEM_ROUTES = {
   ADMIN: "/integrated-system/dashboard/admin",
-  ADMIN_OPRPRD: "/integrated-system/dashboard/admin/oprprd",
   ADMIN_OPRPRD_MONITORING: "/integrated-system/dashboard/admin/oprprd/monitoring",
   ADMIN_OPRPRD_ANALISIS: "/integrated-system/dashboard/admin/oprprd/analisis",
   ADMIN_OPRPRD_LAPORAN: "/integrated-system/dashboard/admin/oprprd/laporan",

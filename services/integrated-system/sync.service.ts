@@ -1,6 +1,19 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const LIVE_SYSTEM_BASE_URL = process.env.LIVE_SYSTEM_BASE_URL || "";
+const LIVE_SYSTEM_API_KEY = process.env.INTEGRATED_SYSTEM_WEBHOOK_SECRET || "";
+
+function mapStatusToStage(idStatus: number | undefined): string {
+  switch (idStatus) {
+    case 9: return "penerimaan_order";
+    case 10: return "racik_bahan";
+    case 12: return "pembentukan_cincin";
+    case 24: return "finishing";
+    case 14: return "pengiriman";
+    case 15: return "selesai";
+    default: return "penerimaan_order";
+  }
+}
 
 interface SyncResult {
   synced: number;
@@ -12,11 +25,12 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
   const result: SyncResult = { synced: 0, skipped: 0, errors: 0 };
   const db = createAdminClient();
 
-  const sinceDate = since || new Date().toISOString().split("T")[0];
+  const sinceDate = since || "2026-01-01 00:00:00";
 
   try {
     const response = await fetch(
-      `${LIVE_SYSTEM_BASE_URL}/api/order-sync/new-orders?since=${sinceDate}`,
+      `${LIVE_SYSTEM_BASE_URL}/api/order-sync/new-orders?since=${encodeURIComponent(sinceDate)}`,
+      { headers: { "X-API-Key": LIVE_SYSTEM_API_KEY } },
     );
 
     if (!response.ok) {
@@ -26,7 +40,7 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
 
     const { orders } = await response.json() as {
       orders: Array<{
-        legacy_id: number;
+        id: number;
         kode_order: string;
         nama: string;
         email?: string;
@@ -55,7 +69,7 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
         const { data: inserted, error: insertError } = await db
           .from("legacy_orders")
           .insert({
-            legacy_id: order.legacy_id,
+            legacy_id: order.id,
             kode_order: order.kode_order,
             nama: order.nama,
             email: order.email ?? null,
@@ -77,7 +91,7 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
 
         const stage = order.tgl_selesai
           ? "selesai"
-          : "order_diterima";
+          : mapStatusToStage(order.id_status);
 
         await db.from("tracking_stages").insert({
           order_id: inserted.id,
