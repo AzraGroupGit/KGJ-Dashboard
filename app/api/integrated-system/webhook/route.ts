@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
     const { order } = payload as {
       order: {
-        legacy_id: number;
+        id: number;
         kode_order: string;
         nama: string;
         email?: string;
@@ -29,9 +29,9 @@ export async function POST(request: Request) {
       };
     };
 
-    if (!order?.kode_order || !order?.legacy_id) {
+    if (!order?.kode_order || !order?.id) {
       return NextResponse.json(
-        { error: "Payload tidak valid: kode_order dan legacy_id diperlukan" },
+        { error: "Payload tidak valid: kode_order dan id diperlukan" },
         { status: 400 },
       );
     }
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     const { data: inserted, error: insertError } = await db
       .from("legacy_orders")
       .insert({
-        legacy_id: order.legacy_id,
+            legacy_id: order.id,
         kode_order: order.kode_order,
         nama: order.nama,
         email: order.email ?? null,
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       ? "selesai"
       : order.id_status
         ? mapStatusToStage(order.id_status)
-        : "order_diterima";
+        : "penerimaan_order";
 
     await db.from("tracking_stages").insert({
       order_id: inserted.id,
@@ -110,16 +110,13 @@ export async function POST(request: Request) {
 }
 
 function mapStatusToStage(idStatus: number): string {
-  const mapping: Record<number, string> = {
-    1: "order_diterima",
-    2: "persiapan_bahan",
-    3: "racik_bahan",
-    4: "cetak",
-    5: "finishing",
-    6: "qc",
-    7: "packing",
-    8: "pengiriman",
-    9: "selesai",
-  };
-  return mapping[idStatus] ?? "order_diterima";
+  switch (idStatus) {
+    case 9: return "penerimaan_order";
+    case 10: return "racik_bahan";
+    case 12: return "pembentukan_cincin";
+    case 24: return "finishing";
+    case 14: return "pengiriman";
+    case 15: return "selesai";
+    default: return "penerimaan_order";
+  }
 }

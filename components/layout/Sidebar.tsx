@@ -180,11 +180,6 @@ const menuItems: Record<string, MenuItem[]> = {
       icon: "oprprd",
       submenu: [
         {
-          name: "Dashboard",
-          icon: "dashboard",
-          href: INTEGRATED_SYSTEM_ROUTES.ADMIN_OPRPRD,
-        },
-        {
           name: "Monitoring OPR-PRD",
           icon: "monitor",
           href: INTEGRATED_SYSTEM_ROUTES.ADMIN_OPRPRD_MONITORING,

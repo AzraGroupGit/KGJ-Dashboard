@@ -54,7 +54,7 @@ export default function SupervisorMonitoringPage() {
 
       <div className="space-y-2">
         {orders.map((o) => {
-          const stage = o.tracking?.[0]?.current_stage ?? "order_diterima";
+          const stage = o.tracking?.[0]?.current_stage ?? "penerimaan_order";
           const stageIdx = STAGE_SEQUENCE.indexOf(stage as StageName);
           const progressPercent = stageIdx >= 0 ? Math.round(((stageIdx + 1) / STAGE_SEQUENCE.length) * 100) : 0;
 

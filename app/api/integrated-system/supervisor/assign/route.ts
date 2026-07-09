@@ -80,7 +80,7 @@ export async function PUT(request: Request) {
     } else {
       await db.from("tracking_stages").insert({
         order_id: body.orderId,
-        current_stage: "order_diterima",
+        current_stage: "penerimaan_order",
         stage_status: "in_progress",
         assigned_to: body.workerId,
         updated_at: now,

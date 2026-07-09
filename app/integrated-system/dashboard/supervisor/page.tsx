@@ -10,7 +10,9 @@ import {
   ArrowLeft, RefreshCw,
 } from "lucide-react";
 
-const KANBAN_STAGES = ["order_diterima", "persiapan_bahan", "racik_bahan", "cetak", "finishing", "qc", "packing", "pengiriman", "selesai"];
+const KANBAN_STAGES = STAGE_SEQUENCE.filter(
+  (s) => !s.startsWith("approval_") && s !== "penerimaan_order",
+);
 
 interface OrderItem {
   id: string; kode_order: string; nama: string; tgl_order: string | null;
@@ -69,7 +71,7 @@ export default function SupervisorDashboard() {
 
   const handleApprove = async () => {
     if (!approvalOrder) return;
-    const currentStage = approvalOrder.tracking?.[0]?.current_stage ?? "order_diterima";
+    const currentStage = approvalOrder.tracking?.[0]?.current_stage ?? "penerimaan_order";
     const next = getNextStage(currentStage);
     if (!next) return;
     setSubmitting(approvalOrder.id); setError("");
@@ -90,7 +92,7 @@ export default function SupervisorDashboard() {
 
   const handleReworkSubmit = async () => {
     if (!reworkOrder) return;
-    const currentStage = reworkOrder.tracking?.[0]?.current_stage ?? "order_diterima";
+    const currentStage = reworkOrder.tracking?.[0]?.current_stage ?? "penerimaan_order";
     const prevIdx = getStageIndex(currentStage);
     const target = reworkTargetStage || (prevIdx > 0 ? STAGE_SEQUENCE[prevIdx - 1] : currentStage);
 
@@ -338,7 +340,7 @@ export default function SupervisorDashboard() {
             <p className="text-sm text-gray-600 mb-3">
               Lanjutkan dari <span className="font-medium">{STAGE_LABELS[approvalOrder.tracking?.[0]?.current_stage as keyof typeof STAGE_LABELS]}</span> ke{" "}
               <span className="font-medium text-emerald-700">
-                {STAGE_LABELS[getNextStage(approvalOrder.tracking?.[0]?.current_stage ?? "order_diterima") as keyof typeof STAGE_LABELS]}
+                {STAGE_LABELS[getNextStage(approvalOrder.tracking?.[0]?.current_stage ?? "penerimaan_order") as keyof typeof STAGE_LABELS]}
               </span>
               ?
             </p>
@@ -384,7 +386,7 @@ export default function SupervisorDashboard() {
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
               >
                 {STAGE_SEQUENCE.map((s, idx) => {
-                  const currentIdx = getStageIndex(reworkOrder.tracking?.[0]?.current_stage ?? "order_diterima");
+                  const currentIdx = getStageIndex(reworkOrder.tracking?.[0]?.current_stage ?? "penerimaan_order");
                   if (idx > currentIdx && s !== "selesai") return null;
                   return (
                     <option key={s} value={s} disabled={s === reworkOrder.tracking?.[0]?.current_stage}>

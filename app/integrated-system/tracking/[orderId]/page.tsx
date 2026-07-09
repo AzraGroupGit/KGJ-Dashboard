@@ -69,8 +69,8 @@ export default function OrderTrackingDetailPage({
           <AlertTriangle className="mx-auto h-8 w-8 text-amber-500" />
           <p className="mt-2 text-sm text-gray-600">Order tidak ditemukan</p>
           <Link
-            href="/integrated-system/orders"
-            className="mt-3 inline-block text-sm text-indigo-600 hover:underline"
+            href="/integrated-system/dashboard/admin"
+            className="mt-3 inline-block text-sm text-[#c9a227] hover:underline"
           >
             ← Kembali ke daftar order
           </Link>
@@ -80,17 +80,17 @@ export default function OrderTrackingDetailPage({
   }
 
   const { order, tracking, history } = data.data;
-  const currentStage = tracking?.current_stage ?? "order_diterima";
+  const currentStage = tracking?.current_stage ?? "penerimaan_order";
   const stageLabel =
     STAGE_LABELS[currentStage as keyof typeof STAGE_LABELS] ?? currentStage;
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <Link
-        href="/integrated-system/orders"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-indigo-600"
+        href="/integrated-system/dashboard/admin"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-white/40 hover:text-[#c9a227]"
       >
-        ← Kembali ke daftar order
+        ← Kembali ke dashboard
       </Link>
 
       <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
