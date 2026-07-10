@@ -8,8 +8,15 @@ export class ApiError extends Error {
   }
 }
 
+function handleUnauthorized() {
+  if (typeof window === "undefined") return;
+  ["userId", "userEmail", "userName", "userUsername", "userRole", "userRoleDetail", "userBranch"].forEach((k) => localStorage.removeItem(k));
+  window.location.href = "/login?from=integrated-system";
+}
+
 export async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(url);
+  if (res.status === 401) { handleUnauthorized(); throw new ApiError("Unauthorized", 401); }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new ApiError(body.error ?? body.message ?? "Gagal memuat data", res.status);
@@ -36,6 +43,7 @@ export async function mutator<T>(
           ? JSON.stringify(options.body)
           : undefined,
   });
+  if (res.status === 401) { handleUnauthorized(); throw new ApiError("Unauthorized", 401); }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new ApiError(body.error ?? body.message ?? "Gagal memproses", res.status);

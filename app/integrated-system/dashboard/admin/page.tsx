@@ -92,7 +92,7 @@ export default function AdminDashboard() {
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="rounded-xl border border-[#c9a227]/10 bg-[#2a2522] p-5 shadow-sm">
+            <div key={i} className="rounded-xl border border-[#c9a227]/10 bg-[#2a2522] p-4 shadow-sm">
               <div className="h-3 w-16 animate-pulse rounded bg-white/[0.04]" />
               <div className="mt-2 h-8 w-12 animate-pulse rounded bg-white/[0.06]" />
             </div>
@@ -119,7 +119,7 @@ export default function AdminDashboard() {
     <div className="p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-[#f0f4ff]">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-[#f0f4ff] tracking-tight">Dashboard</h1>
           <p className="mt-1 text-sm text-white/40">Overview order dari sistem live</p>
         </div>
         <div className="flex items-center gap-3">
@@ -140,24 +140,24 @@ export default function AdminDashboard() {
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
-        <div className="rounded-xl border border-[#c9a227]/10 bg-[#2a2522] p-5 shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-medium text-white/40"><Package className="h-3.5 w-3.5" />Total Order</div>
-          <p className="mt-1 text-2xl font-bold text-[#f0f4ff]">{totalOrders}</p>
+        <div className="rounded-xl border border-[#c9a227]/10 bg-[#2a2522] p-4 shadow-sm">
+          <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30"><Package className="h-3.5 w-3.5" />Total Order</div>
+          <p className="mt-1 text-xl font-bold text-[#f0f4ff]">{totalOrders}</p>
           <p className="mt-0.5 text-[11px] text-white/20">{hasFilters ? "Difilter" : "Semua periode"}</p>
         </div>
-        <div className="rounded-xl border border-[#c9a227]/20 bg-[#c9a227]/5 p-5 shadow-sm">
+        <div className="rounded-xl border border-[#c9a227]/20 bg-[#c9a227]/5 p-4 shadow-sm">
           <div className="flex items-center gap-2 text-xs font-medium text-[#c9a227]"><Play className="h-3.5 w-3.5" />In Progress</div>
-          <p className="mt-1 text-2xl font-bold text-[#d4ae3a]">{inProgress}</p>
+          <p className="mt-1 text-xl font-bold text-[#d4ae3a]">{inProgress}</p>
           <p className="mt-0.5 text-[11px] text-[#c9a227]/50">{totalOrders > 0 ? Math.round((inProgress / totalOrders) * 100) : 0}% dari total</p>
         </div>
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-5 shadow-sm">
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4 shadow-sm">
           <div className="flex items-center gap-2 text-xs font-medium text-emerald-400"><CheckCircle2 className="h-3.5 w-3.5" />Completed</div>
-          <p className="mt-1 text-2xl font-bold text-emerald-300">{completed}</p>
+          <p className="mt-1 text-xl font-bold text-emerald-300">{completed}</p>
           <p className="mt-0.5 text-[11px] text-emerald-500/50">{totalOrders > 0 ? Math.round((completed / totalOrders) * 100) : 0}% dari total</p>
         </div>
-        <div className="rounded-xl border border-[#c9a227]/10 bg-[#2a2522] p-5 shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-medium text-white/40"><RefreshCw className="h-3.5 w-3.5" />Ter-sync</div>
-          <p className="mt-1 text-2xl font-bold text-[#c9a227]">{totalSynced}</p>
+        <div className="rounded-xl border border-[#c9a227]/10 bg-[#2a2522] p-4 shadow-sm">
+          <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30"><RefreshCw className="h-3.5 w-3.5" />Ter-sync</div>
+          <p className="mt-1 text-xl font-bold text-[#c9a227]">{totalSynced}</p>
           <p className="mt-0.5 text-[11px] text-white/20">Sinkron terakhir</p>
         </div>
       </div>
@@ -176,14 +176,14 @@ export default function AdminDashboard() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Cari kode order atau nama..."
-            className="w-full rounded-lg border border-[#c9a227]/20 bg-[#2a2522] py-2 pl-9 pr-4 text-sm text-[#e8e2d4] placeholder:text-white/20 focus:border-[#c9a227]/40 focus:outline-none focus:ring-2 focus:ring-[#c9a227]/10"
+            className="w-full rounded-md border border-[#c9a227]/20 bg-[#2a2522] px-3 py-1.5 pl-8 text-xs text-[#e8e2d4] placeholder:text-white/20 focus:border-[#c9a227]/40 focus:outline-none focus:ring-2 focus:ring-[#c9a227]/10"
           />
         </div>
-        <select value={stageFilter} onChange={(e) => { setStageFilter(e.target.value); setPage(1); }} className="rounded-lg border border-[#c9a227]/20 bg-[#2a2522] px-3 py-2 text-sm text-[#e8e2d4] focus:border-[#c9a227]/40 focus:outline-none focus:ring-2 focus:ring-[#c9a227]/10">
+        <select value={stageFilter} onChange={(e) => { setStageFilter(e.target.value); setPage(1); }} className="rounded-md border border-[#c9a227]/20 bg-[#2a2522] px-2.5 py-1.5 text-xs text-[#e8e2d4] focus:border-[#c9a227]/40 focus:outline-none focus:ring-2 focus:ring-[#c9a227]/10">
           <option value="all">Semua Stage</option>
           {STAGE_SEQUENCE.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
         </select>
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="rounded-lg border border-[#c9a227]/20 bg-[#2a2522] px-3 py-2 text-sm text-[#e8e2d4] focus:border-[#c9a227]/40 focus:outline-none focus:ring-2 focus:ring-[#c9a227]/10">
+        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="rounded-md border border-[#c9a227]/20 bg-[#2a2522] px-2.5 py-1.5 text-xs text-[#e8e2d4] focus:border-[#c9a227]/40 focus:outline-none focus:ring-2 focus:ring-[#c9a227]/10">
           <option value="all">Semua Status</option>
           <option value="in_progress">In Progress</option>
           <option value="completed">Completed</option>
@@ -196,7 +196,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      <div className="mb-6 rounded-xl border border-[#c9a227]/10 bg-[#2a2522] p-5 shadow-sm">
+      <div className="mb-6 rounded-xl border border-[#c9a227]/10 bg-[#2a2522] p-4 shadow-sm">
         <h2 className="mb-4 text-sm font-semibold text-[#e8e2d4]">Distribusi Stage</h2>
         <div className="space-y-2.5">
           {stageEntries.map(({ stage, label, count }) => (
@@ -222,11 +222,11 @@ export default function AdminDashboard() {
           <table className="w-full">
             <thead className="border-b border-[#c9a227]/5">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/30 uppercase tracking-wider">Kode Order</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/30 uppercase tracking-wider">Pelanggan</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/30 uppercase tracking-wider">Tanggal</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/30 uppercase tracking-wider">Stage</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-white/30 uppercase tracking-wider">Status</th>
+                <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider">Kode Order</th>
+                <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider">Pelanggan</th>
+                <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider">Tanggal</th>
+                <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider">Stage</th>
+                <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c9a227]/5">
