@@ -195,16 +195,6 @@ export default function LoginPage() {
           background: radial-gradient(circle, rgba(201, 162, 39, 0.05) 0%, transparent 70%);
           top: 40%; left: -60px;
         }
-        .divider {
-          width: 48px; height: 1px; background: rgba(201, 162, 39, 0.4);
-          margin-bottom: 10px; position: relative;
-        }
-        .divider::after {
-          content: ""; position: absolute; top: 50%; left: 50%;
-          transform: translate(-50%, -50%) rotate(45deg);
-          width: 5px; height: 5px; background: #c9a227;
-          box-shadow: 0 0 10px rgba(201, 162, 39, 0.4), 0 0 24px rgba(201, 162, 39, 0.15);
-        }
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
@@ -250,8 +240,18 @@ export default function LoginPage() {
             Kotagede Jewellery
           </h1>
 
-          {/* Gold divider with diamond accent */}
-          <div className="divider mt-2 mb-1" />
+          {/* Gold filigree ornament */}
+          <div className="w-48 sm:w-56 h-4 opacity-50">
+            <svg viewBox="0 0 200 12" className="w-full h-full text-[#c9a227]" fill="none">
+              <line x1="0" y1="6" x2="72" y2="6" stroke="currentColor" strokeWidth="0.5" />
+              <path d="M72 6 Q80 0 88 6" stroke="currentColor" strokeWidth="0.5" />
+              <path d="M72 6 Q80 12 88 6" stroke="currentColor" strokeWidth="0.5" />
+              <polygon points="100,1.5 107,6 100,10.5 93,6" fill="currentColor" opacity="0.5" />
+              <path d="M112 6 Q120 0 128 6" stroke="currentColor" strokeWidth="0.5" />
+              <path d="M112 6 Q120 12 128 6" stroke="currentColor" strokeWidth="0.5" />
+              <line x1="128" y1="6" x2="200" y2="6" stroke="currentColor" strokeWidth="0.5" />
+            </svg>
+          </div>
 
           {/* Frosted glass card - gold border + true glassmorphism with inner border */}
           <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-5 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 bg-[#1C1917]/70 backdrop-blur-[20px] relative shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_rgba(0,0,0,0.35)]">

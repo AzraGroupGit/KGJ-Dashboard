@@ -407,7 +407,7 @@ function WorkshopLoginContent() {
               <line x1="0" y1="6" x2="72" y2="6" stroke="currentColor" strokeWidth="0.5" />
               <path d="M72 6 Q80 0 88 6" stroke="currentColor" strokeWidth="0.5" />
               <path d="M72 6 Q80 12 88 6" stroke="currentColor" strokeWidth="0.5" />
-              <polygon points="100,1.5 107,6 100,10.5 93,6" fill="currentColor" opacity="0.8" />
+              <polygon points="100,1.5 107,6 100,10.5 93,6" fill="currentColor" opacity="0.5" />
               <path d="M112 6 Q120 0 128 6" stroke="currentColor" strokeWidth="0.5" />
               <path d="M112 6 Q120 12 128 6" stroke="currentColor" strokeWidth="0.5" />
               <line x1="128" y1="6" x2="200" y2="6" stroke="currentColor" strokeWidth="0.5" />

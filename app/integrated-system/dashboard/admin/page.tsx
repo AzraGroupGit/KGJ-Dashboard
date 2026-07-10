@@ -5,11 +5,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api";
 import SyncStatus from "@/components/integrated-system/sync-status";
 import { STAGE_LABELS, STAGE_SEQUENCE } from "@/services/integrated-system/tracking.service";
-import Link from "next/link";
 import {
   RefreshCw, Loader2, Package, Play, CheckCircle2, Search, ChevronLeft, ChevronRight,
-  AlertTriangle, User,
+  AlertTriangle, User, X, Mail, Phone, MapPin,
 } from "lucide-react";
+import StageProgressBar from "@/components/integrated-system/stage-progress";
+import Timeline from "@/components/integrated-system/timeline";
 
 interface OrderItem {
   id: string; kode_order: string; nama: string; tgl_order: string | null; tgl_selesai: string | null;
@@ -66,6 +67,13 @@ export default function AdminDashboard() {
   const totalCount = monitoringData?.count ?? 0;
   const totalPages = Math.ceil(totalCount / 20);
   const hasFilters = search || stageFilter !== "all" || statusFilter !== "all";
+  const [popupOrderId, setPopupOrderId] = useState<string | null>(null);
+
+  const { data: popupData, isFetching: popupLoading } = useQuery<{ data: { order: { id: string; kode_order: string; nama: string; email: string | null; no_hp: string | null; alamat: string | null; tgl_order: string | null; tgl_selesai: string | null; catatan: string | null }; tracking: { current_stage: string; stage_status: string } | null; history: Array<{ id: string; stage: string; status: string; note: string | null; created_at: string; changed_by_user?: { full_name: string } | null }> } }>({
+    queryKey: ["integrated-system", "tracking", popupOrderId],
+    queryFn: () => fetcher(`/api/integrated-system/tracking/${popupOrderId}`),
+    enabled: !!popupOrderId,
+  });
 
   const handleSync = async () => {
     setSyncing(true); setSyncResult(null);
@@ -233,7 +241,7 @@ export default function AdminDashboard() {
               {monitoringOrders.map((o) => (
                 <tr key={o.id} className="hover:bg-white/[0.02] transition-colors">
                   <td className="px-4 py-3">
-                    <Link href={`/integrated-system/tracking/${o.id}`} className="text-xs font-mono font-medium text-[#c9a227] hover:underline">{o.kode_order}</Link>
+                    <button onClick={() => setPopupOrderId(o.id)} className="text-xs font-mono font-medium text-[#c9a227] hover:underline">{o.kode_order}</button>
                   </td>
                   <td className="px-4 py-3"><div className="flex items-center gap-1.5 text-sm text-[#e8e2d4]"><User className="h-3.5 w-3.5 text-white/20" />{o.nama}</div></td>
                   <td className="px-4 py-3 text-xs text-white/30">{o.tgl_order ? new Date(o.tgl_order).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-"}</td>
@@ -259,6 +267,49 @@ export default function AdminDashboard() {
           <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="rounded-lg border border-[#c9a227]/10 px-3 py-1.5 text-sm text-[#e8e2d4] hover:bg-white/[0.04] disabled:opacity-30">
             <ChevronRight className="h-4 w-4" />
           </button>
+        </div>
+      )}
+      {popupOrderId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setPopupOrderId(null)}>
+          <div className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl bg-[#2a2522] shadow-xl border border-[#c9a227]/10" onClick={(e) => e.stopPropagation()}>
+            {popupLoading ? (
+              <div className="flex items-center justify-center py-12"><div className="h-6 w-6 animate-spin rounded-full border-2 border-[#c9a227]/20 border-t-[#c9a227]" /></div>
+            ) : popupData?.data?.order ? (
+              <>
+                <div className="sticky top-0 z-10 bg-[#2a2522] border-b border-[#c9a227]/5 px-5 py-4 rounded-t-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 pr-3">
+                      <span className="font-mono text-xs font-semibold text-white/40">{popupData.data.order.kode_order}</span>
+                      <h3 className="text-sm font-semibold text-[#f0f4ff] mt-0.5 truncate">{popupData.data.order.nama}</h3>
+                    </div>
+                    <button onClick={() => setPopupOrderId(null)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/40 hover:bg-white/[0.04]"><X className="h-5 w-5" /></button>
+                  </div>
+                </div>
+                {(() => { const popupOrder = popupData.data.order; const popupTracking = popupData.data.tracking; const popupHistory = popupData.data.history; return (
+                  <div className="p-5 space-y-4">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">Pelanggan</p>
+                      <div className="rounded-lg bg-[#1C1917] p-3 space-y-1">
+                        <p className="text-sm font-semibold text-[#f0f4ff]">{popupOrder.nama}</p>
+                        {popupOrder.email && <p className="text-xs text-white/40 flex items-center gap-1"><Mail className="h-3 w-3" />{popupOrder.email}</p>}
+                        {popupOrder.no_hp && <p className="text-xs text-white/40 flex items-center gap-1"><Phone className="h-3 w-3" />{popupOrder.no_hp}</p>}
+                        {popupOrder.alamat && <p className="text-xs text-white/40 flex items-center gap-1"><MapPin className="h-3 w-3" />{popupOrder.alamat}</p>}
+                      </div>
+                    </div>
+                    {popupTracking && (
+                      <div className="rounded-lg bg-[#1C1917] p-4">
+                        <StageProgressBar currentStage={popupTracking.current_stage} stageStatus={popupTracking.stage_status} />
+                      </div>
+                    )}
+                    {popupHistory.length > 0 && <Timeline history={popupHistory as never} />}
+                    {popupOrder.catatan && <div className="rounded-lg bg-[#1C1917] p-3 text-xs text-[#e8e2d4]">{popupOrder.catatan}</div>}
+                  </div>
+                ); })()}
+              </>
+            ) : (
+              <div className="py-12 text-center text-sm text-white/30">Order tidak ditemukan</div>
+            )}
+          </div>
         </div>
       )}
     </div>
