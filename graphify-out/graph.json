@@ -21,144 +21,24 @@
   },
   "nodes": [
     {
-      "label": "page.tsx",
+      "label": "route.ts",
       "file_type": "code",
-      "source_file": "app/dashboard/superadmin/oprprd/monitoring/page.tsx",
+      "source_file": "app/api/integrated-system/sync/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "app_dashboard_superadmin_oprprd_monitoring_page",
-      "community": 40,
-      "norm_label": "page.tsx"
+      "id": "app_api_integrated_system_sync_route",
+      "community": 60,
+      "norm_label": "route.ts"
     },
     {
-      "label": "ActiveTab",
+      "label": "POST()",
       "file_type": "code",
-      "source_file": "app/dashboard/superadmin/oprprd/monitoring/page.tsx",
-      "source_location": "L29",
+      "source_file": "app/api/integrated-system/sync/route.ts",
+      "source_location": "L6",
       "_origin": "ast",
-      "id": "app_dashboard_superadmin_oprprd_monitoring_page_activetab",
-      "community": 40,
-      "norm_label": "activetab"
-    },
-    {
-      "label": "MonitoringPage()",
-      "file_type": "code",
-      "source_file": "app/dashboard/superadmin/oprprd/monitoring/page.tsx",
-      "source_location": "L33",
-      "_origin": "ast",
-      "id": "app_dashboard_superadmin_oprprd_monitoring_page_monitoringpage",
-      "community": 40,
-      "norm_label": "monitoringpage()"
-    },
-    {
-      "label": "page.tsx",
-      "file_type": "code",
-      "source_file": "app/integrated-system/dashboard/admin/oprprd/analisis/page.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "app_integrated_system_dashboard_admin_oprprd_analisis_page",
-      "community": 40,
-      "norm_label": "page.tsx"
-    },
-    {
-      "label": "AnalisisData",
-      "file_type": "code",
-      "source_file": "app/integrated-system/dashboard/admin/oprprd/analisis/page.tsx",
-      "source_location": "L8",
-      "_origin": "ast",
-      "id": "app_integrated_system_dashboard_admin_oprprd_analisis_page_analisisdata",
-      "community": 40,
-      "norm_label": "analisisdata"
-    },
-    {
-      "label": "AdminOprPrdAnalisisPage()",
-      "file_type": "code",
-      "source_file": "app/integrated-system/dashboard/admin/oprprd/analisis/page.tsx",
-      "source_location": "L14",
-      "_origin": "ast",
-      "id": "app_integrated_system_dashboard_admin_oprprd_analisis_page_adminoprprdanalisispage",
-      "community": 40,
-      "norm_label": "adminoprprdanalisispage()"
-    },
-    {
-      "label": "page.tsx",
-      "file_type": "code",
-      "source_file": "app/integrated-system/dashboard/admin/oprprd/laporan/page.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "app_integrated_system_dashboard_admin_oprprd_laporan_page",
-      "community": 40,
-      "norm_label": "page.tsx"
-    },
-    {
-      "label": "OrderItem",
-      "file_type": "code",
-      "source_file": "app/integrated-system/dashboard/admin/oprprd/laporan/page.tsx",
-      "source_location": "L9",
-      "_origin": "ast",
-      "id": "app_integrated_system_dashboard_admin_oprprd_laporan_page_orderitem",
-      "community": 40,
-      "norm_label": "orderitem"
-    },
-    {
-      "label": "AdminOprPrdLaporanPage()",
-      "file_type": "code",
-      "source_file": "app/integrated-system/dashboard/admin/oprprd/laporan/page.tsx",
-      "source_location": "L14",
-      "_origin": "ast",
-      "id": "app_integrated_system_dashboard_admin_oprprd_laporan_page_adminoprprdlaporanpage",
-      "community": 40,
-      "norm_label": "adminoprprdlaporanpage()"
-    },
-    {
-      "label": "page.tsx",
-      "file_type": "code",
-      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "app_integrated_system_dashboard_admin_page",
-      "community": 40,
-      "norm_label": "page.tsx"
-    },
-    {
-      "label": "OrderItem",
-      "file_type": "code",
-      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
-      "source_location": "L14",
-      "_origin": "ast",
-      "id": "app_integrated_system_dashboard_admin_page_orderitem",
-      "community": 40,
-      "norm_label": "orderitem"
-    },
-    {
-      "label": "AdminOverview",
-      "file_type": "code",
-      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
-      "source_location": "L19",
-      "_origin": "ast",
-      "id": "app_integrated_system_dashboard_admin_page_adminoverview",
-      "community": 40,
-      "norm_label": "adminoverview"
-    },
-    {
-      "label": "MonitoringData",
-      "file_type": "code",
-      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
-      "source_location": "L27",
-      "_origin": "ast",
-      "id": "app_integrated_system_dashboard_admin_page_monitoringdata",
-      "community": 40,
-      "norm_label": "monitoringdata"
-    },
-    {
-      "label": "AdminDashboard()",
-      "file_type": "code",
-      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
-      "source_location": "L31",
-      "_origin": "ast",
-      "id": "app_integrated_system_dashboard_admin_page_admindashboard",
-      "community": 40,
-      "norm_label": "admindashboard()"
+      "id": "app_api_integrated_system_sync_route_post",
+      "community": 60,
+      "norm_label": "post()"
     },
     {
       "label": "page.tsx",
@@ -381,76 +261,6 @@
       "norm_label": "workshoploginpage()"
     },
     {
-      "label": "api.ts",
-      "file_type": "code",
-      "source_file": "lib/api.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "lib_api",
-      "community": 40,
-      "norm_label": "api.ts"
-    },
-    {
-      "label": "ApiError",
-      "file_type": "code",
-      "source_file": "lib/api.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "lib_api_apierror",
-      "community": 40,
-      "norm_label": "apierror"
-    },
-    {
-      "label": ".constructor()",
-      "file_type": "code",
-      "source_file": "lib/api.ts",
-      "source_location": "L2",
-      "_origin": "ast",
-      "id": "lib_api_apierror_constructor",
-      "community": 40,
-      "norm_label": ".constructor()"
-    },
-    {
-      "label": "handleUnauthorized()",
-      "file_type": "code",
-      "source_file": "lib/api.ts",
-      "source_location": "L11",
-      "_origin": "ast",
-      "id": "lib_api_handleunauthorized",
-      "community": 40,
-      "norm_label": "handleunauthorized()"
-    },
-    {
-      "label": "fetcher()",
-      "file_type": "code",
-      "source_file": "lib/api.ts",
-      "source_location": "L17",
-      "_origin": "ast",
-      "id": "lib_api_fetcher",
-      "community": 40,
-      "norm_label": "fetcher()"
-    },
-    {
-      "label": "MutatorMethod",
-      "file_type": "code",
-      "source_file": "lib/api.ts",
-      "source_location": "L27",
-      "_origin": "ast",
-      "id": "lib_api_mutatormethod",
-      "community": 40,
-      "norm_label": "mutatormethod"
-    },
-    {
-      "label": "mutator()",
-      "file_type": "code",
-      "source_file": "lib/api.ts",
-      "source_location": "L29",
-      "_origin": "ast",
-      "id": "lib_api_mutator",
-      "community": 40,
-      "norm_label": "mutator()"
-    },
-    {
       "label": "sync.service.ts",
       "file_type": "code",
       "source_file": "services/integrated-system/sync.service.ts",
@@ -489,6 +299,216 @@
       "id": "services_integrated_system_sync_service_syncneworders",
       "community": 60,
       "norm_label": "syncneworders()"
+    },
+    {
+      "label": "page.tsx",
+      "file_type": "code",
+      "source_file": "app/dashboard/superadmin/oprprd/monitoring/page.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "page.tsx",
+      "id": "app_dashboard_superadmin_oprprd_monitoring_page"
+    },
+    {
+      "label": "ActiveTab",
+      "file_type": "code",
+      "source_file": "app/dashboard/superadmin/oprprd/monitoring/page.tsx",
+      "source_location": "L29",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "activetab",
+      "id": "app_dashboard_superadmin_oprprd_monitoring_page_activetab"
+    },
+    {
+      "label": "MonitoringPage()",
+      "file_type": "code",
+      "source_file": "app/dashboard/superadmin/oprprd/monitoring/page.tsx",
+      "source_location": "L33",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "monitoringpage()",
+      "id": "app_dashboard_superadmin_oprprd_monitoring_page_monitoringpage"
+    },
+    {
+      "label": "page.tsx",
+      "file_type": "code",
+      "source_file": "app/integrated-system/dashboard/admin/oprprd/analisis/page.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "page.tsx",
+      "id": "app_integrated_system_dashboard_admin_oprprd_analisis_page"
+    },
+    {
+      "label": "AnalisisData",
+      "file_type": "code",
+      "source_file": "app/integrated-system/dashboard/admin/oprprd/analisis/page.tsx",
+      "source_location": "L8",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "analisisdata",
+      "id": "app_integrated_system_dashboard_admin_oprprd_analisis_page_analisisdata"
+    },
+    {
+      "label": "AdminOprPrdAnalisisPage()",
+      "file_type": "code",
+      "source_file": "app/integrated-system/dashboard/admin/oprprd/analisis/page.tsx",
+      "source_location": "L14",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "adminoprprdanalisispage()",
+      "id": "app_integrated_system_dashboard_admin_oprprd_analisis_page_adminoprprdanalisispage"
+    },
+    {
+      "label": "page.tsx",
+      "file_type": "code",
+      "source_file": "app/integrated-system/dashboard/admin/oprprd/laporan/page.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "page.tsx",
+      "id": "app_integrated_system_dashboard_admin_oprprd_laporan_page"
+    },
+    {
+      "label": "OrderItem",
+      "file_type": "code",
+      "source_file": "app/integrated-system/dashboard/admin/oprprd/laporan/page.tsx",
+      "source_location": "L9",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "orderitem",
+      "id": "app_integrated_system_dashboard_admin_oprprd_laporan_page_orderitem"
+    },
+    {
+      "label": "AdminOprPrdLaporanPage()",
+      "file_type": "code",
+      "source_file": "app/integrated-system/dashboard/admin/oprprd/laporan/page.tsx",
+      "source_location": "L14",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "adminoprprdlaporanpage()",
+      "id": "app_integrated_system_dashboard_admin_oprprd_laporan_page_adminoprprdlaporanpage"
+    },
+    {
+      "label": "page.tsx",
+      "file_type": "code",
+      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "page.tsx",
+      "id": "app_integrated_system_dashboard_admin_page"
+    },
+    {
+      "label": "OrderItem",
+      "file_type": "code",
+      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
+      "source_location": "L14",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "orderitem",
+      "id": "app_integrated_system_dashboard_admin_page_orderitem"
+    },
+    {
+      "label": "AdminOverview",
+      "file_type": "code",
+      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
+      "source_location": "L19",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "adminoverview",
+      "id": "app_integrated_system_dashboard_admin_page_adminoverview"
+    },
+    {
+      "label": "MonitoringData",
+      "file_type": "code",
+      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
+      "source_location": "L27",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "monitoringdata",
+      "id": "app_integrated_system_dashboard_admin_page_monitoringdata"
+    },
+    {
+      "label": "AdminDashboard()",
+      "file_type": "code",
+      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
+      "source_location": "L31",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "admindashboard()",
+      "id": "app_integrated_system_dashboard_admin_page_admindashboard"
+    },
+    {
+      "label": "api.ts",
+      "file_type": "code",
+      "source_file": "lib/api.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "api.ts",
+      "id": "lib_api"
+    },
+    {
+      "label": "ApiError",
+      "file_type": "code",
+      "source_file": "lib/api.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "apierror",
+      "id": "lib_api_apierror"
+    },
+    {
+      "label": ".constructor()",
+      "file_type": "code",
+      "source_file": "lib/api.ts",
+      "source_location": "L2",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": ".constructor()",
+      "id": "lib_api_apierror_constructor"
+    },
+    {
+      "label": "handleUnauthorized()",
+      "file_type": "code",
+      "source_file": "lib/api.ts",
+      "source_location": "L11",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "handleunauthorized()",
+      "id": "lib_api_handleunauthorized"
+    },
+    {
+      "label": "fetcher()",
+      "file_type": "code",
+      "source_file": "lib/api.ts",
+      "source_location": "L17",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "fetcher()",
+      "id": "lib_api_fetcher"
+    },
+    {
+      "label": "MutatorMethod",
+      "file_type": "code",
+      "source_file": "lib/api.ts",
+      "source_location": "L27",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "mutatormethod",
+      "id": "lib_api_mutatormethod"
+    },
+    {
+      "label": "mutator()",
+      "file_type": "code",
+      "source_file": "lib/api.ts",
+      "source_location": "L29",
+      "_origin": "ast",
+      "community": 40,
+      "norm_label": "mutator()",
+      "id": "lib_api_mutator"
     },
     {
       "label": "route.ts",
@@ -533,26 +553,6 @@
     {
       "label": "route.ts",
       "file_type": "code",
-      "source_file": "app/api/integrated-system/sync/route.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "community": 60,
-      "norm_label": "route.ts",
-      "id": "app_api_integrated_system_sync_route"
-    },
-    {
-      "label": "POST()",
-      "file_type": "code",
-      "source_file": "app/api/integrated-system/sync/route.ts",
-      "source_location": "L6",
-      "_origin": "ast",
-      "community": 60,
-      "norm_label": "post()",
-      "id": "app_api_integrated_system_sync_route_post"
-    },
-    {
-      "label": "route.ts",
-      "file_type": "code",
       "source_file": "app/api/integrated-system/webhook/route.ts",
       "source_location": "L1",
       "_origin": "ast",
@@ -586,7 +586,7 @@
       "source_file": "app/integrated-system/dashboard/admin/oprprd/monitoring/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 61,
+      "community": 119,
       "norm_label": "page.tsx",
       "id": "app_integrated_system_dashboard_admin_oprprd_monitoring_page"
     },
@@ -596,7 +596,7 @@
       "source_file": "app/integrated-system/dashboard/admin/oprprd/monitoring/page.tsx",
       "source_location": "L14",
       "_origin": "ast",
-      "community": 61,
+      "community": 119,
       "norm_label": "orderitem",
       "id": "app_integrated_system_dashboard_admin_oprprd_monitoring_page_orderitem"
     },
@@ -606,7 +606,7 @@
       "source_file": "app/integrated-system/dashboard/admin/oprprd/monitoring/page.tsx",
       "source_location": "L19",
       "_origin": "ast",
-      "community": 61,
+      "community": 119,
       "norm_label": "bottleneckstage",
       "id": "app_integrated_system_dashboard_admin_oprprd_monitoring_page_bottleneckstage"
     },
@@ -616,7 +616,7 @@
       "source_file": "app/integrated-system/dashboard/admin/oprprd/monitoring/page.tsx",
       "source_location": "L26",
       "_origin": "ast",
-      "community": 61,
+      "community": 119,
       "norm_label": "trackingdetail",
       "id": "app_integrated_system_dashboard_admin_oprprd_monitoring_page_trackingdetail"
     },
@@ -626,7 +626,7 @@
       "source_file": "app/integrated-system/dashboard/admin/oprprd/monitoring/page.tsx",
       "source_location": "L34",
       "_origin": "ast",
-      "community": 61,
+      "community": 119,
       "norm_label": "oprprdmonitoringpage()",
       "id": "app_integrated_system_dashboard_admin_oprprd_monitoring_page_oprprdmonitoringpage"
     },
@@ -666,7 +666,7 @@
       "source_file": "app/integrated-system/dashboard/supervisor/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 61,
+      "community": 68,
       "norm_label": "page.tsx",
       "id": "app_integrated_system_dashboard_supervisor_page"
     },
@@ -676,7 +676,7 @@
       "source_file": "app/integrated-system/dashboard/supervisor/page.tsx",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 61,
+      "community": 68,
       "norm_label": "kanban_stages",
       "id": "app_integrated_system_dashboard_supervisor_page_kanban_stages"
     },
@@ -686,7 +686,7 @@
       "source_file": "app/integrated-system/dashboard/supervisor/page.tsx",
       "source_location": "L17",
       "_origin": "ast",
-      "community": 61,
+      "community": 68,
       "norm_label": "orderitem",
       "id": "app_integrated_system_dashboard_supervisor_page_orderitem"
     },
@@ -696,7 +696,7 @@
       "source_file": "app/integrated-system/dashboard/supervisor/page.tsx",
       "source_location": "L22",
       "_origin": "ast",
-      "community": 61,
+      "community": 68,
       "norm_label": "workeritem",
       "id": "app_integrated_system_dashboard_supervisor_page_workeritem"
     },
@@ -706,7 +706,7 @@
       "source_file": "app/integrated-system/dashboard/supervisor/page.tsx",
       "source_location": "L26",
       "_origin": "ast",
-      "community": 61,
+      "community": 68,
       "norm_label": "supervisordashboard()",
       "id": "app_integrated_system_dashboard_supervisor_page_supervisordashboard"
     },
@@ -716,7 +716,7 @@
       "source_file": "app/integrated-system/dashboard/supervisor/persetujuan/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 61,
+      "community": 62,
       "norm_label": "page.tsx",
       "id": "app_integrated_system_dashboard_supervisor_persetujuan_page"
     },
@@ -726,7 +726,7 @@
       "source_file": "app/integrated-system/dashboard/supervisor/persetujuan/page.tsx",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 61,
+      "community": 62,
       "norm_label": "orderitem",
       "id": "app_integrated_system_dashboard_supervisor_persetujuan_page_orderitem"
     },
@@ -736,7 +736,7 @@
       "source_file": "app/integrated-system/dashboard/supervisor/persetujuan/page.tsx",
       "source_location": "L14",
       "_origin": "ast",
-      "community": 61,
+      "community": 62,
       "norm_label": "workeritem",
       "id": "app_integrated_system_dashboard_supervisor_persetujuan_page_workeritem"
     },
@@ -746,7 +746,7 @@
       "source_file": "app/integrated-system/dashboard/supervisor/persetujuan/page.tsx",
       "source_location": "L18",
       "_origin": "ast",
-      "community": 61,
+      "community": 62,
       "norm_label": "supervisorpersetujuanpage()",
       "id": "app_integrated_system_dashboard_supervisor_persetujuan_page_supervisorpersetujuanpage"
     },
@@ -756,7 +756,7 @@
       "source_file": "app/integrated-system/tracking/[orderId]/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 61,
+      "community": 127,
       "norm_label": "page.tsx",
       "id": "app_integrated_system_tracking_orderid_page"
     },
@@ -766,7 +766,7 @@
       "source_file": "app/integrated-system/tracking/[orderId]/page.tsx",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 61,
+      "community": 127,
       "norm_label": "trackingdata",
       "id": "app_integrated_system_tracking_orderid_page_trackingdata"
     },
@@ -776,7 +776,7 @@
       "source_file": "app/integrated-system/tracking/[orderId]/page.tsx",
       "source_location": "L47",
       "_origin": "ast",
-      "community": 61,
+      "community": 127,
       "norm_label": "ordertrackingdetailpage()",
       "id": "app_integrated_system_tracking_orderid_page_ordertrackingdetailpage"
     },
@@ -1096,7 +1096,7 @@
       "source_file": "services/integrated-system/tracking.service.ts",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 61,
+      "community": 62,
       "norm_label": "getstageindex()",
       "id": "services_integrated_system_tracking_service_getstageindex"
     },
@@ -1106,7 +1106,7 @@
       "source_file": "services/integrated-system/tracking.service.ts",
       "source_location": "L15",
       "_origin": "ast",
-      "community": 61,
+      "community": 62,
       "norm_label": "getprogresspercent()",
       "id": "services_integrated_system_tracking_service_getprogresspercent"
     },
@@ -1116,7 +1116,7 @@
       "source_file": "services/integrated-system/tracking.service.ts",
       "source_location": "L21",
       "_origin": "ast",
-      "community": 61,
+      "community": 68,
       "norm_label": "getnextstage()",
       "id": "services_integrated_system_tracking_service_getnextstage"
     },
@@ -1286,7 +1286,7 @@
       "source_file": "app/api/integrated-system/supervisor/approve/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 61,
+      "community": 68,
       "norm_label": "route.ts",
       "id": "app_api_integrated_system_supervisor_approve_route"
     },
@@ -1296,7 +1296,7 @@
       "source_file": "app/api/integrated-system/supervisor/approve/route.ts",
       "source_location": "L7",
       "_origin": "ast",
-      "community": 61,
+      "community": 68,
       "norm_label": "put()",
       "id": "app_api_integrated_system_supervisor_approve_route_put"
     },
@@ -1496,7 +1496,7 @@
       "source_file": "app/api/integrated-system/worker/submit/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 61,
+      "community": 68,
       "norm_label": "route.ts",
       "id": "app_api_integrated_system_worker_submit_route"
     },
@@ -1506,7 +1506,7 @@
       "source_file": "app/api/integrated-system/worker/submit/route.ts",
       "source_location": "L7",
       "_origin": "ast",
-      "community": 61,
+      "community": 68,
       "norm_label": "put()",
       "id": "app_api_integrated_system_worker_submit_route_put"
     },
@@ -1676,7 +1676,7 @@
       "source_file": "app/api/supervisor/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 6,
+      "community": 105,
       "norm_label": "route.ts",
       "id": "app_api_supervisor_route"
     },
@@ -1686,7 +1686,7 @@
       "source_file": "app/api/supervisor/route.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 6,
+      "community": 105,
       "norm_label": "approval_stages",
       "id": "app_api_supervisor_route_approval_stages"
     },
@@ -1696,7 +1696,7 @@
       "source_file": "app/api/supervisor/route.ts",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 6,
+      "community": 105,
       "norm_label": "operational_approval_stages",
       "id": "app_api_supervisor_route_operational_approval_stages"
     },
@@ -1706,7 +1706,7 @@
       "source_file": "app/api/supervisor/route.ts",
       "source_location": "L18",
       "_origin": "ast",
-      "community": 6,
+      "community": 105,
       "norm_label": "production_approval_stages",
       "id": "app_api_supervisor_route_production_approval_stages"
     },
@@ -1716,7 +1716,7 @@
       "source_file": "app/api/supervisor/route.ts",
       "source_location": "L25",
       "_origin": "ast",
-      "community": 6,
+      "community": 105,
       "norm_label": "approval_to_production_stage",
       "id": "app_api_supervisor_route_approval_to_production_stage"
     },
@@ -1726,7 +1726,7 @@
       "source_file": "app/api/supervisor/route.ts",
       "source_location": "L33",
       "_origin": "ast",
-      "community": 6,
+      "community": 105,
       "norm_label": "verifysupervisor()",
       "id": "app_api_supervisor_route_verifysupervisor"
     },
@@ -1736,7 +1736,7 @@
       "source_file": "app/api/supervisor/route.ts",
       "source_location": "L60",
       "_origin": "ast",
-      "community": 6,
+      "community": 105,
       "norm_label": "get()",
       "id": "app_api_supervisor_route_get"
     },
@@ -3826,7 +3826,7 @@
       "source_file": "app/integrated-system/dashboard/supervisor/bottleneck/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 61,
+      "community": 126,
       "norm_label": "page.tsx",
       "id": "app_integrated_system_dashboard_supervisor_bottleneck_page"
     },
@@ -3836,7 +3836,7 @@
       "source_file": "app/integrated-system/dashboard/supervisor/bottleneck/page.tsx",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 61,
+      "community": 126,
       "norm_label": "bottleneckdata",
       "id": "app_integrated_system_dashboard_supervisor_bottleneck_page_bottleneckdata"
     },
@@ -3846,7 +3846,7 @@
       "source_file": "app/integrated-system/dashboard/supervisor/bottleneck/page.tsx",
       "source_location": "L16",
       "_origin": "ast",
-      "community": 61,
+      "community": 126,
       "norm_label": "supervisorbottleneckpage()",
       "id": "app_integrated_system_dashboard_supervisor_bottleneck_page_supervisorbottleneckpage"
     },
@@ -4436,7 +4436,7 @@
       "source_file": "components/integrated-system/order-card.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 61,
+      "community": 128,
       "norm_label": "order-card.tsx",
       "id": "components_integrated_system_order_card"
     },
@@ -4446,7 +4446,7 @@
       "source_file": "components/integrated-system/order-card.tsx",
       "source_location": "L7",
       "_origin": "ast",
-      "community": 61,
+      "community": 128,
       "norm_label": "ordercardprops",
       "id": "components_integrated_system_order_card_ordercardprops"
     },
@@ -4456,7 +4456,7 @@
       "source_file": "components/integrated-system/order-card.tsx",
       "source_location": "L16",
       "_origin": "ast",
-      "community": 61,
+      "community": 128,
       "norm_label": "ordercard()",
       "id": "components_integrated_system_order_card_ordercard"
     },
@@ -4466,7 +4466,7 @@
       "source_file": "components/integrated-system/stage-progress.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 61,
+      "community": 62,
       "norm_label": "stage-progress.tsx",
       "id": "components_integrated_system_stage_progress"
     },
@@ -4476,7 +4476,7 @@
       "source_file": "components/integrated-system/stage-progress.tsx",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 61,
+      "community": 62,
       "norm_label": "stageprogressbarprops",
       "id": "components_integrated_system_stage_progress_stageprogressbarprops"
     },
@@ -4486,7 +4486,7 @@
       "source_file": "components/integrated-system/stage-progress.tsx",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 61,
+      "community": 62,
       "norm_label": "stageprogressbar()",
       "id": "components_integrated_system_stage_progress_stageprogressbar"
     },
@@ -4526,7 +4526,7 @@
       "source_file": "components/integrated-system/timeline.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 61,
+      "community": 125,
       "norm_label": "timeline.tsx",
       "id": "components_integrated_system_timeline"
     },
@@ -4536,7 +4536,7 @@
       "source_file": "components/integrated-system/timeline.tsx",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 61,
+      "community": 125,
       "norm_label": "historyentry",
       "id": "components_integrated_system_timeline_historyentry"
     },
@@ -4546,7 +4546,7 @@
       "source_file": "components/integrated-system/timeline.tsx",
       "source_location": "L19",
       "_origin": "ast",
-      "community": 61,
+      "community": 125,
       "norm_label": "timelineprops",
       "id": "components_integrated_system_timeline_timelineprops"
     },
@@ -4556,7 +4556,7 @@
       "source_file": "components/integrated-system/timeline.tsx",
       "source_location": "L23",
       "_origin": "ast",
-      "community": 61,
+      "community": 125,
       "norm_label": "timeline()",
       "id": "components_integrated_system_timeline_timeline"
     },
@@ -4756,7 +4756,7 @@
       "source_file": "components/orders/CustomerTimeline.tsx",
       "source_location": "L24",
       "_origin": "ast",
-      "community": 61,
+      "community": 62,
       "norm_label": "customertimeline()",
       "id": "components_orders_customertimeline_customertimeline"
     },
@@ -5006,7 +5006,7 @@
       "source_file": "components/orders/StageTimeline.tsx",
       "source_location": "L238",
       "_origin": "ast",
-      "community": 61,
+      "community": 62,
       "norm_label": "stageprogressbar()",
       "id": "components_orders_stagetimeline_stageprogressbar"
     },
@@ -6242,7 +6242,7 @@
       "source_file": "app/api/auth/pin-login/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 0,
+      "community": 6,
       "norm_label": "route.ts",
       "community_name": "Production Reporting API",
       "id": "app_api_auth_pin_login_route"
@@ -6253,7 +6253,7 @@
       "source_file": "app/api/auth/pin-login/route.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 0,
+      "community": 6,
       "norm_label": "post()",
       "community_name": "Production Reporting API",
       "id": "app_api_auth_pin_login_route_post"
@@ -6264,7 +6264,7 @@
       "source_file": "app/api/auth/qr-login/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 0,
+      "community": 6,
       "norm_label": "route.ts",
       "community_name": "Supervisor API Routes",
       "id": "app_api_auth_qr_login_route"
@@ -6275,7 +6275,7 @@
       "source_file": "app/api/auth/qr-login/route.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 0,
+      "community": 6,
       "norm_label": "post()",
       "community_name": "Supervisor API Routes",
       "id": "app_api_auth_qr_login_route_post"
@@ -6286,7 +6286,7 @@
       "source_file": "app/api/auth/workshop-pin/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 66,
+      "community": 6,
       "norm_label": "route.ts",
       "community_name": "Production Reporting API",
       "id": "app_api_auth_workshop_pin_route"
@@ -6297,7 +6297,7 @@
       "source_file": "app/api/auth/workshop-pin/route.ts",
       "source_location": "L7",
       "_origin": "ast",
-      "community": 66,
+      "community": 6,
       "norm_label": "post()",
       "community_name": "Production Reporting API",
       "id": "app_api_auth_workshop_pin_route_post"
@@ -6616,7 +6616,7 @@
       "source_file": "app/api/cs/pelanggan/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 36,
+      "community": 107,
       "norm_label": "route.ts",
       "community_name": "Order Grouping API",
       "id": "app_api_cs_pelanggan_route"
@@ -6627,7 +6627,7 @@
       "source_file": "app/api/cs/pelanggan/route.ts",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 36,
+      "community": 107,
       "norm_label": "grouporders()",
       "community_name": "Order Grouping API",
       "id": "app_api_cs_pelanggan_route_grouporders"
@@ -6638,7 +6638,7 @@
       "source_file": "app/api/cs/pelanggan/route.ts",
       "source_location": "L84",
       "_origin": "ast",
-      "community": 36,
+      "community": 107,
       "norm_label": "get()",
       "community_name": "Order Grouping API",
       "id": "app_api_cs_pelanggan_route_get"
@@ -6770,7 +6770,7 @@
       "source_file": "app/api/daily-stats-1/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 62,
+      "community": 51,
       "norm_label": "route.ts",
       "community_name": "Weekly Activity API",
       "id": "app_api_daily_stats_1_route"
@@ -6781,7 +6781,7 @@
       "source_file": "app/api/daily-stats-1/route.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 62,
+      "community": 51,
       "norm_label": "day_abbr",
       "community_name": "Weekly Activity API",
       "id": "app_api_daily_stats_1_route_day_abbr"
@@ -6792,7 +6792,7 @@
       "source_file": "app/api/daily-stats-1/route.ts",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 62,
+      "community": 51,
       "norm_label": "makelabel()",
       "community_name": "Weekly Activity API",
       "id": "app_api_daily_stats_1_route_makelabel"
@@ -6803,7 +6803,7 @@
       "source_file": "app/api/daily-stats-1/route.ts",
       "source_location": "L16",
       "_origin": "ast",
-      "community": 62,
+      "community": 51,
       "norm_label": "prevday()",
       "community_name": "Weekly Activity API",
       "id": "app_api_daily_stats_1_route_prevday"
@@ -6814,7 +6814,7 @@
       "source_file": "app/api/daily-stats-1/route.ts",
       "source_location": "L22",
       "_origin": "ast",
-      "community": 62,
+      "community": 51,
       "norm_label": "last7days()",
       "community_name": "Weekly Activity API",
       "id": "app_api_daily_stats_1_route_last7days"
@@ -6825,7 +6825,7 @@
       "source_file": "app/api/daily-stats-1/route.ts",
       "source_location": "L34",
       "_origin": "ast",
-      "community": 62,
+      "community": 51,
       "norm_label": "sumfield()",
       "community_name": "Weekly Activity API",
       "id": "app_api_daily_stats_1_route_sumfield"
@@ -6836,7 +6836,7 @@
       "source_file": "app/api/daily-stats-1/route.ts",
       "source_location": "L43",
       "_origin": "ast",
-      "community": 62,
+      "community": 51,
       "norm_label": "get()",
       "community_name": "Weekly Activity API",
       "id": "app_api_daily_stats_1_route_get"
@@ -7056,7 +7056,7 @@
       "source_file": "app/api/management/tasks/items/[id]/attachments/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 9,
+      "community": 11,
       "norm_label": "route.ts",
       "community_name": "User Administration API",
       "id": "app_api_management_tasks_items_id_attachments_route"
@@ -7067,7 +7067,7 @@
       "source_file": "app/api/management/tasks/items/[id]/attachments/route.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 9,
+      "community": 11,
       "norm_label": "allowed_types",
       "community_name": "User Administration API",
       "id": "app_api_management_tasks_items_id_attachments_route_allowed_types"
@@ -7078,7 +7078,7 @@
       "source_file": "app/api/management/tasks/items/[id]/attachments/route.ts",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 9,
+      "community": 11,
       "norm_label": "post()",
       "community_name": "User Administration API",
       "id": "app_api_management_tasks_items_id_attachments_route_post"
@@ -7089,7 +7089,7 @@
       "source_file": "app/api/management/tasks/items/[id]/attachments/route.ts",
       "source_location": "L108",
       "_origin": "ast",
-      "community": 9,
+      "community": 11,
       "norm_label": "get()",
       "community_name": "User Administration API",
       "id": "app_api_management_tasks_items_id_attachments_route_get"
@@ -7133,7 +7133,7 @@
       "source_file": "app/api/management/tasks/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 9,
+      "community": 11,
       "norm_label": "route.ts",
       "community_name": "User Administration API",
       "id": "app_api_management_tasks_route"
@@ -7144,7 +7144,7 @@
       "source_file": "app/api/management/tasks/route.ts",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 9,
+      "community": 11,
       "norm_label": "skip_notify_statuses",
       "community_name": "User Administration API",
       "id": "app_api_management_tasks_route_skip_notify_statuses"
@@ -7155,7 +7155,7 @@
       "source_file": "app/api/management/tasks/route.ts",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 9,
+      "community": 11,
       "norm_label": "get()",
       "community_name": "User Administration API",
       "id": "app_api_management_tasks_route_get"
@@ -7166,7 +7166,7 @@
       "source_file": "app/api/management/tasks/route.ts",
       "source_location": "L69",
       "_origin": "ast",
-      "community": 9,
+      "community": 11,
       "norm_label": "post()",
       "community_name": "User Administration API",
       "id": "app_api_management_tasks_route_post"
@@ -7177,7 +7177,7 @@
       "source_file": "app/api/management/tasks/route.ts",
       "source_location": "L128",
       "_origin": "ast",
-      "community": 9,
+      "community": 11,
       "norm_label": "delete()",
       "community_name": "User Administration API",
       "id": "app_api_management_tasks_route_delete"
@@ -7606,7 +7606,7 @@
       "source_file": "app/api/production/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 6,
+      "community": 113,
       "norm_label": "route.ts",
       "community_name": "Client Session Management",
       "id": "app_api_production_route"
@@ -7617,7 +7617,7 @@
       "source_file": "app/api/production/route.ts",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 6,
+      "community": 113,
       "norm_label": "expert_roles",
       "community_name": "Client Session Management",
       "id": "app_api_production_route_expert_roles"
@@ -7628,7 +7628,7 @@
       "source_file": "app/api/production/route.ts",
       "source_location": "L18",
       "_origin": "ast",
-      "community": 6,
+      "community": 113,
       "norm_label": "role_default_stage",
       "community_name": "Client Session Management",
       "id": "app_api_production_route_role_default_stage"
@@ -7639,7 +7639,7 @@
       "source_file": "app/api/production/route.ts",
       "source_location": "L25",
       "_origin": "ast",
-      "community": 6,
+      "community": 113,
       "norm_label": "expert_stages",
       "community_name": "Client Session Management",
       "id": "app_api_production_route_expert_stages"
@@ -7650,7 +7650,7 @@
       "source_file": "app/api/production/route.ts",
       "source_location": "L29",
       "_origin": "ast",
-      "community": 6,
+      "community": 113,
       "norm_label": "get()",
       "community_name": "Client Session Management",
       "id": "app_api_production_route_get"
@@ -8024,7 +8024,7 @@
       "source_file": "app/api/reports-oprprd/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 41,
+      "community": 89,
       "norm_label": "route.ts",
       "community_name": "CSV Export Utilities",
       "id": "app_api_reports_oprprd_route"
@@ -8035,7 +8035,7 @@
       "source_file": "app/api/reports-oprprd/route.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 41,
+      "community": 89,
       "norm_label": "production_roles",
       "community_name": "CSV Export Utilities",
       "id": "app_api_reports_oprprd_route_production_roles"
@@ -8046,7 +8046,7 @@
       "source_file": "app/api/reports-oprprd/route.ts",
       "source_location": "L17",
       "_origin": "ast",
-      "community": 41,
+      "community": 89,
       "norm_label": "fmtdate()",
       "community_name": "CSV Export Utilities",
       "id": "app_api_reports_oprprd_route_fmtdate"
@@ -8057,7 +8057,7 @@
       "source_file": "app/api/reports-oprprd/route.ts",
       "source_location": "L26",
       "_origin": "ast",
-      "community": 41,
+      "community": 89,
       "norm_label": "fmtduration()",
       "community_name": "CSV Export Utilities",
       "id": "app_api_reports_oprprd_route_fmtduration"
@@ -8068,7 +8068,7 @@
       "source_file": "app/api/reports-oprprd/route.ts",
       "source_location": "L39",
       "_origin": "ast",
-      "community": 41,
+      "community": 89,
       "norm_label": "fmtnum()",
       "community_name": "CSV Export Utilities",
       "id": "app_api_reports_oprprd_route_fmtnum"
@@ -8079,7 +8079,7 @@
       "source_file": "app/api/reports-oprprd/route.ts",
       "source_location": "L44",
       "_origin": "ast",
-      "community": 41,
+      "community": 89,
       "norm_label": "fmtpct()",
       "community_name": "CSV Export Utilities",
       "id": "app_api_reports_oprprd_route_fmtpct"
@@ -8090,7 +8090,7 @@
       "source_file": "app/api/reports-oprprd/route.ts",
       "source_location": "L49",
       "_origin": "ast",
-      "community": 41,
+      "community": 89,
       "norm_label": "escapecsv()",
       "community_name": "CSV Export Utilities",
       "id": "app_api_reports_oprprd_route_escapecsv"
@@ -8101,7 +8101,7 @@
       "source_file": "app/api/reports-oprprd/route.ts",
       "source_location": "L58",
       "_origin": "ast",
-      "community": 41,
+      "community": 89,
       "norm_label": "tocsv()",
       "community_name": "CSV Export Utilities",
       "id": "app_api_reports_oprprd_route_tocsv"
@@ -8112,7 +8112,7 @@
       "source_file": "app/api/reports-oprprd/route.ts",
       "source_location": "L66",
       "_origin": "ast",
-      "community": 41,
+      "community": 89,
       "norm_label": "get()",
       "community_name": "CSV Export Utilities",
       "id": "app_api_reports_oprprd_route_get"
@@ -8123,7 +8123,7 @@
       "source_file": "app/api/reports/[id]/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 36,
+      "community": 107,
       "norm_label": "route.ts",
       "community_name": "Order Grouping API",
       "id": "app_api_reports_id_route"
@@ -8134,7 +8134,7 @@
       "source_file": "app/api/reports/[id]/route.ts",
       "source_location": "L7",
       "_origin": "ast",
-      "community": 36,
+      "community": 107,
       "norm_label": "params",
       "community_name": "Order Grouping API",
       "id": "app_api_reports_id_route_params"
@@ -8145,7 +8145,7 @@
       "source_file": "app/api/reports/[id]/route.ts",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 36,
+      "community": 107,
       "norm_label": "delete()",
       "community_name": "Order Grouping API",
       "id": "app_api_reports_id_route_delete"
@@ -8233,7 +8233,7 @@
       "source_file": "app/api/reports/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 6,
+      "community": 117,
       "norm_label": "route.ts",
       "community_name": "Production Reporting API",
       "id": "app_api_reports_route"
@@ -8244,7 +8244,7 @@
       "source_file": "app/api/reports/route.ts",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 6,
+      "community": 117,
       "norm_label": "generatereportcontent()",
       "community_name": "Production Reporting API",
       "id": "app_api_reports_route_generatereportcontent"
@@ -8255,7 +8255,7 @@
       "source_file": "app/api/reports/route.ts",
       "source_location": "L130",
       "_origin": "ast",
-      "community": 6,
+      "community": 117,
       "norm_label": "generatemonthlycsv()",
       "community_name": "Production Reporting API",
       "id": "app_api_reports_route_generatemonthlycsv"
@@ -8266,7 +8266,7 @@
       "source_file": "app/api/reports/route.ts",
       "source_location": "L240",
       "_origin": "ast",
-      "community": 6,
+      "community": 117,
       "norm_label": "get()",
       "community_name": "Production Reporting API",
       "id": "app_api_reports_route_get"
@@ -8277,7 +8277,7 @@
       "source_file": "app/api/reports/route.ts",
       "source_location": "L308",
       "_origin": "ast",
-      "community": 6,
+      "community": 117,
       "norm_label": "post()",
       "community_name": "Production Reporting API",
       "id": "app_api_reports_route_post"
@@ -8904,7 +8904,7 @@
       "source_file": "app/api/stages/submit/route.ts",
       "source_location": "L57",
       "_origin": "ast",
-      "community": 64,
+      "community": 25,
       "norm_label": "nextinsequence()",
       "community_name": "Data Normalization Utilities",
       "id": "app_api_stages_submit_route_nextinsequence"
@@ -9036,7 +9036,7 @@
       "source_file": "app/api/superadmin/management-tasks/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 11,
+      "community": 9,
       "norm_label": "route.ts",
       "community_name": "User Administration API",
       "id": "app_api_superadmin_management_tasks_route"
@@ -9047,7 +9047,7 @@
       "source_file": "app/api/superadmin/management-tasks/route.ts",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 11,
+      "community": 9,
       "norm_label": "get()",
       "community_name": "User Administration API",
       "id": "app_api_superadmin_management_tasks_route_get"
@@ -9058,7 +9058,7 @@
       "source_file": "app/api/superadmin/management-tasks/route.ts",
       "source_location": "L69",
       "_origin": "ast",
-      "community": 11,
+      "community": 9,
       "norm_label": "patch()",
       "community_name": "User Administration API",
       "id": "app_api_superadmin_management_tasks_route_patch"
@@ -9124,7 +9124,7 @@
       "source_file": "app/api/supervisor/accounts/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 11,
+      "community": 118,
       "norm_label": "route.ts",
       "community_name": "Account Mapping API",
       "id": "app_api_supervisor_accounts_route"
@@ -9135,7 +9135,7 @@
       "source_file": "app/api/supervisor/accounts/route.ts",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 11,
+      "community": 118,
       "norm_label": "verifysupervisorscope()",
       "community_name": "Account Mapping API",
       "id": "app_api_supervisor_accounts_route_verifysupervisorscope"
@@ -9146,7 +9146,7 @@
       "source_file": "app/api/supervisor/accounts/route.ts",
       "source_location": "L36",
       "_origin": "ast",
-      "community": 11,
+      "community": 118,
       "norm_label": "mapaccount()",
       "community_name": "Account Mapping API",
       "id": "app_api_supervisor_accounts_route_mapaccount"
@@ -9157,7 +9157,7 @@
       "source_file": "app/api/supervisor/accounts/route.ts",
       "source_location": "L57",
       "_origin": "ast",
-      "community": 11,
+      "community": 118,
       "norm_label": "get()",
       "community_name": "Account Mapping API",
       "id": "app_api_supervisor_accounts_route_get"
@@ -9168,7 +9168,7 @@
       "source_file": "app/api/supervisor/accounts/route.ts",
       "source_location": "L119",
       "_origin": "ast",
-      "community": 11,
+      "community": 118,
       "norm_label": "post()",
       "community_name": "Account Mapping API",
       "id": "app_api_supervisor_accounts_route_post"
@@ -10103,7 +10103,7 @@
       "source_file": "app/dashboard/management/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 18,
+      "community": 110,
       "norm_label": "page.tsx",
       "community_name": "Management Navigation Sidebar",
       "id": "app_dashboard_management_page"
@@ -10114,7 +10114,7 @@
       "source_file": "app/dashboard/management/page.tsx",
       "source_location": "L16",
       "_origin": "ast",
-      "community": 18,
+      "community": 110,
       "norm_label": "taskitem",
       "community_name": "Management Navigation Sidebar",
       "id": "app_dashboard_management_page_taskitem"
@@ -10125,7 +10125,7 @@
       "source_file": "app/dashboard/management/page.tsx",
       "source_location": "L22",
       "_origin": "ast",
-      "community": 18,
+      "community": 110,
       "norm_label": "task",
       "community_name": "Management Navigation Sidebar",
       "id": "app_dashboard_management_page_task"
@@ -10136,7 +10136,7 @@
       "source_file": "app/dashboard/management/page.tsx",
       "source_location": "L29",
       "_origin": "ast",
-      "community": 18,
+      "community": 110,
       "norm_label": "managementoverviewpage()",
       "community_name": "Management Navigation Sidebar",
       "id": "app_dashboard_management_page_managementoverviewpage"
@@ -10719,7 +10719,7 @@
       "source_file": "app/dashboard/superadmin/management/_shared/constants.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 18,
+      "community": 106,
       "norm_label": "constants.ts",
       "community_name": "Manager Task Monitoring",
       "id": "app_dashboard_superadmin_management_shared_constants"
@@ -10730,7 +10730,7 @@
       "source_file": "app/dashboard/superadmin/management/_shared/constants.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 18,
+      "community": 106,
       "norm_label": "c",
       "community_name": "Manager Task Monitoring",
       "id": "app_dashboard_superadmin_management_shared_constants_c"
@@ -10741,7 +10741,7 @@
       "source_file": "app/dashboard/superadmin/management/_shared/constants.ts",
       "source_location": "L19",
       "_origin": "ast",
-      "community": 18,
+      "community": 106,
       "norm_label": "role_display",
       "community_name": "Manager Task Monitoring",
       "id": "app_dashboard_superadmin_management_shared_constants_role_display"
@@ -10873,7 +10873,7 @@
       "source_file": "app/dashboard/superadmin/management/_shared/utils.ts",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 18,
+      "community": 106,
       "norm_label": "isoverdue()",
       "community_name": "Management History Dashboard",
       "id": "app_dashboard_superadmin_management_shared_utils_isoverdue"
@@ -10961,7 +10961,7 @@
       "source_file": "app/dashboard/superadmin/management/monitoring/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 18,
+      "community": 106,
       "norm_label": "page.tsx",
       "community_name": "Manager Task Monitoring",
       "id": "app_dashboard_superadmin_management_monitoring_page"
@@ -10972,7 +10972,7 @@
       "source_file": "app/dashboard/superadmin/management/monitoring/page.tsx",
       "source_location": "L22",
       "_origin": "ast",
-      "community": 18,
+      "community": 106,
       "norm_label": "sortkey",
       "community_name": "Manager Task Monitoring",
       "id": "app_dashboard_superadmin_management_monitoring_page_sortkey"
@@ -10983,7 +10983,7 @@
       "source_file": "app/dashboard/superadmin/management/monitoring/page.tsx",
       "source_location": "L25",
       "_origin": "ast",
-      "community": 18,
+      "community": 106,
       "norm_label": "managementmonitoringpage()",
       "community_name": "Manager Task Monitoring",
       "id": "app_dashboard_superadmin_management_monitoring_page_managementmonitoringpage"
@@ -12072,7 +12072,7 @@
       "source_file": "app/loading.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 18,
+      "community": 110,
       "norm_label": "loading.tsx",
       "community_name": "Marketing Channel Dashboard",
       "id": "app_loading"
@@ -12083,7 +12083,7 @@
       "source_file": "app/loading.tsx",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 18,
+      "community": 110,
       "norm_label": "rootloading()",
       "community_name": "Marketing Channel Dashboard",
       "id": "app_loading_rootloading"
@@ -12666,7 +12666,7 @@
       "source_file": "components/dashboard/superadmin/Diamond.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 18,
+      "community": 100,
       "norm_label": "diamond.tsx",
       "community_name": "Item Detail Components",
       "id": "components_dashboard_superadmin_diamond"
@@ -12677,7 +12677,7 @@
       "source_file": "components/dashboard/superadmin/Diamond.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 18,
+      "community": 100,
       "norm_label": "diamond()",
       "community_name": "Item Detail Components",
       "id": "components_dashboard_superadmin_diamond_diamond"
@@ -12688,7 +12688,7 @@
       "source_file": "components/dashboard/superadmin/ItemRow.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 18,
+      "community": 100,
       "norm_label": "itemrow.tsx",
       "community_name": "Item Detail Components",
       "id": "components_dashboard_superadmin_itemrow"
@@ -12699,7 +12699,7 @@
       "source_file": "components/dashboard/superadmin/ItemRow.tsx",
       "source_location": "L8",
       "_origin": "ast",
-      "community": 18,
+      "community": 100,
       "norm_label": "getstatuslabel()",
       "community_name": "Item Detail Components",
       "id": "components_dashboard_superadmin_itemrow_getstatuslabel"
@@ -12710,7 +12710,7 @@
       "source_file": "components/dashboard/superadmin/ItemRow.tsx",
       "source_location": "L19",
       "_origin": "ast",
-      "community": 18,
+      "community": 100,
       "norm_label": "itemrowprops",
       "community_name": "Item Detail Components",
       "id": "components_dashboard_superadmin_itemrow_itemrowprops"
@@ -12721,7 +12721,7 @@
       "source_file": "components/dashboard/superadmin/ItemRow.tsx",
       "source_location": "L40",
       "_origin": "ast",
-      "community": 18,
+      "community": 100,
       "norm_label": "segment",
       "community_name": "Item Detail Components",
       "id": "components_dashboard_superadmin_itemrow_segment"
@@ -12732,7 +12732,7 @@
       "source_file": "components/dashboard/superadmin/ItemRow.tsx",
       "source_location": "L49",
       "_origin": "ast",
-      "community": 18,
+      "community": 100,
       "norm_label": "segments",
       "community_name": "Item Detail Components",
       "id": "components_dashboard_superadmin_itemrow_segments"
@@ -12743,7 +12743,7 @@
       "source_file": "components/dashboard/superadmin/ItemRow.tsx",
       "source_location": "L56",
       "_origin": "ast",
-      "community": 18,
+      "community": 100,
       "norm_label": "itemrow()",
       "community_name": "Item Detail Components",
       "id": "components_dashboard_superadmin_itemrow_itemrow"
@@ -12754,7 +12754,7 @@
       "source_file": "components/dashboard/superadmin/ManagerCard.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 18,
+      "community": 66,
       "norm_label": "managercard.tsx",
       "community_name": "Manager Task Monitoring",
       "id": "components_dashboard_superadmin_managercard"
@@ -12765,7 +12765,7 @@
       "source_file": "components/dashboard/superadmin/ManagerCard.tsx",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 18,
+      "community": 66,
       "norm_label": "progressrow",
       "community_name": "Manager Task Monitoring",
       "id": "components_dashboard_superadmin_managercard_progressrow"
@@ -12776,7 +12776,7 @@
       "source_file": "components/dashboard/superadmin/ManagerCard.tsx",
       "source_location": "L20",
       "_origin": "ast",
-      "community": 18,
+      "community": 66,
       "norm_label": "taskitem",
       "community_name": "Manager Task Monitoring",
       "id": "components_dashboard_superadmin_managercard_taskitem"
@@ -12787,7 +12787,7 @@
       "source_file": "components/dashboard/superadmin/ManagerCard.tsx",
       "source_location": "L27",
       "_origin": "ast",
-      "community": 18,
+      "community": 66,
       "norm_label": "task",
       "community_name": "Manager Task Monitoring",
       "id": "components_dashboard_superadmin_managercard_task"
@@ -12798,7 +12798,7 @@
       "source_file": "components/dashboard/superadmin/ManagerCard.tsx",
       "source_location": "L35",
       "_origin": "ast",
-      "community": 18,
+      "community": 66,
       "norm_label": "manager",
       "community_name": "Manager Task Monitoring",
       "id": "components_dashboard_superadmin_managercard_manager"
@@ -12809,7 +12809,7 @@
       "source_file": "components/dashboard/superadmin/ManagerCard.tsx",
       "source_location": "L43",
       "_origin": "ast",
-      "community": 18,
+      "community": 66,
       "norm_label": "managercard()",
       "community_name": "Manager Task Monitoring",
       "id": "components_dashboard_superadmin_managercard_managercard"
@@ -12842,7 +12842,7 @@
       "source_file": "components/dashboard/superadmin/TaskDetailModal.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 18,
+      "community": 103,
       "norm_label": "taskdetailmodal.tsx",
       "community_name": "Manager Task Monitoring",
       "id": "components_dashboard_superadmin_taskdetailmodal"
@@ -12853,7 +12853,7 @@
       "source_file": "components/dashboard/superadmin/TaskDetailModal.tsx",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 18,
+      "community": 103,
       "norm_label": "progressrow",
       "community_name": "Manager Task Monitoring",
       "id": "components_dashboard_superadmin_taskdetailmodal_progressrow"
@@ -12864,7 +12864,7 @@
       "source_file": "components/dashboard/superadmin/TaskDetailModal.tsx",
       "source_location": "L22",
       "_origin": "ast",
-      "community": 18,
+      "community": 103,
       "norm_label": "taskitem",
       "community_name": "Manager Task Monitoring",
       "id": "components_dashboard_superadmin_taskdetailmodal_taskitem"
@@ -12875,7 +12875,7 @@
       "source_file": "components/dashboard/superadmin/TaskDetailModal.tsx",
       "source_location": "L29",
       "_origin": "ast",
-      "community": 18,
+      "community": 103,
       "norm_label": "task",
       "community_name": "Manager Task Monitoring",
       "id": "components_dashboard_superadmin_taskdetailmodal_task"
@@ -12886,7 +12886,7 @@
       "source_file": "components/dashboard/superadmin/TaskDetailModal.tsx",
       "source_location": "L37",
       "_origin": "ast",
-      "community": 18,
+      "community": 103,
       "norm_label": "manager",
       "community_name": "Manager Task Monitoring",
       "id": "components_dashboard_superadmin_taskdetailmodal_manager"
@@ -12897,7 +12897,7 @@
       "source_file": "components/dashboard/superadmin/TaskDetailModal.tsx",
       "source_location": "L45",
       "_origin": "ast",
-      "community": 18,
+      "community": 103,
       "norm_label": "taskdetailmodal()",
       "community_name": "Manager Task Monitoring",
       "id": "components_dashboard_superadmin_taskdetailmodal_taskdetailmodal"
@@ -14283,7 +14283,7 @@
       "source_file": "lib/format.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 18,
+      "community": 103,
       "norm_label": "format.ts",
       "community_name": "Manager Task Monitoring",
       "id": "lib_format"
@@ -14294,7 +14294,7 @@
       "source_file": "lib/format.ts",
       "source_location": "L3",
       "_origin": "ast",
-      "community": 18,
+      "community": 103,
       "norm_label": "formatrelativedeadline()",
       "community_name": "Manager Task Monitoring",
       "id": "lib_format_formatrelativedeadline"
@@ -14382,7 +14382,7 @@
       "source_file": "lib/overdue.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 18,
+      "community": 66,
       "norm_label": "overdue.ts",
       "community_name": "Manager Task Monitoring",
       "id": "lib_overdue"
@@ -14393,7 +14393,7 @@
       "source_file": "lib/overdue.ts",
       "source_location": "L7",
       "_origin": "ast",
-      "community": 9,
+      "community": 11,
       "norm_label": "computeoverduedays()",
       "community_name": "User Administration API",
       "id": "lib_overdue_computeoverduedays"
@@ -14404,7 +14404,7 @@
       "source_file": "lib/overdue.ts",
       "source_location": "L18",
       "_origin": "ast",
-      "community": 18,
+      "community": 66,
       "norm_label": "overdueseverity",
       "community_name": "Manager Task Monitoring",
       "id": "lib_overdue_overdueseverity"
@@ -14415,7 +14415,7 @@
       "source_file": "lib/overdue.ts",
       "source_location": "L26",
       "_origin": "ast",
-      "community": 18,
+      "community": 66,
       "norm_label": "getoverdueseverity()",
       "community_name": "Manager Task Monitoring",
       "id": "lib_overdue_getoverdueseverity"
@@ -14426,7 +14426,7 @@
       "source_file": "lib/overdue.ts",
       "source_location": "L34",
       "_origin": "ast",
-      "community": 18,
+      "community": 66,
       "norm_label": "getreviewwaitingdays()",
       "community_name": "Manager Task Monitoring",
       "id": "lib_overdue_getreviewwaitingdays"
@@ -14437,7 +14437,7 @@
       "source_file": "lib/overdue.ts",
       "source_location": "L42",
       "_origin": "ast",
-      "community": 18,
+      "community": 66,
       "norm_label": "getdeadlineurgency()",
       "community_name": "Manager Task Monitoring",
       "id": "lib_overdue_getdeadlineurgency"
@@ -15119,7 +15119,7 @@
       "source_file": "lib/working-days.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 12,
+      "community": 104,
       "norm_label": "working-days.ts",
       "community_name": "Working Day Calculations",
       "id": "lib_working_days"
@@ -15130,7 +15130,7 @@
       "source_file": "lib/working-days.ts",
       "source_location": "L3",
       "_origin": "ast",
-      "community": 12,
+      "community": 104,
       "norm_label": "indonesiaholidays",
       "community_name": "Working Day Calculations",
       "id": "lib_working_days_indonesiaholidays"
@@ -15141,7 +15141,7 @@
       "source_file": "lib/working-days.ts",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 12,
+      "community": 104,
       "norm_label": "getindonesianholidays()",
       "community_name": "Working Day Calculations",
       "id": "lib_working_days_getindonesianholidays"
@@ -15152,7 +15152,7 @@
       "source_file": "lib/working-days.ts",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 12,
+      "community": 104,
       "norm_label": "countworkingdays()",
       "community_name": "Working Day Calculations",
       "id": "lib_working_days_countworkingdays"
@@ -15163,7 +15163,7 @@
       "source_file": "lib/working-days.ts",
       "source_location": "L33",
       "_origin": "ast",
-      "community": 12,
+      "community": 104,
       "norm_label": "kategori_thresholds",
       "community_name": "Working Day Calculations",
       "id": "lib_working_days_kategori_thresholds"
@@ -15174,7 +15174,7 @@
       "source_file": "lib/working-days.ts",
       "source_location": "L43",
       "_origin": "ast",
-      "community": 12,
+      "community": 104,
       "norm_label": "getrecommendedkategori()",
       "community_name": "Working Day Calculations",
       "id": "lib_working_days_getrecommendedkategori"
@@ -15185,7 +15185,7 @@
       "source_file": "lib/working-days.ts",
       "source_location": "L50",
       "_origin": "ast",
-      "community": 12,
+      "community": 104,
       "norm_label": "addworkingdays()",
       "community_name": "Working Day Calculations",
       "id": "lib_working_days_addworkingdays"
@@ -15196,7 +15196,7 @@
       "source_file": "lib/working-days.ts",
       "source_location": "L65",
       "_origin": "ast",
-      "community": 12,
+      "community": 104,
       "norm_label": "getworkingdaysmessage()",
       "community_name": "Working Day Calculations",
       "id": "lib_working_days_getworkingdaysmessage"
@@ -16253,190 +16253,56 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "app/dashboard/superadmin/oprprd/monitoring/page.tsx",
-      "source_location": "L29",
+      "source_file": "app/api/integrated-system/sync/route.ts",
+      "source_location": "L6",
       "weight": 1.0,
-      "source": "app_dashboard_superadmin_oprprd_monitoring_page",
-      "target": "app_dashboard_superadmin_oprprd_monitoring_page_activetab",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/dashboard/superadmin/oprprd/monitoring/page.tsx",
-      "source_location": "L33",
-      "weight": 1.0,
-      "source": "app_dashboard_superadmin_oprprd_monitoring_page",
-      "target": "app_dashboard_superadmin_oprprd_monitoring_page_monitoringpage",
+      "source": "app_api_integrated_system_sync_route",
+      "target": "app_api_integrated_system_sync_route_post",
       "confidence_score": 1.0
     },
     {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "app/dashboard/superadmin/oprprd/monitoring/page.tsx",
-      "source_location": "L7",
+      "source_file": "app/api/integrated-system/sync/route.ts",
+      "source_location": "L1",
       "weight": 1.0,
-      "source": "app_dashboard_superadmin_oprprd_monitoring_page",
-      "target": "lib_api",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/dashboard/superadmin/oprprd/monitoring/page.tsx",
-      "source_location": "L7",
-      "weight": 1.0,
-      "source": "app_dashboard_superadmin_oprprd_monitoring_page",
-      "target": "lib_api_fetcher",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/dashboard/admin/oprprd/analisis/page.tsx",
-      "source_location": "L14",
-      "weight": 1.0,
-      "source": "app_integrated_system_dashboard_admin_oprprd_analisis_page",
-      "target": "app_integrated_system_dashboard_admin_oprprd_analisis_page_adminoprprdanalisispage",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/dashboard/admin/oprprd/analisis/page.tsx",
-      "source_location": "L8",
-      "weight": 1.0,
-      "source": "app_integrated_system_dashboard_admin_oprprd_analisis_page",
-      "target": "app_integrated_system_dashboard_admin_oprprd_analisis_page_analisisdata",
+      "source": "app_api_integrated_system_sync_route",
+      "target": "lib_supabase_server",
       "confidence_score": 1.0
     },
     {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/dashboard/admin/oprprd/analisis/page.tsx",
+      "source_file": "app/api/integrated-system/sync/route.ts",
       "source_location": "L4",
       "weight": 1.0,
-      "source": "app_integrated_system_dashboard_admin_oprprd_analisis_page",
-      "target": "lib_api",
+      "source": "app_api_integrated_system_sync_route",
+      "target": "services_integrated_system_sync_service",
       "confidence_score": 1.0
     },
     {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/dashboard/admin/oprprd/analisis/page.tsx",
+      "source_file": "app/api/integrated-system/sync/route.ts",
       "source_location": "L4",
       "weight": 1.0,
-      "source": "app_integrated_system_dashboard_admin_oprprd_analisis_page",
-      "target": "lib_api_fetcher",
+      "source": "app_api_integrated_system_sync_route",
+      "target": "services_integrated_system_sync_service_syncneworders",
       "confidence_score": 1.0
     },
     {
-      "relation": "contains",
+      "relation": "calls",
+      "context": "call",
       "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/dashboard/admin/oprprd/laporan/page.tsx",
-      "source_location": "L14",
+      "confidence_score": 1.0,
+      "source_file": "app/api/integrated-system/sync/route.ts",
+      "source_location": "L28",
       "weight": 1.0,
-      "source": "app_integrated_system_dashboard_admin_oprprd_laporan_page",
-      "target": "app_integrated_system_dashboard_admin_oprprd_laporan_page_adminoprprdlaporanpage",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/dashboard/admin/oprprd/laporan/page.tsx",
-      "source_location": "L9",
-      "weight": 1.0,
-      "source": "app_integrated_system_dashboard_admin_oprprd_laporan_page",
-      "target": "app_integrated_system_dashboard_admin_oprprd_laporan_page_orderitem",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/dashboard/admin/oprprd/laporan/page.tsx",
-      "source_location": "L5",
-      "weight": 1.0,
-      "source": "app_integrated_system_dashboard_admin_oprprd_laporan_page",
-      "target": "lib_api",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/dashboard/admin/oprprd/laporan/page.tsx",
-      "source_location": "L5",
-      "weight": 1.0,
-      "source": "app_integrated_system_dashboard_admin_oprprd_laporan_page",
-      "target": "lib_api_fetcher",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
-      "source_location": "L31",
-      "weight": 1.0,
-      "source": "app_integrated_system_dashboard_admin_page",
-      "target": "app_integrated_system_dashboard_admin_page_admindashboard",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
-      "source_location": "L19",
-      "weight": 1.0,
-      "source": "app_integrated_system_dashboard_admin_page",
-      "target": "app_integrated_system_dashboard_admin_page_adminoverview",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
-      "source_location": "L27",
-      "weight": 1.0,
-      "source": "app_integrated_system_dashboard_admin_page",
-      "target": "app_integrated_system_dashboard_admin_page_monitoringdata",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
-      "source_location": "L14",
-      "weight": 1.0,
-      "source": "app_integrated_system_dashboard_admin_page",
-      "target": "app_integrated_system_dashboard_admin_page_orderitem",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
-      "source_location": "L5",
-      "weight": 1.0,
-      "source": "app_integrated_system_dashboard_admin_page",
-      "target": "lib_api",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
-      "source_location": "L5",
-      "weight": 1.0,
-      "source": "app_integrated_system_dashboard_admin_page",
-      "target": "lib_api_fetcher",
-      "confidence_score": 1.0
+      "source": "app_api_integrated_system_sync_route_post",
+      "target": "services_integrated_system_sync_service_syncneworders"
     },
     {
       "relation": "contains",
@@ -16516,28 +16382,6 @@
       "weight": 1.0,
       "source": "app_integrated_system_workshop_login_page",
       "target": "app_integrated_system_workshop_login_page_workshoploginpage",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/workshop/login/page.tsx",
-      "source_location": "L5",
-      "weight": 1.0,
-      "source": "app_integrated_system_workshop_login_page",
-      "target": "lib_api",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrated-system/workshop/login/page.tsx",
-      "source_location": "L5",
-      "weight": 1.0,
-      "source": "app_integrated_system_workshop_login_page",
-      "target": "lib_api_fetcher",
       "confidence_score": 1.0
     },
     {
@@ -16651,26 +16495,233 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/integrated-system/sync.service.ts",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "services_integrated_system_sync_service",
+      "target": "services_integrated_system_sync_service_mapstatustostage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/integrated-system/sync.service.ts",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "services_integrated_system_sync_service",
+      "target": "services_integrated_system_sync_service_syncneworders",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/integrated-system/sync.service.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "services_integrated_system_sync_service",
+      "target": "services_integrated_system_sync_service_syncresult",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "services/integrated-system/sync.service.ts",
+      "source_location": "L98",
+      "weight": 1.0,
+      "source": "services_integrated_system_sync_service_syncneworders",
+      "target": "services_integrated_system_sync_service_mapstatustostage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/dashboard/superadmin/oprprd/monitoring/page.tsx",
+      "source_location": "L29",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_dashboard_superadmin_oprprd_monitoring_page",
+      "target": "app_dashboard_superadmin_oprprd_monitoring_page_activetab"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/dashboard/superadmin/oprprd/monitoring/page.tsx",
+      "source_location": "L33",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_dashboard_superadmin_oprprd_monitoring_page",
+      "target": "app_dashboard_superadmin_oprprd_monitoring_page_monitoringpage"
+    },
+    {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "app/workshop/login/page.tsx",
-      "source_location": "L5",
+      "source_file": "app/dashboard/superadmin/oprprd/monitoring/page.tsx",
+      "source_location": "L7",
       "weight": 1.0,
-      "source": "app_workshop_login_page",
-      "target": "lib_api",
-      "confidence_score": 1.0
+      "confidence_score": 1.0,
+      "source": "app_dashboard_superadmin_oprprd_monitoring_page",
+      "target": "lib_api"
     },
     {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "app/workshop/login/page.tsx",
+      "source_file": "app/dashboard/superadmin/oprprd/monitoring/page.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_dashboard_superadmin_oprprd_monitoring_page",
+      "target": "lib_api_fetcher"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrated-system/dashboard/admin/oprprd/analisis/page.tsx",
+      "source_location": "L14",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_integrated_system_dashboard_admin_oprprd_analisis_page",
+      "target": "app_integrated_system_dashboard_admin_oprprd_analisis_page_adminoprprdanalisispage"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrated-system/dashboard/admin/oprprd/analisis/page.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_integrated_system_dashboard_admin_oprprd_analisis_page",
+      "target": "app_integrated_system_dashboard_admin_oprprd_analisis_page_analisisdata"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrated-system/dashboard/admin/oprprd/analisis/page.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_integrated_system_dashboard_admin_oprprd_analisis_page",
+      "target": "lib_api"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrated-system/dashboard/admin/oprprd/analisis/page.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_integrated_system_dashboard_admin_oprprd_analisis_page",
+      "target": "lib_api_fetcher"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrated-system/dashboard/admin/oprprd/laporan/page.tsx",
+      "source_location": "L14",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_integrated_system_dashboard_admin_oprprd_laporan_page",
+      "target": "app_integrated_system_dashboard_admin_oprprd_laporan_page_adminoprprdlaporanpage"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrated-system/dashboard/admin/oprprd/laporan/page.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_integrated_system_dashboard_admin_oprprd_laporan_page",
+      "target": "app_integrated_system_dashboard_admin_oprprd_laporan_page_orderitem"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrated-system/dashboard/admin/oprprd/laporan/page.tsx",
       "source_location": "L5",
       "weight": 1.0,
-      "source": "app_workshop_login_page",
-      "target": "lib_api_fetcher",
-      "confidence_score": 1.0
+      "confidence_score": 1.0,
+      "source": "app_integrated_system_dashboard_admin_oprprd_laporan_page",
+      "target": "lib_api"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrated-system/dashboard/admin/oprprd/laporan/page.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_integrated_system_dashboard_admin_oprprd_laporan_page",
+      "target": "lib_api_fetcher"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
+      "source_location": "L31",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_integrated_system_dashboard_admin_page",
+      "target": "app_integrated_system_dashboard_admin_page_admindashboard"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
+      "source_location": "L19",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_integrated_system_dashboard_admin_page",
+      "target": "app_integrated_system_dashboard_admin_page_adminoverview"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
+      "source_location": "L27",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_integrated_system_dashboard_admin_page",
+      "target": "app_integrated_system_dashboard_admin_page_monitoringdata"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
+      "source_location": "L14",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_integrated_system_dashboard_admin_page",
+      "target": "app_integrated_system_dashboard_admin_page_orderitem"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_integrated_system_dashboard_admin_page",
+      "target": "lib_api"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrated-system/dashboard/admin/page.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_integrated_system_dashboard_admin_page",
+      "target": "lib_api_fetcher"
     },
     {
       "relation": "imports_from",
@@ -16799,9 +16850,9 @@
       "source_file": "lib/api.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_api",
-      "target": "lib_api_apierror",
-      "confidence_score": 1.0
+      "target": "lib_api_apierror"
     },
     {
       "relation": "contains",
@@ -16809,9 +16860,9 @@
       "source_file": "lib/api.ts",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_api",
-      "target": "lib_api_fetcher",
-      "confidence_score": 1.0
+      "target": "lib_api_fetcher"
     },
     {
       "relation": "contains",
@@ -16819,9 +16870,9 @@
       "source_file": "lib/api.ts",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_api",
-      "target": "lib_api_handleunauthorized",
-      "confidence_score": 1.0
+      "target": "lib_api_handleunauthorized"
     },
     {
       "relation": "contains",
@@ -16829,9 +16880,9 @@
       "source_file": "lib/api.ts",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_api",
-      "target": "lib_api_mutator",
-      "confidence_score": 1.0
+      "target": "lib_api_mutator"
     },
     {
       "relation": "contains",
@@ -16839,9 +16890,9 @@
       "source_file": "lib/api.ts",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_api",
-      "target": "lib_api_mutatormethod",
-      "confidence_score": 1.0
+      "target": "lib_api_mutatormethod"
     },
     {
       "relation": "method",
@@ -16849,9 +16900,9 @@
       "source_file": "lib/api.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_api_apierror",
-      "target": "lib_api_apierror_constructor",
-      "confidence_score": 1.0
+      "target": "lib_api_apierror_constructor"
     },
     {
       "relation": "calls",
@@ -16860,9 +16911,9 @@
       "source_file": "lib/api.ts",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_api_fetcher",
-      "target": "lib_api_handleunauthorized",
-      "confidence_score": 1.0
+      "target": "lib_api_handleunauthorized"
     },
     {
       "relation": "calls",
@@ -16871,83 +16922,9 @@
       "source_file": "lib/api.ts",
       "source_location": "L46",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_api_mutator",
-      "target": "lib_api_handleunauthorized",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/api/integrated-system/sync/route.ts",
-      "source_location": "L4",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_api_integrated_system_sync_route",
-      "target": "services_integrated_system_sync_service"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "services/integrated-system/sync.service.ts",
-      "source_location": "L6",
-      "weight": 1.0,
-      "source": "services_integrated_system_sync_service",
-      "target": "services_integrated_system_sync_service_mapstatustostage",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "services/integrated-system/sync.service.ts",
-      "source_location": "L24",
-      "weight": 1.0,
-      "source": "services_integrated_system_sync_service",
-      "target": "services_integrated_system_sync_service_syncneworders",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "services/integrated-system/sync.service.ts",
-      "source_location": "L18",
-      "weight": 1.0,
-      "source": "services_integrated_system_sync_service",
-      "target": "services_integrated_system_sync_service_syncresult",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "services/integrated-system/sync.service.ts",
-      "source_location": "L96",
-      "weight": 1.0,
-      "source": "services_integrated_system_sync_service_syncneworders",
-      "target": "services_integrated_system_sync_service_mapstatustostage",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/api/integrated-system/sync/route.ts",
-      "source_location": "L4",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_api_integrated_system_sync_route",
-      "target": "services_integrated_system_sync_service_syncneworders"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "app/api/integrated-system/sync/route.ts",
-      "source_location": "L26",
-      "weight": 1.0,
-      "source": "app_api_integrated_system_sync_route_post",
-      "target": "services_integrated_system_sync_service_syncneworders"
+      "target": "lib_api_handleunauthorized"
     },
     {
       "relation": "contains",
@@ -16989,27 +16966,6 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "app_api_integrated_system_supervisor_assign_route",
-      "target": "lib_supabase_server"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/api/integrated-system/sync/route.ts",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_api_integrated_system_sync_route",
-      "target": "app_api_integrated_system_sync_route_post"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/api/integrated-system/sync/route.ts",
-      "source_location": "L1",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_api_integrated_system_sync_route",
       "target": "lib_supabase_server"
     },
     {
@@ -42587,5 +42543,5 @@
       "source_file": ".github/workflows/ci.yml"
     }
   ],
-  "built_at_commit": "71ff1c43b5f95fb974f55787cc7bc61a603b2e07"
+  "built_at_commit": "af6216ec4d8d9e1b1b0d1a3b2407625a0cfb3f3a"
 }

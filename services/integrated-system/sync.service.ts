@@ -40,7 +40,7 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
       return result;
     }
 
-    const { orders } = await response.json() as {
+    const responseData = await response.json() as {
       orders: Array<{
         id: number;
         kode_order: string;
@@ -55,7 +55,8 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
       }>;
     };
 
-    console.log("[sync] Yii2 returned", orders?.length ?? 0, "orders");
+    const { orders } = responseData;
+    console.log("[sync] Yii2 returned", orders?.length ?? 0, "orders, URL:", `${LIVE_SYSTEM_BASE_URL}/api/order-sync/new-orders?since=${encodeURIComponent(sinceDate)}`);
 
     for (const order of orders) {
       try {
