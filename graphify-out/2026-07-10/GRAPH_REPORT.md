@@ -1,16 +1,16 @@
-# Graph Report - erp-system  (2026-07-10)
+# Graph Report - erp-system  (2026-07-09)
 
 ## Corpus Check
-- 300 files · ~228,159 words
+- 300 files · ~228,078 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1528 nodes · 2505 edges · 112 communities (85 shown, 27 thin omitted)
+- 1527 nodes · 2512 edges · 124 communities (91 shown, 33 thin omitted)
 - Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 242 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `71ff1c43`
+- Built from commit: `cc225031`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -83,6 +83,7 @@
 - [[_COMMUNITY_Customer Order History|Customer Order History]]
 - [[_COMMUNITY_Worker History Cards|Worker History Cards]]
 - [[_COMMUNITY_Production Loss API|Production Loss API]]
+- [[_COMMUNITY_Order Grouping API|Order Grouping API]]
 - [[_COMMUNITY_Order Timeline Logic|Order Timeline Logic]]
 - [[_COMMUNITY_Order PDF Generation|Order PDF Generation]]
 - [[_COMMUNITY_Order Validation Schemas|Order Validation Schemas]]
@@ -103,20 +104,31 @@
 - [[_COMMUNITY_Loading Splash Screen|Loading Splash Screen]]
 - [[_COMMUNITY_Login Form Component|Login Form Component]]
 - [[_COMMUNITY_Numpad Input Component|Numpad Input Component]]
+- [[_COMMUNITY_Generic Loading Component|Generic Loading Component]]
 - [[_COMMUNITY_Select Input Component|Select Input Component]]
 - [[_COMMUNITY_ESLint Configuration|ESLint Configuration]]
 - [[_COMMUNITY_Supabase Client Setup|Supabase Client Setup]]
 - [[_COMMUNITY_Next.js Configuration|Next.js Configuration]]
 - [[_COMMUNITY_PostCSS Configuration|PostCSS Configuration]]
+- [[_COMMUNITY_getClientUser|getClientUser]]
 - [[_COMMUNITY_page.tsx|page.tsx]]
 - [[_COMMUNITY_route.ts|route.ts]]
 - [[_COMMUNITY_page.tsx|page.tsx]]
+- [[_COMMUNITY_page.tsx|page.tsx]]
+- [[_COMMUNITY_getNextStage|getNextStage]]
+- [[_COMMUNITY_route.ts|route.ts]]
+- [[_COMMUNITY_route.ts|route.ts]]
+- [[_COMMUNITY_page.tsx|page.tsx]]
+- [[_COMMUNITY_route.ts|route.ts]]
 - [[_COMMUNITY_route.ts|route.ts]]
 - [[_COMMUNITY_route.ts|route.ts]]
 - [[_COMMUNITY_BottleneckHeatmap.tsx|BottleneckHeatmap.tsx]]
+- [[_COMMUNITY_mapping.service.ts|mapping.service.ts]]
 - [[_COMMUNITY_layout.ts|layout.ts]]
 - [[_COMMUNITY_route.ts|route.ts]]
 - [[_COMMUNITY_FilterPresets.tsx|FilterPresets.tsx]]
+- [[_COMMUNITY_page.tsx|page.tsx]]
+- [[_COMMUNITY_page.tsx|page.tsx]]
 - [[_COMMUNITY_MaterialSelect.tsx|MaterialSelect.tsx]]
 - [[_COMMUNITY_lead-input.ts|lead-input.ts]]
 - [[_COMMUNITY_marketing-input.ts|marketing-input.ts]]
@@ -126,10 +138,10 @@
 1. `createClient()` - 101 edges
 2. `createAdminClient()` - 80 edges
 3. `getRoleProps()` - 58 edges
-4. `getClientUser()` - 23 edges
-5. `Loading()` - 17 edges
-6. `compilerOptions` - 17 edges
-7. `ClientUser` - 16 edges
+4. `getClientUser()` - 24 edges
+5. `Loading()` - 19 edges
+6. `ClientUser` - 17 edges
+7. `compilerOptions` - 17 edges
 8. `Account` - 12 edges
 9. `POST()` - 11 edges
 10. `AlertState` - 11 edges
@@ -152,11 +164,11 @@
 ## Hyperedges (group relationships)
 - **CI Pipeline Stages** — github_workflows_ci_job_typecheck, github_workflows_ci_job_lint, github_workflows_ci_job_test, github_workflows_ci_job_e2e [EXTRACTED 1.00]
 
-## Communities (112 total, 27 thin omitted)
+## Communities (124 total, 33 thin omitted)
 
 ### Community 0 - "Supervisor API Routes"
-Cohesion: 0.05
-Nodes (19): GET(), GET(), GET(), GET(), POST(), POST(), POST(), POST() (+11 more)
+Cohesion: 0.06
+Nodes (36): GET(), GET(), GET(), GET(), POST(), POST(), DELETE(), DELETE() (+28 more)
 
 ### Community 1 - "User and Branch Forms"
 Cohesion: 0.06
@@ -167,8 +179,8 @@ Cohesion: 0.07
 Nodes (19): ALL_MAT_TYPES, ALL_TX_TYPES, CertRow, ComplRow, Field, FieldItem, FieldOption, MAT_TYPE_LABELS (+11 more)
 
 ### Community 3 - "Dashboard UI Components"
-Cohesion: 0.07
-Nodes (35): CollapsibleSection(), AdminTask, Badge(), BnRow(), DELIVERY_LABELS, DeliveryOrder, EmptyState(), Expert (+27 more)
+Cohesion: 0.05
+Nodes (47): CollapsibleSection(), AdminTask, Badge(), BnRow(), DELIVERY_LABELS, DeliveryOrder, EmptyState(), Expert (+39 more)
 
 ### Community 4 - "Account Management Modals"
 Cohesion: 0.11
@@ -180,7 +192,7 @@ Nodes (10): ALL_ROLES, AllRole, AppRole, AUTH_ONLY_PATHS, INTEGRATED_SYSTEM_ROUT
 
 ### Community 6 - "Client Session Management"
 Cohesion: 0.05
-Nodes (31): ACTIVE_STAGES, GET(), StageBottleneck, GET(), POST(), GET(), PUT(), PUT() (+23 more)
+Nodes (37): POST(), POST(), POST(), GET(), POST(), GET(), PUT(), PUT() (+29 more)
 
 ### Community 7 - "Database Schema Definitions"
 Cohesion: 0.06
@@ -199,44 +211,40 @@ Cohesion: 0.07
 Nodes (18): AnalisisPage(), AnalystData, currentPeriod(), ExpertPerformance, OrderFlowPoint, QC_LABELS, QCMetric, ROLE_CONFIG (+10 more)
 
 ### Community 11 - "User Administration API"
-Cohesion: 0.14
-Nodes (21): DELETE(), PATCH(), GET(), PUT(), GET(), PATCH(), GET(), mapAccount() (+13 more)
-
-### Community 12 - "Production Reporting API"
-Cohesion: 0.19
-Nodes (12): StageDeadlineBadge(), getScaleFactor(), getStageDeadline(), getStageDeadlineStatus(), STAGE_H_DAYS, StageDeadlineStatus, subtractWorkingDays(), addWorkingDays() (+4 more)
+Cohesion: 0.70
+Nodes (4): GET(), mapAccount(), POST(), verifySupervisorScope()
 
 ### Community 13 - "BMS Role Management"
 Cohesion: 0.13
 Nodes (22): admin, BMS_ROLE_NAMES, BmsRoleName, DELETE(), GET(), isBmsRoleName(), isManagementRoleName(), MANAGEMENT_ROLE_NAMES (+14 more)
 
 ### Community 14 - "Manager Task Monitoring"
-Cohesion: 0.17
-Nodes (7): PATCH(), GET(), DELETE(), GET(), POST(), SupervisorInfo, verifySupervisorScope()
+Cohesion: 0.20
+Nodes (7): Manager, ManagerCard(), ProgressRow, Task, TaskItem, getOverdueSeverity(), OverdueSeverity
 
 ### Community 15 - "Branch Statistics Dashboard"
 Cohesion: 0.10
 Nodes (19): BMSStatsData, BranchRow, ChannelRow, ComparisonMode, DailyStaff, DailyStats, fmtRp(), fmtRpShort() (+11 more)
 
 ### Community 16 - "Order Detail Views"
-Cohesion: 0.09
-Nodes (13): FormConfig, getTheme(), GROUP_THEME, OrderDetailData, Phase, ROLE_STAGE_MAP, STAGE_LABELS, Theme (+5 more)
+Cohesion: 0.05
+Nodes (22): formatDate(), FormConfig, getTheme(), GROUP_THEME, OrderDetailData, Phase, ROLE_STAGE_MAP, STAGE_LABELS (+14 more)
 
 ### Community 17 - "Daily Analysis Dashboard"
 Cohesion: 0.10
 Nodes (10): DailyAnalysisPage(), DailyData, DailyStaffRow, DailyTotals, DailyTrend, fmtRpShort(), HeroBanner(), P (+2 more)
 
 ### Community 18 - "Management History Dashboard"
-Cohesion: 0.05
-Nodes (36): Task, TaskItem, SortKey, ManagementDashboardPage(), C, ROLE_DISPLAY, DashboardStats, HistoryEntry (+28 more)
+Cohesion: 0.17
+Nodes (14): ManagementDashboardPage(), DashboardStats, HistoryEntry, InsightCardData, ManagerData, ManagerStats, ProgressRow, Task (+6 more)
 
 ### Community 19 - "TypeScript Configuration"
 Cohesion: 0.10
 Nodes (20): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+12 more)
 
 ### Community 20 - "Marketing Channel Dashboard"
-Cohesion: 0.12
-Nodes (9): BANKS, RecentInput, StatsData, HistoryEntry, Task, TaskItem, iconMap, menuItems (+1 more)
+Cohesion: 0.18
+Nodes (6): BANKS, RecentInput, StatsData, iconMap, menuItems, CS_ROUTES
 
 ### Community 21 - "Data Viewer Utilities"
 Cohesion: 0.10
@@ -247,16 +255,16 @@ Cohesion: 0.16
 Nodes (11): FormFieldsProps, inputCls(), OrderFormFields(), BANKS, formatRupiah(), formDataToPatch(), LABELS, normalizeSumber() (+3 more)
 
 ### Community 23 - "Owner KPI Dashboard"
-Cohesion: 0.11
-Nodes (7): QRCodeCard(), ACTIVITY_ICON, ActivityRow(), DashboardData, formatRelativeTime(), STAGE_BAR_CLASS, STAGE_LABELS
+Cohesion: 0.12
+Nodes (6): ACTIVITY_ICON, ActivityRow(), DashboardData, formatRelativeTime(), STAGE_BAR_CLASS, STAGE_LABELS
 
 ### Community 24 - "Order Action Handlers"
 Cohesion: 0.16
 Nodes (16): GET(), getClientIP(), handleDeleteOrder(), handleEditWork(), handleReadOrder(), handleRejectOrder(), handleStartWork(), isValidAction() (+8 more)
 
 ### Community 25 - "Customer Stage Progress"
-Cohesion: 0.15
-Nodes (11): _prevInSequence(), CUSTOMER_STAGE_SEQUENCE, getProgressPercent(), getStageIndex(), isStageCompleted(), isStageUpcoming(), STAGE_COLORS, STAGE_GROUP (+3 more)
+Cohesion: 0.14
+Nodes (12): nextInSequence(), _prevInSequence(), CUSTOMER_STAGE_SEQUENCE, getProgressPercent(), getStageIndex(), isStageCompleted(), isStageUpcoming(), STAGE_COLORS (+4 more)
 
 ### Community 26 - "Dashboard Activity Feed"
 Cohesion: 0.12
@@ -271,8 +279,8 @@ Cohesion: 0.11
 Nodes (18): dependencies, bcrypt, date-holidays, @hello-pangea/dnd, lucide-react, next, pusher, pusher-js (+10 more)
 
 ### Community 29 - "Lead Input Management"
-Cohesion: 0.12
-Nodes (13): LeadInput, MarketingChannel, Channel, CSInput, CSUser, AlertProps, Button, ButtonProps (+5 more)
+Cohesion: 0.14
+Nodes (11): LeadInput, MarketingChannel, Channel, CSInput, CSUser, AlertProps, Button, ButtonProps (+3 more)
 
 ### Community 30 - "Order Entry Page"
 Cohesion: 0.12
@@ -283,8 +291,8 @@ Cohesion: 0.20
 Nodes (11): buildRequest(), getCredentials(), normalizeWa(), parseErrorResponse(), parseSuccessResponse(), sendTemplate(), SendTemplateParams, SendTemplateResult (+3 more)
 
 ### Community 33 - "QR Code Management"
-Cohesion: 0.14
-Nodes (7): ACTION_STYLES, AlertState, EMPTY_GENERATE_FORM, QRCodeCardProps, ROLE_GROUP_STYLES, ScanEvent, STAGE_LABELS
+Cohesion: 0.13
+Nodes (8): ACTION_STYLES, AlertState, EMPTY_GENERATE_FORM, QRCodeCard(), QRCodeCardProps, ROLE_GROUP_STYLES, ScanEvent, STAGE_LABELS
 
 ### Community 34 - "Supervisor Order Monitoring"
 Cohesion: 0.17
@@ -299,8 +307,8 @@ Cohesion: 0.18
 Nodes (12): ALLOWED_TYPES, POST(), ALLOWED_FORM_FIELDS, DELETE(), generateOrderNumber(), GET(), POST(), requireCsOrAdmin() (+4 more)
 
 ### Community 37 - "Management Task List"
-Cohesion: 0.33
-Nodes (3): FilterTab, formatDate(), ManagementTasksPage()
+Cohesion: 0.14
+Nodes (8): FilterTab, formatDate(), ManagementTasksPage(), ConfirmDialogProps, ConfirmVariant, variantConfig, Input, InputProps
 
 ### Community 38 - "Order Status Lookup"
 Cohesion: 0.23
@@ -311,8 +319,8 @@ Cohesion: 0.23
 Nodes (12): ACTION_LABELS, GET(), GET_STATS(), getDateRange(), isValidAction(), isValidStage(), POST(), ScanEventStats (+4 more)
 
 ### Community 40 - "Management Navigation Sidebar"
-Cohesion: 0.12
-Nodes (11): ActiveTab, AnalisisData, OrderItem, AdminOverview, MonitoringData, OrderItem, ApiError, fetcher() (+3 more)
+Cohesion: 0.18
+Nodes (5): HistoryEntry, Task, TaskItem, ApiError, MutatorMethod
 
 ### Community 41 - "Stage Configuration API"
 Cohesion: 0.10
@@ -335,12 +343,12 @@ Cohesion: 0.29
 Nodes (9): ALLOWED_ROLES, checkAuth(), DELETE(), GET(), PATCH(), POST(), QRCode, Role (+1 more)
 
 ### Community 46 - "PIN Settings Page"
-Cohesion: 0.20
-Nodes (4): Mode, Step, UserProfile, BrandHeaderProps
+Cohesion: 0.29
+Nodes (4): OrderItem, OrderItem, WorkerDashboard(), StageName
 
 ### Community 47 - "User Profile Modals"
-Cohesion: 0.18
-Nodes (5): HeaderProps, ProfileData, ProfileData, SettingsModalProps, ROUTES
+Cohesion: 0.12
+Nodes (8): Assignment, PersonnelResponse, PersonnelUser, HeaderProps, ProfileData, ProfileData, SettingsModalProps, ROUTES
 
 ### Community 48 - "CI/CD Test Workflow"
 Cohesion: 0.22
@@ -351,12 +359,8 @@ Cohesion: 0.20
 Nodes (10): scripts, build, dev, lint, postinstall, start, test, test:e2e (+2 more)
 
 ### Community 50 - "Monthly Insights API"
-Cohesion: 0.29
-Nodes (10): formatCurrency(), generateInsights(), GET(), getDayName(), getDaysInMonth(), getDaysRemainingInMonth(), getLast7DaysHistory(), getMonthName() (+2 more)
-
-### Community 51 - "CSV Export Utilities"
-Cohesion: 0.48
-Nodes (5): formatCurrency(), formatNumber(), formatPercentage(), GET(), toCSV()
+Cohesion: 0.18
+Nodes (14): formatCurrency(), generateInsights(), GET(), getDayName(), getDaysInMonth(), getDaysRemainingInMonth(), getLast7DaysHistory(), getMonthName() (+6 more)
 
 ### Community 52 - "Report Generation Page"
 Cohesion: 0.22
@@ -375,8 +379,8 @@ Cohesion: 0.32
 Nodes (6): calculateAverageCycleTime(), DailyStatsResponse, estimateWipValue(), GET(), PRODUCTION_ROLES, STAGE_ORDER
 
 ### Community 56 - "Report Selection Page"
-Cohesion: 0.08
-Nodes (20): currentPeriod(), LaporanPage(), periodLabel(), ReportCard, REPORTS, ReportType, TONE_MAP, OrderItem (+12 more)
+Cohesion: 0.32
+Nodes (7): currentPeriod(), LaporanPage(), periodLabel(), ReportCard, REPORTS, ReportType, TONE_MAP
 
 ### Community 57 - "Bottleneck Monitoring Page"
 Cohesion: 0.24
@@ -387,36 +391,40 @@ Cohesion: 0.25
 Nodes (4): ROLE_GROUP_STYLES, STAGE_LABELS, QRCode, Role
 
 ### Community 59 - "Stage Deadline Tracking"
-Cohesion: 0.29
-Nodes (5): formatDate(), WorkerHistorySection(), WorkshopWorkOrderCard(), formatAddsOnList(), LABEL_MAP
+Cohesion: 0.80
+Nodes (4): DELETE(), loadTargetUser(), PATCH(), verifySupervisorScope()
 
 ### Community 60 - "Item Detail Components"
-Cohesion: 0.53
-Nodes (4): POST(), mapStatusToStage(), syncNewOrders(), SyncResult
+Cohesion: 0.29
+Nodes (5): getStatusLabel(), ItemRow(), ItemRowProps, Segment, SEGMENTS
 
 ### Community 61 - "Working Day Calculations"
-Cohesion: 0.05
-Nodes (27): PUT(), PUT(), BottleneckStage, OrderItem, TrackingDetail, BottleneckData, OrderItem, KANBAN_STAGES (+19 more)
+Cohesion: 0.27
+Nodes (7): PUT(), PUT(), KANBAN_STAGES, OrderItem, SupervisorDashboard(), WorkerItem, getNextStage()
 
 ### Community 62 - "Weekly Activity API"
-Cohesion: 0.43
-Nodes (5): DAY_ABBR, GET(), last7Days(), prevDay(), sumField()
-
-### Community 63 - "Financial Formatting API"
-Cohesion: 0.40
-Nodes (3): Assignment, PersonnelResponse, PersonnelUser
+Cohesion: 0.21
+Nodes (10): DAY_ABBR, GET(), last7Days(), prevDay(), sumField(), formatCurrency(), formatNumber(), formatPercentage() (+2 more)
 
 ### Community 64 - "Stage Visibility API"
-Cohesion: 0.29
-Nodes (9): advanceOrder(), APPROVAL_GATE_MAP, getAttemptNumber(), hasAccess(), nextInSequence(), POST(), ROLE_STAGES, WORKER_STAGES (+1 more)
+Cohesion: 0.31
+Nodes (8): advanceOrder(), APPROVAL_GATE_MAP, getAttemptNumber(), hasAccess(), POST(), ROLE_STAGES, WORKER_STAGES, getSupervisorRoleForApproval()
 
 ### Community 65 - "Customer Order History"
 Cohesion: 0.25
 Nodes (6): formatRupiah(), PelangganGroup, PelangganOrder, PelangganPage(), AnalisisChannelPage(), InputMarketingPage()
 
+### Community 66 - "Worker History Cards"
+Cohesion: 0.33
+Nodes (6): StageProgressBar(), StageProgressBarProps, CustomerTimeline(), StageProgressBar(), getProgressPercent(), getStageIndex()
+
 ### Community 67 - "Production Loss API"
 Cohesion: 0.33
 Nodes (4): GET(), PRODUCTION_ROLES, QC_STAGES, SUSUT_STAGES
+
+### Community 68 - "Order Grouping API"
+Cohesion: 0.40
+Nodes (3): BottleneckStage, OrderItem, TrackingDetail
 
 ### Community 69 - "Order Timeline Logic"
 Cohesion: 0.50
@@ -430,13 +438,17 @@ Nodes (6): fmtDate(), FONT_SRC, OrderFormPDF(), PDF_CACHE_BUST, s, CsOrder
 Cohesion: 0.33
 Nodes (4): OrderFormData, OrderFormDataPublic, OrderFormDataPublicSchema, OrderFormDataSchema
 
+### Community 73 - "Account Mapping API"
+Cohesion: 0.33
+Nodes (5): ROLE_CONFIGS, RoleConfig, LoginRole, setClientUser(), queryParamToAppRole()
+
 ### Community 75 - "Slot Management Page"
 Cohesion: 0.36
 Nodes (9): canAccessPath(), getDashboardPath(), isAuthOnlyPath(), isProtectedPath(), isWorkshopRole(), config, fetchUserRoleName(), proxy() (+1 more)
 
 ### Community 76 - "Completion Estimation Component"
-Cohesion: 0.19
-Nodes (5): ConfirmDialogProps, ConfirmVariant, variantConfig, clearClientUser(), ClientUser
+Cohesion: 0.28
+Nodes (3): ActiveTab, clearClientUser(), ClientUser
 
 ### Community 82 - "Package Metadata"
 Cohesion: 0.50
@@ -446,6 +458,14 @@ Nodes (3): name, private, version
 Cohesion: 0.22
 Nodes (8): BmsEditUserSchema, BmsUserSchema, ManagementEditUserSchema, ManagementUserSchema, OprprdEditUserSchema, OprprdUserSchema, SupervisorEditUserSchema, SupervisorUserSchema
 
+### Community 89 - "Generic Loading Component"
+Cohesion: 0.25
+Nodes (4): Manager, ProgressRow, Task, TaskItem
+
+### Community 100 - "getClientUser"
+Cohesion: 0.40
+Nodes (3): OrderItem, WorkerHistoryPage(), getClientUser()
+
 ### Community 101 - "page.tsx"
 Cohesion: 0.29
 Nodes (3): Mode, Step, UserProfile
@@ -454,9 +474,25 @@ Nodes (3): Mode, Step, UserProfile
 Cohesion: 0.29
 Nodes (6): APPROVAL_STAGES, APPROVAL_STAGES_ARRAY, APPROVAL_TO_PRODUCTION_STAGE, GET(), PRODUCTION_TO_APPROVAL_STAGE, SUPERVISOR_VISIBLE_STAGES
 
+### Community 103 - "page.tsx"
+Cohesion: 0.33
+Nodes (4): SortKey, C, ROLE_DISPLAY, isOverdue()
+
+### Community 104 - "page.tsx"
+Cohesion: 0.40
+Nodes (3): AdminOverview, MonitoringData, OrderItem
+
+### Community 107 - "route.ts"
+Cohesion: 0.40
+Nodes (4): EXPERT_ROLES, EXPERT_STAGES, GET(), ROLE_DEFAULT_STAGE
+
 ### Community 109 - "route.ts"
-Cohesion: 0.60
-Nodes (4): POST(), isLoginRole(), isAppRole(), queryParamToAppRole()
+Cohesion: 0.83
+Nodes (3): POST(), isLoginRole(), isAppRole()
+
+### Community 110 - "route.ts"
+Cohesion: 0.50
+Nodes (3): ACTIVE_STAGES, GET(), StageBottleneck
 
 ### Community 111 - "route.ts"
 Cohesion: 0.21
@@ -471,24 +507,24 @@ Cohesion: 0.50
 Nodes (3): CollapseState, MenuItem, Notification
 
 ## Knowledge Gaps
-- **523 isolated node(s):** `ActiveTab`, `AnalisisData`, `OrderItem`, `OrderItem`, `AdminOverview` (+518 more)
+- **521 isolated node(s):** `OrderItem`, `BottleneckStage`, `TrackingDetail`, `OrderItem`, `AdminOverview` (+516 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **27 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **33 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `createClient()` connect `Superadmin QR API` to `Supervisor API Routes`, `Client Session Management`, `User Administration API`, `BMS Role Management`, `Manager Task Monitoring`, `Order Action Handlers`, `Order Creation API`, `Scan Event Analytics`, `Stage Configuration API`, `KPI Data Fetching`, `Order Detail API`, `Monthly Insights API`, `CSV Export Utilities`, `Cycle Time Analytics`, `Weekly Activity API`, `Stage Visibility API`, `Worker History Cards`, `Production Loss API`, `Module Activity API`, `route.ts`, `route.ts`?**
-  _High betweenness centrality (0.035) - this node is a cross-community bridge._
-- **Why does `getRoleProps()` connect `Client Session Management` to `Supervisor API Routes`, `Superadmin QR API`, `User Administration API`, `BMS Role Management`, `Manager Task Monitoring`, `Order Creation API`, `Stage Configuration API`, `CSV Export Utilities`, `Cycle Time Analytics`, `Report Selection Page`, `Working Day Calculations`, `Weekly Activity API`, `Stage Visibility API`, `Worker History Cards`, `Production Loss API`, `Module Activity API`, `Slot Management Page`, `route.ts`, `route.ts`, `route.ts`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
-- **Why does `createAdminClient()` connect `User Administration API` to `Supervisor API Routes`, `Stage Visibility API`, `Worker History Cards`, `Production Loss API`, `Order Creation API`, `Order Status Lookup`, `Client Session Management`, `Scan Event Analytics`, `Data Normalization Utilities`, `Superadmin QR API`, `Module Activity API`, `Stage Configuration API`, `route.ts`, `BMS Role Management`, `Manager Task Monitoring`, `route.ts`, `Cycle Time Analytics`?**
-  _High betweenness centrality (0.015) - this node is a cross-community bridge._
+- **Why does `createClient()` connect `Superadmin QR API` to `Supervisor API Routes`, `Client Session Management`, `User Administration API`, `BMS Role Management`, `Order Action Handlers`, `Order Creation API`, `Scan Event Analytics`, `Stage Configuration API`, `KPI Data Fetching`, `Order Detail API`, `Monthly Insights API`, `Cycle Time Analytics`, `Stage Deadline Tracking`, `Weekly Activity API`, `Stage Visibility API`, `Production Loss API`, `Module Activity API`, `route.ts`, `route.ts`, `route.ts`, `route.ts`?**
+  _High betweenness centrality (0.033) - this node is a cross-community bridge._
+- **Why does `getRoleProps()` connect `Client Session Management` to `Supervisor API Routes`, `Superadmin QR API`, `User Administration API`, `BMS Role Management`, `Order Creation API`, `Stage Configuration API`, `Cycle Time Analytics`, `Stage Deadline Tracking`, `Working Day Calculations`, `Weekly Activity API`, `Stage Visibility API`, `Production Loss API`, `Module Activity API`, `Slot Management Page`, `route.ts`, `route.ts`, `route.ts`, `route.ts`, `route.ts`?**
+  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+- **Why does `createAdminClient()` connect `Supervisor API Routes` to `Stage Visibility API`, `Order Status Lookup`, `route.ts`, `Production Loss API`, `Order Creation API`, `Client Session Management`, `Scan Event Analytics`, `Data Normalization Utilities`, `Superadmin QR API`, `Module Activity API`, `route.ts`, `Stage Configuration API`, `User Administration API`, `route.ts`, `route.ts`, `BMS Role Management`, `Cycle Time Analytics`, `Stage Deadline Tracking`?**
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
 - **Are the 100 inferred relationships involving `createClient()` (e.g. with `GET()` and `GET()`) actually correct?**
   _`createClient()` has 100 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 79 inferred relationships involving `createAdminClient()` (e.g. with `GET()` and `GET()`) actually correct?**
   _`createAdminClient()` has 79 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 38 inferred relationships involving `getRoleProps()` (e.g. with `GET()` and `POST()`) actually correct?**
   _`getRoleProps()` has 38 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `ActiveTab`, `AnalisisData`, `OrderItem` to the rest of the system?**
-  _523 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `OrderItem`, `BottleneckStage`, `TrackingDetail` to the rest of the system?**
+  _521 weakly-connected nodes found - possible documentation gaps or missing edges._

@@ -210,7 +210,7 @@ export default function LoginPage() {
         }
       `}</style>
 
-      <div className="fixed inset-0 flex items-center justify-center overflow-y-auto min-h-dvh bg-[#1C1917] text-[#FAFAF9] font-[var(--font-dm-sans)]">
+      <div className="fixed inset-0 flex items-center justify-center overflow-hidden bg-[#1C1917] text-[#FAFAF9] font-[var(--font-dm-sans)]">
         {/* Background - visible geometric pattern + orbs */}
         <div className="fixed inset-0 z-0 pointer-events-none">
           {/* Crosshatch geometric texture */}
@@ -234,14 +234,14 @@ export default function LoginPage() {
         </Link>
 
         {/* Main content column - larger spacing to fill page */}
-        <div className="relative z-10 flex flex-col items-center w-full max-w-[580px] px-6 sm:px-12 py-6 sm:py-8 gap-y-4 sm:gap-y-5">
+        <div className="relative z-10 flex flex-col items-center w-full max-w-[580px] px-6 sm:px-12 py-3 sm:py-4 gap-y-2 sm:gap-y-3">
           {/* Logo */}
           <Image
             src="/logo.png"
             alt="KGJ"
             width={80}
             height={80}
-            className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 object-contain shrink-0"
+            className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 object-contain shrink-0"
             priority
           />
 
@@ -254,18 +254,18 @@ export default function LoginPage() {
           <div className="divider mt-2 mb-1" />
 
           {/* Frosted glass card - gold border + true glassmorphism with inner border */}
-          <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-6 sm:px-8 md:px-10 py-5 sm:py-6 md:py-8 bg-[#1C1917]/70 backdrop-blur-[20px] relative min-h-[380px] sm:min-h-[420px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_rgba(0,0,0,0.35)]">
+          <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-5 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 bg-[#1C1917]/70 backdrop-blur-[20px] relative shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_rgba(0,0,0,0.35)]">
             {/* Inner 1px border for glass refraction */}
             <div className="absolute inset-[1px] rounded-[19px] border border-white/[0.03] pointer-events-none" />
-            <h2 className="font-[var(--font-dm-serif)] text-lg sm:text-2xl text-[#f0f4ff] text-center mb-3 tracking-[-0.01em] [text-wrap:balance]">
+            <h2 className="font-[var(--font-dm-serif)] text-lg sm:text-2xl text-[#f0f4ff] text-center mb-2 tracking-[-0.01em] [text-wrap:balance]">
               Selamat Datang
             </h2>
-            <p className="text-[13px] sm:text-base text-white/40 text-center mb-3 sm:mb-4">
+            <p className="text-[13px] sm:text-base text-white/40 text-center mb-2 sm:mb-2">
               Login untuk mengakses dashboard
             </p>
 
             {error && (
-              <div className="flex items-start gap-2.5 rounded-lg bg-red-500/[0.08] border border-red-500/[0.15] px-3.5 py-3 mb-4 text-[13px] text-red-300 leading-relaxed">
+              <div className="flex items-start gap-2.5 rounded-lg bg-red-500/[0.08] border border-red-500/[0.15] px-3.5 py-3 mb-2 text-[13px] text-red-300 leading-relaxed">
                 <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-400" />
                 <span>{error}</span>
               </div>
@@ -276,7 +276,7 @@ export default function LoginPage() {
                 Pilih Role
               </p>
               {/* Role selection - strict horizontal row with per-role colors */}
-              <div className="flex justify-center gap-3 mb-6">
+              <div className="flex justify-center gap-3 mb-2">
                 {visibleRoles.map((config) => {
                   const isActive = role === config.value;
                   return (
@@ -312,7 +312,7 @@ export default function LoginPage() {
                 })}
               </div>
 
-              <div className="mb-3">
+              <div className="mb-2">
                 <label className="block text-[13px] font-medium text-white/50 tracking-[0.01em] mb-1.5">
                   Email
                 </label>
@@ -332,7 +332,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="mb-3">
+              <div className="mb-2">
                 <label className="block text-[13px] font-medium text-white/50 tracking-[0.01em] mb-1.5">
                   Password
                 </label>
@@ -411,11 +411,11 @@ export default function LoginPage() {
               {/* Inner border for refraction */}
               <div className="absolute inset-[1px] rounded-[15px] border border-white/[0.03] pointer-events-none" />
               <div className="relative z-10 flex flex-col items-center text-center">
-                <div className="w-12 h-12 rounded-full bg-[#c9a227]/10 flex items-center justify-center mb-4">
+                <div className="w-12 h-12 rounded-full bg-[#c9a227]/10 flex items-center justify-center mb-2">
                   <Lock className="w-6 h-6 text-[#c9a227]" />
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">Fitur Belum Tersedia</h3>
-                <p className="text-sm text-white/60 mb-6 leading-relaxed">
+                <p className="text-sm text-white/60 mb-2 leading-relaxed">
                   Mohon maaf, fitur lupa password sedang dalam pengembangan. Silahkan hubungi administrator untuk reset password.
                 </p>
                 <button
