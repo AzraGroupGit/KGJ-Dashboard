@@ -55,6 +55,8 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
       }>;
     };
 
+    console.log("[sync] Yii2 returned", orders?.length ?? 0, "orders");
+
     for (const order of orders) {
       try {
         const { data: existing } = await db
