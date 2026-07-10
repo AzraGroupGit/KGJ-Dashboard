@@ -10,9 +10,7 @@ import {
   ArrowLeft, RefreshCw,
 } from "lucide-react";
 
-const KANBAN_STAGES = STAGE_SEQUENCE.filter(
-  (s) => !s.startsWith("approval_") && s !== "penerimaan_order",
-);
+const KANBAN_STAGES = STAGE_SEQUENCE;
 
 interface OrderItem {
   id: string; kode_order: string; nama: string; tgl_order: string | null;
@@ -234,13 +232,14 @@ export default function SupervisorDashboard() {
           const stageIdx = getStageIndex(stage);
           const previousStage = stageIdx > 0 ? STAGE_SEQUENCE[stageIdx - 1] : null;
 
+          const isApproval = stage.startsWith("approval_");
           return (
-            <div key={stage} className="rounded-xl border border-gray-200 bg-gray-50/50 p-3">
+            <div key={stage} className={`rounded-xl border p-3 ${isApproval ? "border-amber-500/20 bg-amber-500/[0.04]" : "border-gray-200 bg-gray-50/50"}`}>
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <h2 className={`text-xs font-semibold uppercase tracking-wider ${isApproval ? "text-amber-500/60" : "text-gray-500"}`}>
                   {STAGE_LABELS[stage as keyof typeof STAGE_LABELS] ?? stage}
                 </h2>
-                <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-medium text-gray-600">
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${isApproval ? "bg-amber-500/10 text-amber-600" : "bg-gray-200 text-gray-600"}`}>
                   {items.length}
                 </span>
               </div>

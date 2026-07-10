@@ -20,7 +20,7 @@ export async function POST() {
       .limit(1);
 
     const since = lastSync?.[0]?.created_at
-      ? new Date(new Date(lastSync[0].created_at).getTime() - 60000).toISOString().replace("T", " ").split(".")[0]
+      ? new Date(new Date(lastSync[0].created_at).getTime() - 300000).toISOString().replace("T", " ").split(".")[0]
       : "2026-01-01 00:00:00";
 
     console.log("[sync] Sending since:", since, "Last sync:", lastSync?.[0]?.created_at);

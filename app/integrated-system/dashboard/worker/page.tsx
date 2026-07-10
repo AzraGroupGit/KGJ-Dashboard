@@ -146,6 +146,7 @@ export default function WorkerDashboard() {
               };
               const deadlineInfo = getDeadlineInfo();
 
+              const isApprovalNext = next?.startsWith("approval_");
               return (
                 <li key={order.id}>
                   <button
@@ -213,7 +214,9 @@ export default function WorkerDashboard() {
                             {submitting === order.id ? (
                               <span className="flex items-center justify-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" />Menyimpan...</span>
                             ) : next ? (
-                              `Selesai — Lanjut ke ${STAGE_LABELS[next as keyof typeof STAGE_LABELS] ?? next}`
+                              isApprovalNext
+                                ? "Selesai — Menunggu persetujuan supervisor"
+                                : `Selesai — Lanjut ke ${STAGE_LABELS[next as keyof typeof STAGE_LABELS] ?? next}`
                             ) : (
                               "Stage terakhir"
                             )}
