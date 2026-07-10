@@ -210,7 +210,7 @@ export default function LoginPage() {
         }
       `}</style>
 
-      <div className="fixed inset-0 flex items-center justify-center bg-[#1C1917] text-[#FAFAF9] font-[var(--font-dm-sans)]">
+      <div className="fixed inset-0 flex items-center justify-center overflow-y-auto min-h-dvh bg-[#1C1917] text-[#FAFAF9] font-[var(--font-dm-sans)]">
         {/* Background - visible geometric pattern + orbs */}
         <div className="fixed inset-0 z-0 pointer-events-none">
           {/* Crosshatch geometric texture */}

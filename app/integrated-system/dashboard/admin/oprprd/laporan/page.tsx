@@ -46,62 +46,62 @@ export default function AdminOprPrdLaporanPage() {
   };
 
   if (isLoading) {
-    return <div className="p-4 sm:p-6 animate-pulse"><div className="h-7 w-48 rounded bg-gray-200 mb-6" /><div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-12 rounded-xl bg-gray-100" />)}</div></div>;
+    return <div className="p-4 sm:p-6 animate-pulse"><div className="h-7 w-48 rounded bg-gray-200 mb-6" /><div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-12 rounded-xl bg-white/[0.04]" />)}</div></div>;
   }
 
   return (
     <div className="p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Laporan</h1>
-          <p className="mt-1 text-sm text-gray-500">Laporan order dari sistem live</p>
+          <h1 className="text-xl font-bold text-[#f0f4ff]">Laporan</h1>
+          <p className="mt-1 text-sm text-white/40">Laporan order dari sistem live</p>
         </div>
-        <button onClick={handleExportCSV} disabled={orders.length === 0} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+        <button onClick={handleExportCSV} disabled={orders.length === 0} className="inline-flex items-center gap-1.5 rounded-lg bg-[#c9a227] px-3 py-2 text-xs font-medium text-white hover:bg-[#d4ae3a] disabled:opacity-50 transition-colors">
           <Download className="h-3.5 w-3.5" />Export CSV
         </button>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-500">Dari</label>
-          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+          <label className="text-xs text-white/40">Dari</label>
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="rounded-lg border border-[#c9a227]/10 px-3 py-2 text-sm focus:border-[#c9a227]/40 focus:outline-none focus:ring-2 focus:ring-[#c9a227]/10" />
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-500">Sampai</label>
-          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+          <label className="text-xs text-white/40">Sampai</label>
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="rounded-lg border border-[#c9a227]/10 px-3 py-2 text-sm focus:border-[#c9a227]/40 focus:outline-none focus:ring-2 focus:ring-[#c9a227]/10" />
         </div>
       </div>
 
-      <p className="mb-3 text-xs text-gray-500">{count} order ditemukan</p>
+      <p className="mb-3 text-xs text-white/40">{count} order ditemukan</p>
 
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-[#c9a227]/10 bg-[#2a2522] shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-white/[0.03] border-b border-[#c9a227]/10">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Kode Order</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Pelanggan</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tgl Order</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Deadline</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Stage</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Kode Order</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Pelanggan</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Tgl Order</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Deadline</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Stage</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[#c9a227]/5">
               {orders.map((o) => (
-                <tr key={o.id} className="hover:bg-gray-50/50">
-                  <td className="px-4 py-3 text-xs font-mono text-indigo-600">{o.kode_order}</td>
-                  <td className="px-4 py-3 text-sm text-gray-800">{o.nama}</td>
-                  <td className="px-4 py-3 text-xs text-gray-500">{o.tgl_order ?? "-"}</td>
-                  <td className="px-4 py-3 text-xs text-gray-500">{o.tgl_selesai ? new Date(o.tgl_selesai).toLocaleDateString("id-ID") : "-"}</td>
-                  <td className="px-4 py-3"><span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">{STAGE_LABELS[o.tracking?.[0]?.current_stage as keyof typeof STAGE_LABELS] ?? "-"}</span></td>
-                  <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${o.tracking?.[0]?.stage_status === "completed" ? "bg-emerald-50 text-emerald-700" : o.tracking?.[0]?.stage_status === "rework" ? "bg-amber-50 text-amber-700" : "bg-blue-50 text-blue-700"}`}>{(o.tracking?.[0]?.stage_status ?? "-").replace(/_/g, " ")}</span></td>
+                <tr key={o.id} className="hover:bg-white/[0.03]/50">
+                  <td className="px-4 py-3 text-xs font-mono text-[#c9a227]">{o.kode_order}</td>
+                  <td className="px-4 py-3 text-sm text-[#f0f4ff]">{o.nama}</td>
+                  <td className="px-4 py-3 text-xs text-white/40">{o.tgl_order ?? "-"}</td>
+                  <td className="px-4 py-3 text-xs text-white/40">{o.tgl_selesai ? new Date(o.tgl_selesai).toLocaleDateString("id-ID") : "-"}</td>
+                  <td className="px-4 py-3"><span className="rounded-full bg-[#c9a227]/10 px-2 py-0.5 text-[10px] font-medium text-indigo-700">{STAGE_LABELS[o.tracking?.[0]?.current_stage as keyof typeof STAGE_LABELS] ?? "-"}</span></td>
+                  <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${o.tracking?.[0]?.stage_status === "completed" ? "bg-emerald-500/[0.08] text-emerald-300" : o.tracking?.[0]?.stage_status === "rework" ? "bg-amber-500/[0.08] text-amber-300" : "bg-[#c9a227]/10 text-[#c9a227]"}`}>{(o.tracking?.[0]?.stage_status ?? "-").replace(/_/g, " ")}</span></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {orders.length === 0 && <div className="py-12 text-center text-sm text-gray-400">Tidak ada data untuk periode ini</div>}
+        {orders.length === 0 && <div className="py-12 text-center text-sm text-white/30">Tidak ada data untuk periode ini</div>}
       </div>
     </div>
   );

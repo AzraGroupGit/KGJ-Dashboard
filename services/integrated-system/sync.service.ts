@@ -34,6 +34,8 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
     );
 
     if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      console.error("[sync] Fetch failed:", response.status, "Body:", body, "URL:", LIVE_SYSTEM_BASE_URL);
       result.errors++;
       return result;
     }
@@ -108,11 +110,13 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
         });
 
         result.synced++;
-      } catch {
+      } catch (err) {
+        console.error("[sync] Order insert error:", err);
         result.errors++;
       }
     }
-  } catch {
+  } catch (err) {
+    console.error("[sync] Fatal error:", err);
     result.errors++;
   }
 

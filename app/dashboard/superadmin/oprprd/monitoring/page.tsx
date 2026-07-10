@@ -209,10 +209,10 @@ export default function MonitoringPage() {
           {/* Page Header */}
           <div className="flex items-start justify-between gap-4 mb-5">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+              <h2 className="text-2xl font-bold text-[#f0f4ff] tracking-tight">
                 Monitoring OPR-PRD
               </h2>
-              <p className="text-sm text-slate-400 mt-0.5">
+              <p className="text-sm text-white/40 mt-0.5">
                 Pantau operasional & produksi secara terpadu
               </p>
             </div>
@@ -223,7 +223,7 @@ export default function MonitoringPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Cari order / customer..."
-                  className="w-52 rounded-md border border-slate-200 bg-white px-3 py-1.5 pl-8 text-xs text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
+                  className="w-52 rounded-md border border-[#c9a227]/10 bg-white px-3 py-1.5 pl-8 text-xs text-[#e8e2d4] shadow-sm placeholder:text-white/20 focus:border-slate-400 focus:outline-none"
                 />
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               </div>
@@ -232,7 +232,7 @@ export default function MonitoringPage() {
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-36 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
+                  className="w-36 rounded-md border border-[#c9a227]/10 bg-white px-2.5 py-1.5 text-xs text-[#e8e2d4] shadow-sm focus:border-slate-400 focus:outline-none"
                   title="Dari tanggal"
                 />
                 <span className="text-xs text-slate-400">—</span>
@@ -240,7 +240,7 @@ export default function MonitoringPage() {
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="w-36 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
+                  className="w-36 rounded-md border border-[#c9a227]/10 bg-white px-2.5 py-1.5 text-xs text-[#e8e2d4] shadow-sm focus:border-slate-400 focus:outline-none"
                   title="Sampai tanggal"
                 />
                 <FilterPresets
@@ -260,7 +260,7 @@ export default function MonitoringPage() {
           </div>
 
           {/* Tab Bar */}
-          <div className="flex items-end border-b border-slate-200 mb-6 gap-0">
+          <div className="flex items-end border-b border-[#c9a227]/10 mb-6 gap-0">
             {TABS.map((tab) => (
               <button
                 key={tab.key}
@@ -268,12 +268,12 @@ export default function MonitoringPage() {
                 className={`group flex flex-col items-start px-5 py-3 text-left transition-colors border-b-2 -mb-px ${
                   activeTab === tab.key
                     ? "border-slate-900 text-slate-900"
-                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                    : "border-transparent text-white/40 hover:text-[#e8e2d4] hover:border-slate-300"
                 }`}
               >
                 <span className="text-sm font-semibold">{tab.label}</span>
                 <span
-                  className={`text-[10px] mt-0.5 transition-colors ${activeTab === tab.key ? "text-slate-500" : "text-slate-400"}`}
+                  className={`text-[10px] mt-0.5 transition-colors ${activeTab === tab.key ? "text-white/40" : "text-slate-400"}`}
                 >
                   {tab.desc}
                 </span>
