@@ -6,9 +6,9 @@ import { fetcher } from "@/lib/api";
 import { STAGE_LABELS, STAGE_SEQUENCE } from "@/services/integrated-system/tracking.service";
 import StageProgressBar from "@/components/integrated-system/stage-progress";
 import Timeline from "@/components/integrated-system/timeline";
-import Link from "next/link";
 import {
   Search, ChevronDown, ChevronRight, X, AlertTriangle,
+  Mail, Phone, MapPin,
 } from "lucide-react";
 
 interface OrderItem {
@@ -38,6 +38,7 @@ export default function OprPrdMonitoringPage() {
   const [bnFilter, setBnFilter] = useState<string>("all");
   const [expandedBn, setExpandedBn] = useState<string | null>(null);
   const [popupOrderId, setPopupOrderId] = useState<string | null>(null);
+  const [popupTab, setPopupTab] = useState<"info" | "stages">("info");
 
   const params = new URLSearchParams();
   if (search) params.set("search", search);
@@ -220,45 +221,98 @@ export default function OprPrdMonitoringPage() {
 
       {popupOrderId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setPopupOrderId(null)}>
-          <div className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-[#2a2522] border border-[#c9a227]/10 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 flex items-center justify-between px-5 py-4 border-b border-[#c9a227]/5 bg-[#2a2522] rounded-t-2xl">
-              <h3 className="text-sm font-semibold text-[#f0f4ff]">Detail Order</h3>
-              <button onClick={() => setPopupOrderId(null)} className="rounded-lg p-1 text-white/30 hover:bg-white/[0.04]"><X className="h-4 w-4" /></button>
-            </div>
-            {popupLoading ? (
-              <div className="py-12 text-center"><div className="h-8 w-8 rounded-full border-2 border-[#c9a227]/20 border-t-[#c9a227] animate-spin mx-auto" /></div>
-            ) : popupOrder ? (
-              <div className="px-5 py-4">
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <span className="rounded bg-[#c9a227]/10 px-2 py-0.5 text-xs font-mono font-medium text-[#c9a227]">{popupOrder.kode_order}</span>
+          <div className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl bg-[#2a2522] shadow-xl border border-[#c9a227]/10" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 z-10 bg-[#2a2522] border-b border-[#c9a227]/5 px-5 py-4 rounded-t-xl">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 pr-3">
+                  <span className="font-mono text-xs font-semibold text-white/40">{popupOrder?.kode_order}</span>
+                  <h3 className="text-sm font-semibold text-[#f0f4ff] mt-0.5 truncate">{popupOrder?.nama}</h3>
                   {popupTracking && (
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${popupTracking.stage_status === "completed" ? "bg-emerald-500/[0.08] text-emerald-300" : popupTracking.stage_status === "rework" ? "bg-red-500/[0.08] text-red-300" : "bg-[#c9a227]/10 text-[#c9a227]"}`}>
+                    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium mt-1 ${
+                      popupTracking.stage_status === "completed" ? "bg-emerald-500/[0.08] text-emerald-300" :
+                      popupTracking.stage_status === "rework" ? "bg-red-500/[0.08] text-red-300" :
+                      "bg-[#c9a227]/10 text-[#c9a227]"
+                    }`}>
                       {STAGE_LABELS[popupTracking.current_stage as keyof typeof STAGE_LABELS] ?? popupTracking.current_stage}
                     </span>
                   )}
                 </div>
-                <p className="text-base font-semibold text-[#f0f4ff] mb-1">{popupOrder.nama}</p>
-                {popupOrder.tgl_order && <p className="text-xs text-white/30 mb-3">Order: {new Date(popupOrder.tgl_order).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>}
+                <button onClick={() => setPopupOrderId(null)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/40 hover:bg-white/[0.04]">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
 
-                <div className="mb-4 rounded-lg bg-white/[0.02] p-4">
-                  <StageProgressBar currentStage={popupTracking?.current_stage ?? "penerimaan_order"} stageStatus={popupTracking?.stage_status ?? "in_progress"} />
+            {popupLoading ? (
+              <div className="flex items-center justify-center py-12"><div className="h-6 w-6 animate-spin rounded-full border-2 border-[#c9a227]/20 border-t-[#c9a227]" /></div>
+            ) : popupOrder ? (
+              <>
+                <div className="flex border-b border-[#c9a227]/5 px-5">
+                  {(["info", "stages"] as const).map((t) => (
+                    <button key={t} onClick={() => setPopupTab(t)}
+                      className={`px-3 py-2.5 text-xs font-medium border-b-2 transition-colors ${popupTab === t ? "border-[#c9a227] text-[#f0f4ff]" : "border-transparent text-white/40 hover:text-[#e8e2d4]"}`}
+                    >
+                      {t === "info" ? "Info Order" : "Riwayat Tahap"}
+                    </button>
+                  ))}
                 </div>
 
-                {popupHistory.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-xs font-medium text-white/40 mb-2">Riwayat Stage</p>
-                    <Timeline history={popupHistory as never} />
-                  </div>
-                )}
+                <div className="p-5 space-y-4">
+                  {popupTab === "info" && (
+                    <>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">Pelanggan</p>
+                        <div className="rounded-lg bg-[#1C1917] p-3 space-y-1">
+                          <p className="text-sm font-semibold text-[#f0f4ff]">{popupOrder.nama}</p>
+                          {popupOrder.email && <p className="text-xs text-white/40 flex items-center gap-1"><Mail className="h-3 w-3" />{popupOrder.email}</p>}
+                          {popupOrder.no_hp && <p className="text-xs text-white/40 flex items-center gap-1"><Phone className="h-3 w-3" />{popupOrder.no_hp}</p>}
+                          {popupOrder.alamat && <p className="text-xs text-white/40 flex items-center gap-1"><MapPin className="h-3 w-3" />{popupOrder.alamat}</p>}
+                        </div>
+                      </div>
 
-                <Link
-                  href={`/integrated-system/tracking/${popupOrder.id}`}
-                  onClick={() => setPopupOrderId(null)}
-                  className="block w-full rounded-lg bg-[#c9a227] py-2.5 text-center text-sm font-medium text-[#15130f] hover:bg-[#d4ae3a] transition-colors"
-                >
-                  Lihat Detail Lengkap
-                </Link>
-              </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">Tanggal</p>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {popupOrder.tgl_order && (
+                            <div className="bg-[#1C1917] rounded p-2">
+                              <span className="text-white/40">Tgl Order</span>
+                              <p className="font-medium text-[#e8e2d4]">{new Date(popupOrder.tgl_order).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
+                            </div>
+                          )}
+                          <div className="bg-[#1C1917] rounded p-2">
+                            <span className="text-white/40">Deadline</span>
+                            <p className={`font-medium ${popupOrder.tgl_selesai && new Date(popupOrder.tgl_selesai) < new Date() ? "text-red-300" : "text-[#e8e2d4]"}`}>
+                              {popupOrder.tgl_selesai ? new Date(popupOrder.tgl_selesai).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "\u2014"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">Progress Stage</p>
+                        <div className="rounded-lg bg-[#1C1917] p-4">
+                          <StageProgressBar currentStage={popupTracking?.current_stage ?? "penerimaan_order"} stageStatus={popupTracking?.stage_status ?? "in_progress"} />
+                        </div>
+                      </div>
+
+                      {popupOrder.catatan && (
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">Catatan</p>
+                          <div className="rounded-lg bg-[#1C1917] p-3 text-xs text-[#e8e2d4]">{popupOrder.catatan}</div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {popupTab === "stages" && (
+                    popupHistory.length > 0 ? (
+                      <Timeline history={popupHistory as never} />
+                    ) : (
+                      <p className="text-sm text-white/40 text-center py-8">Belum ada riwayat tahap</p>
+                    )
+                  )}
+                </div>
+              </>
             ) : (
               <div className="py-12 text-center text-sm text-white/30">Order tidak ditemukan</div>
             )}
