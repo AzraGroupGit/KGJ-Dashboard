@@ -47,118 +47,80 @@ export async function GET(request?: NextRequest) {
     const _toDateISO = toParam ? new Date(toParam + "T23:59:59").toISOString() : now.toISOString();
 
     // ========== FETCH ALL SECTIONS IN PARALLEL ==========
+    // Legacy source: stage_history (submissions) + legacy_quality_checklist_results.
+    // Sections with no legacy equivalent (customer_confirmations, pricing/pelunasan,
+    // deliveries) return empty — the legacy schema does not carry that data.
     const [
-      konfirmasiResult,
-      pelunasanResult,
-      deliveryResult,
       adminTasksResult,
       racikResult,
       laserResult,
       qcSummaryResult,
       qcActivityResult,
     ] = await Promise.allSettled([
-      // 1. KONFIRMASI
+      // ADMIN TASKS — stage_history (completed submissions only)
       admin
-        .from("customer_confirmations")
+        .from("stage_history")
         .select(
           `
-          confirmation_type, confirmation_method, confirmation_status,
-          rejection_reason, change_requests, photos_sent_at, confirmed_at, created_at,
-          cs_orders!cc_order_id_fkey (order_number, customer_name, customer_wa),
-          stage_results!cc_stage_result_fkey (data)
-        `,
-        )
-        .eq("confirmation_status", "pending")
-        .order("created_at", { ascending: false })
-        .limit(30),
-
-      // 2. PELUNASAN — query directly from cs_orders + payments
-      admin
-        .from("cs_orders")
-        .select("id, order_number, harga, dp_amount, customer_name")
-        .not("status", "in", "(completed,cancelled)")
-        .is("deleted_at", null)
-        .order("updated_at", { ascending: false })
-        .limit(50),
-
-      // 3. DELIVERY
-      admin
-        .from("stage_results")
-        .select(
-          `
-          data, started_at, finished_at,
-          cs_orders!stage_results_order_id_fkey (
-            order_number, delivery_method, completed_at,
-            customers!orders_customer_id_fkey (name)
-          )
-        `,
-        )
-        .eq("stage", "pengiriman")
-        .order("started_at", { ascending: false })
-        .limit(50),
-
-      // 4. ADMIN TASKS — query stage_results directly
-      admin
-        .from("stage_results")
-        .select(
-          `
-          order_id, stage, started_at, finished_at,
-          cs_orders!stage_results_order_id_fkey (order_number),
-          users!stage_results_user_id_fkey (full_name, role:roles!users_role_id_fkey(name))
+          order_id, stage, created_at,
+          legacy_orders!stage_history_order_id_fkey (kode_order),
+          users!stage_history_changed_by_fkey (full_name, role:roles!users_role_id_fkey(name))
         `,
         )
         .in("stage", ["pelunasan", "kelengkapan", "packing", "pengiriman"])
-        .gte("started_at", threeDaysAgoISO)
-        .order("started_at", { ascending: false })
+        .gte("created_at", threeDaysAgoISO)
+        .order("created_at", { ascending: false })
         .limit(50),
 
-      // 5. RACIK BAHAN
+      // RACIK BAHAN
       admin
-        .from("stage_results")
+        .from("stage_history")
         .select(
           `
-          data, finished_at,
-          cs_orders!stage_results_order_id_fkey (order_number, target_weight),
-          users!stage_results_user_id_fkey (full_name)
+          data, created_at,
+          legacy_orders!stage_history_order_id_fkey (kode_order),
+          users!stage_history_changed_by_fkey (full_name)
         `,
         )
         .eq("stage", "racik_bahan")
-        .gte("finished_at", sevenDaysAgoISO)
-        .order("finished_at", { ascending: false }),
+        .eq("status", "completed")
+        .gte("created_at", sevenDaysAgoISO)
+        .order("created_at", { ascending: false }),
 
-      // 6. LASER
+      // LASER
       admin
-        .from("stage_results")
+        .from("stage_history")
         .select(
           `
-          data, started_at, finished_at,
-          cs_orders!stage_results_order_id_fkey (order_number)
+          data, created_at,
+          legacy_orders!stage_history_order_id_fkey (kode_order)
         `,
         )
         .eq("stage", "laser")
-        .gte("started_at", sevenDaysAgoISO)
-        .order("started_at", { ascending: false }),
+        .eq("status", "completed")
+        .gte("created_at", sevenDaysAgoISO)
+        .order("created_at", { ascending: false }),
 
-      // 7. QC SUMMARY
+      // QC SUMMARY
       admin
-        .from("quality_checklist_results")
-        .select(`check_key, passed, stage_result_id, created_at`)
+        .from("legacy_quality_checklist_results")
+        .select(`check_key, passed, stage_history_id, created_at`)
         .order("created_at", { ascending: false })
         .limit(500),
 
-      // 8. QC ACTIVITY
+      // QC ACTIVITY
       admin
-        .from("stage_results")
+        .from("stage_history")
         .select(
           `
-          data, notes, stage, finished_at,
-          cs_orders!stage_results_order_id_fkey (order_number),
-          users!stage_results_user_id_fkey (full_name)
+          data, note, stage, created_at,
+          legacy_orders!stage_history_order_id_fkey (kode_order),
+          users!stage_history_changed_by_fkey (full_name)
         `,
         )
         .in("stage", ["qc_1", "qc_2", "qc_3"])
-        .not("finished_at", "is", null)
-        .order("finished_at", { ascending: false })
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
         .limit(15),
     ]);
 
@@ -173,9 +135,6 @@ export async function GET(request?: NextRequest) {
       }
     };
 
-    logError("konfirmasi", konfirmasiResult);
-    logError("pelunasan", pelunasanResult);
-    logError("delivery", deliveryResult);
     logError("admin tasks", adminTasksResult);
     logError("racik", racikResult);
     logError("laser", laserResult);
@@ -183,13 +142,12 @@ export async function GET(request?: NextRequest) {
     logError("qc activity", qcActivityResult);
 
     // ========== KONFIRMASI ==========
-    const { data: waitingApprovalOrders, error: waitingError } = await admin
-      .from("cs_orders")
-      .select("order_number, created_at, current_stage, customer_name, customer_wa")
-      .in("status", ["waiting_approval", "in_progress"])
+    // Approval-stage orders awaiting review, from the legacy tracking pointer.
+    const { data: waitingApprovalTracking, error: waitingError } = await admin
+      .from("tracking_stages")
+      .select("updated_at, current_stage, legacy_orders!tracking_stages_order_id_fkey(kode_order, nama, no_hp, created_at)")
       .in("current_stage", ["approval_penerimaan_order", "approval_qc_1"])
-      .is("deleted_at", null)
-      .order("created_at", { ascending: true })
+      .order("updated_at", { ascending: true })
       .limit(30);
 
     if (waitingError) {
@@ -199,76 +157,36 @@ export async function GET(request?: NextRequest) {
       );
     }
 
-    const konfirmasi = (waitingApprovalOrders || [])
+    type KonfirmLegacy = { kode_order: string; nama: string | null; no_hp: string | null; created_at: string | null };
+    const konfirmasi = (waitingApprovalTracking || [])
       .slice(0, 10)
       .map((row) => {
-        const hoursElapsed = row.created_at
-          ? (now.getTime() - new Date(row.created_at).getTime()) / 3_600_000
+        const lo = (Array.isArray(row.legacy_orders) ? row.legacy_orders[0] : row.legacy_orders) as KonfirmLegacy | undefined;
+        const createdAt = lo?.created_at ?? row.updated_at;
+        const hoursElapsed = createdAt
+          ? (now.getTime() - new Date(createdAt).getTime()) / 3_600_000
           : 0;
         return {
-          order_number: row.order_number,
-          customer_name: row.customer_name ?? null,
-          wa_contact: row.customer_wa ?? null,
-          dp_requested_at: row.created_at,
+          order_number: lo?.kode_order ?? "—",
+          customer_name: lo?.nama ?? null,
+          wa_contact: lo?.no_hp ?? null,
+          dp_requested_at: createdAt,
           dp_received_at: null,
           dp_amount: null,
           customer_decision: "pending",
-          confirmation_started_at: row.created_at,
+          confirmation_started_at: createdAt,
           confirmation_finished_at: null,
           hours_elapsed: Math.round(hoursElapsed * 10) / 10,
         };
       });
 
     // ========== PELUNASAN ==========
-    const pelunasanRaw =
-      pelunasanResult.status === "fulfilled" && !pelunasanResult.value.error
-        ? pelunasanResult.value.data || []
-        : [];
-
-    const pelunasan = pelunasanRaw
-      .map((row) => {
-        const total = row.harga || 0;
-        const dp = row.dp_amount || 0;
-        const remaining = total - dp;
-        return {
-          order_number: row.order_number,
-          customer_name: row.customer_name ?? null,
-          total_price: total,
-          dp_paid: dp,
-          remaining_amount: remaining > 0 ? remaining : 0,
-          payment_status: remaining <= 0 ? "lunas" : "belum_lunas",
-          final_payment_method: null,
-          pelunasan_finished_at: null,
-        };
-      })
-      .filter((row) => row.payment_status !== "lunas")
-      .slice(0, 10);
+    // Legacy orders carry no pricing (harga/dp_amount) — section is empty.
+    const pelunasan: Array<Record<string, unknown>> = [];
 
     // ========== DELIVERY ==========
-    const deliveryRaw =
-      deliveryResult.status === "fulfilled" && !deliveryResult.value.error
-        ? deliveryResult.value.data || []
-        : [];
-
-    const delivery = deliveryRaw
-      .filter(
-        (row) =>
-          row.data?.picked_up_by_customer_at == null &&
-          (row as any).orders?.completed_at == null,
-      )
-      .slice(0, 10)
-      .map((row) => ({
-        order_number: (row as any).orders?.order_number ?? null,
-        customer_name: (row as any).orders?.customers?.name ?? null,
-        delivery_method: (row as any).orders?.delivery_method ?? null,
-        shipped_at: row.data?.shipped_to_store_at ?? null,
-        customer_notified_at: row.data?.customer_notified_at ?? null,
-        picked_up_by_customer_at: row.data?.picked_up_by_customer_at ?? null,
-        courier_name: row.data?.courier_name ?? null,
-        tracking_number: row.data?.tracking_number ?? null,
-        completed_at: (row as any).orders?.completed_at ?? null,
-        delivery_finished_at: row.finished_at,
-      }));
+    // Legacy has no deliveries/stage delivery data surfaced here — empty.
+    const delivery: Array<Record<string, unknown>> = [];
 
     // ========== ADMIN TASKS ==========
     const adminTasksRaw =
@@ -276,34 +194,23 @@ export async function GET(request?: NextRequest) {
         ? adminTasksResult.value.data || []
         : [];
 
-    const fourHoursAgo = new Date(now);
-    fourHoursAgo.setHours(fourHoursAgo.getHours() - 4);
-
+    // stage_history rows are completed submissions (no in-progress / duration).
     const adminTasks = adminTasksRaw
-      .sort((a, b) => {
-        const aActive = a.finished_at == null ? 0 : 1;
-        const bActive = b.finished_at == null ? 0 : 1;
-        if (aActive !== bActive) return aActive - bActive;
-        return (
-          new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
-        );
-      })
+      .sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
       .slice(0, 20)
       .map((row) => ({
         order_id: row.order_id,
-        order_number: (row as any).orders?.order_number,
+        order_number: (row as any).legacy_orders?.kode_order ?? null,
         stage: row.stage,
         executed_by: (row as any).users?.full_name ?? null,
         executed_by_role: (row as any).users?.role?.name ?? null,
-        duration_minutes:
-          (row as any).duration_minutes ??
-          (row.started_at && !row.finished_at
-            ? (now.getTime() - new Date(row.started_at).getTime()) / 60000
-            : null),
-        is_active: row.finished_at == null,
-        started_at: row.started_at,
-        is_delayed:
-          row.finished_at == null && new Date(row.started_at) < fourHoursAgo,
+        duration_minutes: null,
+        is_active: false,
+        started_at: row.created_at,
+        is_delayed: false,
       }));
 
     // ========== RACIK BAHAN ==========
@@ -312,23 +219,15 @@ export async function GET(request?: NextRequest) {
         ? racikResult.value.data || []
         : [];
 
-    const racikFinished = racikRaw.filter(
-      (row) => row.finished_at != null,
-    );
+    const racikFinished = racikRaw;
 
-    let deviationSum = 0,
-      deviationCount = 0,
-      bufferSum = 0,
+    // target_weight is not available for legacy orders → deviation always 0.
+    const deviationSum = 0,
+      deviationCount = 0;
+    let bufferSum = 0,
       bufferCount = 0;
 
     racikFinished.forEach((row) => {
-      const totalWeight = parseFloat(row.data?.total_weight);
-      const targetWeight = parseFloat((row as any).orders?.target_weight);
-      if (!isNaN(totalWeight) && !isNaN(targetWeight) && targetWeight > 0) {
-        deviationSum +=
-          (Math.abs(totalWeight - targetWeight) / targetWeight) * 100;
-        deviationCount++;
-      }
       const buffer = parseFloat(row.data?.shrinkage_buffer);
       if (!isNaN(buffer)) {
         bufferSum += buffer;
@@ -337,12 +236,12 @@ export async function GET(request?: NextRequest) {
     });
 
     const racikLogs = racikFinished.slice(0, 5).map((row) => ({
-      order_number: (row as any).orders?.order_number ?? null,
+      order_number: (row as any).legacy_orders?.kode_order ?? null,
       staff_name: (row as any).users?.full_name ?? null,
-      target_weight: (row as any).orders?.target_weight ?? null,
+      target_weight: null,
       total_weight: row.data?.total_weight ?? null,
       shrinkage_buffer: row.data?.shrinkage_buffer ?? null,
-      timestamp: row.finished_at,
+      timestamp: row.created_at,
     }));
 
     // Fetch antrian racik
@@ -371,40 +270,30 @@ export async function GET(request?: NextRequest) {
         ? laserResult.value.data || []
         : [];
 
-    const antrianUkir = laserRaw.filter(
-      (r) => r.finished_at == null,
-    ).length;
+    // stage_history has only completed submissions → no in-progress queue.
+    const antrianUkir = 0;
 
     let durationSum = 0,
       durationCount = 0;
     laserRaw.forEach((r) => {
-      if (r.finished_at != null) {
-        const dur = parseFloat(r.data?.engraving_duration_seconds);
-        if (!isNaN(dur)) {
-          durationSum += dur;
-          durationCount++;
-        }
+      const dur = parseFloat(r.data?.engraving_duration_seconds);
+      if (!isNaN(dur)) {
+        durationSum += dur;
+        durationCount++;
       }
     });
 
     const mesinSet = new Set<string>();
-    laserRaw.forEach((r) => {
-      if (r.finished_at == null) {
-        const mid = r.data?.laser_machine_id;
-        if (mid) mesinSet.add(mid);
-      }
-    });
 
     const laserRecent = laserRaw
-      .filter((r) => r.finished_at != null)
       .slice(0, 5)
       .map((r) => ({
-        order_number: (r as any).orders?.order_number ?? null,
+        order_number: (r as any).legacy_orders?.kode_order ?? null,
         engraved_text: r.data?.engraved_text ?? null,
         ring_identity_number: r.data?.ring_identity_number ?? null,
         font_style: r.data?.font_style ?? null,
         laser_machine_id: r.data?.laser_machine_id ?? null,
-        completed_at: r.finished_at,
+        completed_at: r.created_at,
       }));
 
     // ========== QC SUMMARY ==========
@@ -430,7 +319,7 @@ export async function GET(request?: NextRequest) {
     const srIds = [
       ...new Set(
         qcSummaryRaw
-          .map((r) => r.stage_result_id)
+          .map((r) => r.stage_history_id)
           .filter(Boolean),
       ),
     ];
@@ -438,11 +327,11 @@ export async function GET(request?: NextRequest) {
     const stageMap = new Map<string, { stage: string; finished_at: string }>();
     if (srIds.length > 0) {
       const { data: srData } = await admin
-        .from("stage_results")
-        .select("id, stage, finished_at")
+        .from("stage_history")
+        .select("id, stage, created_at")
         .in("id", srIds);
       (srData || []).forEach((sr) => {
-        stageMap.set(sr.id, { stage: sr.stage, finished_at: sr.finished_at });
+        stageMap.set(sr.id, { stage: sr.stage, finished_at: sr.created_at });
       });
     }
 
@@ -451,7 +340,7 @@ export async function GET(request?: NextRequest) {
       { total: number; passed: number; failed: number; date: string }
     >();
     qcSummaryRaw.forEach((row) => {
-      const sr = stageMap.get(row.stage_result_id);
+      const sr = stageMap.get(row.stage_history_id);
       if (!sr) return;
       const stage = sr.stage;
       // Fallback to created_at if finished_at is null
@@ -482,12 +371,12 @@ export async function GET(request?: NextRequest) {
         : [];
 
     const qcActivity = qcActivityRaw.map((row) => ({
-      order_number: (row as any).orders?.order_number ?? null,
+      order_number: (row as any).legacy_orders?.kode_order ?? null,
       stage: row.stage,
       result: row.data?.overall_result ?? null,
       executed_by: (row as any).users?.full_name ?? null,
-      finished_at: row.finished_at,
-      notes: row.notes,
+      finished_at: row.created_at,
+      notes: (row as any).note,
       issues_found: row.data?.issues_found ?? null,
     }));
 

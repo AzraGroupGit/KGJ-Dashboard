@@ -6,6 +6,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleProps } from "@/lib/auth/session";
 import { notifySupervisors, getSupervisorRoleForApproval, notifyCsForOrder } from "@/lib/notifications";
 import { STAGE_SEQUENCE, STAGE_GROUP, getStageIndex } from "@/lib/stages";
+import {
+  stageToYii2Status,
+  STAGES_THAT_PUSH_TO_YII2,
+} from "@/lib/legacy/reverse-map";
 
 // ── Role access ────────────────────────────────────────────────────────────────
 
@@ -44,14 +48,14 @@ async function getAttemptNumber(
   stage: string,
 ): Promise<number> {
   const { data } = await admin
-    .from("stage_results")
+    .from("stage_history")
     .select("attempt_number")
     .eq("order_id", orderId)
     .eq("stage", stage)
     .order("attempt_number", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data?.attempt_number ?? 0) + 1;
+  return ((data as { attempt_number?: number } | null)?.attempt_number ?? 0) + 1;
 }
 
 function nextInSequence(stage: string): string | null {
@@ -64,6 +68,8 @@ function _prevInSequence(stage: string): string | null {
   return idx > 0 ? STAGE_SEQUENCE[idx - 1] : null;
 }
 
+// Advance the legacy tracking pointer. The completion of `fromStage` is logged
+// separately as a stage_history submission row; this only moves the pointer.
 async function advanceOrder(
   admin: ReturnType<typeof createAdminClient>,
   orderId: string,
@@ -71,31 +77,82 @@ async function advanceOrder(
   toStage: string,
   userId: string,
   waitingApproval: boolean,
-  reason?: string,
+  _reason?: string,
 ) {
   const now = new Date().toISOString();
 
   await admin
-    .from("cs_orders")
+    .from("tracking_stages")
     .update({
       current_stage: toStage,
-      status: waitingApproval ? "waiting_approval" : "in_progress",
+      stage_status: waitingApproval ? "waiting_approval" : "in_progress",
       updated_at: now,
+      updated_by: userId,
     })
-    .eq("id", orderId);
+    .eq("order_id", orderId);
+}
 
-  await admin.from("order_stage_transitions").insert({
-    order_id: orderId,
-    from_stage: fromStage,
-    to_stage: toStage,
-    transitioned_by: userId,
-    reason:
-      reason ??
-      (waitingApproval
-        ? `${fromStage} selesai — menunggu persetujuan supervisor`
-        : `${fromStage} selesai`),
-    transitioned_at: now,
-  });
+// Record a completed-stage submission into stage_history (legacy's combined
+// submission + transition log). Returns the new row id (for QC checklist link).
+async function recordSubmission(
+  admin: ReturnType<typeof createAdminClient>,
+  orderId: string,
+  userId: string,
+  stage: string,
+  attemptNumber: number,
+  data: Record<string, unknown>,
+  note: string | null,
+): Promise<string | null> {
+  const { data: row } = await admin
+    .from("stage_history")
+    .insert({
+      order_id: orderId,
+      stage,
+      status: "completed",
+      note,
+      changed_by: userId,
+      attempt_number: attemptNumber,
+      data,
+      created_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  return (row as { id?: string } | null)?.id ?? null;
+}
+
+// Fire-and-forget push to Yii2 LIVE_SYSTEM when a milestone stage is completed.
+// Does not block the HTTP response; failure is logged, never propagated.
+async function pushStageToYii2(
+  legacyId: number | null,
+  stage: string,
+) {
+  if (legacyId == null) return;
+
+  if (!STAGES_THAT_PUSH_TO_YII2.has(stage)) return;
+
+  const idStatus = stageToYii2Status(stage);
+  if (idStatus == null) return;
+
+  const baseUrl = process.env.LIVE_SYSTEM_BASE_URL;
+  const apiKey = process.env.INTEGRATED_SYSTEM_WEBHOOK_SECRET;
+  if (!baseUrl || !apiKey) return;
+
+  try {
+    await fetch(`${baseUrl}/api/order-sync/webhook`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+      },
+      body: JSON.stringify({
+        event: "status_update",
+        order_id: legacyId,
+        id_status: idStatus,
+      }),
+    });
+  } catch {
+    console.warn(`[pushStageToYii2] Push gagal untuk order #${legacyId} stage ${stage}`);
+  }
 }
 
 // ── POST ───────────────────────────────────────────────────────────────────────
@@ -160,18 +217,30 @@ export async function POST(request: Request) {
         { status: 403 },
       );
 
-    const { data: order, error: orderError } = await admin
-      .from("cs_orders")
-      .select("id, current_stage, status, order_number")
+    const { data: legacyOrder, error: orderError } = await admin
+      .from("legacy_orders")
+      .select("id, kode_order, legacy_id")
       .eq("id", orderId)
-      .is("deleted_at", null)
       .single();
 
-    if (orderError || !order)
+    if (orderError || !legacyOrder)
       return NextResponse.json(
         { error: "Order tidak ditemukan" },
         { status: 404 },
       );
+
+    const { data: tracking } = await admin
+      .from("tracking_stages")
+      .select("current_stage, stage_status")
+      .eq("order_id", orderId)
+      .maybeSingle();
+
+    const order = {
+      id: legacyOrder.id,
+      order_number: legacyOrder.kode_order,
+      current_stage: tracking?.current_stage ?? "penerimaan_order",
+      status: tracking?.stage_status ?? "in_progress",
+    };
 
     if (order.current_stage !== stage)
       return NextResponse.json(
@@ -194,18 +263,11 @@ export async function POST(request: Request) {
           { status: 400 },
         );
 
-      await admin.from("stage_results").insert({
-        order_id: orderId,
-        user_id: userId,
-        stage: "cek_kadar",
-        attempt_number: attemptNumber,
-        data: { result, notes: data.notes ?? null },
-        started_at: now,
-        finished_at: now,
-      });
+      await recordSubmission(admin, orderId, userId, "cek_kadar", attemptNumber,
+        { result, notes: data.notes ?? null }, (data.notes as string) ?? null);
 
       if (result === "tidak_lolos") {
-        await admin.from("rework_logs").insert({
+        await admin.from("legacy_rework_logs").insert({
           order_id: orderId,
           from_stage: "cek_kadar",
           to_stage: "lebur_bahan",
@@ -218,22 +280,23 @@ export async function POST(request: Request) {
         });
 
         await admin
-          .from("cs_orders")
+          .from("tracking_stages")
           .update({
             current_stage: "lebur_bahan",
-            status: "rework",
+            stage_status: "rework",
             updated_at: now,
+            updated_by: userId,
           })
-          .eq("id", orderId);
+          .eq("order_id", orderId);
 
-        await admin.from("order_stage_transitions").insert({
+        await admin.from("stage_history").insert({
           order_id: orderId,
-          from_stage: "cek_kadar",
-          to_stage: "lebur_bahan",
-          transitioned_by: userId,
-          reason:
+          stage: "lebur_bahan",
+          status: "rework",
+          note:
             `Cek kadar tidak lolos — dikembalikan ke lebur bahan. ${(data.notes as string) ?? ""}`.trim(),
-          transitioned_at: now,
+          changed_by: userId,
+          created_at: now,
         });
 
         // Notify production supervisor about rework
@@ -290,20 +353,13 @@ export async function POST(request: Request) {
           { status: 400 },
         );
 
-      await admin.from("stage_results").insert({
-        order_id: orderId,
-        user_id: userId,
-        stage: "konfirmasi",
-        attempt_number: attemptNumber,
-        data: { ...data },
-        started_at: now,
-        finished_at: now,
-      });
+      await recordSubmission(admin, orderId, userId, "konfirmasi", attemptNumber,
+        { ...data }, (data.notes as string) ?? null);
 
       if (result === "not_approved") {
         const prevStage = "qc_2";
 
-        await admin.from("rework_logs").insert({
+        await admin.from("legacy_rework_logs").insert({
           order_id: orderId,
           from_stage: "konfirmasi",
           to_stage: prevStage,
@@ -316,22 +372,23 @@ export async function POST(request: Request) {
         });
 
         await admin
-          .from("cs_orders")
+          .from("tracking_stages")
           .update({
             current_stage: prevStage,
-            status: "rework",
+            stage_status: "rework",
             updated_at: now,
+            updated_by: userId,
           })
-          .eq("id", orderId);
+          .eq("order_id", orderId);
 
-        await admin.from("order_stage_transitions").insert({
+        await admin.from("stage_history").insert({
           order_id: orderId,
-          from_stage: "konfirmasi",
-          to_stage: prevStage,
-          transitioned_by: userId,
-          reason:
+          stage: prevStage,
+          status: "rework",
+          note:
             `Konfirmasi customer care tidak disetujui — dikembalikan ke QC akhir. ${(data.notes as string) ?? ""}`.trim(),
-          transitioned_at: now,
+          changed_by: userId,
+          created_at: now,
         });
 
         // Notify production supervisor about rework
@@ -386,27 +443,14 @@ export async function POST(request: Request) {
         passed: boolean;
       }>;
 
-      const { data: srInsert, error: srError } = await admin
-        .from("stage_results")
-        .insert({
-          order_id: orderId,
-          user_id: userId,
-          stage,
-          attempt_number: attemptNumber,
-          data: { quality_checklist: checklist, notes: data.notes ?? null },
-          started_at: now,
-          finished_at: now,
-        })
-        .select("id")
-        .single();
+      const srId = await recordSubmission(admin, orderId, userId, stage, attemptNumber,
+        { quality_checklist: checklist, notes: data.notes ?? null }, (data.notes as string) ?? null);
 
-      if (srError) throw srError;
-
-      if (srInsert?.id && checklist.length > 0) {
-        await admin.from("quality_checklist_results").insert(
+      if (srId && checklist.length > 0) {
+        await admin.from("legacy_quality_checklist_results").insert(
           checklist.map((item) => ({
             order_id: orderId,
-            stage_result_id: srInsert.id,
+            stage_history_id: srId,
             check_key: item.key,
             passed: item.passed,
             recorded_by: userId,
@@ -449,21 +493,14 @@ export async function POST(request: Request) {
     if (stage === "packing") {
       const result = data.result as string;
 
-      await admin.from("stage_results").insert({
-        order_id: orderId,
-        user_id: userId,
-        stage: "packing",
-        attempt_number: attemptNumber,
-        data: { result, notes: data.notes ?? null },
-        started_at: now,
-        finished_at: now,
-      });
+      await recordSubmission(admin, orderId, userId, "packing", attemptNumber,
+        { result, notes: data.notes ?? null }, (data.notes as string) ?? null);
 
       if (result === "belum") {
         await admin
-          .from("cs_orders")
-          .update({ status: "rework", updated_at: now })
-          .eq("id", orderId);
+          .from("tracking_stages")
+          .update({ stage_status: "rework", updated_at: now, updated_by: userId })
+          .eq("order_id", orderId);
 
         return NextResponse.json({
           success: true,
@@ -510,15 +547,8 @@ export async function POST(request: Request) {
       const isFailed = data.is_delivered === "gagal";
       const isDelivered = data.is_delivered === "sampai_store";
 
-      await admin.from("stage_results").insert({
-        order_id: orderId,
-        user_id: userId,
-        stage: "pengiriman",
-        attempt_number: attemptNumber,
-        data: { ...data },
-        started_at: now,
-        finished_at: now,
-      });
+      await recordSubmission(admin, orderId, userId, "pengiriman", attemptNumber,
+        { ...data }, (data.notes as string) ?? null);
 
       const deliveryUpdate: Record<string, unknown> = {
         status: isDelivered ? "delivered" : isFailed ? "failed" : "dispatched",
@@ -536,7 +566,7 @@ export async function POST(request: Request) {
       };
 
       await admin
-        .from("deliveries")
+        .from("legacy_deliveries")
         .update(deliveryUpdate)
         .eq("order_id", orderId)
         .eq("status", "pending");
@@ -547,25 +577,30 @@ export async function POST(request: Request) {
           : "Produk sudah sampai di expedisi — order selesai";
 
         await admin
-          .from("cs_orders")
+          .from("tracking_stages")
           .update({
             current_stage: "selesai",
-            status: "completed",
-            completed_at: now,
+            stage_status: "completed",
             updated_at: now,
+            updated_by: userId,
           })
-          .eq("id", orderId);
+          .eq("order_id", orderId);
 
-        await admin.from("order_stage_transitions").insert({
+        await admin.from("stage_history").insert({
           order_id: orderId,
-          from_stage: "pengiriman",
-          to_stage: "selesai",
-          transitioned_by: userId,
-          reason,
-          transitioned_at: now,
+          stage: "selesai",
+          status: "completed",
+          note: reason,
+          changed_by: userId,
+          created_at: now,
         });
 
         notifyCsForOrder(orderId);
+
+        // Pengiriman berhasil → push selesai to Yii2.
+        const legacyId = (legacyOrder as { legacy_id?: number }).legacy_id ?? null;
+        pushStageToYii2(legacyId, "pengiriman");
+        pushStageToYii2(legacyId, "selesai");
 
         return NextResponse.json({
           success: true,
@@ -592,16 +627,8 @@ export async function POST(request: Request) {
     }
 
     // ── Standard "Done" stages ─────────────────────────────────────────────────
-    await admin.from("stage_results").insert({
-      order_id: orderId,
-      user_id: userId,
-      stage,
-      attempt_number: attemptNumber,
-      data: { ...data },
-      notes: (data as Record<string, unknown>).notes as string | null ?? null,
-      started_at: now,
-      finished_at: now,
-    });
+    await recordSubmission(admin, orderId, userId, stage, attemptNumber,
+      { ...data }, (data as Record<string, unknown>).notes as string | null ?? null);
 
     const approvalStage = APPROVAL_GATE_MAP[stage];
     const resolvedNext = approvalStage ?? nextInSequence(stage);
@@ -630,6 +657,11 @@ export async function POST(request: Request) {
         );
       }
     }
+
+    // Push the completed stage back to Yii2 (fire-and-forget; only fires on
+    // milestone stages defined in STAGES_THAT_PUSH_TO_YII2).
+    const legacyId = (legacyOrder as { legacy_id?: number }).legacy_id ?? null;
+    pushStageToYii2(legacyId, stage);
 
     return NextResponse.json({
       success: true,

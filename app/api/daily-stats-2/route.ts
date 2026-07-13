@@ -121,18 +121,19 @@ async function calculateAverageCycleTime(
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+  // Legacy: cycle time = tgl_selesai - tgl_order from orders that reached selesai
   const { data, error } = await admin
-        .from("cs_orders")
-        .select("tgl_order, completed_at")
-        .not("completed_at", "is", null)
-    .gte("completed_at", thirtyDaysAgo.toISOString())
-    .is("deleted_at", null);
+    .from("legacy_orders")
+    .select("tgl_order, tgl_selesai")
+    .not("tgl_selesai", "is", null)
+    .gte("tgl_selesai", thirtyDaysAgo.toISOString().split("T")[0]);
 
   if (error || !data || data.length === 0) return 0;
 
   const totalDays = data.reduce((sum: number, order: Record<string, unknown>) => {
-    const start = new Date(order.tgl_order as string);
-    const end = new Date(order.completed_at as string);
+    const start = new Date((order.tgl_order as string) ?? "");
+    const end = new Date((order.tgl_selesai as string) ?? "");
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return sum;
     return sum + (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
   }, 0);
 
@@ -221,83 +222,76 @@ export async function GET(_request: NextRequest) {
       recentActivitiesQuery,
     ] = await Promise.all([
       admin
-        .from("cs_orders")
-        .select("id", { count: "exact", head: true })
-        .in("status", ["in_progress", "waiting_approval", "approved", "rework"])
-        .is("deleted_at", null),
+        .from("tracking_stages")
+        .select("order_id", { count: "exact", head: true })
+        .neq("current_stage", "selesai"),
       admin
-        .from("cs_orders")
+        .from("legacy_orders")
         .select("id", { count: "exact", head: true })
-        .in("status", ["in_progress", "waiting_approval", "rework"])
-        .lte("deadline", todayDateStr)
-        .is("deleted_at", null),
+        .not("tgl_selesai", "is", null)
+        .lte("tgl_selesai", todayDateStr),
       admin
-        .from("stage_results")
-        .select(
-          "order_id, data, stage, cs_orders!stage_results_order_id_fkey(id, status)",
-        )
+        .from("stage_history")
+        .select("order_id, data, stage")
+        .eq("status", "completed")
         .in("stage", ["racik_bahan", "pemasangan_permata", "finishing"])
-        .order("started_at", { ascending: false }),
+        .order("created_at", { ascending: false }),
       admin
-        .from("cs_orders")
+        .from("legacy_orders")
         .select("id", { count: "exact", head: true })
-        .gte("created_at", todayISO)
-        .is("deleted_at", null),
+        .gte("created_at", todayISO),
       admin
-        .from("cs_orders")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "completed")
-        .gte("completed_at", todayISO)
-        .is("deleted_at", null),
+        .from("tracking_stages")
+        .select("order_id", { count: "exact", head: true })
+        .eq("current_stage", "selesai")
+        .gte("updated_at", todayISO),
       admin
-        .from("cs_orders")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "completed")
-        .gte("completed_at", thirtyDaysAgoISO)
-        .is("deleted_at", null),
+        .from("tracking_stages")
+        .select("order_id", { count: "exact", head: true })
+        .eq("current_stage", "selesai")
+        .gte("updated_at", thirtyDaysAgoISO),
       admin
-        .from("rework_logs")
+        .from("legacy_rework_logs")
         .select("severity")
-        .gte("created_at", thirtyDaysAgoISO),
+        .gte("logged_at", thirtyDaysAgoISO),
       admin
-        .from("cs_orders")
+        .from("legacy_orders")
         .select("id", { count: "exact", head: true })
-        .gte("created_at", startOfWeek.toISOString())
-        .is("deleted_at", null),
+        .gte("created_at", startOfWeek.toISOString()),
       admin
-        .from("cs_orders")
+        .from("legacy_orders")
         .select("id", { count: "exact", head: true })
         .gte("created_at", startOfLastWeek.toISOString())
-        .lt("created_at", startOfWeek.toISOString())
-        .is("deleted_at", null),
+        .lt("created_at", startOfWeek.toISOString()),
       admin
-        .from("cs_orders")
-        .select("id, order_number, status, deadline, current_stage")
+        .from("tracking_stages")
+        .select("order_id, current_stage, legacy_orders!tracking_stages_order_id_fkey(kode_order, tgl_selesai)")
         .in("current_stage", [
           "approval_penerimaan_order",
           "approval_qc_1",
           "pelunasan",
           "pengiriman",
         ])
-        .is("deleted_at", null)
         .limit(100),
       admin
-        .from("stage_results")
-        .select("data, started_at")
+        .from("stage_history")
+        .select("data, created_at")
         .eq("stage", "racik_bahan")
-        .gte("started_at", thirtyDaysAgoISO),
+        .eq("status", "completed")
+        .gte("created_at", thirtyDaysAgoISO),
       admin
-        .from("stage_results")
-        .select("id, data, started_at, finished_at")
+        .from("stage_history")
+        .select("id, data, created_at")
         .eq("stage", "laser")
-        .order("started_at", { ascending: false })
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
         .limit(50),
       admin
-        .from("stage_results")
-        .select("stage, data, started_at, finished_at")
+        .from("stage_history")
+        .select("stage, data, created_at")
         .in("stage", ["qc_1", "qc_2", "qc_3"])
-        .gte("started_at", todayISO)
-        .not("finished_at", "is", null),
+        .eq("status", "completed")
+        .gte("created_at", todayISO),
       admin
         .from("users")
         .select(
@@ -305,29 +299,27 @@ export async function GET(_request: NextRequest) {
         )
         .is("deleted_at", null),
       admin
-        .from("stage_results")
-        .select(
-          "id, data, started_at, finished_at, cs_orders!stage_results_order_id_fkey(id, order_number)",
-        )
+        .from("stage_history")
+        .select("id, data, created_at, legacy_orders!stage_history_order_id_fkey(id, kode_order)")
         .eq("stage", "pemasangan_permata")
-        .order("started_at", { ascending: false })
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
         .limit(100),
       admin
-        .from("stage_results")
-        .select("id, stage, started_at, finished_at")
+        .from("stage_history")
+        .select("id, stage, created_at")
+        .eq("status", "completed")
         .in("stage", ["pelunasan", "kelengkapan", "packing", "pengiriman"])
         .limit(200),
       admin
-        .from("cs_orders")
+        .from("tracking_stages")
         .select("current_stage")
-        .in("status", ["in_progress", "waiting_approval", "approved", "rework"])
-        .is("deleted_at", null),
+        .neq("current_stage", "selesai"),
+      // No legacy scan_events — recent activities come from latest stage_history
       admin
-        .from("scan_events")
-        .select(
-          "id, action, stage, scanned_at, cs_orders!scan_events_order_id_fkey(order_number), users!scan_events_user_id_fkey(full_name)",
-        )
-        .order("scanned_at", { ascending: false })
+        .from("stage_history")
+        .select("id, stage, note, created_at, legacy_orders!stage_history_order_id_fkey(kode_order), users!stage_history_changed_by_fkey(full_name)")
+        .order("created_at", { ascending: false })
         .limit(30),
     ]);
 
@@ -373,6 +365,7 @@ export async function GET(_request: NextRequest) {
       totalDelivery = 0,
       urgentCount = 0;
     afterSalesData.forEach((record) => {
+      const lo = (record as any).legacy_orders as { kode_order?: string; tgl_selesai?: string | null } | undefined;
       if (
         record.current_stage === "approval_penerimaan_order" ||
         record.current_stage === "approval_qc_1"
@@ -380,9 +373,9 @@ export async function GET(_request: NextRequest) {
         totalKonfirmasi++;
       if (record.current_stage === "pelunasan") totalPelunasan++;
       if (record.current_stage === "pengiriman") totalDelivery++;
-      if (record.deadline) {
+      if (lo?.tgl_selesai) {
         const daysLeft =
-          (new Date(record.deadline).getTime() - Date.now()) /
+          (new Date(lo.tgl_selesai).getTime() - Date.now()) /
           (1000 * 60 * 60 * 24);
         if (daysLeft <= 2 && daysLeft > 0) urgentCount++;
       }
@@ -409,8 +402,9 @@ export async function GET(_request: NextRequest) {
     // Laser
     // ============================================================
     const laserData = laserStatsQuery.data || [];
-    const antrianLaser = laserData.filter((l) => !l.finished_at).length;
-    const mesinAktifLaser = laserData.filter((l) => l.finished_at).length;
+    // stage_history rows are all completed submissions — no in-progress queue.
+    const antrianLaser = 0;
+    const mesinAktifLaser = laserData.length;
 
     // ============================================================
     // QC
@@ -440,41 +434,36 @@ export async function GET(_request: NextRequest) {
       (e) => e.status === "active",
     ).length;
 
-    const { count: totalExpertOrders } = await admin
-      .from("scan_events")
-      .select("order_id", { count: "exact", head: true })
-      .eq("action", "submit")
-      .in(
-        "user_id",
-        expertData
-          .filter((e) => e.status === "active")
-          .map((e) => e.id),
-      )
-      .gte("scanned_at", todayISO);
+    // Legacy: no scan_events to count expert orders from. Use stage_history count
+    // for active experts as a rough proxy.
+    const activeExpertIds = expertData
+      .filter((e) => e.status === "active")
+      .map((e) => e.id);
+    const { count: totalExpertOrders } = activeExpertIds.length > 0
+      ? await admin
+          .from("stage_history")
+          .select("order_id", { count: "exact", head: true })
+          .eq("status", "completed")
+          .in("changed_by", activeExpertIds)
+          .gte("created_at", todayISO)
+      : { count: 0 };
 
     // ============================================================
     // Micro Setting
     // ============================================================
     const microData = microSettingQuery.data || [];
-    const microSettingTotal = microData.filter((m) => {
-      const order = (m as any).orders;
-      return order?.has_gemstone;
-    }).length;
-    const microInProgress = microData.filter((m) => {
-      const order = (m as any).orders;
-      return !m.finished_at && order?.has_gemstone;
-    }).length;
+    // Legacy: no has_gemstone field; all stage_history rows are completed.
+    const microSettingTotal = microData.length;
+    const microInProgress = 0;
 
     // ============================================================
     // Admin Tasks
     // ============================================================
     const adminTasksRaw = adminTasksQuery.data || [];
+    // stage_history rows are completed; no in-progress tracking in legacy.
     const adminTotal = adminTasksRaw.length;
-    const adminActive = adminTasksRaw.filter((t) => !t.finished_at).length;
-    const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
-    const adminDelayed = adminTasksRaw.filter(
-      (t) => !t.finished_at && new Date(t.started_at) < fourHoursAgo,
-    ).length;
+    const adminActive = 0;
+    const adminDelayed = 0;
 
     // ============================================================
     // Stage Distribution
@@ -502,21 +491,18 @@ export async function GET(_request: NextRequest) {
       (activity) => ({
         id: activity.id,
         type: mapStageToActivityType(activity.stage),
-        orderNumber: (activity as any).orders?.order_number || "-",
+        orderNumber: (activity as any).legacy_orders?.kode_order || "-",
         stage: activity.stage,
         user: (activity as any).users?.full_name || "Unknown",
-        timestamp: activity.scanned_at,
-        status: (activity.action === "reject"
-          ? "error"
-          : activity.action === "submit"
-            ? "success"
-            : undefined) as "success" | "error" | undefined,
-        notes:
-          activity.action === "reject"
-            ? "Ditolak, perlu rework"
-            : activity.action === "submit"
-              ? `Stage ${activity.stage} selesai`
-              : undefined,
+        timestamp: activity.created_at,
+        status: activity.stage.startsWith("approval_")
+          ? "success" as const
+          : activity.stage.startsWith("qc_")
+            ? "success" as const
+            : undefined,
+        notes: activity.stage.startsWith("approval_")
+          ? `Disetujui — stage ${activity.stage}`
+          : (activity as any).note ?? undefined,
       }),
     );
 
@@ -524,19 +510,19 @@ export async function GET(_request: NextRequest) {
     // Top Performers (from stage_results aggregation)
     // ============================================================
     const { data: performerData } = await admin
-      .from("stage_results")
+      .from("stage_history")
       .select(
-        "user_id, users!stage_results_user_id_fkey(full_name, role:roles!users_role_id_fkey(name))",
+        "changed_by, users!stage_history_changed_by_fkey(full_name, role:roles!users_role_id_fkey(name))",
       )
-      .gte("started_at", thirtyDaysAgoISO)
-      .not("finished_at", "is", null);
+      .eq("status", "completed")
+      .gte("created_at", thirtyDaysAgoISO);
 
     const performerMap = new Map<
       string,
       { name: string; role: string; count: number }
     >();
     (performerData || []).forEach((r) => {
-      const uid = r.user_id;
+      const uid = (r as { changed_by: string }).changed_by;
       if (!performerMap.has(uid)) {
         performerMap.set(uid, {
           name: (r as any).users?.full_name || "Unknown",

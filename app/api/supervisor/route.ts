@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleProps } from "@/lib/auth/session";
 import { STAGE_SEQUENCE, STAGE_GROUP, STAGE_LABELS } from "@/lib/stages";
+import { mapLegacyStatus } from "@/lib/legacy/adapter";
 
 const APPROVAL_STAGES = STAGE_SEQUENCE.filter((s) => s.startsWith("approval_"));
 
@@ -104,57 +105,78 @@ export async function GET(request?: NextRequest) {
 
     const [ordersResult, completedResult, submissionsTodayResult, ordersCreatedTodayResult, ordersCompletedTodayResult] = await Promise.allSettled([
       admin
-        .from("cs_orders")
+        .from("tracking_stages")
         .select(
-          "id, order_number, customer_name, current_stage, status, created_at, updated_at, deadline, completed_at",
+          "order_id, current_stage, stage_status, updated_at, legacy_orders!tracking_stages_order_id_fkey(id, kode_order, nama, tgl_order, tgl_selesai)",
         )
-        .not("status", "in", "(completed,cancelled)")
-        .is("deleted_at", null)
+        .neq("current_stage", "selesai")
         .order("updated_at", { ascending: false })
         .limit(200),
 
       (() => {
         let q = admin
-          .from("cs_orders")
+          .from("tracking_stages")
           .select(
-            "id, order_number, customer_name, current_stage, status, created_at, updated_at, deadline, completed_at",
+            "order_id, current_stage, stage_status, updated_at, legacy_orders!tracking_stages_order_id_fkey(id, kode_order, nama, tgl_order, tgl_selesai)",
           )
-          .eq("status", "completed")
-          .is("deleted_at", null);
+          .eq("current_stage", "selesai");
         if (fromParam || toParam) {
-          q = q.gte("completed_at", fromISO).lte("completed_at", toISO);
+          q = q.gte("updated_at", fromISO).lte("updated_at", toISO);
         }
-        return q.order("completed_at", { ascending: false }).limit(50);
+        return q.order("updated_at", { ascending: false }).limit(50);
       })(),
 
       admin
-        .from("stage_results")
-        .select("id", { count: "exact" })
-        .gte("finished_at", fromISO)
-        .lte("finished_at", toISO)
-        .not("finished_at", "is", null)
-        .limit(1),
-
-      admin
-        .from("cs_orders")
-        .select("id", { count: "exact" })
-        .gte("created_at", todayStart.toISOString())
-        .is("deleted_at", null)
-        .limit(1),
-
-      admin
-        .from("cs_orders")
+        .from("stage_history")
         .select("id", { count: "exact" })
         .eq("status", "completed")
-        .gte("completed_at", todayStart.toISOString())
-        .is("deleted_at", null)
+        .gte("created_at", fromISO)
+        .lte("created_at", toISO)
+        .limit(1),
+
+      admin
+        .from("legacy_orders")
+        .select("id", { count: "exact" })
+        .gte("created_at", todayStart.toISOString())
+        .limit(1),
+
+      admin
+        .from("tracking_stages")
+        .select("id", { count: "exact" })
+        .eq("current_stage", "selesai")
+        .gte("updated_at", todayStart.toISOString())
         .limit(1),
     ]);
 
+    type LegacyEmbed = { id: string; kode_order: string; nama: string | null; tgl_order: string | null; tgl_selesai: string | null };
+    type TrackRow = {
+      order_id: string;
+      current_stage: string;
+      stage_status: string;
+      updated_at: string | null;
+      legacy_orders?: LegacyEmbed | LegacyEmbed[] | null;
+    };
+
+    const flatten = (rows: unknown[]) =>
+      (rows as TrackRow[]).map((t) => {
+        const lo = Array.isArray(t.legacy_orders) ? t.legacy_orders[0] : t.legacy_orders;
+        return {
+          id: t.order_id,
+          order_number: lo?.kode_order ?? "—",
+          customer_name: lo?.nama ?? null,
+          current_stage: t.current_stage,
+          status: mapLegacyStatus(t.stage_status, t.current_stage),
+          created_at: lo?.tgl_order ?? null,
+          updated_at: t.updated_at,
+          deadline: lo?.tgl_selesai ?? null,
+          completed_at: t.current_stage === "selesai" ? t.updated_at : null,
+        };
+      });
+
     const orders =
-      ordersResult.status === "fulfilled" ? ordersResult.value.data || [] : [];
+      ordersResult.status === "fulfilled" ? flatten(ordersResult.value.data || []) : [];
     const completedOrdersRaw =
-      completedResult.status === "fulfilled" ? completedResult.value.data || [] : [];
+      completedResult.status === "fulfilled" ? flatten(completedResult.value.data || []) : [];
     const submissionsToday =
       submissionsTodayResult.status === "fulfilled"
         ? submissionsTodayResult.value.count || 0
@@ -173,13 +195,13 @@ export async function GET(request?: NextRequest) {
     const transitionsByOrder = new Map<string, { order_id: string; transitioned_at: string }[]>();
     if (completedOrderIds.length > 0) {
       const { data: transitions } = await admin
-        .from("order_stage_transitions")
-        .select("order_id, transitioned_at")
+        .from("stage_history")
+        .select("order_id, created_at")
         .in("order_id", completedOrderIds)
-        .order("transitioned_at", { ascending: true });
+        .order("created_at", { ascending: true });
       for (const t of transitions || []) {
         const arr = transitionsByOrder.get(t.order_id) || [];
-        arr.push(t);
+        arr.push({ order_id: t.order_id, transitioned_at: t.created_at });
         transitionsByOrder.set(t.order_id, arr);
       }
     }
@@ -197,11 +219,9 @@ export async function GET(request?: NextRequest) {
     // ── Pending approval count ─────────────────────────────────────────────────
     let pendingCount = 0;
     const { data: waitingOrders } = await admin
-      .from("cs_orders")
-      .select("id, current_stage")
-      .in("status", ["waiting_approval"])
+      .from("tracking_stages")
+      .select("order_id, current_stage")
       .in("current_stage", [...supervisorApprovalStages])
-      .is("deleted_at", null)
       .limit(100);
 
     if (waitingOrders && waitingOrders.length > 0) {
@@ -211,22 +231,22 @@ export async function GET(request?: NextRequest) {
 
       const otherIds = waitingOrders
         .filter((o) => o.current_stage !== "approval_penerimaan_order")
-        .map((o) => o.id);
+        .map((o) => o.order_id);
 
       if (otherIds.length > 0) {
         const orderExpectedStage = new Map<string, string>();
         for (const o of waitingOrders) {
           const prodStage = APPROVAL_TO_PRODUCTION_STAGE[o.current_stage];
           if (prodStage && o.current_stage !== "approval_penerimaan_order") {
-            orderExpectedStage.set(o.id, prodStage);
+            orderExpectedStage.set(o.order_id, prodStage);
           }
         }
 
         const { data: srRows } = await admin
-          .from("stage_results")
+          .from("stage_history")
           .select("order_id, stage, attempt_number")
           .in("order_id", otherIds)
-          .not("finished_at", "is", null)
+          .eq("status", "completed")
           .order("attempt_number", { ascending: false });
 
         const seen = new Set<string>();
@@ -240,25 +260,32 @@ export async function GET(request?: NextRequest) {
       }
     }
 
-    // ── Latest stage_results per order ─────────────────────────────────────────
+    // ── Latest stage_history per order ─────────────────────────────────────────
     const orderIds = orders.map((o) => o.id);
     let latestResults: unknown[] = [];
     if (orderIds.length > 0) {
       const { data: results } = await admin
-        .from("stage_results")
+        .from("stage_history")
         .select(
-          "order_id, stage, finished_at, users!stage_results_user_id_fkey(full_name)",
+          "order_id, stage, created_at, users!stage_history_changed_by_fkey(full_name)",
         )
         .in("order_id", orderIds)
-        .not("finished_at", "is", null)
-        .order("finished_at", { ascending: false });
+        .eq("status", "completed")
+        .order("created_at", { ascending: false });
       latestResults = results || [];
     }
 
     type LatestRec = { order_id: string; stage: string; finished_at: string; users?: { full_name: string | null } | null };
     const latestByOrder = new Map<string, LatestRec>();
-    for (const r of latestResults as LatestRec[]) {
-      if (!latestByOrder.has(r.order_id)) latestByOrder.set(r.order_id, r);
+    for (const r of latestResults as Array<{ order_id: string; stage: string; created_at: string; users?: { full_name: string | null } | null }>) {
+      if (!latestByOrder.has(r.order_id)) {
+        latestByOrder.set(r.order_id, {
+          order_id: r.order_id,
+          stage: r.stage,
+          finished_at: r.created_at,
+          users: Array.isArray(r.users) ? r.users[0] : r.users,
+        });
+      }
     }
 
     // ── Enrich orders ──────────────────────────────────────────────────────────
@@ -268,7 +295,7 @@ export async function GET(request?: NextRequest) {
       let group: string;
       if (STAGE_GROUP[o.current_stage] === "production") group = "production";
       else if (STAGE_GROUP[o.current_stage] === "operational") group = "operational";
-      else if (APPROVAL_STAGES.includes(o.current_stage)) {
+      else if ((APPROVAL_STAGES as string[]).includes(o.current_stage)) {
         const prodStage = APPROVAL_TO_PRODUCTION_STAGE[o.current_stage];
         group =
           prodStage && STAGE_GROUP[prodStage] === "production"

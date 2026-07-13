@@ -75,40 +75,47 @@ export async function GET() {
       visibleApprovalStages = [...APPROVAL_STAGES] as string[];
     }
 
-    // ── 1. cs_orders at an approval stage ─────────────────────────────────────
-    const { data: pendingOrders, error: ordersError } = await admin
-      .from("cs_orders")
+    // ── 1. legacy orders at an approval stage (via tracking_stages) ───────────
+    const { data: trackingRows, error: ordersError } = await admin
+      .from("tracking_stages")
       .select(
-        `id, order_number, customer_name, customer_wa, customer_email, customer_instagram,
-         current_stage, status, updated_at, tgl_order,
-         deadline, harga, dp_amount, acara, kebutuhan_acara, alat_ukur, gramasi_pria, gramasi_wanita,
-         ukiran_cincin_pria, ukiran_cincin_wanita,
-         ukuran_pria, ukiran_pria, jenis_cincin_pria,
-         model_bentuk_pria, microsetting_pria, detail_laser_pria, detail_finishing_pria,
-         ukuran_wanita, ukiran_wanita, jenis_cincin_wanita,
-         model_bentuk_wanita, microsetting_wanita, detail_laser_wanita, detail_finishing_wanita,
-         kategori, transfer_ke_bank, jenis_cincin_features, dari_artis_detail,
-         font, laser_position, pengiriman, box, alamat_pengiriman,
-         reference_image_pria_url, reference_image_wanita_url,
-         users!cs_orders_created_by_fkey ( full_name )`,
+        `order_id, current_stage, stage_status, updated_at,
+         legacy_orders!tracking_stages_order_id_fkey ( id, kode_order, nama, no_hp, email, tgl_order, tgl_selesai, catatan )`,
       )
-      .in("status", ["waiting_approval", "in_progress"])
       .in("current_stage", visibleApprovalStages)
-      .is("deleted_at", null)
       .order("updated_at", { ascending: false })
       .limit(100);
 
     if (ordersError) {
-      console.error("[Pending] cs_orders query error:", ordersError);
+      console.error("[Pending] tracking_stages query error:", ordersError);
       return NextResponse.json({ error: "Gagal mengambil data" }, { status: 500 });
     }
 
-    // ── 2. stage_results for non-penerimaan_order approvals ──────────────────
-    // stage_results.order_id references cs_orders.id
+    type LegacyEmbed = {
+      id: string; kode_order: string; nama: string | null; no_hp: string | null;
+      email: string | null; tgl_order: string | null; tgl_selesai: string | null; catatan: string | null;
+    };
+    const pendingOrders = (trackingRows ?? []).map((t) => {
+      const lo = (Array.isArray(t.legacy_orders) ? t.legacy_orders[0] : t.legacy_orders) as LegacyEmbed | undefined;
+      return {
+        id: lo?.id ?? t.order_id,
+        order_number: lo?.kode_order ?? "—",
+        customer_name: lo?.nama ?? null,
+        customer_wa: lo?.no_hp ?? null,
+        customer_email: lo?.email ?? null,
+        current_stage: t.current_stage,
+        updated_at: t.updated_at,
+        tgl_order: lo?.tgl_order ?? null,
+        deadline: lo?.tgl_selesai ?? null,
+        catatan: lo?.catatan ?? null,
+      };
+    });
+
+    // ── 2. stage_history for non-penerimaan_order approvals ──────────────────
     const orderProductionStageMap: Record<string, string> = {};
     const stageResultOrderIds: string[] = [];
 
-    for (const o of pendingOrders ?? []) {
+    for (const o of pendingOrders) {
       const productionStage = APPROVAL_TO_PRODUCTION_STAGE[o.current_stage];
       if (productionStage && productionStage !== "penerimaan_order") {
         orderProductionStageMap[o.id] = productionStage;
@@ -130,13 +137,13 @@ export async function GET() {
 
     if (stageResultOrderIds.length > 0) {
       const { data: results } = await admin
-        .from("stage_results")
+        .from("stage_history")
         .select(
-          `id, order_id, stage, data, attempt_number, finished_at,
-           users!stage_results_user_id_fkey ( full_name, role:roles!users_role_id_fkey(name) )`,
+          `id, order_id, stage, data, attempt_number, created_at,
+           users!stage_history_changed_by_fkey ( full_name, role:roles!users_role_id_fkey(name) )`,
         )
         .in("order_id", stageResultOrderIds)
-        .not("finished_at", "is", null)
+        .eq("status", "completed")
         .order("attempt_number", { ascending: false });
 
       const seen = new Set<string>();
@@ -157,8 +164,8 @@ export async function GET() {
         stageResultMap[r.order_id] = {
           id: r.id,
           data: cleanData,
-          attempt_number: r.attempt_number,
-          finished_at: r.finished_at,
+          attempt_number: (r as { attempt_number?: number }).attempt_number ?? 1,
+          finished_at: r.created_at,
           user_name: (r.users as any)?.full_name ?? "—",
           user_role: (r.users as any)?.role?.name ?? "—",
         };
@@ -166,56 +173,56 @@ export async function GET() {
     }
 
     // ── 3. Shape response ──────────────────────────────────────────────────────
-    const pending = (pendingOrders ?? [])
+    const pending = pendingOrders
       .map((o) => {
         const productionStage =
           APPROVAL_TO_PRODUCTION_STAGE[o.current_stage] ?? o.current_stage;
         const isPenerimaanOrder = productionStage === "penerimaan_order";
         const sr = stageResultMap[o.id] ?? null;
 
-        // work_order comes directly from the cs_order
+        // work_order: legacy has no ring-spec fields → nulls (UI renders "—")
         const work_order = {
           cs_order_id: o.id,
           cs_order_number: o.order_number,
           customer_name: o.customer_name,
           customer_wa: o.customer_wa ?? null,
           customer_email: o.customer_email ?? null,
-          ukuran_pria: o.ukuran_pria ?? null,
-          ukiran_pria: o.ukuran_pria ?? null,
-          jenis_cincin_pria: o.jenis_cincin_pria ?? null,
-          model_bentuk_pria: o.model_bentuk_pria ?? null,
-          microsetting_pria: o.microsetting_pria ?? null,
-          detail_laser_pria: o.detail_laser_pria ?? null,
-          detail_finishing_pria: o.detail_finishing_pria ?? null,
-          ukuran_wanita: o.ukuran_wanita ?? null,
-          ukiran_wanita: o.ukiran_wanita ?? null,
-          jenis_cincin_wanita: o.jenis_cincin_wanita ?? null,
-          model_bentuk_wanita: o.model_bentuk_wanita ?? null,
-          microsetting_wanita: o.microsetting_wanita ?? null,
-          detail_laser_wanita: o.detail_laser_wanita ?? null,
-          detail_finishing_wanita: o.detail_finishing_wanita ?? null,
-          font: o.font ?? null,
-          laser_position: o.laser_position ?? null,
-          acara: o.acara ?? null,
-          kategori: o.kategori ?? null,
-          transfer_ke_bank: o.transfer_ke_bank ?? null,
-          jenis_cincin_features: o.jenis_cincin_features ?? null,
-          dari_artis_detail: o.dari_artis_detail ?? null,
-          alat_ukur: o.alat_ukur ?? null,
-          gramasi_pria: o.gramasi_pria ?? null,
-          gramasi_wanita: o.gramasi_wanita ?? null,
-          ukiran_cincin_pria: o.ukiran_cincin_pria ?? null,
-          ukiran_cincin_wanita: o.ukiran_cincin_wanita ?? null,
-          harga: o.harga ?? null,
-          dp_amount: o.dp_amount ?? null,
+          ukuran_pria: null,
+          ukiran_pria: null,
+          jenis_cincin_pria: null,
+          model_bentuk_pria: null,
+          microsetting_pria: null,
+          detail_laser_pria: null,
+          detail_finishing_pria: null,
+          ukuran_wanita: null,
+          ukiran_wanita: null,
+          jenis_cincin_wanita: null,
+          model_bentuk_wanita: null,
+          microsetting_wanita: null,
+          detail_laser_wanita: null,
+          detail_finishing_wanita: null,
+          font: null,
+          laser_position: null,
+          acara: null,
+          kategori: null,
+          transfer_ke_bank: null,
+          jenis_cincin_features: null,
+          dari_artis_detail: null,
+          alat_ukur: null,
+          gramasi_pria: null,
+          gramasi_wanita: null,
+          ukiran_cincin_pria: null,
+          ukiran_cincin_wanita: null,
+          harga: null,
+          dp_amount: null,
           deadline: o.deadline ?? null,
-          pengiriman: o.pengiriman ?? null,
-          alamat_pengiriman: o.alamat_pengiriman ?? null,
-          reference_image_pria_url: o.reference_image_pria_url ?? null,
-          reference_image_wanita_url: o.reference_image_wanita_url ?? null,
+          pengiriman: null,
+          alamat_pengiriman: null,
+          reference_image_pria_url: null,
+          reference_image_wanita_url: null,
         };
 
-        // For penerimaan_order: no stage_result; data = cs_order fields
+        // For penerimaan_order: no stage_result; legacy fields only
         let stageData: Record<string, unknown> | null = null;
         if (isPenerimaanOrder) {
           stageData = {
@@ -223,25 +230,7 @@ export async function GET() {
             customer_wa: o.customer_wa,
             customer_email: o.customer_email,
             deadline: o.deadline,
-            harga: o.harga,
-            dp_amount: o.dp_amount,
-            ukuran_pria: o.ukuran_pria,
-            ukiran_pria: o.ukiran_pria,
-            jenis_cincin_pria: o.jenis_cincin_pria,
-            ukuran_wanita: o.ukuran_wanita,
-            ukiran_wanita: o.ukiran_wanita,
-            jenis_cincin_wanita: o.jenis_cincin_wanita,
-            font: o.font,
-            laser_position: o.laser_position,
-            acara: o.acara,
-            kategori: o.kategori,
-            transfer_ke_bank: o.transfer_ke_bank,
-            jenis_cincin_features: o.jenis_cincin_features,
-            dari_artis_detail: o.dari_artis_detail,
-            pengiriman: o.pengiriman,
-            alamat_pengiriman: o.alamat_pengiriman,
-            reference_image_pria_url: o.reference_image_pria_url,
-            reference_image_wanita_url: o.reference_image_wanita_url,
+            catatan: o.catatan,
           };
         } else if (sr) {
           stageData = sr.data;
@@ -263,7 +252,7 @@ export async function GET() {
             ? (o.tgl_order ?? o.updated_at)
             : (sr?.finished_at ?? null),
           worker_name: isPenerimaanOrder
-            ? ((o.users as any)?.full_name ?? "—")
+            ? "—"
             : (sr?.user_name ?? "—"),
           worker_role: isPenerimaanOrder
             ? "customer_service"

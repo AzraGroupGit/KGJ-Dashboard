@@ -11,7 +11,7 @@ export class ApiError extends Error {
 function handleUnauthorized() {
   if (typeof window === "undefined") return;
   ["userId", "userEmail", "userName", "userUsername", "userRole", "userRoleDetail", "userBranch"].forEach((k) => localStorage.removeItem(k));
-  window.location.href = "/login?from=integrated-system";
+  window.location.href = "/login";
 }
 
 export async function fetcher<T>(url: string): Promise<T> {

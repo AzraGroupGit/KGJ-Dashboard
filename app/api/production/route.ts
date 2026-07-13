@@ -3,7 +3,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { STAGE_GROUP } from "@/lib/stages";
 import { getRoleProps } from "@/lib/auth/session";
 
 // Role yang termasuk "Jewelry Expert"
@@ -21,10 +20,6 @@ const ROLE_DEFAULT_STAGE: Record<string, string> = {
   jewelry_expert_finishing: "finishing",
   micro_setting: "pemasangan_permata",
 };
-
-const EXPERT_STAGES = Object.entries(STAGE_GROUP)
-  .filter(([_, group]) => group === "production")
-  .map(([stage]) => stage);
 
 export async function GET(request?: NextRequest) {
   try {
@@ -64,9 +59,6 @@ export async function GET(request?: NextRequest) {
 
     // Helper tanggal
     const now = new Date();
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
-    const todayStartISO = todayStart.toISOString();
 
     const sevenDaysAgo = new Date(now);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -112,28 +104,14 @@ export async function GET(request?: NextRequest) {
     const expertUserIds = expertUserList.map((u) => u.id);
 
     // ========== 2. SCAN EVENTS HARI INI ==========
-    const { data: todayScans, error: scansError } =
-      expertUserIds.length > 0
-        ? await admin
-            .from("scan_events")
-            .select("user_id, order_id")
-            .in("user_id", expertUserIds)
-            .gte("scanned_at", todayStartISO)
-        : { data: [], error: null };
-
-    if (scansError) {
-      console.error("[GET /api/production] scans:", scansError.message);
-      return NextResponse.json(
-        { error: "Gagal mengambil data scan" },
-        { status: 500 },
-      );
-    }
+    // Legacy orders have no scan_events; scan-based metrics are unavailable.
+    const todayScans: Array<{ user_id: string; order_id: string | null }> = [];
 
     const scanStats = new Map<
       string,
       { totalScans: number; orderSet: Set<string> }
     >();
-    (todayScans || []).forEach((s) => {
+    todayScans.forEach((s) => {
       const stat = scanStats.get(s.user_id) ?? {
         totalScans: 0,
         orderSet: new Set(),
@@ -144,59 +122,23 @@ export async function GET(request?: NextRequest) {
     });
 
     // ========== 3. ACTIVE ORDERS PER EXPERT ==========
-    const { data: activeWork, error: activeWorkError } =
-      expertUserIds.length > 0
-        ? await admin
-            .from("stage_results")
-            .select(
-              `
-              user_id,
-              stage,
-              started_at,
-              cs_orders!stage_results_order_id_fkey ( order_number )
-            `,
-            )
-            .in("user_id", expertUserIds)
-            .in("stage", EXPERT_STAGES as unknown as string[])
-            .is("finished_at", null)
-            .order("started_at", { ascending: false })
-        : { data: [], error: null };
-
-    if (activeWorkError) {
-      console.error(
-        "[GET /api/production] active work:",
-        activeWorkError.message,
-      );
-      return NextResponse.json(
-        { error: "Gagal mengambil data aktif produksi" },
-        { status: 500 },
-      );
-    }
-
+    // Legacy stage_history only records COMPLETED submissions (no in-progress
+    // rows), so "active work per expert" cannot be derived. Left empty.
     const activeByUser = new Map<
       string,
       { orderNumber: string; startedAt: string; stage: string }
     >();
-    (activeWork || []).forEach((row) => {
-      if (!activeByUser.has(row.user_id)) {
-        activeByUser.set(row.user_id, {
-          orderNumber: (row as any).orders?.order_number ?? null,
-          startedAt: row.started_at,
-          stage: row.stage,
-        });
-      }
-    });
 
     // ========== 4. METRIK SUSUT/DEVIASI PER EXPERT ==========
     const { data: recentResults, error: recentResultsError } =
       expertUserIds.length > 0
         ? await admin
-            .from("stage_results")
-            .select("user_id, stage, data")
-            .in("user_id", expertUserIds)
+            .from("stage_history")
+            .select("changed_by, stage, data")
+            .in("changed_by", expertUserIds)
             .in("stage", ["lebur_bahan", "pembentukan_cincin", "pemolesan"])
-            .gte("finished_at", thirtyDaysAgoISO)
-            .not("finished_at", "is", null)
+            .eq("status", "completed")
+            .gte("created_at", thirtyDaysAgoISO)
         : { data: [], error: null };
 
     if (recentResultsError) {
@@ -212,7 +154,8 @@ export async function GET(request?: NextRequest) {
 
     const susutByUser = new Map<string, { sum: number; count: number }>();
     (recentResults || []).forEach((row) => {
-      const stat = susutByUser.get(row.user_id) ?? { sum: 0, count: 0 };
+      const userId = (row as { changed_by: string }).changed_by;
+      const stat = susutByUser.get(userId) ?? { sum: 0, count: 0 };
       let deviation: number | null = null;
 
       if (row.stage === "lebur_bahan") {
@@ -235,7 +178,7 @@ export async function GET(request?: NextRequest) {
       if (deviation != null) {
         stat.sum += deviation;
         stat.count += 1;
-        susutByUser.set(row.user_id, stat);
+        susutByUser.set(userId, stat);
       }
     });
 
@@ -292,11 +235,9 @@ export async function GET(request?: NextRequest) {
       .sort((a, b) => b.ordersHandled - a.ordersHandled);
 
     // ========== 7. MICRO SETTING ==========
-    const { data: microOrders, error: microOrdersError } = await admin
-      .from("cs_orders")
-      .select("id, order_number, current_stage, status")
-      .is("deleted_at", null)
-      .not("status", "in", "(completed,cancelled)")
+    const { data: microTracking, error: microOrdersError } = await admin
+      .from("tracking_stages")
+      .select("order_id, current_stage, stage_status, legacy_orders!tracking_stages_order_id_fkey(id, kode_order)")
       .in("current_stage", ["pemasangan_permata", "pemolesan", "qc_1"])
       .limit(10);
 
@@ -311,23 +252,34 @@ export async function GET(request?: NextRequest) {
       );
     }
 
-    const microOrderIds = (microOrders || []).map((o) => o.id);
+    type MicroLegacy = { id: string; kode_order: string };
+    const microOrders = (microTracking || []).map((t) => {
+      const lo = (Array.isArray(t.legacy_orders) ? t.legacy_orders[0] : t.legacy_orders) as MicroLegacy | undefined;
+      return {
+        id: lo?.id ?? t.order_id,
+        order_number: lo?.kode_order ?? "—",
+        current_stage: t.current_stage,
+        status: t.stage_status,
+      };
+    });
+
+    const microOrderIds = microOrders.map((o) => o.id);
 
     const { data: microResults } =
       microOrderIds.length > 0
         ? await admin
-            .from("stage_results")
+            .from("stage_history")
             .select(
               `
               order_id,
-              started_at,
-              finished_at,
+              created_at,
               attempt_number,
               data,
-              users!stage_results_user_id_fkey ( full_name )
+              users!stage_history_changed_by_fkey ( full_name )
             `,
             )
             .eq("stage", "pemasangan_permata")
+            .eq("status", "completed")
             .in("order_id", microOrderIds)
             .order("attempt_number", { ascending: false })
         : { data: [] };
@@ -339,7 +291,7 @@ export async function GET(request?: NextRequest) {
       }
     });
 
-    const microSetting = (microOrders || [])
+    const microSetting = microOrders
       .map((o) => {
         const result = latestMicroByOrder.get(o.id);
         const data = result?.data as Record<string, unknown> | undefined;
@@ -350,14 +302,10 @@ export async function GET(request?: NextRequest) {
           ? parseFloat(String(data?.weight_after_setting ?? ""))
           : null;
 
-        let status: "waiting" | "in_progress" | "completed";
-        if (!result) {
-          status = "waiting";
-        } else if (result.finished_at) {
-          status = "completed";
-        } else {
-          status = "in_progress";
-        }
+        // stage_history rows are always completed submissions.
+        const status: "waiting" | "in_progress" | "completed" = result
+          ? "completed"
+          : "waiting";
 
         return {
           order_id: o.id,
@@ -365,8 +313,8 @@ export async function GET(request?: NextRequest) {
           gemstone_info: null,
           current_stage: o.current_stage,
           staff_name: (result as any)?.users?.full_name ?? null,
-          started_at: (result as any)?.started_at ?? null,
-          finished_at: (result as any)?.finished_at ?? null,
+          started_at: (result as any)?.created_at ?? null,
+          finished_at: (result as any)?.created_at ?? null,
           weight_before: isNaN(weightBefore as number) ? null : weightBefore,
           weight_after: isNaN(weightAfter as number) ? null : weightAfter,
           status,
@@ -384,12 +332,12 @@ export async function GET(request?: NextRequest) {
       .slice(0, 20);
 
     // ========== 8. YIELD MATERIAL ==========
-    const { data: completedOrders, error: completedError } = await admin
-      .from("cs_orders")
-      .select("id, order_number, created_at, completed_at")
-      .eq("status", "completed")
-      .gte("completed_at", sevenDaysAgoISO)
-      .order("completed_at", { ascending: false })
+    const { data: completedTracking, error: completedError } = await admin
+      .from("tracking_stages")
+      .select("order_id, updated_at, legacy_orders!tracking_stages_order_id_fkey(id, kode_order, created_at)")
+      .eq("current_stage", "selesai")
+      .gte("updated_at", sevenDaysAgoISO)
+      .order("updated_at", { ascending: false })
       .limit(20);
 
     if (completedError) {
@@ -403,14 +351,26 @@ export async function GET(request?: NextRequest) {
       );
     }
 
-    const completedOrderIds = (completedOrders || []).map((o) => o.id);
+    type YieldLegacy = { id: string; kode_order: string; created_at: string | null };
+    const completedOrders = (completedTracking || []).map((t) => {
+      const lo = (Array.isArray(t.legacy_orders) ? t.legacy_orders[0] : t.legacy_orders) as YieldLegacy | undefined;
+      return {
+        id: lo?.id ?? t.order_id,
+        order_number: lo?.kode_order ?? "—",
+        created_at: lo?.created_at ?? null,
+        completed_at: t.updated_at,
+      };
+    });
+
+    const completedOrderIds = completedOrders.map((o) => o.id);
 
     const { data: qc2Results } =
       completedOrderIds.length > 0
         ? await admin
-            .from("stage_results")
+            .from("stage_history")
             .select("order_id, data")
             .eq("stage", "qc_2")
+            .eq("status", "completed")
             .in("order_id", completedOrderIds)
             .order("attempt_number", { ascending: false })
         : { data: [] };

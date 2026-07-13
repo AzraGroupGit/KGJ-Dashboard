@@ -40,16 +40,16 @@ export async function GET(request: Request) {
     const admin = createAdminClient();
 
     let query = admin
-      .from("stage_results")
-      .select(`id, order_id, stage, attempt_number, notes, data, finished_at,
-        cs_orders!stage_results_order_id_fkey ( order_number, customer_name )`)
-      .eq("user_id", user.id)
-      .not("finished_at", "is", null)
-      .order("finished_at", { ascending: false });
+      .from("stage_history")
+      .select(`id, order_id, stage, attempt_number, note, data, created_at,
+        legacy_orders!stage_history_order_id_fkey ( kode_order, nama )`, { count: "exact" })
+      .eq("changed_by", user.id)
+      .eq("status", "completed")
+      .order("created_at", { ascending: false });
 
     if (q) {
       query = query.or(
-        `cs_orders.order_number.ilike.%${q}%,stage.ilike.%${q}%`,
+        `legacy_orders.kode_order.ilike.%${q}%,stage.ilike.%${q}%`,
       );
     }
 
@@ -66,12 +66,12 @@ export async function GET(request: Request) {
       order_id: r.order_id,
       stage: r.stage,
       stage_label: STAGE_LABELS[r.stage] ?? r.stage,
-      attempt_number: r.attempt_number,
-      notes: r.notes ?? null,
+      attempt_number: (r as { attempt_number?: number }).attempt_number ?? 1,
+      notes: (r as { note?: string }).note ?? null,
       data: r.data ?? null,
-      finished_at: r.finished_at,
-      order_number: (r.cs_orders as unknown as { order_number: string; customer_name: string })?.order_number ?? "—",
-      customer_name: (r.cs_orders as unknown as { order_number: string; customer_name: string })?.customer_name ?? "—",
+      finished_at: r.created_at,
+      order_number: (r.legacy_orders as unknown as { kode_order: string; nama: string })?.kode_order ?? "—",
+      customer_name: (r.legacy_orders as unknown as { kode_order: string; nama: string })?.nama ?? "—",
     }));
 
     return NextResponse.json({ success: true, data: history, total: total ?? 0 });

@@ -16,32 +16,33 @@ export async function GET(_request: Request) {
     const DAYS = 90;
     const startDate = new Date(now.getTime() - DAYS * 86400000);
 
-    // Get all transitions in the date range
-    const { data: transitions, error: txErr } = await db
-      .from("order_stage_transitions")
-      .select("order_id, from_stage, to_stage, transitioned_at")
-      .gte("transitioned_at", startDate.toISOString())
-      .order("transitioned_at", { ascending: true });
+    // Legacy: build timeline from stage_history (completed submissions only — no
+    // granular transition log). Same heatmap logic, sparser data.
+    const { data: history, error: txErr } = await db
+      .from("stage_history")
+      .select("order_id, stage, created_at")
+      .gte("created_at", startDate.toISOString())
+      .order("created_at", { ascending: true });
 
     if (txErr) {
       return NextResponse.json({ error: txErr.message }, { status: 500 });
     }
 
-    // Build per-order transition timeline
+    // Build per-order stage timeline from history log
     const orderTimelines = new Map<string, Array<{ stage: string; enteredAt: Date; leftAt: Date | null }>>();
-    for (const t of transitions) {
-      if (!orderTimelines.has(t.order_id)) {
-        orderTimelines.set(t.order_id, []);
+    for (const h of history) {
+      if (!orderTimelines.has(h.order_id)) {
+        orderTimelines.set(h.order_id, []);
       }
-      const timeline = orderTimelines.get(t.order_id)!;
+      const timeline = orderTimelines.get(h.order_id)!;
       // Close previous stage
       if (timeline.length > 0 && timeline[timeline.length - 1].leftAt === null) {
-        timeline[timeline.length - 1].leftAt = new Date(t.transitioned_at);
+        timeline[timeline.length - 1].leftAt = new Date(h.created_at);
       }
       // Enter new stage
       timeline.push({
-        stage: t.to_stage,
-        enteredAt: new Date(t.transitioned_at),
+        stage: h.stage,
+        enteredAt: new Date(h.created_at),
         leftAt: null,
       });
     }
@@ -100,11 +101,9 @@ export async function GET(_request: Request) {
 
     // Get current active orders per stage (for reference)
     const { data: currentOrders } = await db
-      .from("cs_orders")
+      .from("tracking_stages")
       .select("current_stage")
-      .not("status", "in", "(completed,cancelled)")
-      .not("current_stage", "is", null)
-      .is("deleted_at", null);
+      .neq("current_stage", "selesai");
 
     const currentCounts: Record<string, number> = {};
     for (const o of currentOrders || []) {

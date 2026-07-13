@@ -11,7 +11,6 @@ import {
   MARKETING_ROUTES,
   SUPERVISOR_ROUTES,
   MANAGEMENT_ROUTES,
-  INTEGRATED_SYSTEM_ROUTES,
 } from "@/lib/routes";
 import {
   LayoutDashboard,
@@ -168,61 +167,6 @@ const menuItems: Record<string, MenuItem[]> = {
     { name: "Dashboard", icon: "dashboard", href: MANAGEMENT_ROUTES.DASHBOARD },
     { name: "Tugas", icon: "checklist", href: MANAGEMENT_ROUTES.TASKS },
     { name: "Riwayat", icon: "order", href: MANAGEMENT_ROUTES.HISTORY },
-  ],
-  integrated_superadmin: [
-    {
-      name: "Dashboard",
-      icon: "dashboard",
-      href: INTEGRATED_SYSTEM_ROUTES.ADMIN,
-    },
-    {
-      name: "OPR-PRD",
-      icon: "oprprd",
-      submenu: [
-        {
-          name: "Monitoring OPR-PRD",
-          icon: "monitor",
-          href: INTEGRATED_SYSTEM_ROUTES.ADMIN_OPRPRD_MONITORING,
-        },
-        {
-          name: "Analisis Kinerja",
-          icon: "analisis",
-          href: INTEGRATED_SYSTEM_ROUTES.ADMIN_OPRPRD_ANALISIS,
-        },
-        {
-          name: "Laporan",
-          icon: "report",
-          href: INTEGRATED_SYSTEM_ROUTES.ADMIN_OPRPRD_LAPORAN,
-        },
-      ],
-    },
-  ],
-  integrated_supervisor: [
-    {
-      name: "Dashboard",
-      icon: "dashboard",
-      href: INTEGRATED_SYSTEM_ROUTES.SUPERVISOR,
-    },
-    {
-      name: "Persetujuan",
-      icon: "approval",
-      href: INTEGRATED_SYSTEM_ROUTES.SUPERVISOR_PERSETUJUAN,
-    },
-    {
-      name: "Bottleneck",
-      icon: "scan",
-      href: INTEGRATED_SYSTEM_ROUTES.SUPERVISOR_BOTTLENECK,
-    },
-    {
-      name: "Monitoring",
-      icon: "monitor",
-      href: INTEGRATED_SYSTEM_ROUTES.SUPERVISOR_MONITORING,
-    },
-    {
-      name: "QR Code",
-      icon: "qr",
-      href: INTEGRATED_SYSTEM_ROUTES.SUPERVISOR_QR_CODES,
-    },
   ],
 };
 

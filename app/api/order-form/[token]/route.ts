@@ -145,6 +145,16 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ token: string }> },
 ) {
+  // DISABLED: public order-form submission is retired — order data now comes
+  // from the legacy Yii2 system, not customer form entry. Kept behind flag.
+  const ORDER_FORM_SUBMISSION_ENABLED = false;
+  if (!ORDER_FORM_SUBMISSION_ENABLED) {
+    return NextResponse.json(
+      { error: "Pengisian formulir order dinonaktifkan." },
+      { status: 403 },
+    );
+  }
+
   try {
     const { token } = await params;
 

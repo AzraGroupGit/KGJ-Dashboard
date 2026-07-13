@@ -109,9 +109,9 @@ export async function GET(request: Request) {
     // ── PRODUCTION REPORT ─────────────────────────────────────────────────
     if (type === "production") {
       const { data, error } = await admin
-        .from("stage_results")
+        .from("stage_history")
         .select(
-          "stage, started_at, finished_at, attempt_number, data, cs_orders!stage_results_order_id_fkey(order_number, customer_name), users!stage_results_user_id_fkey(full_name, role:roles!users_role_id_fkey(name))",
+          "stage, created_at, attempt_number, data, legacy_orders!stage_history_order_id_fkey(kode_order, nama), users!stage_history_changed_by_fkey(full_name, role:roles!users_role_id_fkey(name))",
         )
         .in("stage", [
           "racik_bahan",
@@ -122,10 +122,10 @@ export async function GET(request: Request) {
           "laser",
           "finishing",
         ])
-        .gte("started_at", fromISO)
-        .lte("started_at", toISO)
-        .not("finished_at", "is", null)
-        .order("started_at", { ascending: false });
+        .eq("status", "completed")
+        .gte("created_at", fromISO)
+        .lte("created_at", toISO)
+        .order("created_at", { ascending: false });
 
       if (error) {
         return NextResponse.json(
@@ -153,14 +153,14 @@ export async function GET(request: Request) {
 
         return [
           i + 1,
-          fmtDate(r.started_at),
-          (r as any).orders?.order_number ?? "-",
-          (r as any).orders?.customer_name ?? "-",
+          fmtDate(r.created_at),
+          (r as any).legacy_orders?.kode_order ?? "-",
+          (r as any).legacy_orders?.nama ?? "-",
           getStageLabel(r.stage),
           (r as any).users?.full_name ?? "-",
           getRoleProps(r.users).name ?? "-",
-          fmtDuration(r.started_at, r.finished_at),
-          r.attempt_number ?? 1,
+          fmtDuration(r.created_at, r.created_at),
+          (r as any).attempt_number ?? 1,
           susut,
         ];
       });
@@ -192,15 +192,15 @@ export async function GET(request: Request) {
     // ── QUALITY REPORT ────────────────────────────────────────────────────
     if (type === "quality") {
       const { data, error } = await admin
-        .from("stage_results")
+        .from("stage_history")
         .select(
-          "stage, started_at, finished_at, notes, data, cs_orders!stage_results_order_id_fkey(order_number, customer_name), users!stage_results_user_id_fkey(full_name)",
+          "stage, created_at, note, data, legacy_orders!stage_history_order_id_fkey(kode_order, nama), users!stage_history_changed_by_fkey(full_name)",
         )
         .in("stage", ["qc_1", "qc_2", "qc_3"])
-        .gte("started_at", fromISO)
-        .lte("started_at", toISO)
-        .not("finished_at", "is", null)
-        .order("finished_at", { ascending: false });
+        .eq("status", "completed")
+        .gte("created_at", fromISO)
+        .lte("created_at", toISO)
+        .order("created_at", { ascending: false });
 
       if (error) {
         return NextResponse.json(
@@ -211,14 +211,14 @@ export async function GET(request: Request) {
 
       const rows = (data ?? []).map((r, i: number) => [
         i + 1,
-        fmtDate(r.finished_at),
-        (r as any).orders?.order_number ?? "-",
-        (r as any).orders?.customer_name ?? "-",
+        fmtDate(r.created_at),
+        (r as any).legacy_orders?.kode_order ?? "-",
+        (r as any).legacy_orders?.nama ?? "-",
         getStageLabel(r.stage),
         (r as any).users?.full_name ?? "-",
         r.data?.overall_result ?? r.data?.result ?? "-",
-        r.notes ?? "-",
-        fmtDuration(r.started_at, r.finished_at),
+        (r as any).note ?? "-",
+        fmtDuration(r.created_at, r.created_at),
       ]);
 
       const stageSummary: Record<string, { total: number; passed: number }> =
@@ -278,28 +278,23 @@ export async function GET(request: Request) {
 
     // ── STAFF REPORT ──────────────────────────────────────────────────────
     if (type === "staff") {
-      const [staffRes, stageRes, scanRes] = await Promise.all([
+      const [staffRes, stageRes] = await Promise.all([
         admin
           .from("users")
           .select("id, full_name, role:roles!users_role_id_fkey(name)")
           .eq("status", "active")
           .is("deleted_at", null),
         admin
-          .from("stage_results")
-          .select("user_id, stage, data")
-          .gte("started_at", fromISO)
-          .lte("started_at", toISO)
-          .not("finished_at", "is", null),
-        admin
-          .from("scan_events")
-          .select("user_id, order_id")
-          .gte("scanned_at", fromISO)
-          .lte("scanned_at", toISO),
+          .from("stage_history")
+          .select("changed_by, stage, data")
+          .eq("status", "completed")
+          .gte("created_at", fromISO)
+          .lte("created_at", toISO),
       ]);
 
       const allStaff = staffRes.data ?? [];
       const allStages = stageRes.data ?? [];
-      const allScans = scanRes.data ?? [];
+      const allScans: Array<{ user_id: string; order_id: string }> = []; // no legacy scan_events
 
       const productionStaff = allStaff.filter((u) =>
         PRODUCTION_ROLES.includes(getRoleProps(u).name),
@@ -323,7 +318,8 @@ export async function GET(request: Request) {
       const susutMap = new Map<string, { sum: number; count: number }>();
 
       allStages.forEach((sr) => {
-        stagesMap.set(sr.user_id, (stagesMap.get(sr.user_id) ?? 0) + 1);
+        const uid = (sr as { changed_by: string }).changed_by;
+        stagesMap.set(uid, (stagesMap.get(uid) ?? 0) + 1);
         if (
           ["lebur_bahan", "pembentukan_cincin", "pemolesan"].includes(sr.stage)
         ) {
@@ -341,10 +337,10 @@ export async function GET(request: Request) {
             if (!isNaN(l) && !isNaN(b) && b > 0) susut = (l / b) * 100;
           }
           if (susut != null) {
-            const acc = susutMap.get(sr.user_id) ?? { sum: 0, count: 0 };
+            const acc = susutMap.get(uid) ?? { sum: 0, count: 0 };
             acc.sum += susut;
             acc.count += 1;
-            susutMap.set(sr.user_id, acc);
+            susutMap.set(uid, acc);
           }
         }
       });
@@ -387,11 +383,11 @@ export async function GET(request: Request) {
     }
 
     // ── COMPLETE REPORT ───────────────────────────────────────────────────
-    const [prodRes, qcRes, staffAll, scanAll, stageAll] = await Promise.all([
+    const [prodRes, qcRes, staffAll, stageAll] = await Promise.all([
       admin
-        .from("stage_results")
+        .from("stage_history")
         .select(
-          "stage, started_at, finished_at, data, cs_orders!stage_results_order_id_fkey(order_number), users!stage_results_user_id_fkey(full_name, role:roles!users_role_id_fkey(name))",
+          "stage, created_at, data, legacy_orders!stage_history_order_id_fkey(kode_order), users!stage_history_changed_by_fkey(full_name, role:roles!users_role_id_fkey(name))",
         )
         .in("stage", [
           "racik_bahan",
@@ -402,21 +398,21 @@ export async function GET(request: Request) {
           "laser",
           "finishing",
         ])
-        .gte("started_at", fromISO)
-        .lte("started_at", toISO)
-        .not("finished_at", "is", null)
-        .order("started_at", { ascending: false }),
+        .eq("status", "completed")
+        .gte("created_at", fromISO)
+        .lte("created_at", toISO)
+        .order("created_at", { ascending: false }),
 
       admin
-        .from("stage_results")
+        .from("stage_history")
         .select(
-          "stage, finished_at, data, notes, cs_orders!stage_results_order_id_fkey(order_number), users!stage_results_user_id_fkey(full_name)",
+          "stage, created_at, data, note, legacy_orders!stage_history_order_id_fkey(kode_order), users!stage_history_changed_by_fkey(full_name)",
         )
         .in("stage", ["qc_1", "qc_2", "qc_3"])
-        .gte("started_at", fromISO)
-        .lte("started_at", toISO)
-        .not("finished_at", "is", null)
-        .order("finished_at", { ascending: false }),
+        .eq("status", "completed")
+        .gte("created_at", fromISO)
+        .lte("created_at", toISO)
+        .order("created_at", { ascending: false }),
 
       admin
         .from("users")
@@ -425,17 +421,11 @@ export async function GET(request: Request) {
         .is("deleted_at", null),
 
       admin
-        .from("scan_events")
-        .select("user_id, order_id")
-        .gte("scanned_at", fromISO)
-        .lte("scanned_at", toISO),
-
-      admin
-        .from("stage_results")
-        .select("user_id, stage, data")
-        .gte("started_at", fromISO)
-        .lte("started_at", toISO)
-        .not("finished_at", "is", null),
+        .from("stage_history")
+        .select("changed_by, stage, data")
+        .eq("status", "completed")
+        .gte("created_at", fromISO)
+        .lte("created_at", toISO),
     ]);
 
     const exportDate = now.toLocaleDateString("id-ID", {
@@ -447,45 +437,35 @@ export async function GET(request: Request) {
 
     const prodRows = (prodRes.data ?? []).map((r, i: number) => [
       i + 1,
-      fmtDate(r.started_at),
-      (r as any).orders?.order_number ?? "-",
+      fmtDate(r.created_at),
+      (r as any).legacy_orders?.kode_order ?? "-",
       getStageLabel(r.stage),
       (r as any).users?.full_name ?? "-",
       getRoleProps(r.users).name ?? "-",
-      fmtDuration(r.started_at, r.finished_at),
+      fmtDuration(r.created_at, r.created_at),
     ]);
 
     const qcRows = (qcRes.data ?? []).map((r, i: number) => [
       i + 1,
-      fmtDate(r.finished_at),
-      (r as any).orders?.order_number ?? "-",
+      fmtDate(r.created_at),
+      (r as any).legacy_orders?.kode_order ?? "-",
       getStageLabel(r.stage),
       (r as any).users?.full_name ?? "-",
       r.data?.overall_result ?? r.data?.result ?? "-",
-      r.notes ?? "-",
+      (r as any).note ?? "-",
     ]);
 
     const prodStaff = (staffAll.data ?? []).filter((u) =>
       PRODUCTION_ROLES.includes(getRoleProps(u).name),
     );
 
-    const scanMap2 = new Map<
-      string,
-      { scans: number; orderSet: Set<string> }
-    >();
-    (scanAll.data ?? []).forEach((s) => {
-      const e = scanMap2.get(s.user_id) ?? {
-        scans: 0,
-        orderSet: new Set<string>(),
-      };
-      e.scans += 1;
-      if (s.order_id) e.orderSet.add(s.order_id);
-      scanMap2.set(s.user_id, e);
-    });
+    // Scan data: no legacy equivalent — staff report shows 0 scans.
+    const scanMap2 = new Map<string, { scans: number; orderSet: Set<string> }>();
 
     const stageMap2 = new Map<string, number>();
     (stageAll.data ?? []).forEach((s) => {
-      stageMap2.set(s.user_id, (stageMap2.get(s.user_id) ?? 0) + 1);
+      const uid = (s as { changed_by: string }).changed_by;
+      stageMap2.set(uid, (stageMap2.get(uid) ?? 0) + 1);
     });
 
     const staffRows = prodStaff.map((u, i: number) => {

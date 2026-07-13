@@ -8,7 +8,6 @@ import Link from "next/link";
 import Image from "next/image";
 import Loading from "@/components/ui/Loading";
 import { getDashboardPath, queryParamToAppRole } from "@/lib/routes";
-import { supabase } from "@/lib/supabase/client";
 import { setClientUser, type LoginRole } from "@/lib/auth/session";
 import {
   Shield,
@@ -84,20 +83,15 @@ const ROLE_CONFIGS: RoleConfig[] = [
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const fromIntegratedSystem = searchParams.get("from") === "integrated-system";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState<LoginRole>(
-    fromIntegratedSystem ? "management" : "superadmin",
-  );
+  const [role, setRole] = useState<LoginRole>("superadmin");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showForgotDialog, setShowForgotDialog] = useState(false);
 
-  const visibleRoles = fromIntegratedSystem
-    ? ROLE_CONFIGS.filter((c) => c.value === "superadmin" || c.value === "management")
-    : ROLE_CONFIGS;
+  const visibleRoles = ROLE_CONFIGS;
 
   useEffect(() => {
     const roleFromParam = queryParamToAppRole(searchParams.get("role"));
@@ -144,15 +138,7 @@ export default function LoginPage() {
         branch: data.user.branch ?? null,
       });
 
-      if (fromIntegratedSystem) {
-        try { await supabase.auth.signInWithPassword({ email, password }); } catch {}
-      }
-
-      const targetPath = fromIntegratedSystem
-        ? (role === "superadmin"
-            ? "/integrated-system/dashboard/admin"
-            : "/integrated-system/dashboard/supervisor")
-        : getDashboardPath(data.user.role);
+      const targetPath = getDashboardPath(data.user.role);
 
       if (!targetPath) {
         setError(`Role tidak dikenali: ${data.user.role}`);
@@ -303,9 +289,7 @@ export default function LoginPage() {
                     >
                       <div className="w-5 h-5 flex-shrink-0">{config.icon}</div>
                       <span className="text-center leading-tight">
-                        {fromIntegratedSystem
-                          ? config.value === "superadmin" ? "Admin" : "Supervisor"
-                          : config.label}
+                        {config.label}
                       </span>
                     </button>
                   );

@@ -82,7 +82,6 @@ export async function GET(request: Request) {
     const [
       staffRes,
       stageResultsRes,
-      scanEventsRes,
       completedOrdersRes,
       qcChecklistRes,
     ] = await Promise.allSettled([
@@ -95,28 +94,22 @@ export async function GET(request: Request) {
         .is("deleted_at", null),
 
       admin
-        .from("stage_results")
-        .select("user_id, stage, data, started_at, finished_at")
-        .gte("started_at", fromISO)
-        .lte("started_at", toISO)
-        .not("finished_at", "is", null),
-
-      admin
-        .from("scan_events")
-        .select("user_id, order_id, stage, scanned_at")
-        .gte("scanned_at", fromISO)
-        .lte("scanned_at", toISO),
-
-      admin
-        .from("cs_orders")
-        .select("id, completed_at")
+        .from("stage_history")
+        .select("changed_by, stage, data, created_at")
         .eq("status", "completed")
-        .gte("completed_at", fromISO)
-        .lte("completed_at", toISO),
+        .gte("created_at", fromISO)
+        .lte("created_at", toISO),
 
       admin
-        .from("quality_checklist_results")
-        .select("check_key, passed, stage_result_id, created_at")
+        .from("tracking_stages")
+        .select("order_id, updated_at")
+        .eq("current_stage", "selesai")
+        .gte("updated_at", fromISO)
+        .lte("updated_at", toISO),
+
+      admin
+        .from("legacy_quality_checklist_results")
+        .select("check_key, passed, stage_history_id, created_at")
         .gte("created_at", fromISO)
         .lte("created_at", toISO),
     ]);
@@ -127,10 +120,7 @@ export async function GET(request: Request) {
       stageResultsRes.status === "fulfilled"
         ? (stageResultsRes.value.data ?? [])
         : [];
-    const scanEvents =
-      scanEventsRes.status === "fulfilled"
-        ? (scanEventsRes.value.data ?? [])
-        : [];
+    const scanEvents: Array<{ user_id: string; order_id: string; stage: string; scanned_at: string }> = []; // no legacy
     const completedOrders =
       completedOrdersRes.status === "fulfilled"
         ? (completedOrdersRes.value.data ?? [])
@@ -144,14 +134,12 @@ export async function GET(request: Request) {
     [
       staffRes,
       stageResultsRes,
-      scanEventsRes,
       completedOrdersRes,
       qcChecklistRes,
     ].forEach((r, i) => {
       const labels = [
         "staff",
-        "stage_results",
-        "scan_events",
+        "stage_history",
         "completed_orders",
         "qc_checklist",
       ];
@@ -163,11 +151,11 @@ export async function GET(request: Request) {
       }
     });
 
-    // ── Fetch stage_results for QC checklist mapping ─────────────────────────
+    // ── Fetch stage_history for QC checklist mapping ─────────────────────────
     const srIds = [
       ...new Set(
         qcChecklistRaw
-          .map((r) => r.stage_result_id)
+          .map((r) => (r as { stage_history_id: string }).stage_history_id)
           .filter(Boolean),
       ),
     ];
@@ -175,12 +163,12 @@ export async function GET(request: Request) {
 
     if (srIds.length > 0) {
       const { data: srData } = await admin
-        .from("stage_results")
-        .select("id, stage, finished_at")
+        .from("stage_history")
+        .select("id, stage, created_at")
         .in("id", srIds);
 
       (srData || []).forEach((sr) => {
-        stageMap.set(sr.id, { stage: sr.stage, finished_at: sr.finished_at });
+        stageMap.set(sr.id, { stage: sr.stage, finished_at: sr.created_at });
       });
     }
 
@@ -207,14 +195,15 @@ export async function GET(request: Request) {
     const susutByUser = new Map<string, { sum: number; count: number }>();
 
     stageResults.forEach((sr) => {
-      stagesByUser.set(sr.user_id, (stagesByUser.get(sr.user_id) ?? 0) + 1);
+      const uid = (sr as { changed_by: string }).changed_by;
+      stagesByUser.set(uid, (stagesByUser.get(uid) ?? 0) + 1);
       if (SUSUT_STAGES.includes(sr.stage)) {
         const susut = computeSusut(sr.stage, sr.data);
         if (susut != null) {
-          const acc = susutByUser.get(sr.user_id) ?? { sum: 0, count: 0 };
+          const acc = susutByUser.get(uid) ?? { sum: 0, count: 0 };
           acc.sum += susut;
           acc.count += 1;
-          susutByUser.set(sr.user_id, acc);
+          susutByUser.set(uid, acc);
         }
       }
     });
@@ -238,16 +227,13 @@ export async function GET(request: Request) {
       })
       .sort((a, b) => b.stagesCompleted - a.stagesCompleted);
 
-    // ── Stage Efficiency (from stage_results) ────────────────────────────────
+    // ── Stage Efficiency (from stage_history — single-ts, durations are 0) ────
     const stageEffMap = new Map<
       string,
       { totalMin: number; count: number; mins: number[] }
     >();
     stageResults.forEach((sr) => {
-      if (!sr.finished_at || !sr.started_at) return;
-      const durMs =
-        new Date(sr.finished_at).getTime() - new Date(sr.started_at).getTime();
-      const durMin = durMs / 60_000;
+      const durMin = 0; // stage_history has one timestamp (created_at), no measurable duration
       const entry = stageEffMap.get(sr.stage) ?? {
         totalMin: 0,
         count: 0,
@@ -285,7 +271,8 @@ export async function GET(request: Request) {
     >();
 
     qcChecklistRaw.forEach((row) => {
-      const sr = stageMap.get(row.stage_result_id);
+      const r = row as { check_key: string; passed: boolean; stage_history_id: string; created_at: string };
+      const sr = stageMap.get(r.stage_history_id);
       if (!sr || !QC_STAGES.includes(sr.stage)) return;
       const entry = qcByStage.get(sr.stage) ?? {
         total: 0,
@@ -293,7 +280,7 @@ export async function GET(request: Request) {
         failed: 0,
       };
       entry.total++;
-      if (row.passed) entry.passed++;
+      if (r.passed) entry.passed++;
       else entry.failed++;
       qcByStage.set(sr.stage, entry);
     });
@@ -313,8 +300,9 @@ export async function GET(request: Request) {
     // ── Order Flow (daily completions) ──────────────────────────────────────
     const flowMap = new Map<string, number>();
     completedOrders.forEach((o) => {
-      const day = (o.completed_at as string).split("T")[0];
-      flowMap.set(day, (flowMap.get(day) ?? 0) + 1);
+      const ts = (o as { updated_at: string }).updated_at;
+      const day = ts ? ts.split("T")[0] : "";
+      if (day) flowMap.set(day, (flowMap.get(day) ?? 0) + 1);
     });
 
     const orderFlow: { date: string; completed: number }[] = [];

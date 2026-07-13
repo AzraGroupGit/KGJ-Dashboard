@@ -97,6 +97,17 @@ export async function GET(_request: Request) {
 // ── POST /api/cs/orders ────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
+  // DISABLED: order creation in main-erp is retired — orders now originate from
+  // the legacy Yii2 system (synced into legacy_orders). This endpoint no longer
+  // creates cs_orders. Code kept for reference behind this flag.
+  const ORDER_CREATION_ENABLED = false;
+  if (!ORDER_CREATION_ENABLED) {
+    return NextResponse.json(
+      { error: "Pembuatan order dinonaktifkan. Order berasal dari sistem Yii2." },
+      { status: 403 },
+    );
+  }
+
   try {
     const supabase = await createClient();
     const auth = await requireCsOrAdmin(supabase);

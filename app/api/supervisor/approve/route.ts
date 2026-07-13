@@ -93,10 +93,10 @@ export async function POST(request: Request) {
     }
 
     const { data: order, error: orderError } = await admin
-      .from("cs_orders")
-      .select("id, current_stage, status")
-      .eq("id", order_id)
-      .single();
+      .from("tracking_stages")
+      .select("order_id, current_stage, stage_status")
+      .eq("order_id", order_id)
+      .maybeSingle();
 
     if (orderError || !order)
       return NextResponse.json({ error: "Order tidak ditemukan" }, { status: 404 });
@@ -107,17 +107,19 @@ export async function POST(request: Request) {
         { status: 409 },
       );
 
-    if (order.status !== "waiting_approval" && order.status !== "in_progress")
+    // An order is approvable as long as it is sitting at this approval stage and
+    // not yet finished. We gate on current_stage (reliable) rather than
+    // stage_status, which the Yii2 sync seeds as 'completed' for the current
+    // stage and is therefore not a trustworthy signal of approvability.
+    if (order.current_stage === "selesai")
       return NextResponse.json(
-        {
-          error: `Order berstatus '${order.status}', bukan 'waiting_approval' atau 'in_progress'`,
-        },
+        { error: "Order sudah selesai — tidak dapat diproses." },
         { status: 409 },
       );
 
     if (stage_result_id) {
       const { data: sr, error: srError } = await admin
-        .from("stage_results")
+        .from("stage_history")
         .select("id")
         .eq("id", stage_result_id)
         .eq("order_id", order_id)
@@ -143,52 +145,42 @@ export async function POST(request: Request) {
       nextStage = idx >= 0 && idx < STAGE_SEQUENCE.length - 1 ? STAGE_SEQUENCE[idx + 1] : null;
     }
 
-    // ── 1. Insert approval record ──────────────────────────────────────────────
-    await admin.from("approvals").insert({
-      order_id,
-      approver_id: authUser.id,
-      stage: productionStage,
-      decision: action === "approve" ? "approved" : "rejected",
-      remarks: remarks ?? null,
-      stage_result_id: stage_result_id ?? null,
-      decided_at: now,
-    });
-
-    // ── 2. Update order ────────────────────────────────────────────────────────
+    // ── 1. Update tracking pointer + log the decision in stage_history ──────────
+    // (legacy has no `approvals` table — decision captured here + activity_logs)
     if (action === "approve") {
       await admin
-        .from("cs_orders")
+        .from("tracking_stages")
         .update(
           nextStage && nextStage !== "selesai"
-            ? { current_stage: nextStage, status: "in_progress", updated_at: now }
-            : { current_stage: "selesai", status: "completed", completed_at: now, updated_at: now },
+            ? { current_stage: nextStage, stage_status: "in_progress", updated_at: now, updated_by: authUser.id }
+            : { current_stage: "selesai", stage_status: "completed", updated_at: now, updated_by: authUser.id },
         )
-        .eq("id", order_id);
+        .eq("order_id", order_id);
 
-      await admin.from("order_stage_transitions").insert({
+      await admin.from("stage_history").insert({
         order_id,
-        from_stage: stage,
-        to_stage: nextStage ?? "selesai",
-        transitioned_by: authUser.id,
-        reason: `Approved by ${supervisorName}${remarks ? ` — ${remarks}` : ""}`,
-        transitioned_at: now,
+        stage: nextStage ?? "selesai",
+        status: "completed",
+        note: `Approved by ${supervisorName}${remarks ? ` — ${remarks}` : ""}`,
+        changed_by: authUser.id,
+        created_at: now,
       });
     } else {
       await admin
-        .from("cs_orders")
-        .update({ current_stage: productionStage, status: "rework", updated_at: now })
-        .eq("id", order_id);
+        .from("tracking_stages")
+        .update({ current_stage: productionStage, stage_status: "rework", updated_at: now, updated_by: authUser.id })
+        .eq("order_id", order_id);
 
-      await admin.from("order_stage_transitions").insert({
+      await admin.from("stage_history").insert({
         order_id,
-        from_stage: stage,
-        to_stage: productionStage,
-        transitioned_by: authUser.id,
-        reason: `Rejected by ${supervisorName}${remarks ? ` — ${remarks}` : ""}`,
-        transitioned_at: now,
+        stage: productionStage,
+        status: "rework",
+        note: `Rejected by ${supervisorName}${remarks ? ` — ${remarks}` : ""}`,
+        changed_by: authUser.id,
+        created_at: now,
       });
 
-      await admin.from("rework_logs").insert({
+      await admin.from("legacy_rework_logs").insert({
         order_id,
         from_stage: stage,
         to_stage: productionStage,
@@ -199,20 +191,20 @@ export async function POST(request: Request) {
       });
     }
 
-    // ── 3. Notify worker ────────────────────────────────────────────────────────
+    // ── 2. Notify worker ────────────────────────────────────────────────────────
     const workerId = stage_result_id
-      ? (await admin.from("stage_results").select("user_id").eq("id", stage_result_id).single()).data
-          ?.user_id
+      ? (await admin.from("stage_history").select("changed_by").eq("id", stage_result_id).single()).data
+          ?.changed_by
       : null;
 
     if (workerId) {
       const { data: workerOrder } = await admin
-        .from("cs_orders")
-        .select("order_number")
+        .from("legacy_orders")
+        .select("kode_order")
         .eq("id", order_id)
         .single();
 
-      const orderNum = workerOrder?.order_number ?? "—";
+      const orderNum = workerOrder?.kode_order ?? "—";
       if (action === "approve") {
         sendNotification({
           userId: workerId,
@@ -232,19 +224,19 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── 4. Tag stage_result with supervisor action ─────────────────────────────
+    // ── 3. Tag the submission row with supervisor action ───────────────────────
     if (stage_result_id) {
       const { data: sr } = await admin
-        .from("stage_results")
+        .from("stage_history")
         .select("data")
         .eq("id", stage_result_id)
         .single();
 
       await admin
-        .from("stage_results")
+        .from("stage_history")
         .update({
           data: {
-            ...(sr?.data ?? {}),
+            ...((sr as { data?: Record<string, unknown> } | null)?.data ?? {}),
             _sv_action: action,
             _sv_by: supervisorName,
             _sv_at: now,
