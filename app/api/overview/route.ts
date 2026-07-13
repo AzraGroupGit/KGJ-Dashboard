@@ -108,28 +108,24 @@ export async function GET(request: Request) {
         .order("created_at", { ascending: false })
         .limit(8),
 
-      // OPRPRD: Active production orders
+      // OPRPRD: Active production orders (legacy tracking pointer)
       admin
-        .from("cs_orders")
+        .from("tracking_stages")
         .select("id", { count: "exact" })
-        .in("current_stage", STAGE_SEQUENCE.filter(s => !s.startsWith("approval_") && s !== "penerimaan_order" && s !== "selesai"))
-        .not("status", "in", "(completed,cancelled)")
-        .is("deleted_at", null),
+        .in("current_stage", STAGE_SEQUENCE.filter(s => !s.startsWith("approval_") && s !== "penerimaan_order" && s !== "selesai")),
 
-      // OPRPRD: Completed orders in last 7 days with deadlines
+      // OPRPRD: Completed orders in last 7 days (legacy: reached "selesai")
       admin
-        .from("cs_orders")
-        .select("completed_at, deadline")
-        .eq("status", "completed")
-        .gte("completed_at", new Date(Date.now() - 7 * 86400000).toISOString())
-        .is("deleted_at", null),
+        .from("tracking_stages")
+        .select("order_id, updated_at, legacy_orders!tracking_stages_order_id_fkey(tgl_selesai)")
+        .eq("current_stage", "selesai")
+        .gte("updated_at", new Date(Date.now() - 7 * 86400000).toISOString()),
 
       // OPRPRD: Orders waiting approval (backlog)
       admin
-        .from("cs_orders")
+        .from("tracking_stages")
         .select("id", { count: "exact" })
-        .in("current_stage", STAGE_SEQUENCE.filter(s => s.startsWith("approval_") && s !== "approval_racik_bahan" && s !== "approval_produksi"))
-        .is("deleted_at", null),
+        .in("current_stage", STAGE_SEQUENCE.filter(s => s.startsWith("approval_") && s !== "approval_racik_bahan" && s !== "approval_produksi")),
     ]);
 
     // ── BMS metrics ──────────────────────────────────────────────────────────
@@ -149,20 +145,24 @@ export async function GET(request: Request) {
 
     // Total active orders as target
     const { count: totalActive } = await admin
-      .from("cs_orders")
+      .from("tracking_stages")
       .select("id", { count: "exact" })
-      .not("status", "in", "(completed,cancelled)")
-      .is("deleted_at", null);
+      .neq("current_stage", "selesai");
     const target = totalActive ?? 0;
 
-    // On-time calculation
-    const completedOrders = completedOrdersRes.data || [];
+    // On-time calculation (legacy: updated_at = completion, tgl_selesai = deadline)
+    const completedOrders = (completedOrdersRes.data || []) as unknown as Array<{
+      updated_at: string | null;
+      legacy_orders?: { tgl_selesai?: string | null } | { tgl_selesai?: string | null }[];
+    }>;
     let onTimeCount = 0;
     for (const o of completedOrders) {
+      const lo = Array.isArray(o.legacy_orders) ? o.legacy_orders[0] : o.legacy_orders;
+      const deadline = lo?.tgl_selesai ?? null;
       if (
-        o.deadline &&
-        o.completed_at &&
-        new Date(o.completed_at) <= new Date(o.deadline)
+        deadline &&
+        o.updated_at &&
+        new Date(o.updated_at) <= new Date(deadline)
       ) {
         onTimeCount++;
       }

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { STAGE_SEQUENCE, STAGE_GROUP, STAGE_LABELS } from "@/lib/stages";
 import { getRoleProps } from "@/lib/auth/session";
+import { mapLegacyStatus } from "@/lib/legacy/adapter";
 
 const ACTIVE_STAGES = STAGE_SEQUENCE.filter(s => s !== "selesai") as readonly string[];
 
@@ -61,45 +62,70 @@ export async function GET(request?: NextRequest) {
 
     const now = new Date();
 
-    let query = admin
-      .from("cs_orders")
-      .select("id, order_number, customer_name, current_stage, status, updated_at, deadline")
-      .not("status", "in", "(completed,cancelled)")
-      .in("current_stage", ACTIVE_STAGES as unknown as string[])
-      .is("deleted_at", null);
+    const query = admin
+      .from("tracking_stages")
+      .select("order_id, current_stage, stage_status, updated_at, legacy_orders!tracking_stages_order_id_fkey(kode_order, nama, tgl_selesai, created_at)")
+      .neq("current_stage", "selesai")
+      .in("current_stage", ACTIVE_STAGES as unknown as string[]);
 
-    if (fromParam) {
-      query = query.gte("created_at", new Date(fromParam).toISOString());
-    }
-    if (toParam) {
-      query = query.lte("created_at", new Date(toParam + "T23:59:59").toISOString());
-    }
-
-    const { data: orders, error: ordersError } = await query.order("updated_at", { ascending: true });
+    const { data: trackingRows, error: ordersError } = await query.order("updated_at", { ascending: true });
 
     if (ordersError)
       return NextResponse.json({ error: "Gagal mengambil data" }, { status: 500 });
 
-    const orderIds = (orders || []).map((o) => o.id);
+    type LegacyEmbed = { kode_order: string; nama: string | null; tgl_selesai: string | null; created_at: string | null };
+    type TrackRow = {
+      order_id: string;
+      current_stage: string;
+      stage_status: string;
+      updated_at: string | null;
+      legacy_orders?: LegacyEmbed | LegacyEmbed[] | null;
+    };
+
+    // Apply optional created_at date filter (from legacy_orders.created_at)
+    const fromMs = fromParam ? new Date(fromParam).getTime() : null;
+    const toMs = toParam ? new Date(toParam + "T23:59:59").getTime() : null;
+
+    const orders = ((trackingRows ?? []) as TrackRow[])
+      .map((t) => {
+        const lo = Array.isArray(t.legacy_orders) ? t.legacy_orders[0] : t.legacy_orders;
+        return {
+          id: t.order_id,
+          order_number: lo?.kode_order ?? "—",
+          customer_name: lo?.nama ?? null,
+          current_stage: t.current_stage,
+          status: mapLegacyStatus(t.stage_status, t.current_stage),
+          updated_at: t.updated_at ?? "",
+          deadline: lo?.tgl_selesai ?? null,
+          created_at: lo?.created_at ?? null,
+        };
+      })
+      .filter((o) => {
+        if (!fromMs && !toMs) return true;
+        const c = o.created_at ? new Date(o.created_at).getTime() : null;
+        if (c === null) return true;
+        if (fromMs && c < fromMs) return false;
+        if (toMs && c > toMs) return false;
+        return true;
+      });
+
+    const orderIds = orders.map((o) => o.id);
     let latestResults: unknown[] = [];
-    let approvalsData: unknown[] = [];
+    const approvalsData: unknown[] = [];
     if (orderIds.length > 0) {
       const { data: results } = await admin
-        .from("stage_results")
-        .select(`order_id, stage, finished_at,
-          users!stage_results_user_id_fkey ( full_name )`)
+        .from("stage_history")
+        .select(`order_id, stage, created_at,
+          users!stage_history_changed_by_fkey ( full_name )`)
         .in("order_id", orderIds)
-        .not("finished_at", "is", null)
-        .order("finished_at", { ascending: false });
-      latestResults = results || [];
-
-      const { data: approvals } = await admin
-        .from("approvals")
-        .select(`order_id, stage, decision, decided_at,
-          users!approvals_approver_id_fkey ( full_name )`)
-        .in("order_id", orderIds)
-        .order("decided_at", { ascending: false });
-      approvalsData = approvals || [];
+        .eq("status", "completed")
+        .order("created_at", { ascending: false });
+      latestResults = (results || []).map((r) => ({
+        order_id: r.order_id,
+        finished_at: r.created_at,
+        users: Array.isArray(r.users) ? r.users[0] : r.users,
+      }));
+      // approvals table has no legacy equivalent — left empty.
     }
 
     type StageResultRec = { order_id: string; finished_at: string; users?: { full_name: string | null } | null };

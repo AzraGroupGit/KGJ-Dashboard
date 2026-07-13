@@ -41,17 +41,17 @@ export async function GET(request?: NextRequest) {
 
     const [reworkData, totalOrdersResult] = await Promise.allSettled([
       admin
-        .from("rework_logs")
+        .from("legacy_rework_logs")
         .select(
-          "id, order_id, from_stage, to_stage, reason, severity, logged_by, logged_at, created_at",
+          "id, order_id, from_stage, to_stage, reason, severity, logged_by, logged_at",
           { count: "exact" },
         )
-        .gte("created_at", fromISO)
-        .lte("created_at", toISO)
-        .order("created_at", { ascending: false }),
+        .gte("logged_at", fromISO)
+        .lte("logged_at", toISO)
+        .order("logged_at", { ascending: false }),
 
       admin
-        .from("cs_orders")
+        .from("legacy_orders")
         .select("id", { count: "exact", head: true })
         .gte("created_at", fromISO)
         .lte("created_at", toISO),

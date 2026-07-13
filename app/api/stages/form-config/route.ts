@@ -483,32 +483,75 @@ export async function GET(request: Request) {
       );
     }
 
-    const { data: order, error: orderError } = await admin
-      .from("cs_orders")
-      .select(
-        `id, order_number, current_stage, status, deadline,
-         customer_name, customer_wa, customer_email, customer_instagram,
-         acara, kebutuhan_acara, alat_ukur, gramasi_pria, gramasi_wanita, ukiran_cincin_pria, ukiran_cincin_wanita,
-         ukuran_pria, ukiran_pria, jenis_cincin_pria, reference_image_pria_url,
-         model_bentuk_pria, microsetting_pria, detail_laser_pria, detail_finishing_pria,
-         ukuran_wanita, ukiran_wanita, jenis_cincin_wanita, reference_image_wanita_url,
-         model_bentuk_wanita, microsetting_wanita, detail_laser_wanita, detail_finishing_wanita,
-         kategori, transfer_ke_bank, jenis_cincin_features, dari_artis_detail,
-         font, laser_position, box, pengiriman, alamat_pengiriman,
-         harga, dp_amount`,
-      )
+    const { data: legacyOrder, error: orderError } = await admin
+      .from("legacy_orders")
+      .select("id, kode_order, nama, no_hp, email, alamat, tgl_selesai")
       .eq("id", orderId)
-      .is("deleted_at", null)
       .single();
 
-    if (orderError || !order)
+    if (orderError || !legacyOrder)
       return NextResponse.json(
         { error: "Order tidak ditemukan" },
         { status: 404 },
       );
 
+    const { data: tracking } = await admin
+      .from("tracking_stages")
+      .select("current_stage, stage_status")
+      .eq("order_id", orderId)
+      .maybeSingle();
+
+    // Map legacy order into the shape the rest of this handler expects.
+    // cs_orders-only fields (ring specs, pricing, engraving) are null for
+    // legacy orders — the UI renders blanks/"—" for them.
+    const order = {
+      id: legacyOrder.id,
+      order_number: legacyOrder.kode_order,
+      current_stage: tracking?.current_stage ?? "penerimaan_order",
+      status: tracking?.stage_status ?? "in_progress",
+      deadline: legacyOrder.tgl_selesai ?? null,
+      customer_name: legacyOrder.nama ?? null,
+      customer_wa: legacyOrder.no_hp ?? null,
+      customer_email: legacyOrder.email ?? null,
+      customer_instagram: null,
+      acara: null,
+      kebutuhan_acara: null,
+      alat_ukur: null,
+      gramasi_pria: null,
+      gramasi_wanita: null,
+      ukiran_cincin_pria: null,
+      ukiran_cincin_wanita: null,
+      ukuran_pria: null,
+      ukiran_pria: null,
+      jenis_cincin_pria: null,
+      reference_image_pria_url: null,
+      model_bentuk_pria: null,
+      microsetting_pria: null,
+      detail_laser_pria: null,
+      detail_finishing_pria: null,
+      ukuran_wanita: null,
+      ukiran_wanita: null,
+      jenis_cincin_wanita: null,
+      reference_image_wanita_url: null,
+      model_bentuk_wanita: null,
+      microsetting_wanita: null,
+      detail_laser_wanita: null,
+      detail_finishing_wanita: null,
+      kategori: null,
+      transfer_ke_bank: null,
+      jenis_cincin_features: null,
+      dari_artis_detail: null,
+      font: null,
+      laser_position: null,
+      box: null,
+      pengiriman: null,
+      alamat_pengiriman: legacyOrder.alamat ?? null,
+      harga: null,
+      dp_amount: null,
+    };
+
     const { data: lastResult } = await admin
-      .from("stage_results")
+      .from("stage_history")
       .select("data")
       .eq("order_id", orderId)
       .eq("stage", stage)
@@ -523,7 +566,7 @@ export async function GET(request: Request) {
     let konfirmasiInfo: { tanggal_packing?: string; nomor_resi?: string } | null = null;
     if (stage === "packing" || stage === "pengiriman") {
       const { data: konfirmasiResult } = await admin
-        .from("stage_results")
+        .from("stage_history")
         .select("data")
         .eq("order_id", orderId)
         .eq("stage", "konfirmasi")

@@ -12,7 +12,7 @@ import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
 import type { BottleneckData } from "@/types/bottleneck";
-import { Search } from "lucide-react";
+import { Search, RefreshCw } from "lucide-react";
 import type { Channel } from "pusher-js";
 import {
   buildUrl,
@@ -42,6 +42,9 @@ export default function MonitoringPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -186,6 +189,28 @@ export default function MonitoringPage() {
     bnData?.bottlenecks.filter((b) => b.stage_group === "operational").length ??
     0;
 
+  async function handleSync() {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const r = await fetch("/api/legacy/sync", { method: "POST" });
+      const j = await r.json();
+      if (!r.ok) {
+        setSyncMsg(j.error ?? "Sync gagal");
+      } else {
+        setSyncMsg(
+          `Sync selesai: ${j.synced ?? 0} baru, ${j.skipped ?? 0} dilewati${j.errors ? `, ${j.errors} error` : ""}`,
+        );
+        queryClient.invalidateQueries({ queryKey: ["monitoring"] });
+      }
+    } catch {
+      setSyncMsg("Sync gagal — periksa koneksi");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   const TABS: { key: ActiveTab; label: string; desc: string }[] = [
     { key: "overview", label: "Overview", desc: "KPI & Bottleneck" },
     {
@@ -215,6 +240,20 @@ export default function MonitoringPage() {
               <p className="text-sm text-white/40 mt-0.5">
                 Pantau operasional & produksi secara terpadu
               </p>
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  onClick={handleSync}
+                  disabled={syncing}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[#c9a227]/30 bg-[#c9a227]/10 px-3 py-1.5 text-xs font-medium text-[#e8d9a0] transition-colors hover:bg-[#c9a227]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Tarik order terbaru dari sistem Yii2"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
+                  {syncing ? "Menyinkron..." : "Sync Yii2"}
+                </button>
+                {syncMsg && (
+                  <span className="text-[11px] text-white/50">{syncMsg}</span>
+                )}
+              </div>
             </div>
             <div className="flex flex-col items-end gap-1.5 shrink-0">
               <div className="relative">

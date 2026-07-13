@@ -1,5 +1,6 @@
 // app/api/workshop/orders/route.ts
-// Returns cs_orders currently at the authenticated worker's allowed stage(s).
+// Returns legacy Yii2 orders (legacy_orders + tracking_stages) currently at the
+// authenticated worker's allowed stage(s). Response shape is unchanged.
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -7,9 +8,11 @@ import { getRoleProps } from "@/lib/auth/session";
 
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { STAGE_SEQUENCE } from "@/lib/stages";
-
-const APPROVAL_STAGES = new Set<string>(STAGE_SEQUENCE.filter(s => s.startsWith("approval_")));
+import {
+  legacyToOrderSummary,
+  type LegacyOrderRow,
+  type TrackingStageRow,
+} from "@/lib/legacy/adapter";
 
 export async function GET(request: Request) {
   try {
@@ -61,56 +64,70 @@ export async function GET(request: Request) {
     const search = searchParams.get("q")?.trim() ?? "";
     const limit = Math.min(Number(searchParams.get("limit") ?? 50), 100);
 
-    const isSupervisor =
-      workerStages.length > 0 &&
-      workerStages.some((s) => APPROVAL_STAGES.has(s));
-
-    let query = admin
-      .from("cs_orders")
-      .select(
-        `id, order_number, current_stage, status, deadline, updated_at,
-         customer_name, customer_wa`,
-      )
-      .is("deleted_at", null)
+    // Legacy orders live in legacy_orders; their current stage lives in
+    // tracking_stages. Join in-app: filter tracking rows by stage, then hydrate.
+    // Active = current_stage not yet 'selesai' (stage_status alone is unreliable:
+    // sync seeds it as 'completed' for the current stage).
+    let trackingQuery = admin
+      .from("tracking_stages")
+      .select("id, order_id, current_stage, stage_status, assigned_to, updated_at, updated_by")
+      .neq("current_stage", "selesai")
       .order("updated_at", { ascending: false })
       .limit(limit);
 
-    if (isSupervisor) {
-      query = query.in("status", ["in_progress", "waiting_approval", "rework"]);
-    } else {
-      query = query.in("status", ["in_progress", "rework"]);
-    }
-
     if (workerStages.length > 0) {
-      query = query.in("current_stage", workerStages);
+      trackingQuery = trackingQuery.in("current_stage", workerStages);
     }
 
-    if (search) {
-      query = query.or(
-        `order_number.ilike.%${search}%,customer_name.ilike.%${search}%`,
-      );
-    }
+    const { data: trackingRows, error: trackingError } = await trackingQuery;
 
-    const { data: orders, error } = await query;
-
-    if (error) {
-      console.error("[GET /api/workshop/orders] Query error:", error);
+    if (trackingError) {
+      console.error("[GET /api/workshop/orders] tracking query error:", trackingError);
       return NextResponse.json(
         { error: "Gagal mengambil data order" },
         { status: 500 },
       );
     }
 
-    const result = (orders ?? []).map((o) => ({
-      id: o.id,
-      order_number: o.order_number,
-      current_stage: o.current_stage,
-      status: o.status,
-      deadline: o.deadline,
-      updated_at: o.updated_at,
-      customer_name: o.customer_name ?? null,
-      customer_wa: o.customer_wa ?? null,
-    }));
+    const orderIds = (trackingRows ?? []).map((t) => t.order_id);
+
+    let orders: LegacyOrderRow[] = [];
+    if (orderIds.length > 0) {
+      let orderQuery = admin
+        .from("legacy_orders")
+        .select("*")
+        .in("id", orderIds);
+
+      if (search) {
+        orderQuery = orderQuery.or(
+          `kode_order.ilike.%${search}%,nama.ilike.%${search}%`,
+        );
+      }
+
+      const { data: orderRows, error } = await orderQuery;
+      if (error) {
+        console.error("[GET /api/workshop/orders] legacy_orders query error:", error);
+        return NextResponse.json(
+          { error: "Gagal mengambil data order" },
+          { status: 500 },
+        );
+      }
+      orders = (orderRows ?? []) as LegacyOrderRow[];
+    }
+
+    const trackingById = new Map<string, TrackingStageRow>(
+      (trackingRows ?? []).map((t) => [t.order_id, t as TrackingStageRow]),
+    );
+
+    // Preserve tracking's updated_at ordering
+    const orderById = new Map<string, LegacyOrderRow>(orders.map((o) => [o.id, o]));
+    const result = (trackingRows ?? [])
+      .map((t) => {
+        const order = orderById.get(t.order_id);
+        if (!order) return null;
+        return legacyToOrderSummary(order, trackingById.get(t.order_id));
+      })
+      .filter((o): o is NonNullable<typeof o> => o !== null);
 
     return NextResponse.json({
       success: true,
