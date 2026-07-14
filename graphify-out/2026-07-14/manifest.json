@@ -1280,8 +1280,8 @@
     "semantic_hash": ""
   },
   "app/api/legacy/webhook/route.ts": {
-    "mtime": 1783992635.7496438,
-    "ast_hash": "9d70dab389aa1f46b85277e62bae37d8",
+    "mtime": 1783930210.776585,
+    "ast_hash": "9543986e3c50ecbdff4a4bd9d55c9ad9",
     "semantic_hash": ""
   },
   "lib/legacy/adapter.ts": {
@@ -1300,8 +1300,8 @@
     "semantic_hash": ""
   },
   "lib/legacy/sync-service.ts": {
-    "mtime": 1783992668.5710864,
-    "ast_hash": "9e1627016cbc0cdcb4b42a6755c772ba",
+    "mtime": 1783930003.4757016,
+    "ast_hash": "e27a68f0fbdb4fd5aba2fa44b8aef6c7",
     "semantic_hash": ""
   },
   "migrations/010_legacy_stage_data.sql": {
