@@ -1,8 +1,30 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { mapStatusToStage } from "@/lib/legacy/status";
+import { notifySupervisors } from "@/lib/notifications";
+import { buildLegacyOrderRow, buildLegacyOrderUpdate, type Yii2OrderPayload } from "@/lib/legacy/adapter";
 
 const LIVE_SYSTEM_BASE_URL = process.env.LIVE_SYSTEM_BASE_URL || "";
 const LIVE_SYSTEM_API_KEY = process.env.INTEGRATED_SYSTEM_WEBHOOK_SECRET || "";
+
+// Stages that should auto-advance to their approval gate on ingest.
+const APPROVAL_GATE_MAP: Record<string, string> = {
+  penerimaan_order: "approval_penerimaan_order",
+  racik_bahan: "approval_racik_bahan",
+  qc_1: "approval_qc_1",
+  qc_2: "approval_qc_2",
+  pembentukan_cincin: "approval_produksi",
+};
+
+function resolveIngestionStage(rawStage: string): { stage: string; status: string } {
+  const gate = APPROVAL_GATE_MAP[rawStage];
+  if (gate) {
+    return { stage: gate, status: "waiting_approval" };
+  }
+  return {
+    stage: rawStage,
+    status: rawStage === "selesai" ? "completed" : "in_progress",
+  };
+}
 
 interface SyncResult {
   synced: number;
@@ -30,18 +52,7 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
     }
 
     const responseData = await response.json() as {
-      orders: Array<{
-        id: number;
-        kode_order: string;
-        nama: string;
-        email?: string;
-        no_hp?: string;
-        alamat?: string;
-        tgl_order?: string;
-        tgl_selesai?: string;
-        id_status?: number;
-        catatan?: string;
-      }>;
+      orders: Yii2OrderPayload[];
     };
 
     const { orders } = responseData;
@@ -65,12 +76,7 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
 
             await db
               .from("legacy_orders")
-              .update({
-                id_status: incomingStatus,
-                tgl_selesai: order.tgl_selesai ?? undefined,
-                catatan: order.catatan ?? undefined,
-                last_synced_at: new Date().toISOString(),
-              })
+              .update(buildLegacyOrderUpdate(order))
               .eq("id", existing.id);
 
             const { data: tracking } = await db
@@ -117,19 +123,7 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
 
         const { data: inserted, error: insertError } = await db
           .from("legacy_orders")
-          .insert({
-            legacy_id: order.id,
-            kode_order: order.kode_order,
-            nama: order.nama,
-            email: order.email ?? null,
-            no_hp: order.no_hp ?? null,
-            alamat: order.alamat ?? null,
-            tgl_order: order.tgl_order ?? null,
-            tgl_selesai: order.tgl_selesai ?? null,
-            id_status: order.id_status ?? null,
-            catatan: order.catatan ?? null,
-            last_synced_at: new Date().toISOString(),
-          })
+          .insert(buildLegacyOrderRow(order))
           .select("id")
           .single();
 
@@ -141,14 +135,16 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
 
         console.log("[sync] Inserted:", order.kode_order, "→ stage:", mapStatusToStage(order.id_status));
 
-        const stage = order.tgl_selesai
+        const rawStage = order.tgl_selesai
           ? "selesai"
           : mapStatusToStage(order.id_status);
+
+        const { stage, status: stageStatus } = resolveIngestionStage(rawStage);
 
         await db.from("tracking_stages").insert({
           order_id: inserted.id,
           current_stage: stage,
-          stage_status: stage === "selesai" ? "completed" : "in_progress",
+          stage_status: stageStatus,
           updated_at: new Date().toISOString(),
         });
 
@@ -158,6 +154,16 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
           status: "completed",
           created_at: new Date().toISOString(),
         });
+
+        if (stageStatus === "waiting_approval" && stage.startsWith("approval_")) {
+          notifySupervisors(
+            "operational_supervisor",
+            "Order Baru — Menunggu Persetujuan",
+            `Order ${order.kode_order} (${order.nama ?? "—"}) menunggu approval.`,
+            "info",
+            `/dashboard/supervisor/approval`,
+          );
+        }
 
         result.synced++;
       } catch (err) {

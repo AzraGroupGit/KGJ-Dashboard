@@ -485,7 +485,7 @@ export async function GET(request: Request) {
 
     const { data: legacyOrder, error: orderError } = await admin
       .from("legacy_orders")
-      .select("id, kode_order, nama, no_hp, email, alamat, tgl_selesai")
+      .select("id, kode_order, nama, no_hp, email, alamat, tgl_selesai, catatan, harga_final, total_harga, order_down_payment, berat_cincin_pria, berat_cincin_wanita, komponen")
       .eq("id", orderId)
       .single();
 
@@ -504,6 +504,10 @@ export async function GET(request: Request) {
     // Map legacy order into the shape the rest of this handler expects.
     // cs_orders-only fields (ring specs, pricing, engraving) are null for
     // legacy orders — the UI renders blanks/"—" for them.
+    const komponenList = (legacyOrder.komponen ?? []) as Array<Record<string, unknown>>;
+    const pria = komponenList.find((k) => k.id_gender === 1);
+    const wanita = komponenList.find((k) => k.id_gender === 2);
+
     const order = {
       id: legacyOrder.id,
       order_number: legacyOrder.kode_order,
@@ -517,26 +521,26 @@ export async function GET(request: Request) {
       acara: null,
       kebutuhan_acara: null,
       alat_ukur: null,
-      gramasi_pria: null,
-      gramasi_wanita: null,
+      gramasi_pria: legacyOrder.berat_cincin_pria ?? null,
+      gramasi_wanita: legacyOrder.berat_cincin_wanita ?? null,
       ukiran_cincin_pria: null,
       ukiran_cincin_wanita: null,
-      ukuran_pria: null,
-      ukiran_pria: null,
+      ukuran_pria: pria?.ukuran as string ?? null,
+      ukiran_pria: pria?.tek_s as string ?? null,
       jenis_cincin_pria: null,
       reference_image_pria_url: null,
       model_bentuk_pria: null,
       microsetting_pria: null,
-      detail_laser_pria: null,
-      detail_finishing_pria: null,
-      ukuran_wanita: null,
-      ukiran_wanita: null,
+      detail_laser_pria: pria?.id_laser != null ? String(pria.id_laser) : null,
+      detail_finishing_pria: pria?.id_finishing != null ? String(pria.id_finishing) : null,
+      ukuran_wanita: wanita?.ukuran as string ?? null,
+      ukiran_wanita: wanita?.teks as string ?? null,
       jenis_cincin_wanita: null,
       reference_image_wanita_url: null,
       model_bentuk_wanita: null,
       microsetting_wanita: null,
-      detail_laser_wanita: null,
-      detail_finishing_wanita: null,
+      detail_laser_wanita: wanita?.id_laser != null ? String(wanita.id_laser) : null,
+      detail_finishing_wanita: wanita?.id_finishing != null ? String(wanita.id_finishing) : null,
       kategori: null,
       transfer_ke_bank: null,
       jenis_cincin_features: null,
@@ -546,8 +550,9 @@ export async function GET(request: Request) {
       box: null,
       pengiriman: null,
       alamat_pengiriman: legacyOrder.alamat ?? null,
-      harga: null,
-      dp_amount: null,
+      harga: legacyOrder.harga_final ?? legacyOrder.total_harga ?? null,
+      dp_amount: legacyOrder.order_down_payment ?? null,
+      catatan: legacyOrder.catatan ?? null,
     };
 
     const { data: lastResult } = await admin
@@ -594,6 +599,7 @@ export async function GET(request: Request) {
       customer_name: order.customer_name,
       customer_wa: order.customer_wa ?? null,
       customer_email: order.customer_email ?? null,
+      catatan: order.catatan ?? null,
       acara: order.acara ?? null,
       kebutuhan_acara: order.kebutuhan_acara ?? null,
       kategori: order.kategori ?? null,

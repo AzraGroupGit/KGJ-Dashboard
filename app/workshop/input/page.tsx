@@ -51,7 +51,9 @@ interface WorkshopOrderInfo {
 interface WorkshopWorkOrder {
   deadline: string | null;
   customer_name: string | null;
+  customer_wa: string | null;
   customer_email: string | null;
+  catatan: string | null;
   acara: string | null;
   kebutuhan_acara: string | null;
   kategori: string | null;
@@ -564,21 +566,32 @@ function WorkshopWorkOrderCard({
         Spesifikasi Order
       </p>
 
-      {/* Customer */}
-      {wo.customer_name && (
+      {/* Order Info */}
+      <div className="space-y-1">
+        <Row label="Customer" value={wo.customer_name} />
+        <Row
+          label="Deadline"
+          value={
+            wo.deadline
+              ? new Date(wo.deadline).toLocaleDateString("id-ID", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })
+              : null
+          }
+        />
+      </div>
+
+      {/* Catatan / Order Notes */}
+      {wo.catatan && (
         <div className="space-y-1">
-          <Row label="Customer" value={wo.customer_name} />
-          <Row
-            label="Deadline"
-            value={
-              wo.deadline
-                ? new Date(wo.deadline).toLocaleDateString("id-ID", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })
-                : null
-            }
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">
+            Catatan Order
+          </p>
+          <div
+            className="rounded-lg border border-stone-200 bg-stone-50 p-2.5 text-xs text-stone-600 leading-relaxed max-w-none [&_p]:mb-1 [&_ul]:ml-4 [&_ol]:ml-4 [&_strong]:text-stone-800"
+            dangerouslySetInnerHTML={{ __html: wo.catatan }}
           />
         </div>
       )}
