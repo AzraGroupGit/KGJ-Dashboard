@@ -1,16 +1,16 @@
-# Graph Report - erp-system  (2026-07-14)
+# Graph Report - erp-system  (2026-07-13)
 
 ## Corpus Check
-- 262 files · ~207,574 words
+- 262 files · ~207,267 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1419 nodes · 2748 edges · 102 communities (85 shown, 17 thin omitted)
+- 1419 nodes · 2754 edges · 102 communities (85 shown, 17 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 11 edges (avg confidence: 0.64)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `48912077`
+- Built from commit: `582148b3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -125,15 +125,15 @@
 
 ## Surprising Connections (you probably didn't know these)
 - `GET()` --calls--> `createClient()`  [EXTRACTED]
+  app/api/branches/route.ts → lib/supabase/server.ts
+- `GET()` --calls--> `createClient()`  [EXTRACTED]
   app/api/qr-scan/route.ts → lib/supabase/server.ts
 - `StageProgressBar()` --calls--> `getStageIndex()`  [EXTRACTED]
   components/orders/StageTimeline.tsx → lib/stages.ts
+- `POST()` --calls--> `mapStatusToStage()`  [EXTRACTED]
+  app/api/legacy/webhook/route.ts → lib/legacy/status.ts
 - `GET()` --calls--> `legacyToOrderDetail()`  [EXTRACTED]
   app/api/order-detail/route.ts → lib/legacy/adapter.ts
-- `GET()` --calls--> `createClient()`  [EXTRACTED]
-  app/api/analytics/cycle-time/route.ts → lib/supabase/server.ts
-- `GET()` --calls--> `createClient()`  [EXTRACTED]
-  app/api/analytics/stage-durations/route.ts → lib/supabase/server.ts
 
 ## Import Cycles
 - None detected.
@@ -144,8 +144,8 @@
 ## Communities (102 total, 17 thin omitted)
 
 ### Community 0 - "Supervisor API Routes"
-Cohesion: 0.08
-Nodes (35): GET(), GET(), GET(), POST(), mapStatusToStage(), POST(), POST(), POST() (+27 more)
+Cohesion: 0.10
+Nodes (27): GET(), GET(), POST(), mapStatusToStage(), POST(), POST(), POST(), DELETE() (+19 more)
 
 ### Community 1 - "User and Branch Forms"
 Cohesion: 0.07
@@ -168,8 +168,8 @@ Cohesion: 0.14
 Nodes (9): ALL_ROLES, AllRole, AppRole, AUTH_ONLY_PATHS, MANAGEMENT_ROUTES, PROTECTED_PREFIXES, PUBLIC_PREFIXES, WORKSHOP_ROUTES (+1 more)
 
 ### Community 6 - "Client Session Management"
-Cohesion: 0.10
-Nodes (21): POST(), POST(), POST(), DELETE(), Params, PATCH(), PUT(), requireSuperadmin() (+13 more)
+Cohesion: 0.07
+Nodes (30): POST(), POST(), POST(), GET(), POST(), GET(), POST(), GET() (+22 more)
 
 ### Community 7 - "Database Schema Definitions"
 Cohesion: 0.06
@@ -181,7 +181,7 @@ Nodes (10): filterArr(), normalizeDariArtis(), normalizeLaser(), normalizeSumber
 
 ### Community 9 - "Superadmin QR API"
 Cohesion: 0.07
-Nodes (32): POST(), GET(), POST(), ALLOWED_TYPES, GET(), POST(), GET(), GET() (+24 more)
+Nodes (31): POST(), ALLOWED_TYPES, GET(), POST(), DELETE(), GET(), POST(), SKIP_NOTIFY_STATUSES (+23 more)
 
 ### Community 10 - "Expert Performance Analytics"
 Cohesion: 0.09
@@ -216,8 +216,8 @@ Cohesion: 0.10
 Nodes (10): DailyAnalysisPage(), DailyData, DailyStaffRow, DailyTotals, DailyTrend, fmtRpShort(), HeroBanner(), P (+2 more)
 
 ### Community 18 - "Management History Dashboard"
-Cohesion: 0.17
-Nodes (15): ManagementDashboardPage(), DashboardStats, HistoryEntry, InsightCardData, ManagerData, ManagerStats, ProgressRow, Task (+7 more)
+Cohesion: 0.13
+Nodes (19): FilterTab, formatDate(), ManagementTasksPage(), ManagementDashboardPage(), DashboardStats, HistoryEntry, InsightCardData, ManagerData (+11 more)
 
 ### Community 19 - "TypeScript Configuration"
 Cohesion: 0.12
@@ -296,8 +296,8 @@ Cohesion: 0.31
 Nodes (7): GET(), verifyBearerToken(), CekatOrderStatus, computePaymentStatus(), lookupByCustomerWa(), lookupByOrderNumber(), normalizeWa()
 
 ### Community 39 - "Scan Event Analytics"
-Cohesion: 0.23
-Nodes (12): ACTION_LABELS, GET(), GET_STATS(), getDateRange(), isValidAction(), isValidStage(), POST(), ScanEventStats (+4 more)
+Cohesion: 0.24
+Nodes (11): ACTION_LABELS, GET(), getDateRange(), isValidAction(), isValidStage(), POST(), ScanEventStats, ScanEventWithRelations (+3 more)
 
 ### Community 40 - "Management Navigation Sidebar"
 Cohesion: 0.36
@@ -313,7 +313,7 @@ Nodes (9): cormorantGaramond, dmSans, dmSerifDisplay, geistMono, geistSans, inte
 
 ### Community 43 - "KPI Data Fetching"
 Cohesion: 0.11
-Nodes (9): PATCH(), GET(), DELETE(), GET(), POST(), pusher, STAGE_LABELS, SupervisorInfo (+1 more)
+Nodes (5): GET(), ALLOWED_TYPES, POST(), pusher, STAGE_LABELS
 
 ### Community 44 - "Order Detail API"
 Cohesion: 0.24
@@ -356,24 +356,24 @@ Cohesion: 0.20
 Nodes (13): advanceOrder(), APPROVAL_GATE_MAP, getAttemptNumber(), hasAccess(), nextInSequence(), POST(), pushStageToYii2(), recordSubmission() (+5 more)
 
 ### Community 54 - "Order Detail Popup"
-Cohesion: 0.10
-Nodes (13): formatRupiah(), PelangganGroup, PelangganOrder, PelangganPage(), ActiveTab, SlotCategory, SlotOverride, UserInfo (+5 more)
+Cohesion: 0.14
+Nodes (9): ActiveTab, SlotCategory, SlotOverride, UserInfo, KpiApiResponse, fetcher(), handleUnauthorized(), mutator() (+1 more)
 
 ### Community 55 - "Cycle Time Analytics"
 Cohesion: 0.32
 Nodes (6): calculateAverageCycleTime(), DailyStatsResponse, estimateWipValue(), GET(), PRODUCTION_ROLES, STAGE_ORDER
 
 ### Community 56 - "Report Selection Page"
-Cohesion: 0.08
-Nodes (18): HistoryEntry, Task, TaskItem, Task, TaskItem, ClientUser, getClientUser(), isRoleDetailObject() (+10 more)
+Cohesion: 0.09
+Nodes (21): formatRupiah(), PelangganGroup, PelangganOrder, PelangganPage(), HistoryEntry, Task, TaskItem, Task (+13 more)
 
 ### Community 57 - "Bottleneck Monitoring Page"
 Cohesion: 0.20
 Nodes (8): BottleneckTableRow(), formatHours(), getStatusInfo(), BottleneckHeatmap(), fmtCount(), HeatmapData, CustomerTimeline(), getStageLabel()
 
 ### Community 58 - "Supervisor QR Codes"
-Cohesion: 0.13
-Nodes (18): ACTIVE_STAGES, StageBottleneck, GET(), APPROVAL_STAGES, APPROVAL_TO_PRODUCTION_STAGE, GET(), OPERATIONAL_APPROVAL_STAGES, PRODUCTION_APPROVAL_STAGES (+10 more)
+Cohesion: 0.10
+Nodes (22): ACTIVE_STAGES, StageBottleneck, POST(), POST(), GET(), APPROVAL_STAGES, APPROVAL_TO_PRODUCTION_STAGE, GET() (+14 more)
 
 ### Community 59 - "Stage Deadline Tracking"
 Cohesion: 0.33
@@ -388,16 +388,16 @@ Cohesion: 0.29
 Nodes (3): ComplRow, FieldItem, QualityRow
 
 ### Community 62 - "Weekly Activity API"
-Cohesion: 0.24
-Nodes (6): FilterTab, formatDate(), ManagementTasksPage(), ProgressWidget(), Input, InputProps
+Cohesion: 0.53
+Nodes (5): DELETE(), Params, PATCH(), PUT(), requireSuperadmin()
 
 ### Community 63 - "Financial Formatting API"
 Cohesion: 0.80
 Nodes (4): GET(), mapAccount(), POST(), verifySupervisorScope()
 
 ### Community 64 - "Stage Visibility API"
-Cohesion: 0.32
-Nodes (7): currentPeriod(), LaporanPage(), periodLabel(), ReportCard, REPORTS, ReportType, TONE_MAP
+Cohesion: 0.80
+Nodes (4): DELETE(), loadTargetUser(), PATCH(), verifySupervisorScope()
 
 ### Community 67 - "Production Loss API"
 Cohesion: 0.33
@@ -424,8 +424,8 @@ Cohesion: 0.28
 Nodes (6): POST(), ROLE_CONFIGS, RoleConfig, isLoginRole(), isAppRole(), queryParamToAppRole()
 
 ### Community 74 - "route.ts"
-Cohesion: 0.60
-Nodes (3): POST(), syncNewOrders(), SyncResult
+Cohesion: 0.48
+Nodes (6): DELETE(), GET(), GROUP_STAGES, POST(), PUT(), verifySupervisor()
 
 ### Community 75 - "route.ts"
 Cohesion: 0.40
@@ -456,23 +456,23 @@ Cohesion: 0.20
 Nodes (9): iconMap, menuItems, SidebarProps, MARKETING_ROUTES, SUPERADMIN_ROUTES, SUPERVISOR_ROUTES, CollapseState, MenuItem (+1 more)
 
 ## Knowledge Gaps
-- **443 isolated node(s):** `SyncResult`, `PRODUCTION_ROLES`, `SUSUT_STAGES`, `QC_STAGES`, `ACTIVE_STAGES` (+438 more)
+- **443 isolated node(s):** `PRODUCTION_ROLES`, `SUSUT_STAGES`, `QC_STAGES`, `ACTIVE_STAGES`, `StageBottleneck` (+438 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `fetcher()` connect `Order Detail Popup` to `User and Branch Forms`, `Account Management Modals`, `Expert Performance Analytics`, `User Administration API`, `Branch Statistics Dashboard`, `Order Detail Views`, `Daily Analysis Dashboard`, `Management History Dashboard`, `Marketing Channel Dashboard`, `Data Viewer Utilities`, `Order Form Helpers`, `Owner KPI Dashboard`, `Dashboard Activity Feed`, `Stage Timeline Visualization`, `Lead Input Management`, `Order Entry Page`, `QR Code Management`, `Management Task List`, `PIN Settings Page`, `User Profile Modals`, `Report Generation Page`, `Report Selection Page`, `Bottleneck Monitoring Page`, `Stage Deadline Tracking`, `Weekly Activity API`, `page.tsx`, `page.tsx`, `page.tsx`?**
-  _High betweenness centrality (0.103) - this node is a cross-community bridge._
-- **Why does `createClient()` connect `Superadmin QR API` to `Supervisor API Routes`, `Order Creation API`, `Client Session Management`, `Scan Event Analytics`, `Account Mapping API`, `KPI Data Fetching`, `Order Detail API`, `User Auth API`, `Manager Task Monitoring`, `BMS Role Management`, `Monthly Insights API`, `CSV Export Utilities`, `Order Action Handlers`, `Financial Formatting API`?**
-  _High betweenness centrality (0.083) - this node is a cross-community bridge._
-- **Why does `createAdminClient()` connect `Supervisor API Routes` to `Order Creation API`, `Client Session Management`, `Scan Event Analytics`, `Order Status Lookup`, `Superadmin QR API`, `KPI Data Fetching`, `User Auth API`, `BMS Role Management`, `Financial Formatting API`?**
-  _High betweenness centrality (0.045) - this node is a cross-community bridge._
-- **What connects `SyncResult`, `PRODUCTION_ROLES`, `SUSUT_STAGES` to the rest of the system?**
+- **Why does `fetcher()` connect `Order Detail Popup` to `User and Branch Forms`, `Account Management Modals`, `Expert Performance Analytics`, `User Administration API`, `Branch Statistics Dashboard`, `Order Detail Views`, `Daily Analysis Dashboard`, `Management History Dashboard`, `Marketing Channel Dashboard`, `Data Viewer Utilities`, `Order Form Helpers`, `Owner KPI Dashboard`, `Dashboard Activity Feed`, `Stage Timeline Visualization`, `Lead Input Management`, `Order Entry Page`, `QR Code Management`, `Management Task List`, `PIN Settings Page`, `User Profile Modals`, `Report Generation Page`, `Report Selection Page`, `Bottleneck Monitoring Page`, `Stage Deadline Tracking`, `page.tsx`, `page.tsx`, `page.tsx`?**
+  _High betweenness centrality (0.105) - this node is a cross-community bridge._
+- **Why does `createClient()` connect `Superadmin QR API` to `Supervisor API Routes`, `Stage Visibility API`, `Order Creation API`, `Client Session Management`, `Scan Event Analytics`, `Account Mapping API`, `route.ts`, `KPI Data Fetching`, `Order Detail API`, `User Auth API`, `Manager Task Monitoring`, `BMS Role Management`, `Monthly Insights API`, `CSV Export Utilities`, `Order Action Handlers`, `Weekly Activity API`, `Financial Formatting API`?**
+  _High betweenness centrality (0.087) - this node is a cross-community bridge._
+- **Why does `createAdminClient()` connect `Supervisor API Routes` to `Stage Visibility API`, `Order Creation API`, `Client Session Management`, `Scan Event Analytics`, `Order Status Lookup`, `Superadmin QR API`, `route.ts`, `KPI Data Fetching`, `User Auth API`, `BMS Role Management`, `Financial Formatting API`?**
+  _High betweenness centrality (0.047) - this node is a cross-community bridge._
+- **What connects `PRODUCTION_ROLES`, `SUSUT_STAGES`, `QC_STAGES` to the rest of the system?**
   _443 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Supervisor API Routes` be split into smaller, more focused modules?**
-  _Cohesion score 0.07826694619147449 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0971322849213691 - nodes in this community are weakly interconnected._
 - **Should `User and Branch Forms` be split into smaller, more focused modules?**
   _Cohesion score 0.06957047791893527 - nodes in this community are weakly interconnected._
 - **Should `Custom Form Fields` be split into smaller, more focused modules?**
