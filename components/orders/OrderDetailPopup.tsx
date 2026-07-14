@@ -60,6 +60,7 @@ export interface OrderDetail {
     created_at: string;
     updated_at: string;
     created_by_name: string | null;
+    catatan: string | null;
   };
   transitions: Array<{
     from_stage: string | null;
@@ -542,6 +543,19 @@ export default function OrderDetailPopup({
                           </>
                         )}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Catatan / Order Notes (Yii2 TinyMCE) */}
+                  {o.catatan && (
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">
+                        Catatan Order
+                      </p>
+                      <div
+                        className="rounded-lg bg-[#1C1917] p-3 text-xs text-white/60 leading-relaxed prose-a:text-amber-400 prose-strong:text-white/80 max-w-none [&_p]:mb-1 [&_ul]:ml-4 [&_ol]:ml-4"
+                        dangerouslySetInnerHTML={{ __html: o.catatan }}
+                      />
                     </div>
                   )}
 
