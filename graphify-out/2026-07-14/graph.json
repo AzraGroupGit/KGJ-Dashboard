@@ -23,12 +23,32 @@
     {
       "label": "route.ts",
       "file_type": "code",
+      "source_file": "app/api/legacy/sync/route.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "app_api_legacy_sync_route",
+      "community": 43,
+      "norm_label": "route.ts"
+    },
+    {
+      "label": "POST()",
+      "file_type": "code",
+      "source_file": "app/api/legacy/sync/route.ts",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "app_api_legacy_sync_route_post",
+      "community": 43,
+      "norm_label": "post()"
+    },
+    {
+      "label": "route.ts",
+      "file_type": "code",
       "source_file": "app/api/legacy/webhook/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "app_api_legacy_webhook_route",
       "community": 43,
-      "norm_label": "route.ts"
+      "norm_label": "route.ts",
+      "id": "app_api_legacy_webhook_route"
     },
     {
       "label": "POST()",
@@ -36,9 +56,9 @@
       "source_file": "app/api/legacy/webhook/route.ts",
       "source_location": "L7",
       "_origin": "ast",
-      "id": "app_api_legacy_webhook_route_post",
       "community": 43,
-      "norm_label": "post()"
+      "norm_label": "post()",
+      "id": "app_api_legacy_webhook_route_post"
     },
     {
       "label": "sync-service.ts",
@@ -46,9 +66,9 @@
       "source_file": "lib/legacy/sync-service.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "lib_legacy_sync_service",
       "community": 74,
-      "norm_label": "sync-service.ts"
+      "norm_label": "sync-service.ts",
+      "id": "lib_legacy_sync_service"
     },
     {
       "label": "SyncResult",
@@ -56,9 +76,9 @@
       "source_file": "lib/legacy/sync-service.ts",
       "source_location": "L7",
       "_origin": "ast",
-      "id": "lib_legacy_sync_service_syncresult",
       "community": 74,
-      "norm_label": "syncresult"
+      "norm_label": "syncresult",
+      "id": "lib_legacy_sync_service_syncresult"
     },
     {
       "label": "syncNewOrders()",
@@ -66,9 +86,9 @@
       "source_file": "lib/legacy/sync-service.ts",
       "source_location": "L13",
       "_origin": "ast",
-      "id": "lib_legacy_sync_service_syncneworders",
       "community": 74,
-      "norm_label": "syncneworders()"
+      "norm_label": "syncneworders()",
+      "id": "lib_legacy_sync_service_syncneworders"
     },
     {
       "label": "route.ts",
@@ -319,26 +339,6 @@
       "community": 55,
       "norm_label": "get()",
       "id": "app_api_daily_stats_2_route_get"
-    },
-    {
-      "label": "route.ts",
-      "file_type": "code",
-      "source_file": "app/api/legacy/sync/route.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "community": 74,
-      "norm_label": "route.ts",
-      "id": "app_api_legacy_sync_route"
-    },
-    {
-      "label": "POST()",
-      "file_type": "code",
-      "source_file": "app/api/legacy/sync/route.ts",
-      "source_location": "L6",
-      "_origin": "ast",
-      "community": 74,
-      "norm_label": "post()",
-      "id": "app_api_legacy_sync_route_post"
     },
     {
       "label": "route.ts",
@@ -1916,7 +1916,7 @@
       "source_file": "app/api/branches/[id]/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 6,
+      "community": 62,
       "norm_label": "route.ts",
       "id": "app_api_branches_id_route"
     },
@@ -1926,7 +1926,7 @@
       "source_file": "app/api/branches/[id]/route.ts",
       "source_location": "L7",
       "_origin": "ast",
-      "community": 6,
+      "community": 62,
       "norm_label": "params",
       "id": "app_api_branches_id_route_params"
     },
@@ -1936,7 +1936,7 @@
       "source_file": "app/api/branches/[id]/route.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 6,
+      "community": 62,
       "norm_label": "requiresuperadmin()",
       "id": "app_api_branches_id_route_requiresuperadmin"
     },
@@ -1946,7 +1946,7 @@
       "source_file": "app/api/branches/[id]/route.ts",
       "source_location": "L33",
       "_origin": "ast",
-      "community": 6,
+      "community": 62,
       "norm_label": "put()",
       "id": "app_api_branches_id_route_put"
     },
@@ -1956,7 +1956,7 @@
       "source_file": "app/api/branches/[id]/route.ts",
       "source_location": "L113",
       "_origin": "ast",
-      "community": 6,
+      "community": 62,
       "norm_label": "delete()",
       "id": "app_api_branches_id_route_delete"
     },
@@ -1966,7 +1966,7 @@
       "source_file": "app/api/branches/[id]/route.ts",
       "source_location": "L188",
       "_origin": "ast",
-      "community": 6,
+      "community": 62,
       "norm_label": "patch()",
       "id": "app_api_branches_id_route_patch"
     },
@@ -1976,7 +1976,7 @@
       "source_file": "app/api/branches/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 9,
+      "community": 6,
       "norm_label": "route.ts",
       "id": "app_api_branches_route"
     },
@@ -1986,7 +1986,7 @@
       "source_file": "app/api/branches/route.ts",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 9,
+      "community": 6,
       "norm_label": "get()",
       "id": "app_api_branches_route_get"
     },
@@ -1996,7 +1996,7 @@
       "source_file": "app/api/branches/route.ts",
       "source_location": "L75",
       "_origin": "ast",
-      "community": 9,
+      "community": 6,
       "norm_label": "post()",
       "id": "app_api_branches_route_post"
     },
@@ -2476,7 +2476,7 @@
       "source_file": "app/api/management/tasks/items/[id]/attachments/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 9,
+      "community": 0,
       "norm_label": "route.ts",
       "id": "app_api_management_tasks_items_id_attachments_route"
     },
@@ -2486,7 +2486,7 @@
       "source_file": "app/api/management/tasks/items/[id]/attachments/route.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 9,
+      "community": 0,
       "norm_label": "allowed_types",
       "id": "app_api_management_tasks_items_id_attachments_route_allowed_types"
     },
@@ -2496,7 +2496,7 @@
       "source_file": "app/api/management/tasks/items/[id]/attachments/route.ts",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 9,
+      "community": 0,
       "norm_label": "post()",
       "id": "app_api_management_tasks_items_id_attachments_route_post"
     },
@@ -2506,7 +2506,7 @@
       "source_file": "app/api/management/tasks/items/[id]/attachments/route.ts",
       "source_location": "L108",
       "_origin": "ast",
-      "community": 9,
+      "community": 0,
       "norm_label": "get()",
       "id": "app_api_management_tasks_items_id_attachments_route_get"
     },
@@ -2546,7 +2546,7 @@
       "source_file": "app/api/management/tasks/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 0,
+      "community": 9,
       "norm_label": "route.ts",
       "id": "app_api_management_tasks_route"
     },
@@ -2556,7 +2556,7 @@
       "source_file": "app/api/management/tasks/route.ts",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 0,
+      "community": 9,
       "norm_label": "skip_notify_statuses",
       "id": "app_api_management_tasks_route_skip_notify_statuses"
     },
@@ -2566,7 +2566,7 @@
       "source_file": "app/api/management/tasks/route.ts",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 0,
+      "community": 9,
       "norm_label": "get()",
       "id": "app_api_management_tasks_route_get"
     },
@@ -2576,7 +2576,7 @@
       "source_file": "app/api/management/tasks/route.ts",
       "source_location": "L69",
       "_origin": "ast",
-      "community": 0,
+      "community": 9,
       "norm_label": "post()",
       "id": "app_api_management_tasks_route_post"
     },
@@ -2586,7 +2586,7 @@
       "source_file": "app/api/management/tasks/route.ts",
       "source_location": "L128",
       "_origin": "ast",
-      "community": 0,
+      "community": 9,
       "norm_label": "delete()",
       "id": "app_api_management_tasks_route_delete"
     },
@@ -2766,7 +2766,7 @@
       "source_file": "app/api/profile/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 9,
+      "community": 6,
       "norm_label": "route.ts",
       "id": "app_api_profile_route"
     },
@@ -2776,7 +2776,7 @@
       "source_file": "app/api/profile/route.ts",
       "source_location": "L8",
       "_origin": "ast",
-      "community": 9,
+      "community": 6,
       "norm_label": "get()",
       "id": "app_api_profile_route_get"
     },
@@ -2786,7 +2786,7 @@
       "source_file": "app/api/profile/route.ts",
       "source_location": "L69",
       "_origin": "ast",
-      "community": 9,
+      "community": 6,
       "norm_label": "put()",
       "id": "app_api_profile_route_put"
     },
@@ -3486,7 +3486,7 @@
       "source_file": "app/api/scan-events/route.ts",
       "source_location": "L497",
       "_origin": "ast",
-      "community": 39,
+      "community": 0,
       "norm_label": "get_stats()",
       "id": "app_api_scan_events_route_get_stats"
     },
@@ -3686,7 +3686,7 @@
       "source_file": "app/api/superadmin/management-tasks/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 9,
+      "community": 0,
       "norm_label": "route.ts",
       "id": "app_api_superadmin_management_tasks_route"
     },
@@ -3696,7 +3696,7 @@
       "source_file": "app/api/superadmin/management-tasks/route.ts",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 9,
+      "community": 0,
       "norm_label": "get()",
       "id": "app_api_superadmin_management_tasks_route_get"
     },
@@ -3706,7 +3706,7 @@
       "source_file": "app/api/superadmin/management-tasks/route.ts",
       "source_location": "L69",
       "_origin": "ast",
-      "community": 9,
+      "community": 0,
       "norm_label": "patch()",
       "id": "app_api_superadmin_management_tasks_route_patch"
     },
@@ -3716,7 +3716,7 @@
       "source_file": "app/api/supervisor/accounts/[userId]/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 0,
+      "community": 6,
       "norm_label": "route.ts",
       "id": "app_api_supervisor_accounts_userid_route"
     },
@@ -3726,7 +3726,7 @@
       "source_file": "app/api/supervisor/accounts/[userId]/route.ts",
       "source_location": "L8",
       "_origin": "ast",
-      "community": 0,
+      "community": 6,
       "norm_label": "verifysupervisorscope()",
       "id": "app_api_supervisor_accounts_userid_route_verifysupervisorscope"
     },
@@ -3736,7 +3736,7 @@
       "source_file": "app/api/supervisor/accounts/[userId]/route.ts",
       "source_location": "L30",
       "_origin": "ast",
-      "community": 0,
+      "community": 6,
       "norm_label": "loadtargetuser()",
       "id": "app_api_supervisor_accounts_userid_route_loadtargetuser"
     },
@@ -3746,7 +3746,7 @@
       "source_file": "app/api/supervisor/accounts/[userId]/route.ts",
       "source_location": "L56",
       "_origin": "ast",
-      "community": 0,
+      "community": 6,
       "norm_label": "patch()",
       "id": "app_api_supervisor_accounts_userid_route_patch"
     },
@@ -3756,7 +3756,7 @@
       "source_file": "app/api/supervisor/accounts/[userId]/route.ts",
       "source_location": "L165",
       "_origin": "ast",
-      "community": 0,
+      "community": 6,
       "norm_label": "delete()",
       "id": "app_api_supervisor_accounts_userid_route_delete"
     },
@@ -3816,7 +3816,7 @@
       "source_file": "app/api/supervisor/personnel/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 0,
+      "community": 9,
       "norm_label": "route.ts",
       "id": "app_api_supervisor_personnel_route"
     },
@@ -3826,7 +3826,7 @@
       "source_file": "app/api/supervisor/personnel/route.ts",
       "source_location": "L8",
       "_origin": "ast",
-      "community": 0,
+      "community": 9,
       "norm_label": "verifysupervisor()",
       "id": "app_api_supervisor_personnel_route_verifysupervisor"
     },
@@ -3836,7 +3836,7 @@
       "source_file": "app/api/supervisor/personnel/route.ts",
       "source_location": "L29",
       "_origin": "ast",
-      "community": 0,
+      "community": 9,
       "norm_label": "group_stages",
       "id": "app_api_supervisor_personnel_route_group_stages"
     },
@@ -3846,7 +3846,7 @@
       "source_file": "app/api/supervisor/personnel/route.ts",
       "source_location": "L42",
       "_origin": "ast",
-      "community": 0,
+      "community": 9,
       "norm_label": "get()",
       "id": "app_api_supervisor_personnel_route_get"
     },
@@ -3856,7 +3856,7 @@
       "source_file": "app/api/supervisor/personnel/route.ts",
       "source_location": "L112",
       "_origin": "ast",
-      "community": 0,
+      "community": 9,
       "norm_label": "post()",
       "id": "app_api_supervisor_personnel_route_post"
     },
@@ -3866,7 +3866,7 @@
       "source_file": "app/api/supervisor/personnel/route.ts",
       "source_location": "L173",
       "_origin": "ast",
-      "community": 0,
+      "community": 9,
       "norm_label": "put()",
       "id": "app_api_supervisor_personnel_route_put"
     },
@@ -3876,7 +3876,7 @@
       "source_file": "app/api/supervisor/personnel/route.ts",
       "source_location": "L213",
       "_origin": "ast",
-      "community": 0,
+      "community": 9,
       "norm_label": "delete()",
       "id": "app_api_supervisor_personnel_route_delete"
     },
@@ -4646,7 +4646,7 @@
       "source_file": "app/dashboard/cs/pelanggan/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 54,
+      "community": 56,
       "norm_label": "page.tsx",
       "id": "app_dashboard_cs_pelanggan_page"
     },
@@ -4656,7 +4656,7 @@
       "source_file": "app/dashboard/cs/pelanggan/page.tsx",
       "source_location": "L14",
       "_origin": "ast",
-      "community": 54,
+      "community": 56,
       "norm_label": "pelangganorder",
       "id": "app_dashboard_cs_pelanggan_page_pelangganorder"
     },
@@ -4666,7 +4666,7 @@
       "source_file": "app/dashboard/cs/pelanggan/page.tsx",
       "source_location": "L28",
       "_origin": "ast",
-      "community": 54,
+      "community": 56,
       "norm_label": "pelanggangroup",
       "id": "app_dashboard_cs_pelanggan_page_pelanggangroup"
     },
@@ -4676,7 +4676,7 @@
       "source_file": "app/dashboard/cs/pelanggan/page.tsx",
       "source_location": "L46",
       "_origin": "ast",
-      "community": 54,
+      "community": 56,
       "norm_label": "formatrupiah()",
       "id": "app_dashboard_cs_pelanggan_page_formatrupiah"
     },
@@ -4686,7 +4686,7 @@
       "source_file": "app/dashboard/cs/pelanggan/page.tsx",
       "source_location": "L55",
       "_origin": "ast",
-      "community": 54,
+      "community": 56,
       "norm_label": "formatdate()",
       "id": "app_dashboard_cs_pelanggan_page_formatdate"
     },
@@ -4696,7 +4696,7 @@
       "source_file": "app/dashboard/cs/pelanggan/page.tsx",
       "source_location": "L65",
       "_origin": "ast",
-      "community": 54,
+      "community": 56,
       "norm_label": "statusbadge()",
       "id": "app_dashboard_cs_pelanggan_page_statusbadge"
     },
@@ -4706,7 +4706,7 @@
       "source_file": "app/dashboard/cs/pelanggan/page.tsx",
       "source_location": "L92",
       "_origin": "ast",
-      "community": 54,
+      "community": 56,
       "norm_label": "pelangganpage()",
       "id": "app_dashboard_cs_pelanggan_page_pelangganpage"
     },
@@ -4806,7 +4806,7 @@
       "source_file": "app/dashboard/management/tasks/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 62,
+      "community": 18,
       "norm_label": "page.tsx",
       "id": "app_dashboard_management_tasks_page"
     },
@@ -4816,7 +4816,7 @@
       "source_file": "app/dashboard/management/tasks/page.tsx",
       "source_location": "L27",
       "_origin": "ast",
-      "community": 62,
+      "community": 18,
       "norm_label": "filtertab",
       "id": "app_dashboard_management_tasks_page_filtertab"
     },
@@ -4826,7 +4826,7 @@
       "source_file": "app/dashboard/management/tasks/page.tsx",
       "source_location": "L29",
       "_origin": "ast",
-      "community": 62,
+      "community": 18,
       "norm_label": "formatdate()",
       "id": "app_dashboard_management_tasks_page_formatdate"
     },
@@ -4836,7 +4836,7 @@
       "source_file": "app/dashboard/management/tasks/page.tsx",
       "source_location": "L33",
       "_origin": "ast",
-      "community": 62,
+      "community": 18,
       "norm_label": "grouptasksbystatus()",
       "id": "app_dashboard_management_tasks_page_grouptasksbystatus"
     },
@@ -4846,7 +4846,7 @@
       "source_file": "app/dashboard/management/tasks/page.tsx",
       "source_location": "L52",
       "_origin": "ast",
-      "community": 62,
+      "community": 18,
       "norm_label": "managementtaskspage()",
       "id": "app_dashboard_management_tasks_page_managementtaskspage"
     },
@@ -6536,7 +6536,7 @@
       "source_file": "app/dashboard/superadmin/oprprd/laporan/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 64,
+      "community": 56,
       "norm_label": "page.tsx",
       "id": "app_dashboard_superadmin_oprprd_laporan_page"
     },
@@ -6546,7 +6546,7 @@
       "source_file": "app/dashboard/superadmin/oprprd/laporan/page.tsx",
       "source_location": "L26",
       "_origin": "ast",
-      "community": 64,
+      "community": 56,
       "norm_label": "reporttype",
       "id": "app_dashboard_superadmin_oprprd_laporan_page_reporttype"
     },
@@ -6556,7 +6556,7 @@
       "source_file": "app/dashboard/superadmin/oprprd/laporan/page.tsx",
       "source_location": "L28",
       "_origin": "ast",
-      "community": 64,
+      "community": 56,
       "norm_label": "reportcard",
       "id": "app_dashboard_superadmin_oprprd_laporan_page_reportcard"
     },
@@ -6566,7 +6566,7 @@
       "source_file": "app/dashboard/superadmin/oprprd/laporan/page.tsx",
       "source_location": "L41",
       "_origin": "ast",
-      "community": 64,
+      "community": 56,
       "norm_label": "reports",
       "id": "app_dashboard_superadmin_oprprd_laporan_page_reports"
     },
@@ -6576,7 +6576,7 @@
       "source_file": "app/dashboard/superadmin/oprprd/laporan/page.tsx",
       "source_location": "L106",
       "_origin": "ast",
-      "community": 64,
+      "community": 56,
       "norm_label": "tone_map",
       "id": "app_dashboard_superadmin_oprprd_laporan_page_tone_map"
     },
@@ -6586,7 +6586,7 @@
       "source_file": "app/dashboard/superadmin/oprprd/laporan/page.tsx",
       "source_location": "L131",
       "_origin": "ast",
-      "community": 64,
+      "community": 56,
       "norm_label": "currentperiod()",
       "id": "app_dashboard_superadmin_oprprd_laporan_page_currentperiod"
     },
@@ -6596,7 +6596,7 @@
       "source_file": "app/dashboard/superadmin/oprprd/laporan/page.tsx",
       "source_location": "L136",
       "_origin": "ast",
-      "community": 64,
+      "community": 56,
       "norm_label": "periodlabel()",
       "id": "app_dashboard_superadmin_oprprd_laporan_page_periodlabel"
     },
@@ -6606,7 +6606,7 @@
       "source_file": "app/dashboard/superadmin/oprprd/laporan/page.tsx",
       "source_location": "L145",
       "_origin": "ast",
-      "community": 64,
+      "community": 56,
       "norm_label": "laporanpage()",
       "id": "app_dashboard_superadmin_oprprd_laporan_page_laporanpage"
     },
@@ -8446,7 +8446,7 @@
       "source_file": "app/loading.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 29,
+      "community": 56,
       "norm_label": "loading.tsx",
       "id": "app_loading"
     },
@@ -8456,7 +8456,7 @@
       "source_file": "app/loading.tsx",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 29,
+      "community": 56,
       "norm_label": "rootloading()",
       "id": "app_loading_rootloading"
     },
@@ -9576,7 +9576,7 @@
       "source_file": "components/dashboard/superadmin/ProgressWidget.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 62,
+      "community": 18,
       "norm_label": "progresswidget.tsx",
       "id": "components_dashboard_superadmin_progresswidget"
     },
@@ -9586,7 +9586,7 @@
       "source_file": "components/dashboard/superadmin/ProgressWidget.tsx",
       "source_location": "L3",
       "_origin": "ast",
-      "community": 62,
+      "community": 18,
       "norm_label": "progresswidget()",
       "id": "components_dashboard_superadmin_progresswidget_progresswidget"
     },
@@ -11156,7 +11156,7 @@
       "source_file": "components/ui/Input.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 62,
+      "community": 29,
       "norm_label": "input.tsx",
       "id": "components_ui_input"
     },
@@ -11166,7 +11166,7 @@
       "source_file": "components/ui/Input.tsx",
       "source_location": "L7",
       "_origin": "ast",
-      "community": 62,
+      "community": 29,
       "norm_label": "inputprops",
       "id": "components_ui_input_inputprops"
     },
@@ -11176,7 +11176,7 @@
       "source_file": "components/ui/Input.tsx",
       "source_location": "L14",
       "_origin": "ast",
-      "community": 62,
+      "community": 29,
       "norm_label": "input",
       "id": "components_ui_input_input"
     },
@@ -11186,7 +11186,7 @@
       "source_file": "components/ui/Loading.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 29,
+      "community": 56,
       "norm_label": "loading.tsx",
       "id": "components_ui_loading"
     },
@@ -11196,7 +11196,7 @@
       "source_file": "components/ui/Loading.tsx",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 29,
+      "community": 56,
       "norm_label": "loadingprops",
       "id": "components_ui_loading_loadingprops"
     },
@@ -11206,7 +11206,7 @@
       "source_file": "components/ui/Loading.tsx",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 29,
+      "community": 56,
       "norm_label": "loading()",
       "id": "components_ui_loading_loading"
     },
@@ -11446,7 +11446,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "session.ts",
       "id": "lib_auth_session"
     },
@@ -11456,7 +11456,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L7",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "login_roles",
       "id": "lib_auth_session_login_roles"
     },
@@ -11466,7 +11466,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L15",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "loginrole",
       "id": "lib_auth_session_loginrole"
     },
@@ -11476,7 +11476,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L18",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "rolegroup",
       "id": "lib_auth_session_rolegroup"
     },
@@ -11486,7 +11486,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L25",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "rolepermissions",
       "id": "lib_auth_session_rolepermissions"
     },
@@ -11496,7 +11496,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L40",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "userroledetail",
       "id": "lib_auth_session_userroledetail"
     },
@@ -11506,7 +11506,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L48",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "userbranch",
       "id": "lib_auth_session_userbranch"
     },
@@ -11526,7 +11526,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L71",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "storage_keys",
       "id": "lib_auth_session_storage_keys"
     },
@@ -11536,7 +11536,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L92",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "valid_role_groups",
       "id": "lib_auth_session_valid_role_groups"
     },
@@ -11556,7 +11556,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L111",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "isrolegroup()",
       "id": "lib_auth_session_isrolegroup"
     },
@@ -11566,7 +11566,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L115",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "isroledetailobject()",
       "id": "lib_auth_session_isroledetailobject"
     },
@@ -11586,7 +11586,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L190",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "setclientuser()",
       "id": "lib_auth_session_setclientuser"
     },
@@ -11606,7 +11606,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L239",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "issuperadmin()",
       "id": "lib_auth_session_issuperadmin"
     },
@@ -11616,7 +11616,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L244",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "isoperationaluser()",
       "id": "lib_auth_session_isoperationaluser"
     },
@@ -11626,7 +11626,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L253",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "hasanyrole()",
       "id": "lib_auth_session_hasanyrole"
     },
@@ -11636,7 +11636,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L266",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "haspermission()",
       "id": "lib_auth_session_haspermission"
     },
@@ -11656,7 +11656,7 @@
       "source_file": "lib/auth/session.ts",
       "source_location": "L299",
       "_origin": "ast",
-      "community": 56,
+      "community": 6,
       "norm_label": "getroledisplayname()",
       "id": "lib_auth_session_getroledisplayname"
     },
@@ -11906,7 +11906,7 @@
       "source_file": "lib/notifications.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 36,
+      "community": 0,
       "norm_label": "notifications.ts",
       "id": "lib_notifications"
     },
@@ -11916,7 +11916,7 @@
       "source_file": "lib/notifications.ts",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 36,
+      "community": 0,
       "norm_label": "sendnotification()",
       "id": "lib_notifications_sendnotification"
     },
@@ -11926,7 +11926,7 @@
       "source_file": "lib/notifications.ts",
       "source_location": "L35",
       "_origin": "ast",
-      "community": 36,
+      "community": 0,
       "norm_label": "approval_supervisor",
       "id": "lib_notifications_approval_supervisor"
     },
@@ -11936,7 +11936,7 @@
       "source_file": "lib/notifications.ts",
       "source_location": "L43",
       "_origin": "ast",
-      "community": 36,
+      "community": 0,
       "norm_label": "getsupervisorroleforapproval()",
       "id": "lib_notifications_getsupervisorroleforapproval"
     },
@@ -11946,7 +11946,7 @@
       "source_file": "lib/notifications.ts",
       "source_location": "L47",
       "_origin": "ast",
-      "community": 36,
+      "community": 0,
       "norm_label": "findsupervisorids()",
       "id": "lib_notifications_findsupervisorids"
     },
@@ -11966,7 +11966,7 @@
       "source_file": "lib/notifications.ts",
       "source_location": "L85",
       "_origin": "ast",
-      "community": 36,
+      "community": 0,
       "norm_label": "notifycsfororder()",
       "id": "lib_notifications_notifycsfororder"
     },
@@ -14247,12 +14247,33 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "app/api/legacy/sync/route.ts",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "app_api_legacy_sync_route",
+      "target": "app_api_legacy_sync_route_post",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/legacy/sync/route.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "app_api_legacy_sync_route",
+      "target": "lib_supabase_server",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "app/api/legacy/webhook/route.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_api_legacy_webhook_route",
-      "target": "app_api_legacy_webhook_route_post",
-      "confidence_score": 1.0
+      "target": "app_api_legacy_webhook_route_post"
     },
     {
       "relation": "imports_from",
@@ -14261,20 +14282,9 @@
       "source_file": "app/api/legacy/webhook/route.ts",
       "source_location": "L1",
       "weight": 1.0,
-      "source": "app_api_legacy_webhook_route",
-      "target": "lib_supabase_server",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/api/legacy/sync/route.ts",
-      "source_location": "L4",
-      "weight": 1.0,
       "confidence_score": 1.0,
-      "source": "app_api_legacy_sync_route",
-      "target": "lib_legacy_sync_service"
+      "source": "app_api_legacy_webhook_route",
+      "target": "lib_supabase_server"
     },
     {
       "relation": "contains",
@@ -14282,9 +14292,9 @@
       "source_file": "lib/legacy/sync-service.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_legacy_sync_service",
-      "target": "lib_legacy_sync_service_syncneworders",
-      "confidence_score": 1.0
+      "target": "lib_legacy_sync_service_syncneworders"
     },
     {
       "relation": "contains",
@@ -14292,31 +14302,9 @@
       "source_file": "lib/legacy/sync-service.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_legacy_sync_service",
-      "target": "lib_legacy_sync_service_syncresult",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/api/legacy/sync/route.ts",
-      "source_location": "L4",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_api_legacy_sync_route",
-      "target": "lib_legacy_sync_service_syncneworders"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "app/api/legacy/sync/route.ts",
-      "source_location": "L26",
-      "weight": 1.0,
-      "source": "app_api_legacy_sync_route_post",
-      "target": "lib_legacy_sync_service_syncneworders"
+      "target": "lib_legacy_sync_service_syncresult"
     },
     {
       "relation": "contains",
@@ -14759,27 +14747,6 @@
       "confidence_score": 1.0,
       "source": "app_api_daily_stats_2_route_get",
       "target": "app_api_daily_stats_2_route_estimatewipvalue"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/api/legacy/sync/route.ts",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_api_legacy_sync_route",
-      "target": "app_api_legacy_sync_route_post"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/api/legacy/sync/route.ts",
-      "source_location": "L1",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_api_legacy_sync_route",
-      "target": "lib_supabase_server"
     },
     {
       "relation": "contains",
@@ -43326,5 +43293,5 @@
       "source_file": ".github/workflows/ci.yml"
     }
   ],
-  "built_at_commit": "489120776124e3ce0a733f30de01d73263069dde"
+  "built_at_commit": "c3189ab1d3c07361cfb8b11720322966ceed6d4f"
 }

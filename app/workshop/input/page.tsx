@@ -648,23 +648,23 @@ function WorkshopWorkOrderCard({
           <div className="mt-2 grid grid-cols-2 gap-2">
             <DetailCard
               title="Model / Bentuk"
-              items={wo.pria!.model_bentuk}
+              items={wo.pria!.model_bentuk ?? []}
               color="border-orange-200 bg-orange-50/70"
             />
             <DetailCard
               title="Microsetting"
-              items={wo.pria!.microsetting}
+              items={wo.pria!.microsetting ?? []}
               color="border-yellow-200 bg-yellow-50/70"
             />
             <DetailCard
               title="Laser"
-              items={wo.pria!.detail_laser}
+              items={wo.pria!.detail_laser ?? []}
               color="border-green-200 bg-green-50/70"
             />
             <DetailCard
               title="Finishing"
-              items={wo.pria!.detail_finishing}
-              color="border-blue-200 bg-blue-50/70"
+              items={wo.pria!.detail_finishing ?? []}
+              color="border-violet-200 bg-violet-50/70"
             />
           </div>
         </div>
@@ -703,22 +703,22 @@ function WorkshopWorkOrderCard({
           <div className="mt-2 grid grid-cols-2 gap-2">
             <DetailCard
               title="Model / Bentuk"
-              items={wo.wanita!.model_bentuk}
+              items={wo.wanita!.model_bentuk ?? []}
               color="border-orange-200 bg-orange-50/70"
             />
             <DetailCard
               title="Microsetting"
-              items={wo.wanita!.microsetting}
+              items={wo.wanita!.microsetting ?? []}
               color="border-yellow-200 bg-yellow-50/70"
             />
             <DetailCard
               title="Laser"
-              items={wo.wanita!.detail_laser}
+              items={wo.wanita!.detail_laser ?? []}
               color="border-green-200 bg-green-50/70"
             />
             <DetailCard
               title="Finishing"
-              items={wo.wanita!.detail_finishing}
+              items={wo.wanita!.detail_finishing ?? []}
               color="border-blue-200 bg-blue-50/70"
             />
           </div>

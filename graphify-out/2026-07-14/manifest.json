@@ -1275,8 +1275,8 @@
     "semantic_hash": ""
   },
   "app/api/legacy/sync/route.ts": {
-    "mtime": 1783930182.5877423,
-    "ast_hash": "72e71e88d56abe13d4fe7a6d340abdd2",
+    "mtime": 1783996227.45311,
+    "ast_hash": "eecadf1b8879ebab059b5062f626b6d1",
     "semantic_hash": ""
   },
   "app/api/legacy/webhook/route.ts": {
