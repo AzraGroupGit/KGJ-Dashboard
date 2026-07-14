@@ -51,13 +51,67 @@ export async function syncNewOrders(since?: string): Promise<SyncResult> {
       try {
         const { data: existing } = await db
           .from("legacy_orders")
-          .select("id")
+          .select("id, id_status")
           .eq("kode_order", order.kode_order)
           .maybeSingle();
 
         if (existing) {
-          console.log("[sync] Skipped:", order.kode_order, "(already exists)");
-          result.skipped++;
+          // Status changed → update rather than skip.
+          const incomingStatus = order.id_status ?? null;
+          if (incomingStatus !== null && existing.id_status !== incomingStatus) {
+            const stage = order.tgl_selesai
+              ? "selesai"
+              : mapStatusToStage(incomingStatus);
+
+            await db
+              .from("legacy_orders")
+              .update({
+                id_status: incomingStatus,
+                tgl_selesai: order.tgl_selesai ?? undefined,
+                catatan: order.catatan ?? undefined,
+                last_synced_at: new Date().toISOString(),
+              })
+              .eq("id", existing.id);
+
+            const { data: tracking } = await db
+              .from("tracking_stages")
+              .select("current_stage")
+              .eq("order_id", existing.id)
+              .maybeSingle();
+
+            if (!tracking || tracking.current_stage !== stage) {
+              if (tracking) {
+                await db
+                  .from("tracking_stages")
+                  .update({
+                    current_stage: stage,
+                    stage_status: stage === "selesai" ? "completed" : "in_progress",
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("order_id", existing.id);
+              } else {
+                await db.from("tracking_stages").insert({
+                  order_id: existing.id,
+                  current_stage: stage,
+                  stage_status: stage === "selesai" ? "completed" : "in_progress",
+                  updated_at: new Date().toISOString(),
+                });
+              }
+
+              await db.from("stage_history").insert({
+                order_id: existing.id,
+                stage,
+                status: "completed",
+                created_at: new Date().toISOString(),
+              });
+            }
+
+            console.log("[sync] Updated:", order.kode_order, "→ stage:", stage);
+            result.synced++;
+          } else {
+            console.log("[sync] Skipped:", order.kode_order, "(already exists, no status change)");
+            result.skipped++;
+          }
           continue;
         }
 

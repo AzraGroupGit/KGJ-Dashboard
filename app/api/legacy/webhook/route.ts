@@ -39,11 +39,72 @@ export async function POST(request: Request) {
 
     const { data: existing } = await db
       .from("legacy_orders")
-      .select("id")
+      .select("id, id_status")
       .eq("kode_order", order.kode_order)
       .maybeSingle();
 
     if (existing) {
+      // If id_status changed, update the order and advance tracking.
+      const incomingStatus = order.id_status ?? null;
+      if (incomingStatus !== null && existing.id_status !== incomingStatus) {
+        const stage = order.tgl_selesai
+          ? "selesai"
+          : mapStatusToStage(incomingStatus);
+
+        await db
+          .from("legacy_orders")
+          .update({
+            id_status: incomingStatus,
+            tgl_selesai: order.tgl_selesai ?? undefined,
+            catatan: order.catatan ?? undefined,
+            last_synced_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
+
+        // Only advance if the stage actually changed.
+        const { data: tracking } = await db
+          .from("tracking_stages")
+          .select("current_stage")
+          .eq("order_id", existing.id)
+          .maybeSingle();
+
+        if (!tracking || tracking.current_stage !== stage) {
+          if (tracking) {
+            await db
+              .from("tracking_stages")
+              .update({
+                current_stage: stage,
+                stage_status: stage === "selesai" ? "completed" : "in_progress",
+                updated_at: new Date().toISOString(),
+              })
+              .eq("order_id", existing.id);
+          } else {
+            await db.from("tracking_stages").insert({
+              order_id: existing.id,
+              current_stage: stage,
+              stage_status: stage === "selesai" ? "completed" : "in_progress",
+              updated_at: new Date().toISOString(),
+            });
+          }
+
+          await db.from("stage_history").insert({
+            order_id: existing.id,
+            stage,
+            status: "completed",
+            created_at: new Date().toISOString(),
+          });
+        }
+
+        await db.from("sync_logs").insert({
+          sync_type: "webhook",
+          orders_synced: 1,
+          status: "success",
+          created_at: new Date().toISOString(),
+        });
+
+        return NextResponse.json({ received: true, status: "updated", stage }, { status: 200 });
+      }
+
       return NextResponse.json({ received: true, status: "existing" });
     }
 
