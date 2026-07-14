@@ -290,8 +290,8 @@
     "semantic_hash": "fb8eaaed5f499d2a580793b3bea7f816"
   },
   "app/api/stages/form-config/route.ts": {
-    "mtime": 1783916117.4246812,
-    "ast_hash": "fc3210a1ff1169f50230fe8f21441449",
+    "mtime": 1784003183.492527,
+    "ast_hash": "334d8ec659d189ecb6e3dabd331fd7fa",
     "semantic_hash": ""
   },
   "app/api/stages/submit/route.ts": {
@@ -700,9 +700,9 @@
     "semantic_hash": "9b9b20d27cab1ab4c54da8fc09fe40de"
   },
   "app/workshop/input/page.tsx": {
-    "mtime": 1781497344.0166764,
-    "ast_hash": "3cb1653d07ad6c3d1acfd5563fd262cc",
-    "semantic_hash": "3cb1653d07ad6c3d1acfd5563fd262cc"
+    "mtime": 1784003961.2842286,
+    "ast_hash": "9673dbc26d20f3bc05af1650c70d6f90",
+    "semantic_hash": ""
   },
   "app/workshop/layout.tsx": {
     "mtime": 1783493408.8702397,
@@ -920,8 +920,8 @@
     "semantic_hash": ""
   },
   "components/orders/OrderDetailPopup.tsx": {
-    "mtime": 1783501248.2623174,
-    "ast_hash": "48f4ef958f921d86d984661ff482e456",
+    "mtime": 1784001299.8349848,
+    "ast_hash": "d109edbbc24e9fabff2f3824d695dfc1",
     "semantic_hash": ""
   },
   "components/orders/StageTimeline.tsx": {
@@ -1280,13 +1280,13 @@
     "semantic_hash": ""
   },
   "app/api/legacy/webhook/route.ts": {
-    "mtime": 1783992635.7496438,
-    "ast_hash": "9d70dab389aa1f46b85277e62bae37d8",
+    "mtime": 1784002980.7820015,
+    "ast_hash": "43d2d5071731515739f6539c9db2f8a1",
     "semantic_hash": ""
   },
   "lib/legacy/adapter.ts": {
-    "mtime": 1783693072.0889156,
-    "ast_hash": "9501ca14abd8cc8e672ed5f2b2bc9944",
+    "mtime": 1784003150.487684,
+    "ast_hash": "f9e722df931c65d9afe646a2622ed2f9",
     "semantic_hash": ""
   },
   "lib/legacy/reverse-map.ts": {
@@ -1300,8 +1300,8 @@
     "semantic_hash": ""
   },
   "lib/legacy/sync-service.ts": {
-    "mtime": 1783992668.5710864,
-    "ast_hash": "9e1627016cbc0cdcb4b42a6755c772ba",
+    "mtime": 1784003081.671243,
+    "ast_hash": "a35b1b82230cbbf6744ab043f6f9512e",
     "semantic_hash": ""
   },
   "migrations/010_legacy_stage_data.sql": {
@@ -1312,6 +1312,11 @@
   "migrations/011_legacy_orphan_tables.sql": {
     "mtime": 1783695210.3429627,
     "ast_hash": "b4b9cdeb6503aab27b2d37c147357123",
+    "semantic_hash": ""
+  },
+  "migrations/012_legacy_order_fields.sql": {
+    "mtime": 1784002876.81901,
+    "ast_hash": "82e62ba629faf08ad7cb3e30e511732b",
     "semantic_hash": ""
   }
 }
