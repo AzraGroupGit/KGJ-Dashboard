@@ -215,9 +215,9 @@ export default function LoginPage() {
           <Image
             src="/logo.png"
             alt="KGJ"
-            width={80}
-            height={80}
-            className="w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 object-contain shrink-0"
+            width={100}
+            height={100}
+            className="w-36 h-36 sm:w-44 sm:h-44 object-contain shrink-0"
             priority
           />
 
@@ -227,7 +227,7 @@ export default function LoginPage() {
           </h1>
 
           {/* Gold filigree ornament */}
-          <div className="w-48 sm:w-56 h-4 opacity-50">
+          <div className="w-48 sm:w-56 h-4 opacity-50 mb-2 sm:mb-3">
             <svg viewBox="0 0 200 12" className="w-full h-full text-[#c9a227]" fill="none">
               <line x1="0" y1="6" x2="72" y2="6" stroke="currentColor" strokeWidth="0.5" />
               <path d="M72 6 Q80 0 88 6" stroke="currentColor" strokeWidth="0.5" />
