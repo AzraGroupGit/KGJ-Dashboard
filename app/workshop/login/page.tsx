@@ -434,7 +434,7 @@ function WorkshopLoginContent() {
         {/* Main content column */}
         <div className="relative z-10 flex flex-col items-center w-full max-w-[580px] px-6 sm:px-12 pt-0 pb-6 sm:pt-0 sm:pb-8 gap-y-3 sm:gap-y-4">
           {/* Logo */}
-          <Image src="/logo.png" alt="KGJ" width={80} height={80} className="w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 object-contain shrink-0" priority />
+          <Image src="/logo.png" alt="KGJ" width={100} height={100} className="w-36 h-36 sm:w-44 sm:h-44 object-contain shrink-0" priority />
 
           {/* Brand title */}
           <h1 className="font-[var(--font-dm-serif)] text-base sm:text-lg md:text-2xl text-[#c9a227] tracking-[0.1em]">
@@ -442,7 +442,7 @@ function WorkshopLoginContent() {
           </h1>
 
           {/* Gold filigree ornament */}
-          <div className="w-48 sm:w-56 h-4 opacity-60">
+          <div className="w-48 sm:w-56 h-4 opacity-50 mb-2 sm:mb-3">
             <svg viewBox="0 0 200 12" className="w-full h-full text-[#c9a227]" fill="none">
               <line x1="0" y1="6" x2="72" y2="6" stroke="currentColor" strokeWidth="0.5" />
               <path d="M72 6 Q80 0 88 6" stroke="currentColor" strokeWidth="0.5" />
