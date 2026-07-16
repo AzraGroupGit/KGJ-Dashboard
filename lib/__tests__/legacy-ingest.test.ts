@@ -207,6 +207,10 @@ describe("legacyToOrderDetail komponen resolution", () => {
     total_harga: 4061700,
     harga_final: 4000000,
     order_down_payment: 0,
+    nilai_promo: 61700,
+    biaya_pengiriman: null,
+    id_produk: null,
+    id_jenis_order: 1,
     berat_cincin_pria: 3.486,
     berat_cincin_wanita: 1,
     catatan: null,
@@ -276,5 +280,69 @@ describe("legacyToOrderDetail komponen resolution", () => {
     expect(detail.alamat_pengiriman).toBe("Jl. Sutorejo Prima Utara IV");
     expect(detail.no_nota).toBe("4588");
     expect(detail.deadline_tukang).toBe("2026-07-15");
+  });
+
+  it("exposes the price breakdown (subtotal, diskon, ongkir, final)", () => {
+    const detail = legacyToOrderDetail(row, null);
+    expect(detail.subtotal).toBe(4061700);
+    expect(detail.diskon).toBe(61700);
+    expect(detail.ongkir).toBeNull();
+    expect(detail.harga).toBe(4000000);
+  });
+
+  it("computes harga_final and sisa_bayar when Yii2 omits them", () => {
+    const detail = legacyToOrderDetail(
+      {
+        ...row,
+        harga_final: null,
+        sisa_bayar: null,
+        biaya_pengiriman: 98000,
+        jumlah_bayar: 2000000,
+      },
+      null,
+    );
+    // total - promo + ongkir = 4061700 - 61700 + 98000
+    expect(detail.harga).toBe(4098000);
+    expect(detail.sisa_bayar).toBe(2098000);
+  });
+
+  it("keeps Yii2's sisa_bayar authoritative when present", () => {
+    const detail = legacyToOrderDetail(row, null);
+    expect(detail.sisa_bayar).toBe(2000000);
+  });
+
+  it("exposes produk info for product-checkout orders", () => {
+    const custom = legacyToOrderDetail(row, null);
+    expect(custom.produk_nama).toBeNull();
+    expect(custom.jenis_order).toBe("Couple");
+
+    const byProduk = legacyToOrderDetail({ ...row, id_produk: 785 }, null);
+    expect(byProduk.produk_nama).toContain("PTD0740YG");
+    expect(byProduk.produk_sku).toBe("PTD0740YG");
+    expect(byProduk.produk_spesifikasi).toContain("Spesifikasi Produk");
+  });
+
+  it("falls back to Produk #id for unknown catalog entries", () => {
+    const detail = legacyToOrderDetail({ ...row, id_produk: 99999 }, null);
+    expect(detail.produk_nama).toBe("Produk #99999");
+    expect(detail.produk_spesifikasi).toBeNull();
+  });
+});
+
+describe("buildLegacyOrderUpdate price fields", () => {
+  it("omits nilai_promo/biaya_pengiriman when the payload lacks them (webhook)", () => {
+    const update = buildLegacyOrderUpdate(baseOrder) as Record<string, unknown>;
+    expect(update).not.toHaveProperty("nilai_promo");
+    expect(update).not.toHaveProperty("biaya_pengiriman");
+  });
+
+  it("carries them when present (pull sync)", () => {
+    const update = buildLegacyOrderUpdate({
+      ...baseOrder,
+      nilai_promo: "61700.00",
+      biaya_pengiriman: "98000.00",
+    }) as Record<string, unknown>;
+    expect(update.nilai_promo).toBe(61700);
+    expect(update.biaya_pengiriman).toBe(98000);
   });
 });

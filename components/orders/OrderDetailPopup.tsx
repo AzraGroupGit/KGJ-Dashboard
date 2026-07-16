@@ -16,6 +16,10 @@ export interface OrderDetail {
     id: string;
     order_number: string;
     no_nota: string | null;
+    produk_nama: string | null;
+    produk_sku: string | null;
+    produk_spesifikasi: string | null;
+    jenis_order: string | null;
     customer_name: string;
     customer_wa: string | null;
     customer_email: string | null;
@@ -41,6 +45,9 @@ export interface OrderDetail {
     font: string | null;
     laser_position: string | null;
     harga: number | null;
+    subtotal: number | null;
+    diskon: number | null;
+    ongkir: number | null;
     dp_amount: number | null;
     jenis_pembayaran: string | null;
     jumlah_bayar: number | null;
@@ -118,7 +125,7 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 function formatCurrency(val: number | null) {
-  return val ? `Rp ${val.toLocaleString("id-ID")}` : "\u2014";
+  return val != null ? `Rp ${val.toLocaleString("id-ID")}` : "\u2014";
 }
 
 function formatDate(iso: string | null) {
@@ -347,6 +354,33 @@ export default function OrderDetailPopup({
                     </div>
                   </div>
 
+                  {/* Produk (checkout dari katalog) */}
+                  {o.produk_nama && (
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">
+                        Produk
+                      </p>
+                      <div className="rounded-lg bg-[#1C1917] p-3 space-y-1.5">
+                        <p className="text-sm font-semibold text-[#f0f4ff]">
+                          {o.produk_nama}
+                        </p>
+                        {o.produk_sku && (
+                          <p className="font-mono text-xs text-white/40">
+                            SKU: {o.produk_sku}
+                          </p>
+                        )}
+                        {o.produk_spesifikasi && (
+                          <div
+                            className="text-xs text-white/60 leading-relaxed max-w-none [&_h2]:text-[10px] [&_h2]:font-semibold [&_h2]:uppercase [&_h2]:tracking-wide [&_h2]:text-white/40 [&_h2]:mb-1 [&_blockquote]:mb-0.5 [&_p]:mb-1"
+                            dangerouslySetInnerHTML={{
+                              __html: o.produk_spesifikasi,
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Ring specs */}
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-2">
@@ -420,18 +454,44 @@ export default function OrderDetailPopup({
                       Harga
                     </p>
                     <div className="grid grid-cols-2 gap-2 text-xs">
+                      {o.subtotal != null && (
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Subtotal</span>
+                          <p className="font-semibold text-[#e8e2d4]">
+                            {formatCurrency(o.subtotal)}
+                          </p>
+                        </div>
+                      )}
+                      {o.diskon != null && o.diskon > 0 && (
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Diskon</span>
+                          <p className="font-semibold text-rose-300">
+                            − {formatCurrency(o.diskon)}
+                          </p>
+                        </div>
+                      )}
+                      {o.ongkir != null && o.ongkir > 0 && (
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Biaya Kirim</span>
+                          <p className="font-semibold text-[#e8e2d4]">
+                            {formatCurrency(o.ongkir)}
+                          </p>
+                        </div>
+                      )}
                       <div className="bg-[#1C1917] rounded p-2">
-                        <span className="text-white/40">Total Harga</span>
+                        <span className="text-white/40">Harga Final</span>
                         <p className="font-semibold text-[#e8e2d4]">
                           {formatCurrency(o.harga)}
                         </p>
                       </div>
-                      <div className="bg-[#1C1917] rounded p-2">
-                        <span className="text-white/40">DP</span>
-                        <p className="font-semibold text-[#e8e2d4]">
-                          {formatCurrency(o.dp_amount)}
-                        </p>
-                      </div>
+                      {o.dp_amount != null && o.dp_amount > 0 && (
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">DP</span>
+                          <p className="font-semibold text-[#e8e2d4]">
+                            {formatCurrency(o.dp_amount)}
+                          </p>
+                        </div>
+                      )}
                       {o.jumlah_bayar != null && (
                         <div className="bg-[#1C1917] rounded p-2">
                           <span className="text-white/40">Dibayar</span>
@@ -517,6 +577,14 @@ export default function OrderDetailPopup({
                           <span className="text-white/40">No Nota</span>
                           <p className="font-mono font-medium text-[#e8e2d4]">
                             {o.no_nota}
+                          </p>
+                        </div>
+                      )}
+                      {o.jenis_order && (
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Jenis Order</span>
+                          <p className="font-medium text-[#e8e2d4]">
+                            {o.jenis_order}
                           </p>
                         </div>
                       )}

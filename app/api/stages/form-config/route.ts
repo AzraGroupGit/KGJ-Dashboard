@@ -10,6 +10,7 @@ import {
   fontLabel,
   produkKategoriLabel,
 } from "@/lib/legacy/komponen-labels";
+import { produkInfo } from "@/lib/legacy/produk-labels";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -490,11 +491,23 @@ export async function GET(request: Request) {
 
     const { data: legacyOrder, error: orderError } = await admin
       .from("legacy_orders")
-      .select("id, kode_order, nama, no_hp, email, alamat, alamat_lengkap, tgl_selesai, catatan, harga_final, total_harga, order_down_payment, berat_cincin_pria, berat_cincin_wanita, jenis_acara, komponen")
+      .select("id, kode_order, nama, no_hp, email, alamat, alamat_lengkap, tgl_selesai, catatan, harga_final, total_harga, order_down_payment, berat_cincin_pria, berat_cincin_wanita, jenis_acara, id_produk, komponen")
       .eq("id", orderId)
       .single();
 
-    if (orderError || !legacyOrder)
+    if (orderError && orderError.code !== "PGRST116") {
+      console.error("[Form Config] legacy_orders query error:", orderError);
+      const missingColumn = orderError.message?.includes("does not exist") || orderError.code === "42703";
+      return NextResponse.json(
+        {
+          error: missingColumn
+            ? "Skema DB belum sinkron — jalankan migration 013 & 014 di Supabase"
+            : "Gagal mengambil data order",
+        },
+        { status: 500 },
+      );
+    }
+    if (!legacyOrder)
       return NextResponse.json(
         { error: "Order tidak ditemukan" },
         { status: 404 },
@@ -527,6 +540,8 @@ export async function GET(request: Request) {
       fontLabel(pria?.id_ukiran),
       fontLabel(wanita?.id_ukiran),
     ].filter(Boolean) as string[];
+
+    const produk = produkInfo(legacyOrder.id_produk);
 
     const order = {
       id: legacyOrder.id,
@@ -626,6 +641,9 @@ export async function GET(request: Request) {
       customer_name: order.customer_name,
       customer_wa: order.customer_wa ?? null,
       customer_email: order.customer_email ?? null,
+      produk_nama: produk?.nama ?? null,
+      produk_sku: produk?.sku ?? null,
+      produk_spesifikasi: produk?.spesifikasi ?? null,
       catatan: order.catatan ?? null,
       acara: order.acara ?? null,
       kebutuhan_acara: order.kebutuhan_acara ?? null,

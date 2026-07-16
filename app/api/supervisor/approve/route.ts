@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleProps } from "@/lib/auth/session";
 import { sendNotification } from "@/lib/notifications";
 import { STAGE_SEQUENCE } from "@/lib/stages";
+import { pushStageToYii2 } from "@/lib/legacy/push-status";
 
 const PRODUCTION_TO_APPROVAL_STAGE: Record<string, string> = {};
 const APPROVAL_STAGES: string[] = [];
@@ -136,6 +137,13 @@ export async function POST(request: Request) {
         ([, approvalStage]) => approvalStage === stage,
       )?.[0] ?? stage.replace("approval_", ""));
 
+    const { data: legacyRow } = await admin
+      .from("legacy_orders")
+      .select("legacy_id")
+      .eq("id", order_id)
+      .maybeSingle();
+    const legacyId = (legacyRow as { legacy_id?: number } | null)?.legacy_id ?? null;
+
     const now = new Date().toISOString();
       const supervisorName: string = (profile as { full_name?: string })?.full_name ?? "Supervisor";
 
@@ -165,6 +173,9 @@ export async function POST(request: Request) {
         changed_by: authUser.id,
         created_at: now,
       });
+
+      // Sinkronkan stage terkini ke Yii2 (fire-and-forget).
+      pushStageToYii2(legacyId, nextStage ?? "selesai");
     } else {
       await admin
         .from("tracking_stages")
@@ -189,6 +200,9 @@ export async function POST(request: Request) {
         logged_by: authUser.id,
         logged_at: now,
       });
+
+      // Order kembali ke stage produksi — sinkronkan ke Yii2.
+      pushStageToYii2(legacyId, productionStage);
     }
 
     // ── 2. Notify worker ────────────────────────────────────────────────────────

@@ -53,6 +53,9 @@ interface WorkshopWorkOrder {
   customer_name: string | null;
   customer_wa: string | null;
   customer_email: string | null;
+  produk_nama: string | null;
+  produk_sku: string | null;
+  produk_spesifikasi: string | null;
   catatan: string | null;
   acara: string | null;
   kebutuhan_acara: string | null;
@@ -584,6 +587,31 @@ function WorkshopWorkOrderCard({
           }
         />
       </div>
+
+      {/* Produk (checkout dari katalog) */}
+      {wo.produk_nama && (
+        <div className="space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">
+            Produk
+          </p>
+          <div className="rounded-lg border border-stone-200 bg-stone-50 p-2.5 space-y-1">
+            <p className="text-[13px] font-semibold text-stone-800">
+              {wo.produk_nama}
+            </p>
+            {wo.produk_sku && (
+              <p className="font-mono text-[11px] text-stone-500">
+                SKU: {wo.produk_sku}
+              </p>
+            )}
+            {wo.produk_spesifikasi && (
+              <div
+                className="text-xs text-stone-600 leading-relaxed max-w-none [&_h2]:text-[10px] [&_h2]:font-semibold [&_h2]:uppercase [&_h2]:tracking-wide [&_h2]:text-stone-400 [&_h2]:mb-1 [&_blockquote]:mb-0.5 [&_p]:mb-1 [&_strong]:text-stone-800"
+                dangerouslySetInnerHTML={{ __html: wo.produk_spesifikasi }}
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Catatan / Order Notes */}
       {wo.catatan && (
