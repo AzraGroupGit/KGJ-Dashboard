@@ -14,6 +14,7 @@ import {
   fontLabel,
   produkKategoriLabel,
 } from "@/lib/legacy/komponen-labels";
+import { produkInfo, jenisOrderLabel } from "@/lib/legacy/produk-labels";
 
 // ── Yii2 inbound payload shape ────────────────────────────────────────────────
 
@@ -33,6 +34,10 @@ export interface Yii2OrderPayload {
   total_harga?: string;
   harga_final?: string;
   order_down_payment?: string;
+  nilai_promo?: string;
+  biaya_pengiriman?: string;
+  id_produk?: number | null;
+  id_jenis_order?: number | null;
   berat_cincin_pria?: string;
   berat_cincin_wanita?: string;
   catatan?: string;
@@ -75,6 +80,10 @@ export function buildLegacyOrderRow(order: Yii2OrderPayload) {
     total_harga: toNumeric(order.total_harga),
     harga_final: toNumeric(order.harga_final),
     order_down_payment: toNumeric(order.order_down_payment),
+    nilai_promo: toNumeric(order.nilai_promo),
+    biaya_pengiriman: toNumeric(order.biaya_pengiriman),
+    id_produk: order.id_produk ?? null,
+    id_jenis_order: order.id_jenis_order ?? null,
     berat_cincin_pria: toNumeric(order.berat_cincin_pria),
     berat_cincin_wanita: toNumeric(order.berat_cincin_wanita),
     catatan: order.catatan ?? null,
@@ -98,7 +107,14 @@ export function buildLegacyOrderRow(order: Yii2OrderPayload) {
 export function buildLegacyOrderUpdate(order: Yii2OrderPayload) {
   const { legacy_id: _legacyId, kode_order: _kodeOrder, ...updatable } =
     buildLegacyOrderRow(order);
-  return { ...updatable, deleted_at: null };
+  const update: Record<string, unknown> = { ...updatable, deleted_at: null };
+  // Only the pull feed (new-orders) carries nilai_promo/biaya_pengiriman;
+  // webhook payloads omit them — don't clobber pull-synced values with null.
+  if (order.nilai_promo === undefined) delete update.nilai_promo;
+  if (order.biaya_pengiriman === undefined) delete update.biaya_pengiriman;
+  if (order.id_produk === undefined) delete update.id_produk;
+  if (order.id_jenis_order === undefined) delete update.id_jenis_order;
+  return update;
 }
 
 // ── Source row shapes (public.legacy_orders / public.tracking_stages) ─────────
@@ -120,6 +136,10 @@ export interface LegacyOrderRow {
   total_harga: number | null;
   harga_final: number | null;
   order_down_payment: number | null;
+  nilai_promo: number | null;
+  biaya_pengiriman: number | null;
+  id_produk: number | null;
+  id_jenis_order: number | null;
   berat_cincin_pria: number | null;
   berat_cincin_wanita: number | null;
   catatan: string | null;
@@ -242,10 +262,37 @@ export function legacyToOrderDetail(
     return label ? [label] : null;
   };
 
+  // Price breakdown (Yii2 arithmetic, verified against the kgj DB):
+  //   harga_final = total_harga - nilai_promo + biaya_pengiriman
+  //   sisa_bayar  = harga_final - jumlah_bayar
+  // harga_final from Yii2 is authoritative; compute only when absent.
+  const hargaFinal =
+    order.harga_final ??
+    (order.total_harga != null
+      ? order.total_harga -
+        (order.nilai_promo ?? 0) +
+        (order.biaya_pengiriman ?? 0)
+      : null);
+
+  const sisaBayar =
+    order.sisa_bayar ??
+    (hargaFinal != null && order.jumlah_bayar != null
+      ? hargaFinal - order.jumlah_bayar
+      : null);
+
+  // Order source: product checkout (id_produk set) vs custom. By-produk
+  // orders carry no bahan/finishing/permata in komponen — production specs
+  // live in the produk catalog.
+  const produk = produkInfo(order.id_produk);
+
   return {
     id: order.id,
     order_number: order.kode_order,
     no_nota: order.no_nota ?? null,
+    produk_nama: produk?.nama ?? null,
+    produk_sku: produk?.sku ?? null,
+    produk_spesifikasi: produk?.spesifikasi ?? null,
+    jenis_order: jenisOrderLabel(order.id_jenis_order),
     customer_name: order.nama ?? null,
     customer_wa: order.no_hp ?? null,
     customer_email: order.email ?? null,
@@ -282,11 +329,14 @@ export function legacyToOrderDetail(
     keterangan_wanita: buildKeterangan(wanita),
     font: fonts.length > 0 ? [...new Set(fonts)].join(" / ") : null,
     laser_position: null,
-    harga: order.harga_final ?? order.total_harga ?? null,
+    harga: hargaFinal,
+    subtotal: order.total_harga ?? null,
+    diskon: order.nilai_promo ?? null,
+    ongkir: order.biaya_pengiriman ?? null,
     dp_amount: order.order_down_payment ?? null,
     jenis_pembayaran: order.jenis_pembayaran ?? null,
     jumlah_bayar: order.jumlah_bayar ?? null,
-    sisa_bayar: order.sisa_bayar ?? null,
+    sisa_bayar: sisaBayar,
     order_via: null,
     sumber_media: order.sumber_closing ?? null,
     kategori: null,
