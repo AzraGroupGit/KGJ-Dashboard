@@ -15,14 +15,18 @@ export interface OrderDetail {
   order: {
     id: string;
     order_number: string;
+    no_nota: string | null;
     customer_name: string;
     customer_wa: string | null;
     customer_email: string | null;
     customer_instagram: string | null;
+    customer_hobby: string | null;
+    customer_job: string | null;
     tgl_chat: string | null;
     tgl_order: string | null;
     tgl_acara: string | null;
     deadline: string | null;
+    deadline_tukang: string | null;
     acara: string | null;
     kebutuhan_acara: string | null;
     alat_ukur: string | null;
@@ -38,6 +42,9 @@ export interface OrderDetail {
     laser_position: string | null;
     harga: number | null;
     dp_amount: number | null;
+    jenis_pembayaran: string | null;
+    jumlah_bayar: number | null;
+    sisa_bayar: number | null;
     order_via: string | null;
     sumber_media: string | null;
     kategori: string | null;
@@ -327,6 +334,16 @@ export default function OrderDetailPopup({
                           Instagram: {o.customer_instagram}
                         </p>
                       )}
+                      {o.customer_job && (
+                        <p className="text-xs text-white/40">
+                          Pekerjaan: {o.customer_job}
+                        </p>
+                      )}
+                      {o.customer_hobby && (
+                        <p className="text-xs text-white/40">
+                          Hobi: {o.customer_hobby}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -415,6 +432,32 @@ export default function OrderDetailPopup({
                           {formatCurrency(o.dp_amount)}
                         </p>
                       </div>
+                      {o.jumlah_bayar != null && (
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Dibayar</span>
+                          <p className="font-semibold text-[#e8e2d4]">
+                            {formatCurrency(o.jumlah_bayar)}
+                          </p>
+                        </div>
+                      )}
+                      {o.sisa_bayar != null && (
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Sisa Bayar</span>
+                          <p
+                            className={`font-semibold ${o.sisa_bayar > 0 ? "text-amber-300" : "text-emerald-300"}`}
+                          >
+                            {o.sisa_bayar > 0 ? formatCurrency(o.sisa_bayar) : "Lunas"}
+                          </p>
+                        </div>
+                      )}
+                      {o.jenis_pembayaran && (
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Metode Bayar</span>
+                          <p className="font-semibold text-[#e8e2d4]">
+                            {o.jenis_pembayaran}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -458,6 +501,30 @@ export default function OrderDetailPopup({
                           <span className="text-white/40">Tgl Acara</span>
                           <p className="font-medium text-[#e8e2d4]">
                             {formatDate(o.tgl_acara)}
+                          </p>
+                        </div>
+                      )}
+                      {o.deadline_tukang && (
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Deadline Tukang</span>
+                          <p className="font-medium text-[#e8e2d4]">
+                            {formatDate(o.deadline_tukang)}
+                          </p>
+                        </div>
+                      )}
+                      {o.no_nota && (
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">No Nota</span>
+                          <p className="font-mono font-medium text-[#e8e2d4]">
+                            {o.no_nota}
+                          </p>
+                        </div>
+                      )}
+                      {o.sumber_media && (
+                        <div className="bg-[#1C1917] rounded p-2">
+                          <span className="text-white/40">Sumber</span>
+                          <p className="font-medium text-[#e8e2d4]">
+                            {o.sumber_media}
                           </p>
                         </div>
                       )}

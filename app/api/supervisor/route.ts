@@ -137,6 +137,7 @@ export async function GET(request?: NextRequest) {
       admin
         .from("legacy_orders")
         .select("id", { count: "exact" })
+        .is("deleted_at", null)
         .gte("created_at", todayStart.toISOString())
         .limit(1),
 

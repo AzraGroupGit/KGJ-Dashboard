@@ -125,6 +125,7 @@ async function calculateAverageCycleTime(
   const { data, error } = await admin
     .from("legacy_orders")
     .select("tgl_order, tgl_selesai")
+    .is("deleted_at", null)
     .not("tgl_selesai", "is", null)
     .gte("tgl_selesai", thirtyDaysAgo.toISOString().split("T")[0]);
 
@@ -228,6 +229,7 @@ export async function GET(_request: NextRequest) {
       admin
         .from("legacy_orders")
         .select("id", { count: "exact", head: true })
+        .is("deleted_at", null)
         .not("tgl_selesai", "is", null)
         .lte("tgl_selesai", todayDateStr),
       admin
@@ -239,6 +241,7 @@ export async function GET(_request: NextRequest) {
       admin
         .from("legacy_orders")
         .select("id", { count: "exact", head: true })
+        .is("deleted_at", null)
         .gte("created_at", todayISO),
       admin
         .from("tracking_stages")
@@ -257,10 +260,12 @@ export async function GET(_request: NextRequest) {
       admin
         .from("legacy_orders")
         .select("id", { count: "exact", head: true })
+        .is("deleted_at", null)
         .gte("created_at", startOfWeek.toISOString()),
       admin
         .from("legacy_orders")
         .select("id", { count: "exact", head: true })
+        .is("deleted_at", null)
         .gte("created_at", startOfLastWeek.toISOString())
         .lt("created_at", startOfWeek.toISOString()),
       admin

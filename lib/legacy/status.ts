@@ -31,6 +31,11 @@ export const YII2_STATUS_TO_STAGE: Record<number, string> = {
   15: "selesai",
 };
 
+// Yii2-native payment status (Pelunasan). Not a workshop stage — when it
+// arrives for an existing order, the ERP keeps the current stage unchanged
+// (spec checklist item 6).
+export const YII2_STATUS_PELUNASAN = 13;
+
 export function mapStatusToStage(idStatus: number | undefined): string {
   if (idStatus == null) return "penerimaan_order";
   return YII2_STATUS_TO_STAGE[idStatus] ?? "penerimaan_order";
