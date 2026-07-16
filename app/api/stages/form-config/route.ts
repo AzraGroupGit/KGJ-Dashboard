@@ -5,6 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { STAGE_SEQUENCE, STAGE_GROUP } from "@/lib/stages";
 import { getRoleProps } from "@/lib/auth/session";
+import {
+  komponenLabel,
+  fontLabel,
+  produkKategoriLabel,
+} from "@/lib/legacy/komponen-labels";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -485,7 +490,7 @@ export async function GET(request: Request) {
 
     const { data: legacyOrder, error: orderError } = await admin
       .from("legacy_orders")
-      .select("id, kode_order, nama, no_hp, email, alamat, tgl_selesai, catatan, harga_final, total_harga, order_down_payment, berat_cincin_pria, berat_cincin_wanita, komponen")
+      .select("id, kode_order, nama, no_hp, email, alamat, alamat_lengkap, tgl_selesai, catatan, harga_final, total_harga, order_down_payment, berat_cincin_pria, berat_cincin_wanita, jenis_acara, komponen")
       .eq("id", orderId)
       .single();
 
@@ -502,11 +507,26 @@ export async function GET(request: Request) {
       .maybeSingle();
 
     // Map legacy order into the shape the rest of this handler expects.
-    // cs_orders-only fields (ring specs, pricing, engraving) are null for
-    // legacy orders — the UI renders blanks/"—" for them.
+    // Komponen IDs are resolved to labels via the Yii2 master-data mapping
+    // (lib/legacy/komponen-labels.ts); cs_orders-only fields stay null.
     const komponenList = (legacyOrder.komponen ?? []) as Array<Record<string, unknown>>;
     const pria = komponenList.find((k) => k.id_gender === 1);
     const wanita = komponenList.find((k) => k.id_gender === 2);
+
+    const labelArr = (id: unknown): string[] | null => {
+      const label = komponenLabel(id);
+      return label ? [label] : null;
+    };
+
+    const komponenNote = (k?: Record<string, unknown>): string | null =>
+      typeof k?.keterangan === "string" && k.keterangan.trim()
+        ? k.keterangan.trim()
+        : null;
+
+    const fonts = [
+      fontLabel(pria?.id_ukiran),
+      fontLabel(wanita?.id_ukiran),
+    ].filter(Boolean) as string[];
 
     const order = {
       id: legacyOrder.id,
@@ -518,41 +538,45 @@ export async function GET(request: Request) {
       customer_wa: legacyOrder.no_hp ?? null,
       customer_email: legacyOrder.email ?? null,
       customer_instagram: null,
-      acara: null,
+      acara: legacyOrder.jenis_acara ?? null,
       kebutuhan_acara: null,
       alat_ukur: null,
       gramasi_pria: legacyOrder.berat_cincin_pria ?? null,
       gramasi_wanita: legacyOrder.berat_cincin_wanita ?? null,
       ukiran_cincin_pria: null,
       ukiran_cincin_wanita: null,
+      keterangan_pria: komponenNote(pria),
+      keterangan_wanita: komponenNote(wanita),
       ukuran_pria: pria?.ukuran as string ?? null,
       ukiran_pria: pria?.teks as string ?? null,
-      jenis_cincin_pria: pria?.id_jenis_bahan != null ? String(pria.id_jenis_bahan) : null,
+      jenis_cincin_pria: komponenLabel(pria?.id_jenis_bahan),
       reference_image_pria_url: null,
       model_bentuk_pria: null,
-      microsetting_pria: pria?.id_microsetting != null ? [String(pria.id_microsetting)] : null,
-      detail_laser_pria: pria?.id_laser != null ? [String(pria.id_laser)] : null,
-      detail_finishing_pria: pria?.id_finishing != null ? [String(pria.id_finishing)] : null,
+      microsetting_pria: labelArr(pria?.id_microsetting),
+      detail_laser_pria: labelArr(pria?.id_laser),
+      detail_finishing_pria: labelArr(pria?.id_finishing),
       ukuran_wanita: wanita?.ukuran as string ?? null,
       ukiran_wanita: wanita?.teks as string ?? null,
-      jenis_cincin_wanita: wanita?.id_jenis_bahan != null ? String(wanita.id_jenis_bahan) : null,
+      jenis_cincin_wanita: komponenLabel(wanita?.id_jenis_bahan),
       reference_image_wanita_url: null,
       model_bentuk_wanita: null,
-      microsetting_wanita: wanita?.id_microsetting != null ? [String(wanita.id_microsetting)] : null,
-      detail_laser_wanita: wanita?.id_laser != null ? [String(wanita.id_laser)] : null,
-      detail_finishing_wanita: wanita?.id_finishing != null ? [String(wanita.id_finishing)] : null,
-      kategori: null,
+      microsetting_wanita: labelArr(wanita?.id_microsetting),
+      detail_laser_wanita: labelArr(wanita?.id_laser),
+      detail_finishing_wanita: labelArr(wanita?.id_finishing),
+      kategori:
+        produkKategoriLabel(pria?.id_produk_kategori) ??
+        produkKategoriLabel(wanita?.id_produk_kategori),
       transfer_ke_bank: null,
       jenis_cincin_features: [
-        pria?.id_permata != null ? `permata_${pria.id_permata}` : null,
-        wanita?.id_permata != null ? `permata_${wanita.id_permata}` : null,
+        komponenLabel(pria?.id_permata),
+        komponenLabel(wanita?.id_permata),
       ].filter(Boolean) as string[] | null,
       dari_artis_detail: null,
-      font: null,
+      font: fonts.length > 0 ? [...new Set(fonts)].join(" / ") : null,
       laser_position: null,
       box: null,
       pengiriman: null,
-      alamat_pengiriman: legacyOrder.alamat ?? null,
+      alamat_pengiriman: legacyOrder.alamat_lengkap ?? legacyOrder.alamat ?? null,
       harga: legacyOrder.harga_final ?? legacyOrder.total_harga ?? null,
       dp_amount: legacyOrder.order_down_payment ?? null,
       catatan: legacyOrder.catatan ?? null,
@@ -629,6 +653,7 @@ export async function GET(request: Request) {
         microsetting: order.microsetting_pria ?? null,
         detail_laser: order.detail_laser_pria ?? null,
         detail_finishing: order.detail_finishing_pria ?? null,
+        keterangan: order.keterangan_pria ?? null,
         reference_image_url: order.reference_image_pria_url ?? null,
       },
       wanita: {
@@ -639,6 +664,7 @@ export async function GET(request: Request) {
         microsetting: order.microsetting_wanita ?? null,
         detail_laser: order.detail_laser_wanita ?? null,
         detail_finishing: order.detail_finishing_wanita ?? null,
+        keterangan: order.keterangan_wanita ?? null,
         reference_image_url: order.reference_image_wanita_url ?? null,
       },
     };

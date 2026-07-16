@@ -80,6 +80,7 @@ interface WorkshopWorkOrder {
     microsetting: string[] | null;
     detail_laser: string[] | null;
     detail_finishing: string[] | null;
+    keterangan: string | null;
     reference_image_url: string | null;
   } | null;
   wanita: {
@@ -90,6 +91,7 @@ interface WorkshopWorkOrder {
     microsetting: string[] | null;
     detail_laser: string[] | null;
     detail_finishing: string[] | null;
+    keterangan: string | null;
     reference_image_url: string | null;
   } | null;
 }
@@ -644,6 +646,7 @@ function WorkshopWorkOrderCard({
             <Row label="Jenis cincin" value={wo.pria!.jenis_cincin} />
             <Row label="Ukiran nama" value={wo.pria!.ukiran} />
             <Row label="Ukiran cincin" value={wo.ukiran_cincin_pria} />
+            <Row label="Keterangan" value={wo.pria!.keterangan} />
           </div>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <DetailCard
@@ -664,7 +667,7 @@ function WorkshopWorkOrderCard({
             <DetailCard
               title="Finishing"
               items={wo.pria!.detail_finishing ?? []}
-              color="border-violet-200 bg-violet-50/70"
+              color="border-blue-200 bg-blue-50/70"
             />
           </div>
         </div>
@@ -699,6 +702,7 @@ function WorkshopWorkOrderCard({
             <Row label="Jenis cincin" value={wo.wanita!.jenis_cincin} />
             <Row label="Ukiran nama" value={wo.wanita!.ukiran} />
             <Row label="Ukiran cincin" value={wo.ukiran_cincin_wanita} />
+            <Row label="Keterangan" value={wo.wanita!.keterangan} />
           </div>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <DetailCard
