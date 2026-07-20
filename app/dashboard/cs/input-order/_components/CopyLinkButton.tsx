@@ -25,7 +25,7 @@ export function CopyLinkButton({
     <button
       onClick={copy}
       title={copied ? "Tersalin!" : "Salin link form"}
-      className={`p-1.5 rounded-lg transition-colors ${copied ? "text-green-600 bg-green-50" : "text-gray-500 hover:bg-indigo-50 hover:text-indigo-600"}`}
+      className={`p-1.5 rounded-lg transition-colors ${copied ? "text-emerald-300 bg-emerald-500/10" : "text-white/50 hover:bg-indigo-50 hover:text-indigo-600"}`}
     >
       {copied ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
     </button>

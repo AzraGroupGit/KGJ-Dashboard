@@ -66,8 +66,8 @@ function StatusBadge({ status }: { status: string | null }) {
   const styles: Record<string, string> = {
     in_progress: "bg-blue-50 text-blue-600",
     waiting_approval: "bg-yellow-50 text-yellow-600",
-    rework: "bg-orange-50 text-orange-600",
-    selesai: "bg-green-50 text-green-600",
+    rework: "bg-orange-500/10 text-orange-600",
+    selesai: "bg-emerald-500/10 text-emerald-300",
   };
 
   const labels: Record<string, string> = {
@@ -81,7 +81,7 @@ function StatusBadge({ status }: { status: string | null }) {
   return (
     <span
       className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-        styles[s] || "bg-[#26211c] text-gray-500"
+        styles[s] || "bg-[#26211c] text-white/50"
       }`}
     >
       {labels[s] || s}
@@ -91,17 +91,21 @@ function StatusBadge({ status }: { status: string | null }) {
 
 export default function PelangganPage() {
   const router = useRouter();
-  const [user] = useState<ClientUser | null>(() => getClientUser() ?? null);
+  // Dibaca di useEffect (bukan initializer useState) agar render pertama di
+  // client identik dengan SSR — menghindari hydration mismatch.
+  const [user, setUser] = useState<ClientUser | null>(null);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    const u = getClientUser();
+    setUser(u);
+    if (!u) {
       router.push("/login");
     }
-  }, [user, router]);
+  }, [router]);
 
   const { data: allData = [], isLoading, isFetching, error: queryError } = useQuery<PelangganGroup[]>({
     queryKey: ["cs-pelanggan", debouncedQuery],
@@ -160,10 +164,10 @@ export default function PelangganPage() {
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-xl font-semibold text-gray-800">
+              <h1 className="text-xl font-semibold text-cream">
                 Pelanggan
               </h1>
-              <p className="text-sm text-gray-400 mt-0.5">
+              <p className="text-sm text-white/40 mt-0.5">
                 Data pelanggan dan riwayat pesanan
               </p>
             </div>
@@ -172,43 +176,43 @@ export default function PelangganPage() {
               placeholder="Cari nama atau nomor WA..."
               value={query}
               onChange={(e) => handleQueryChange(e.target.value)}
-              className="w-full sm:w-72 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-gray-400 focus:ring-0 placeholder:text-gray-300"
+              className="w-full sm:w-72 px-3 py-2 text-sm border border-gold/15 rounded-lg focus:outline-none focus:border-gray-400 focus:ring-0 placeholder:text-white/30"
             />
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-indigo-500">
-              <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+            <div className="bg-cocoa rounded-xl shadow-sm p-5 border-l-4 border-indigo-500">
+              <p className="text-xs text-white/50 uppercase tracking-wider font-medium">
                 Total Pelanggan
               </p>
-              <p className="text-2xl font-semibold text-gray-800 mt-1">
+              <p className="text-2xl font-semibold text-cream mt-1">
                 {totalPelanggan}
               </p>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500">
-              <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+            <div className="bg-cocoa rounded-xl shadow-sm p-5 border-l-4 border-blue-500">
+              <p className="text-xs text-white/50 uppercase tracking-wider font-medium">
                 Total Pesanan
               </p>
-              <p className="text-2xl font-semibold text-gray-800 mt-1">
+              <p className="text-2xl font-semibold text-cream mt-1">
                 {totalOrders}
               </p>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-emerald-500">
-              <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+            <div className="bg-cocoa rounded-xl shadow-sm p-5 border-l-4 border-emerald-500">
+              <p className="text-xs text-white/50 uppercase tracking-wider font-medium">
                 Total Belanja
               </p>
-              <p className="text-2xl font-semibold text-gray-800 mt-1">
+              <p className="text-2xl font-semibold text-cream mt-1">
                 {formatRupiah(totalSpent)}
               </p>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-amber-500">
-              <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+            <div className="bg-cocoa rounded-xl shadow-sm p-5 border-l-4 border-amber-500">
+              <p className="text-xs text-white/50 uppercase tracking-wider font-medium">
                 Repeat Order
               </p>
-              <p className="text-2xl font-semibold text-gray-800 mt-1">
+              <p className="text-2xl font-semibold text-cream mt-1">
                 {repeatCount}
               </p>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-white/40 mt-0.5">
                 dari {totalPelanggan} pelanggan
               </p>
             </div>
@@ -221,8 +225,8 @@ export default function PelangganPage() {
           )}
 
           {!(isLoading || isFetching) && allData.length === 0 && (
-            <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-              <p className="text-sm text-gray-400">
+            <div className="bg-cocoa rounded-xl shadow-sm p-12 text-center">
+              <p className="text-sm text-white/40">
                 {query.trim()
                   ? "Tidak ada pelanggan yang cocok"
                   : "Belum ada data pelanggan"}
@@ -231,12 +235,12 @@ export default function PelangganPage() {
           )}
 
           {!(isLoading || isFetching) && allData.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <span className="text-sm font-medium text-gray-700">
+            <div className="bg-cocoa rounded-xl shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-gold/10">
+                <span className="text-sm font-medium text-cream">
                   Semua Pelanggan
                 </span>
-                <span className="text-sm text-gray-400 ml-2">
+                <span className="text-sm text-white/40 ml-2">
                   ({totalPelanggan})
                 </span>
               </div>
@@ -258,36 +262,36 @@ export default function PelangganPage() {
                           </span>
                         </div>
                         <div className="min-w-0">
-                          <div className="text-sm font-medium text-gray-800 truncate">
+                          <div className="text-sm font-medium text-cream truncate">
                             {group.customer_name}
                           </div>
-                          <div className="text-xs text-gray-400">
+                          <div className="text-xs text-white/40">
                             {group.customer_wa || "-"}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-6 flex-shrink-0 ml-4">
                         <div className="text-right">
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-white/70">
                             {group.total_orders} pesanan
                           </div>
-                          <div className="text-xs text-gray-400">
+                          <div className="text-xs text-white/40">
                             {formatRupiah(group.total_spent)}
                           </div>
                         </div>
                         <div className="text-right hidden sm:block">
-                          <div className="text-xs text-gray-400">Terakhir</div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-xs text-white/40">Terakhir</div>
+                          <div className="text-sm text-white/50">
                             {formatDate(group.last_order_at)}
                           </div>
                         </div>
                         {group.total_orders > 1 && (
-                          <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-600 border border-amber-200">
+                          <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-400/20">
                             Repeat
                           </span>
                         )}
                         <ChevronDown
-                          className={`w-4 h-4 text-gray-300 transition-transform ${
+                          className={`w-4 h-4 text-white/30 transition-transform ${
                             open ? "rotate-180" : ""
                           }`}
                         />
@@ -295,11 +299,11 @@ export default function PelangganPage() {
                     </button>
 
                     <div className="flex items-center gap-3 px-6 pb-1 -mt-1 sm:hidden">
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-white/40">
                         {formatDate(group.last_order_at)}
                       </span>
                       {group.total_orders > 1 && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-600">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-500/10 text-amber-300">
                           Repeat
                         </span>
                       )}
@@ -307,7 +311,7 @@ export default function PelangganPage() {
 
                     {open && (
                       <div className="border-t border-gray-50 bg-[#26211c]/30">
-                        <div className="px-6 py-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-400">
+                        <div className="px-6 py-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-white/40">
                           {group.customer_email && (
                             <span>{group.customer_email}</span>
                           )}
@@ -322,20 +326,20 @@ export default function PelangganPage() {
                         <div className="overflow-x-auto">
                           <table className="w-full text-sm">
                             <thead>
-                              <tr className="border-y border-gray-100">
-                                <th className="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                              <tr className="border-y border-gold/10">
+                                <th className="text-left px-6 py-3 text-xs font-medium text-white/40 uppercase tracking-wider">
                                   No. Order
                                 </th>
-                                <th className="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                <th className="text-left px-6 py-3 text-xs font-medium text-white/40 uppercase tracking-wider">
                                   Tgl Order
                                 </th>
-                                <th className="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">
+                                <th className="text-left px-6 py-3 text-xs font-medium text-white/40 uppercase tracking-wider hidden sm:table-cell">
                                   Acara
                                 </th>
-                                <th className="text-left px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">
+                                <th className="text-left px-6 py-3 text-xs font-medium text-white/40 uppercase tracking-wider hidden sm:table-cell">
                                   Status
                                 </th>
-                                <th className="text-right px-6 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                <th className="text-right px-6 py-3 text-xs font-medium text-white/40 uppercase tracking-wider">
                                   Harga
                                 </th>
                               </tr>
@@ -344,16 +348,16 @@ export default function PelangganPage() {
                               {group.orders.map((order) => (
                                 <tr
                                   key={order.id}
-                                  className="hover:bg-white transition-colors"
+                                  className="hover:bg-cocoa transition-colors"
                                 >
-                                  <td className="px-6 py-3 text-gray-800 font-medium">
+                                  <td className="px-6 py-3 text-cream font-medium">
                                     {order.order_number}
                                     {order.transfer_ke_bank && (
                                       <span
                                         className={`ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
                                           ["BCA", "Mandiri", "BNI", "BRI"].includes(order.transfer_ke_bank) || order.transfer_ke_bank === "Ke PT"
                                             ? "bg-blue-100 text-blue-700"
-                                            : "bg-green-100 text-green-700"
+                                            : "bg-emerald-500/10 text-emerald-300"
                                         }`}
                                       >
                                         {["BCA", "Mandiri", "BNI", "BRI"].includes(order.transfer_ke_bank) || order.transfer_ke_bank === "Ke PT"
@@ -362,16 +366,16 @@ export default function PelangganPage() {
                                       </span>
                                     )}
                                   </td>
-                                  <td className="px-6 py-3 text-gray-500">
+                                  <td className="px-6 py-3 text-white/50">
                                     {formatDate(order.tgl_order)}
                                   </td>
-                                  <td className="px-6 py-3 text-gray-500 hidden sm:table-cell">
+                                  <td className="px-6 py-3 text-white/50 hidden sm:table-cell">
                                     {order.acara || "-"}
                                   </td>
                                   <td className="px-6 py-3 hidden sm:table-cell">
                                     <StatusBadge status={order.status} />
                                   </td>
-                                  <td className="px-6 py-3 text-right text-gray-700">
+                                  <td className="px-6 py-3 text-right text-cream">
                                     {order.harga
                                       ? formatRupiah(order.harga)
                                       : "-"}

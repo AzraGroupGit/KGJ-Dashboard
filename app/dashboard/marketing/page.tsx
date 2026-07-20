@@ -150,10 +150,10 @@ export default function MarketingDashboard() {
           <div className="mb-8">
             <div className="flex justify-between items-start flex-wrap gap-4 mb-4">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800">
+                <h2 className="text-2xl font-bold text-cream">
                   Marketing Analytics
                 </h2>
-                <p className="text-gray-600">
+                <p className="text-white/70">
                   Analisis performa channel marketing & optimasi budget
                 </p>
               </div>
@@ -177,7 +177,7 @@ export default function MarketingDashboard() {
                   className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                     activePreset === key
                       ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-gray-600 border-gray-300 hover:border-blue-400 hover:text-blue-600"
+                      : "bg-cocoa text-white/70 border-gold/25 hover:border-blue-400 hover:text-blue-600"
                   }`}
                 >
                   {label}
@@ -186,7 +186,7 @@ export default function MarketingDashboard() {
 
               {/* Active range label */}
               {(filterDate.from || filterDate.to) && activePreset !== "custom" && (
-                <span className="text-xs text-gray-400 ml-1">
+                <span className="text-xs text-white/40 ml-1">
                   {filterDate.from} — {filterDate.to}
                 </span>
               )}
@@ -201,16 +201,16 @@ export default function MarketingDashboard() {
                   onChange={(e) =>
                     setFilterDate({ ...filterDate, from: e.target.value })
                   }
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border border-gold/25 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <span className="text-gray-400 text-sm">—</span>
+                <span className="text-white/40 text-sm">—</span>
                 <input
                   type="date"
                   value={filterDate.to}
                   onChange={(e) =>
                     setFilterDate({ ...filterDate, to: e.target.value })
                   }
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border border-gold/25 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             )}
@@ -281,12 +281,12 @@ export default function MarketingDashboard() {
 
           {/* Channel Performance Table */}
           {channelMetrics.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-8">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-800">
+            <div className="bg-cocoa rounded-xl shadow-sm overflow-hidden mb-8">
+              <div className="px-6 py-4 border-b border-gold/15">
+                <h3 className="text-lg font-semibold text-cream">
                   Performa per Channel
                 </h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-white/50 mt-1">
                   {channelMetrics.length} channel aktif
                 </p>
               </div>
@@ -294,33 +294,33 @@ export default function MarketingDashboard() {
                 <table className="w-full">
                   <thead className="bg-[#26211c]">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                         Channel
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                         Biaya Mkt
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                         CR
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                         CAC
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-white/5">
                     {channelMetrics.map((channel, idx) => (
                       <tr key={idx} className="hover:bg-[#26211c]">
-                        <td className="px-6 py-4 font-medium text-gray-900">
+                        <td className="px-6 py-4 font-medium text-ivory">
                           {channel.channel}
                         </td>
-                        <td className="px-6 py-4 text-gray-600">
+                        <td className="px-6 py-4 text-white/70">
                           Rp {channel.biayaMarketing.toLocaleString("id-ID")}
                         </td>
-                        <td className="px-6 py-4 text-gray-600">
+                        <td className="px-6 py-4 text-white/70">
                           {channel.crSerius.toFixed(1)}%
                         </td>
-                        <td className="px-6 py-4 text-gray-600">
+                        <td className="px-6 py-4 text-white/70">
                           Rp {channel.cac.toLocaleString("id-ID")}
                         </td>
                       </tr>
@@ -332,12 +332,12 @@ export default function MarketingDashboard() {
           )}
 
           {/* All Inputs Table */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800">
+          <div className="bg-cocoa rounded-xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gold/15">
+              <h3 className="text-lg font-semibold text-cream">
                 Riwayat Input Marketing
               </h3>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-white/50 mt-1">
                 {marketingInputs.length} data
               </p>
             </div>
@@ -345,56 +345,56 @@ export default function MarketingDashboard() {
               <table className="w-full">
                 <thead className="bg-[#26211c]">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Tanggal
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Channel
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Biaya Mkt
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Lead Serius
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Closing
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       CR
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-white/5">
                   {marketingInputs.map((input) => {
                     const { crSerius } = calculateMetrics(input);
                     return (
                       <tr key={input.id} className="hover:bg-[#26211c]">
-                        <td className="px-6 py-4 text-gray-600">
+                        <td className="px-6 py-4 text-white/70">
                           {new Date(input.input_date).toLocaleDateString(
                             "id-ID",
                           )}
                         </td>
-                        <td className="px-6 py-4 font-medium text-gray-900">
+                        <td className="px-6 py-4 font-medium text-ivory">
                           {input.channel}
                         </td>
-                        <td className="px-6 py-4 text-gray-600">
+                        <td className="px-6 py-4 text-white/70">
                           Rp {input.biaya_marketing.toLocaleString("id-ID")}
                         </td>
-                        <td className="px-6 py-4 text-gray-600">
+                        <td className="px-6 py-4 text-white/70">
                           {input.lead_serius}
                         </td>
-                        <td className="px-6 py-4 text-gray-600">
+                        <td className="px-6 py-4 text-white/70">
                           {input.closing}
                         </td>
                         <td className="px-6 py-4">
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-semibold ${
                               crSerius > 30
-                                ? "bg-green-100 text-green-800"
+                                ? "bg-emerald-500/10 text-green-800"
                                 : crSerius > 15
                                   ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
+                                  : "bg-rose-500/10 text-red-800"
                             }`}
                           >
                             {crSerius.toFixed(1)}%
@@ -407,7 +407,7 @@ export default function MarketingDashboard() {
                     <tr>
                       <td
                         colSpan={6}
-                        className="px-6 py-8 text-center text-gray-500"
+                        className="px-6 py-8 text-center text-white/50"
                       >
                         Belum ada data. Silakan input data melalui halaman{" "}
                         <a
@@ -425,7 +425,7 @@ export default function MarketingDashboard() {
           </div>
 
           {/* Info Section */}
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="mt-6 bg-sky-500/10 border border-sky-400/20 rounded-lg p-4">
             <div className="flex items-start gap-3">
               <Info className="w-5 h-5 text-blue-600 mt-0.5" />
               <div>

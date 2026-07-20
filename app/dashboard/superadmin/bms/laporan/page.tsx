@@ -203,7 +203,7 @@ export default function LaporanPage() {
     const map = {
       ready: { bg: "bg-green-100 text-green-800", dot: "bg-green-500", label: "Siap" },
       processing: { bg: "bg-yellow-100 text-yellow-800", dot: "bg-yellow-500", label: "Diproses" },
-      failed: { bg: "bg-red-100 text-red-800", dot: "bg-red-500", label: "Gagal" },
+      failed: { bg: "bg-red-100 text-red-800", dot: "bg-rose-500/100", label: "Gagal" },
     };
     const { bg, dot, label } = map[status];
     return (
@@ -263,11 +263,11 @@ export default function LaporanPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
               {[
                 { label: "Total Laporan", value: stats.total, color: "border-indigo-400", textColor: "text-indigo-600" },
-                { label: "Siap Diunduh", value: stats.ready, color: "border-green-400", textColor: "text-green-600" },
-                { label: "Sedang Diproses", value: stats.processing, color: "border-yellow-400", textColor: "text-yellow-600" },
-                { label: "Gagal", value: stats.failed, color: "border-red-400", textColor: "text-red-600" },
+                { label: "Siap Diunduh", value: stats.ready, color: "border-emerald-400/30", textColor: "text-emerald-300" },
+                { label: "Sedang Diproses", value: stats.processing, color: "border-yellow-400", textColor: "text-amber-300" },
+                { label: "Gagal", value: stats.failed, color: "border-red-400", textColor: "text-rose-300" },
               ].map(({ label, value, color, textColor }) => (
-                <div key={label} className={`bg-white rounded-xl shadow-sm p-5 border-l-4 ${color}`}>
+                <div key={label} className={`bg-cocoa rounded-xl shadow-sm p-5 border-l-4 ${color}`}>
                   <p className="text-xs text-gray-500 mb-1">{label}</p>
                   <p className={`text-2xl font-bold ${textColor}`}>{value}</p>
                 </div>
@@ -278,7 +278,7 @@ export default function LaporanPage() {
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
 
               {/* Generate form — 3 cols */}
-              <div className="lg:col-span-3 bg-white rounded-xl shadow-sm p-6">
+              <div className="lg:col-span-3 bg-cocoa rounded-xl shadow-sm p-6">
                 <div className="flex items-center gap-3 mb-5">
                   <div className="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center">
                     <FileText className="w-5 h-5 text-indigo-600" />
@@ -292,7 +292,7 @@ export default function LaporanPage() {
                     <select
                       value={formType}
                       onChange={(e) => setFormType(e.target.value as ReportType)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-cocoa"
                       disabled={isGenerating}
                     >
                       <option value="monthly">Bulanan</option>
@@ -316,7 +316,7 @@ export default function LaporanPage() {
                       <select
                         value={formPeriod}
                         onChange={(e) => setFormPeriod(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-cocoa"
                         disabled={isGenerating}
                       >
                         {quarterOptions.map((o) => (
@@ -328,7 +328,7 @@ export default function LaporanPage() {
                       <select
                         value={formPeriod}
                         onChange={(e) => setFormPeriod(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-cocoa"
                         disabled={isGenerating}
                       >
                         {yearOptions.map((y) => (
@@ -388,7 +388,7 @@ export default function LaporanPage() {
                     onClick={action}
                     className={`flex items-center gap-4 w-full bg-gradient-to-r ${gradient} text-white rounded-xl px-5 py-4 hover:opacity-90 transition-opacity text-left shadow-sm`}
                   >
-                    <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 bg-cocoa/20 rounded-lg flex items-center justify-center shrink-0">
                       {icon}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -402,11 +402,11 @@ export default function LaporanPage() {
             </div>
 
             {/* Reports list */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="bg-cocoa rounded-xl shadow-sm overflow-hidden">
               {/* List header with filter */}
               <div className="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h3 className="text-base font-semibold text-gray-800">Riwayat Laporan</h3>
-                <div className="flex gap-1 bg-gray-100 p-1 rounded-lg text-xs font-medium">
+                <div className="flex gap-1 bg-white/10 p-1 rounded-lg text-xs font-medium">
                   {([
                     { value: "all", label: "Semua" },
                     { value: "monthly", label: "Bulanan" },
@@ -418,7 +418,7 @@ export default function LaporanPage() {
                       onClick={() => setFilterType(value)}
                       className={`px-3 py-1.5 rounded-md transition-colors ${
                         filterType === value
-                          ? "bg-white text-indigo-600 shadow-sm"
+                          ? "bg-cocoa text-indigo-600 shadow-sm"
                           : "text-gray-500 hover:text-gray-700"
                       }`}
                     >
@@ -433,7 +433,7 @@ export default function LaporanPage() {
                   <Loading variant="skeleton" text="Memuat laporan..." />
                 </div>
               ) : reports.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                <div className="flex flex-col items-center justify-center py-16 text-white/40">
                   <FileText className="w-14 h-14 mb-3 opacity-40" />
                   <p className="text-sm font-medium">Belum ada laporan</p>
                   <p className="text-xs mt-1">Generate laporan pertama Anda di atas</p>
@@ -458,7 +458,7 @@ export default function LaporanPage() {
                               {getTypeBadge(report.type)}
                               {getStatusBadge(report.status)}
                             </div>
-                            <div className="flex flex-wrap gap-3 text-xs text-gray-400">
+                            <div className="flex flex-wrap gap-3 text-xs text-white/40">
                               <span>
                                 Dibuat oleh: <span className="text-gray-600">{report.users?.full_name ?? "—"}</span>
                               </span>
@@ -487,14 +487,14 @@ export default function LaporanPage() {
                               Download
                             </a>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white/10 text-white/40 rounded-lg cursor-not-allowed">
                               <Download className="w-3.5 h-3.5" />
                               Download
                             </span>
                           )}
                           <button
                             onClick={() => setReportToDelete(report)}
-                            className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            className="p-1.5 rounded-lg text-rose-300 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
                             title="Hapus laporan"
                           >
                             <Trash2 className="w-4 h-4" />

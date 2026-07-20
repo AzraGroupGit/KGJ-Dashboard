@@ -98,7 +98,7 @@ function KpiPill({
         ? "text-amber-500"
         : status === "danger"
           ? "text-rose-500"
-          : "text-slate-900";
+          : "text-ivory";
   const dc =
     status === "good"
       ? "bg-emerald-400"
@@ -106,19 +106,19 @@ function KpiPill({
         ? "bg-amber-400"
         : status === "danger"
           ? "bg-rose-400"
-          : "bg-slate-300";
+          : "bg-white/20";
   return (
-    <div className="bg-white rounded-xl border border-slate-100 px-4 py-3 hover:border-violet-200 transition-colors duration-200 cursor-pointer shadow-[0_1px_3px_0_rgba(139,92,246,0.04)]">
+    <div className="bg-cocoa rounded-xl border border-gold/10 px-4 py-3 hover:border-gold/40 transition-colors duration-200 cursor-pointer shadow-[0_1px_3px_0_rgba(201,162,39,0.04)]">
       <div className="flex items-center gap-2 mb-1">
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dc}`} />
-        <p className="text-[10px] text-slate-400 font-medium tracking-wide">
+        <p className="text-[10px] text-white/40 font-medium tracking-wide">
           {label}
         </p>
       </div>
       <p className={`text-lg font-bold tabular-nums leading-tight ${sc}`}>
         {value}
         {sub && (
-          <span className="text-[10px] font-normal text-slate-400 ml-1">
+          <span className="text-[10px] font-normal text-white/40 ml-1">
             {sub}
           </span>
         )}
@@ -148,7 +148,7 @@ function StatRow({
   label,
   value,
   delta,
-  vc = "text-slate-900",
+  vc = "text-ivory",
   hint,
 }: {
   label: string;
@@ -159,10 +159,10 @@ function StatRow({
 }) {
   return (
     <div
-      className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0 group/stat cursor-help"
+      className="flex items-center justify-between py-2.5 border-b border-white/5 last:border-0 group/stat cursor-help"
       title={hint}
     >
-      <span className="text-[11px] text-slate-400 tracking-wide">{label}</span>
+      <span className="text-[11px] text-white/40 tracking-wide">{label}</span>
       <div className="flex items-center gap-2">
         {delta !== undefined && <Delta delta={delta} />}
         <span className={`text-[13px] font-semibold tabular-nums ${vc}`}>
@@ -194,20 +194,20 @@ function ModuleCard({
 }) {
   const router = useRouter();
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden flex flex-col group transition-all duration-300 shadow-[0_1px_3px_0_rgba(139,92,246,0.05)] hover:shadow-[0_4px_16px_-4px_rgba(139,92,246,0.12)] hover:border-violet-200">
+    <div className="bg-cocoa rounded-2xl border border-gold/10 overflow-hidden flex flex-col group transition-all duration-300 shadow-[0_1px_3px_0_rgba(201,162,39,0.05)] hover:shadow-[0_4px_16px_-4px_rgba(201,162,39,0.12)] hover:border-gold/40">
       <div className={`h-[2px] w-full ${topBar}`} />
       <div className="p-5 flex-1 flex flex-col gap-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#26211c] flex items-center justify-center text-slate-500 border border-slate-100">
+            <div className="w-8 h-8 rounded-lg bg-carbon flex items-center justify-center text-white/50 border border-gold/10">
               {icon}
             </div>
             <div>
-              <h3 className="text-[13px] font-bold text-slate-900 tracking-tight leading-none">
+              <h3 className="text-[13px] font-bold text-ivory tracking-tight leading-none">
                 {title}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-[11px] text-white/40 mt-0.5">
                 {subtitle}
               </p>
             </div>
@@ -234,11 +234,13 @@ function ModuleCard({
 
 export default function SuperadminDashboard() {
   const router = useRouter();
-  const [clientUser] = useState<ClientUser | null>(() => {
-    if (typeof window === "undefined") return null;
-    return getClientUser();
-  });
-  const [now, setNow] = useState(new Date());
+  const [clientUser, setClientUser] = useState<ClientUser | null>(null);
+
+  useEffect(() => {
+    const u = getClientUser();
+    setClientUser(u);
+    if (!u) router.push("/login");
+  }, [router]);
   const [mounted, setMounted] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -253,11 +255,6 @@ export default function SuperadminDashboard() {
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 0);
     return () => clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(t);
   }, []);
 
   const bms = data?.bms ?? {
@@ -285,7 +282,7 @@ export default function SuperadminDashboard() {
         className="flex h-screen"
         style={{
           background:
-            "#f8f9fb url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='0.75' fill='rgba(139,92,246,0.06)'/%3E%3C/svg%3E\") repeat",
+            "#26211C url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='0.75' fill='rgba(201,162,39,0.06)'/%3E%3C/svg%3E\") repeat",
         }}
       >
         <Sidebar role="superadmin" />
@@ -305,7 +302,7 @@ export default function SuperadminDashboard() {
         className="flex h-screen"
         style={{
           background:
-            "#f8f9fb url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='0.75' fill='rgba(139,92,246,0.06)'/%3E%3C/svg%3E\") repeat",
+            "#26211C url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='0.75' fill='rgba(201,162,39,0.06)'/%3E%3C/svg%3E\") repeat",
         }}
       >
         <Sidebar role="superadmin" />
@@ -325,7 +322,7 @@ export default function SuperadminDashboard() {
         className="flex h-screen"
         style={{
           background:
-            "#f8f9fb url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='0.75' fill='rgba(139,92,246,0.06)'/%3E%3C/svg%3E\") repeat",
+            "#26211C url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='0.75' fill='rgba(201,162,39,0.06)'/%3E%3C/svg%3E\") repeat",
         }}
       >
         <Sidebar role="superadmin" />
@@ -344,7 +341,7 @@ export default function SuperadminDashboard() {
         className="flex h-screen"
         style={{
           background:
-            "#f8f9fb url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='0.75' fill='rgba(139,92,246,0.06)'/%3E%3C/svg%3E\") repeat",
+            "#26211C url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='0.75' fill='rgba(201,162,39,0.06)'/%3E%3C/svg%3E\") repeat",
         }}
       >
         <Sidebar role="superadmin" />
@@ -354,73 +351,45 @@ export default function SuperadminDashboard() {
         <main
           className="flex-1 overflow-y-auto px-6 py-6 space-y-4"
         >
-          {/* ── Greeting ─────────────────────────────────────────────── */}
+          {/* ── Page Header ───────────────────────────────────────────── */}
           <div
-            className="relative bg-white/85 backdrop-blur-sm rounded-2xl border border-white/60 px-7 py-5 overflow-hidden"
+            className="flex flex-col sm:flex-row sm:items-end justify-between gap-4"
             style={{
-              boxShadow:
-                "0 1px 3px 0 rgba(139,92,246,0.05), inset 0 1px 0 0 rgba(255,255,255,0.6)",
               opacity: mounted ? 1 : 0,
               transform: mounted ? "translateY(0)" : "translateY(8px)",
-              transition:
-                "opacity 0.4s cubic-bezier(0.16,1,0.3,1), transform 0.4s cubic-bezier(0.16,1,0.3,1)",
+              transition: "opacity 0.4s cubic-bezier(0.16,1,0.3,1), transform 0.4s cubic-bezier(0.16,1,0.3,1)",
               transitionDelay: "0ms",
             }}
           >
-            {/* geometric accent — subtle, no emoji */}
-            <div
-              className="absolute right-0 top-0 bottom-0 w-48 pointer-events-none"
-              style={{
-                background:
-                  "linear-gradient(135deg, transparent 40%, rgba(139,92,246,0.03) 100%)",
-              }}
-            />
-            {/* decorative lines */}
-            <div className="absolute right-10 top-0 bottom-0 w-px bg-slate-100/60" />
-            <div className="absolute right-20 top-4 bottom-4 w-px bg-slate-100/40" />
-            <svg className="absolute inset-0 w-full h-full opacity-[0.03] pointer-events-none" aria-hidden="true">
-              <filter id="noise-sa">
-                <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-                <feColorMatrix type="saturate" values="0" />
-              </filter>
-              <rect width="100%" height="100%" filter="url(#noise-sa)" />
-            </svg>
-
-            <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] text-slate-400 font-mono tracking-wide">
-                  {formatFullDate()}
+            <div>
+              <h1 className="font-playfair text-2xl font-semibold tracking-wide text-ivory">
+                Superadmin Dashboard
+              </h1>
+              <p className="mt-0.5 text-xs text-white/40">
+                {formatFullDate()}
+              </p>
+            </div>
+            {/* Quick inline stats */}
+            <div className="flex items-center gap-4 text-xs">
+              <div className="text-right">
+                <p className="text-white/40">Omzet</p>
+                <p className="font-semibold tabular-nums text-cream">
+                  {fmtRpShort(bms.omset)}
                 </p>
               </div>
-
-              <div className="flex items-center gap-5 shrink-0">
-                <div className="hidden sm:flex flex-col items-end gap-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                    <span className="text-[10px] font-mono text-slate-400">
-                      Sistem aktif
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-mono text-slate-300">
-                    Terakhir sync{" "}
-                    {now.toLocaleTimeString("id-ID", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-
-                <div className="border-l border-slate-100 pl-5">
-                  <p className="text-[27px] font-bold font-mono text-slate-900 leading-none tabular-nums tracking-tight">
-                    {now.toLocaleTimeString("id-ID", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                  <p className="text-[10px] font-mono text-slate-400 mt-0.5 tracking-[0.15em] uppercase text-right">
-                    {now.toLocaleDateString("id-ID", { weekday: "long" })}
-                  </p>
-                </div>
+              <div className="w-px h-8 bg-white/10" />
+              <div className="text-right">
+                <p className="text-white/40">Produksi</p>
+                <p className="font-semibold tabular-nums text-cream">
+                  {ops.produksi}<span className="font-normal text-white/40">/{ops.target}</span>
+                </p>
+              </div>
+              <div className="w-px h-8 bg-white/10" />
+              <div className="text-right">
+                <p className="text-white/40">On-Time</p>
+                <p className={`font-semibold tabular-nums ${ops.on_time_pct >= 80 ? "text-emerald-300" : ops.on_time_pct >= 60 ? "text-amber-300" : "text-rose-300"}`}>
+                  {ops.on_time_pct}%
+                </p>
               </div>
             </div>
           </div>
@@ -486,15 +455,15 @@ export default function SuperadminDashboard() {
               {alerts.map((a) => {
                 const s = {
                   warning: {
-                    wrap: "bg-amber-50 border-amber-200/60 text-amber-700",
+                    wrap: "bg-amber-500/10 border-amber-400/20 text-amber-300",
                     ic: <IcAlert />,
                   },
                   danger: {
-                    wrap: "bg-rose-50  border-rose-200/60  text-rose-700",
+                    wrap: "bg-rose-500/10  border-rose-400/20  text-rose-300",
                     ic: <IcAlert />,
                   },
                   info: {
-                    wrap: "bg-sky-50   border-sky-200/60   text-sky-700",
+                    wrap: "bg-sky-500/10   border-sky-400/20   text-sky-300",
                     ic: <IcInfo />,
                   },
                 }[a.level];
@@ -573,16 +542,16 @@ export default function SuperadminDashboard() {
               btnBg="bg-violet-400 hover:bg-violet-500"
             >
               {/* Bullet bar — production target */}
-              <div className="pb-3 mb-0.5 border-b border-slate-50">
+              <div className="pb-3 mb-0.5 border-b border-white/5">
                 <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-white/40">
                     Target Produksi
                   </p>
-                  <p className="text-[11px] font-semibold text-slate-700 tabular-nums">
+                  <p className="text-[11px] font-semibold text-cream tabular-nums">
                     {ops.produksi} / {ops.target} unit
                   </p>
                 </div>
-                <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="relative h-2 bg-white/10 rounded-full overflow-hidden">
                   <div
                     className="absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out"
                     style={{
@@ -593,13 +562,13 @@ export default function SuperadminDashboard() {
                   />
                 </div>
                 <div className="flex justify-between mt-1.5">
-                  <span className="text-[10px] text-slate-300 tabular-nums">
+                  <span className="text-[10px] text-white/30 tabular-nums">
                     0
                   </span>
                   <span className="text-[10px] font-bold text-violet-500 tabular-nums">
                     {prodPct}%
                   </span>
-                  <span className="text-[10px] text-slate-300 tabular-nums">
+                  <span className="text-[10px] text-white/30 tabular-nums">
                     {ops.target}
                   </span>
                 </div>
@@ -620,16 +589,16 @@ export default function SuperadminDashboard() {
                 label="Backlog Order"
                 value={`${ops.backlog} order`}
                 hint="Jumlah order yang masih dalam antrian produksi"
-                vc={ops.backlog > 5 ? "text-rose-500" : "text-slate-700"}
+                vc={ops.backlog > 5 ? "text-rose-500" : "text-cream"}
               />
             </ModuleCard>
           </div>
 
           {/* ── Activity feed ─────────────────────────────────────────── */}
           <div
-            className="bg-white rounded-2xl border border-slate-100 overflow-hidden"
+            className="bg-cocoa rounded-2xl border border-gold/10 overflow-hidden"
             style={{
-              boxShadow: "0 1px 3px 0 rgba(139,92,246,0.05)",
+              boxShadow: "0 1px 3px 0 rgba(201,162,39,0.05)",
               opacity: mounted ? 1 : 0,
               transform: mounted ? "translateY(0)" : "translateY(8px)",
               transition:
@@ -637,13 +606,13 @@ export default function SuperadminDashboard() {
               transitionDelay: "320ms",
             }}
           >
-            <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-100">
-              <h3 className="text-[12px] font-semibold text-slate-800">
+            <div className="flex items-center justify-between px-6 py-3.5 border-b border-gold/10">
+              <h3 className="text-[12px] font-semibold text-cream">
                 Aktivitas Terkini
               </h3>
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                <span className="text-[10px] font-mono text-slate-400">
+                <span className="text-[10px] font-mono text-white/40">
                   Live
                 </span>
               </div>
@@ -651,11 +620,11 @@ export default function SuperadminDashboard() {
 
             <div>
               {activity.length === 0 && isLoading ? (
-                <p className="px-6 py-4 text-[11px] text-slate-400">
+                <p className="px-6 py-4 text-[11px] text-white/40">
                   Memuat aktivitas...
                 </p>
               ) : activity.length === 0 ? (
-                <p className="px-6 py-4 text-[11px] text-slate-400">
+                <p className="px-6 py-4 text-[11px] text-white/40">
                   Belum ada aktivitas tercatat.
                 </p>
               ) : (
@@ -665,28 +634,28 @@ export default function SuperadminDashboard() {
                   return (
                     <div
                       key={a.id}
-                      className="relative flex items-start gap-3 pl-10 pr-6 py-3 hover:bg-[#26211c]/70 transition-colors group"
+                      className="relative flex items-start gap-3 pl-10 pr-6 py-3 hover:bg-carbon/70 transition-colors group"
                     >
                       <div className="absolute left-6 top-0 bottom-0 flex flex-col items-center">
                         <span
                           className={`mt-3.5 w-2 h-2 rounded-full shrink-0 border-2 ${
                             bmsRow
                               ? "bg-violet-400 border-violet-400"
-                              : "bg-white border-violet-300"
+                              : "bg-cocoa border-gold"
                           }`}
                         />
                         {!isLast && (
-                          <div className="w-px flex-1 bg-slate-100 mt-1" />
+                          <div className="w-px flex-1 bg-white/10 mt-1" />
                         )}
                       </div>
-                      <span className="text-[10px] font-mono text-slate-300 w-9 shrink-0 tabular-nums pt-2.5">
+                      <span className="text-[10px] font-mono text-white/30 w-9 shrink-0 tabular-nums pt-2.5">
                         {a.time}
                       </span>
                       <div>
-                        <span className="text-[10px] font-semibold text-slate-400 tracking-wide">
+                        <span className="text-[10px] font-semibold text-white/40 tracking-wide">
                           {bmsRow ? "BMS" : "OPR"}
                         </span>
-                        <p className="text-[12px] text-slate-600 leading-relaxed">
+                        <p className="text-[12px] text-white/70 leading-relaxed">
                           {a.message}
                         </p>
                       </div>
@@ -699,7 +668,7 @@ export default function SuperadminDashboard() {
 
           {/* Footer note */}
           <p
-            className="text-center text-[10px] font-mono text-slate-300 pb-2"
+            className="text-center text-[10px] font-mono text-white/30 pb-2"
             style={{
               opacity: mounted ? 1 : 0,
               transform: mounted ? "translateY(0)" : "translateY(8px)",

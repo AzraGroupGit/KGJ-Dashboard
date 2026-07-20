@@ -10,6 +10,7 @@ import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
 import { formatAddsOnList } from "@/lib/adds-on";
 import type { SupervisorGroup } from "@/types/roles";
+import { STAGE_SEQUENCE, getStageLabel } from "@/lib/stages";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -17,9 +18,8 @@ import {
   ChevronUp,
   Clock,
   ExternalLink,
-  Hammer,
+
   RefreshCw,
-  Settings,
   XCircle,
 } from "lucide-react";
 
@@ -74,8 +74,9 @@ type ActionState =
   | { type: "idle" }
   | { type: "confirming_approve" }
   | { type: "confirming_reject" }
+  | { type: "confirming_cancel" }
   | { type: "loading" }
-  | { type: "done"; result: "approved" | "rejected"; message: string };
+  | { type: "done"; result: "approved" | "rejected" | "cancelled"; message: string };
 
 // ── Stage Verification Guidelines + Real Data Display ────────────────────────
 
@@ -304,23 +305,23 @@ function StageInfoPopup({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl bg-white shadow-xl p-5 sm:p-6"
+        className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl bg-cocoa shadow-xl p-5 sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+          className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full text-white/40 hover:bg-white/5/10 hover:text-white/70 transition-colors"
         >
           <XCircle className="h-5 w-5" />
         </button>
 
         {/* Header */}
         <div className="mb-4 pr-8">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-white/40">
             #{orderData.order_number} · {orderData.customer_name}
           </p>
-          <h3 className="text-sm font-semibold text-slate-800 mt-0.5">
+          <h3 className="text-sm font-semibold text-cream mt-0.5">
             {orderData.product_name}
           </h3>
           {(() => {
@@ -334,12 +335,12 @@ function StageInfoPopup({
             return (
               <div className="mt-2 flex items-center gap-2">
                 {passCount > 0 && (
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">
                     {passCount} lolos
                   </span>
                 )}
                 {failCount > 0 && (
-                  <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-600">
+                  <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold text-rose-300">
                     {failCount} tidak lolos
                   </span>
                 )}
@@ -350,7 +351,7 @@ function StageInfoPopup({
 
         {/* Guidelines with real data */}
         {guidelines.length === 0 ? (
-          <p className="text-sm text-slate-400 italic text-center py-4">
+          <p className="text-sm text-white/40 italic text-center py-4">
             Tidak ada panduan verifikasi tersedia untuk tahap ini.
           </p>
         ) : (
@@ -364,31 +365,31 @@ function StageInfoPopup({
                 <li key={idx} className="flex gap-3">
                   <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold mt-0.5 ${
                     passed === true
-                      ? "bg-emerald-100 text-emerald-700"
+                      ? "bg-emerald-500/10 text-emerald-300"
                       : passed === false
-                        ? "bg-rose-100 text-rose-600"
-                        : "bg-slate-100 text-slate-500"
+                        ? "bg-rose-500/10 text-rose-300"
+                        : "bg-white/10 text-white/50"
                   }`}>
                     {passed === true ? "✓" : passed === false ? "✗" : idx + 1}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className={`text-[13px] font-medium ${
-                      passed === false ? "text-rose-700" : "text-slate-700"
+                      passed === false ? "text-rose-300" : "text-cream"
                     }`}>
                       {item.label}
                     </p>
-                    <p className="text-[12px] text-slate-500">{item.detail}</p>
+                    <p className="text-[12px] text-white/50">{item.detail}</p>
                     {hasData && (
                       <div className={`mt-1 rounded px-2 py-1 border ${
                         passed === true
-                          ? "bg-emerald-50 border-emerald-100"
+                          ? "bg-emerald-500/10 border-emerald-100"
                           : passed === false
-                            ? "bg-rose-50 border-rose-100"
-                            : "bg-[#26211c] border-slate-100"
+                            ? "bg-rose-500/10 border-rose-100"
+                            : "bg-[#26211c] border-gold/10"
                       }`}>
-                        <span className="text-[10px] text-slate-400 uppercase">Data: </span>
+                        <span className="text-[10px] text-white/40 uppercase">Data: </span>
                         <span className={`text-[12px] font-semibold ${
-                          passed === true ? "text-emerald-700" : passed === false ? "text-rose-600" : "text-slate-700"
+                          passed === true ? "text-emerald-300" : passed === false ? "text-rose-300" : "text-cream"
                         }`}>
                           {isBoolean
                             ? (passed ? "Lolos ✓" : "Tidak Lolos ✗")
@@ -540,11 +541,11 @@ function QcChecklistDisplay({ items }: { items: Array<{ key?: string; check_key?
         return (
           <div key={i} className="flex items-center gap-2">
             <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold ${
-              item.passed ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-600"
+              item.passed ? "bg-emerald-500/10 text-emerald-300" : "bg-rose-500/10 text-rose-300"
             }`}>
               {item.passed ? "✓" : "✗"}
             </span>
-            <span className={`text-[12px] ${item.passed ? "text-slate-700" : "text-rose-600 font-medium"}`}>
+            <span className={`text-[12px] ${item.passed ? "text-cream" : "text-rose-300 font-medium"}`}>
               {label}
             </span>
           </div>
@@ -577,7 +578,7 @@ function DataViewer({
 
   const hasContent = checklist || notes || entries.length > 0;
   if (!hasContent) {
-    return <p className="text-xs text-slate-400 italic">Tidak ada data tersimpan</p>;
+    return <p className="text-xs text-white/40 italic">Tidak ada data tersimpan</p>;
   }
 
   const preview = entries.slice(0, 3);
@@ -593,14 +594,14 @@ function DataViewer({
             const isFeatures = key === "jenis_cincin_features" && Array.isArray(val) && val.length > 0;
             return (
               <div key={key} className="flex items-baseline justify-between gap-3">
-                <dt className="text-[11px] text-slate-400 shrink-0">{humanizeKey(key)}</dt>
-                <dd className="text-[12px] font-medium text-slate-700 text-right break-words max-w-[70%]">
+                <dt className="text-[11px] text-white/40 shrink-0">{humanizeKey(key)}</dt>
+                <dd className="text-[12px] font-medium text-cream text-right break-words max-w-[70%]">
                   {isUrl ? (
                     <a
                       href={val}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                      className="inline-flex items-center gap-1 rounded border border-sky-400/20 bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium text-sky-300 hover:bg-sky-500/20 transition-colors"
                     >
                       <ExternalLink className="h-3 w-3" />
                       Buka
@@ -621,7 +622,7 @@ function DataViewer({
       {hasMore && (
         <button
           onClick={onToggle}
-          className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-600 transition-colors min-h-[28px]"
+          className="flex items-center gap-1 text-[11px] text-white/40 hover:text-white/70 transition-colors min-h-[28px]"
         >
           {expanded ? (
             <><ChevronUp className="h-3 w-3" /> Sembunyikan</>
@@ -634,12 +635,12 @@ function DataViewer({
       {/* QC Checklist */}
       {checklist && (
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-1.5">
             Checklist QC
           </p>
           <QcChecklistDisplay items={checklist} />
           {checklist.some((i) => !i.passed) && (
-            <p className="mt-1.5 text-[11px] font-medium text-rose-600">
+            <p className="mt-1.5 text-[11px] font-medium text-rose-300">
               {checklist.filter((i) => !i.passed).length} item tidak lolos
             </p>
           )}
@@ -648,9 +649,9 @@ function DataViewer({
 
       {/* Notes */}
       {notes && (
-        <div className="rounded-md border border-amber-100 bg-amber-50/60 px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-600 mb-0.5">Catatan</p>
-          <p className="text-[12px] text-slate-700">{notes}</p>
+        <div className="rounded-md border border-amber-100 bg-amber-500/10/60 px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-300 mb-0.5">Catatan</p>
+          <p className="text-[12px] text-cream">{notes}</p>
         </div>
       )}
     </div>
@@ -666,49 +667,49 @@ function WorkOrderCard({ wo }: { wo: WorkOrder }) {
   const hasWanita = wo.ukuran_wanita || wo.jenis_cincin_wanita || wo.ukiran_wanita;
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-[#26211c] overflow-hidden mb-3">
+    <div className="rounded-lg border border-gold/15 bg-[#26211c] overflow-hidden mb-3">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-slate-100 transition-colors"
+        className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-white/5/10 transition-colors"
       >
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-white/50">
           Spesifikasi Cincin · {wo.cs_order_number}
         </span>
         {open ? (
-          <ChevronUp className="h-3.5 w-3.5 text-slate-400" />
+          <ChevronUp className="h-3.5 w-3.5 text-white/40" />
         ) : (
-          <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+          <ChevronDown className="h-3.5 w-3.5 text-white/40" />
         )}
       </button>
 
       {open && (
-        <div className="px-3 pb-3 space-y-2.5 border-t border-slate-200 pt-2.5">
+        <div className="px-3 pb-3 space-y-2.5 border-t border-gold/15 pt-2.5">
           {hasPria && (
             <div>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase mb-1">Pria</p>
+              <p className="text-[10px] font-semibold text-white/40 uppercase mb-1">Pria</p>
               <dl className="space-y-1">
                 {wo.ukuran_pria && (
                   <div className="flex justify-between">
-                    <dt className="text-[11px] text-slate-500">Ukuran</dt>
-                    <dd className="text-[11px] font-semibold text-slate-700">{wo.ukuran_pria}</dd>
+                    <dt className="text-[11px] text-white/50">Ukuran</dt>
+                    <dd className="text-[11px] font-semibold text-cream">{wo.ukuran_pria}</dd>
                   </div>
                 )}
                 {wo.jenis_cincin_pria && (
                   <div className="flex justify-between">
-                    <dt className="text-[11px] text-slate-500">Jenis</dt>
-                    <dd className="text-[11px] font-semibold text-slate-700 text-right max-w-[60%] break-words">{wo.jenis_cincin_pria}</dd>
+                    <dt className="text-[11px] text-white/50">Jenis</dt>
+                    <dd className="text-[11px] font-semibold text-cream text-right max-w-[60%] break-words">{wo.jenis_cincin_pria}</dd>
                   </div>
                 )}
                 {wo.ukiran_pria && (
                   <div className="flex justify-between">
-                    <dt className="text-[11px] text-slate-500">Ukiran</dt>
-                    <dd className="text-[11px] font-semibold text-slate-700 text-right max-w-[55%]">{wo.ukiran_pria}</dd>
+                    <dt className="text-[11px] text-white/50">Ukiran</dt>
+                    <dd className="text-[11px] font-semibold text-cream text-right max-w-[55%]">{wo.ukiran_pria}</dd>
                   </div>
                 )}
                 {wo.keterangan_pria && (
                   <div className="flex justify-between">
-                    <dt className="text-[11px] text-slate-500">Ket.</dt>
-                    <dd className="text-[11px] text-slate-600 text-right max-w-[60%]">
+                    <dt className="text-[11px] text-white/50">Ket.</dt>
+                    <dd className="text-[11px] text-white/70 text-right max-w-[60%]">
                       {Array.isArray(wo.keterangan_pria) ? wo.keterangan_pria.join(", ") : wo.keterangan_pria}
                     </dd>
                   </div>
@@ -719,30 +720,30 @@ function WorkOrderCard({ wo }: { wo: WorkOrder }) {
 
           {hasWanita && (
             <div>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase mb-1">Wanita</p>
+              <p className="text-[10px] font-semibold text-white/40 uppercase mb-1">Wanita</p>
               <dl className="space-y-1">
                 {wo.ukuran_wanita && (
                   <div className="flex justify-between">
-                    <dt className="text-[11px] text-slate-500">Ukuran</dt>
-                    <dd className="text-[11px] font-semibold text-slate-700">{wo.ukuran_wanita}</dd>
+                    <dt className="text-[11px] text-white/50">Ukuran</dt>
+                    <dd className="text-[11px] font-semibold text-cream">{wo.ukuran_wanita}</dd>
                   </div>
                 )}
                 {wo.jenis_cincin_wanita && (
                   <div className="flex justify-between">
-                    <dt className="text-[11px] text-slate-500">Jenis</dt>
-                    <dd className="text-[11px] font-semibold text-slate-700 text-right max-w-[60%] break-words">{wo.jenis_cincin_wanita}</dd>
+                    <dt className="text-[11px] text-white/50">Jenis</dt>
+                    <dd className="text-[11px] font-semibold text-cream text-right max-w-[60%] break-words">{wo.jenis_cincin_wanita}</dd>
                   </div>
                 )}
                 {wo.ukiran_wanita && (
                   <div className="flex justify-between">
-                    <dt className="text-[11px] text-slate-500">Ukiran</dt>
-                    <dd className="text-[11px] font-semibold text-slate-700 text-right max-w-[55%]">{wo.ukiran_wanita}</dd>
+                    <dt className="text-[11px] text-white/50">Ukiran</dt>
+                    <dd className="text-[11px] font-semibold text-cream text-right max-w-[55%]">{wo.ukiran_wanita}</dd>
                   </div>
                 )}
                 {wo.keterangan_wanita && (
                   <div className="flex justify-between">
-                    <dt className="text-[11px] text-slate-500">Ket.</dt>
-                    <dd className="text-[11px] text-slate-600 text-right max-w-[60%]">
+                    <dt className="text-[11px] text-white/50">Ket.</dt>
+                    <dd className="text-[11px] text-white/70 text-right max-w-[60%]">
                       {Array.isArray(wo.keterangan_wanita) ? wo.keterangan_wanita.join(", ") : wo.keterangan_wanita}
                     </dd>
                   </div>
@@ -755,14 +756,14 @@ function WorkOrderCard({ wo }: { wo: WorkOrder }) {
             <div className="flex gap-3">
               {wo.font && (
                 <div>
-                  <p className="text-[10px] text-slate-400">Font</p>
-                  <p className="text-[11px] font-semibold text-slate-700">{wo.font}</p>
+                  <p className="text-[10px] text-white/40">Font</p>
+                  <p className="text-[11px] font-semibold text-cream">{wo.font}</p>
                 </div>
               )}
               {wo.laser_position && (
                 <div>
-                  <p className="text-[10px] text-slate-400">Posisi Laser</p>
-                  <p className="text-[11px] font-semibold text-slate-700">{wo.laser_position}</p>
+                  <p className="text-[10px] text-white/40">Posisi Laser</p>
+                  <p className="text-[11px] font-semibold text-cream">{wo.laser_position}</p>
                 </div>
               )}
             </div>
@@ -775,7 +776,7 @@ function WorkOrderCard({ wo }: { wo: WorkOrder }) {
                   href={wo.reference_image_pria_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-1/2 rounded border border-slate-200 bg-white px-2 py-1 text-center text-[10px] font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+                  className="w-1/2 rounded border border-gold/15 bg-cocoa px-2 py-1 text-center text-[10px] font-medium text-sky-300 hover:bg-sky-500/10 transition-colors"
                 >
                   Referensi Pria ↗
                 </a>
@@ -785,7 +786,7 @@ function WorkOrderCard({ wo }: { wo: WorkOrder }) {
                   href={wo.reference_image_wanita_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-1/2 rounded border border-slate-200 bg-white px-2 py-1 text-center text-[10px] font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+                  className="w-1/2 rounded border border-gold/15 bg-cocoa px-2 py-1 text-center text-[10px] font-medium text-sky-300 hover:bg-sky-500/10 transition-colors"
                 >
                   Referensi Wanita ↗
                 </a>
@@ -804,6 +805,7 @@ function PendingCard({
   item,
   onApprove,
   onReject,
+  onCancel,
 }: {
   item: PendingItem;
   onApprove: (
@@ -818,14 +820,17 @@ function PendingCard({
     notes: string,
     reworkStage?: string,
   ) => Promise<void>;
+  onCancel: (orderId: string, stage: string, reason: string) => Promise<void>;
 }) {
   const [state, setState] = useState<ActionState>({ type: "idle" });
   const [rejectNotes, setRejectNotes] = useState("");
+  const [cancelReason, setCancelReason] = useState("");
   const [reworkStage, setReworkStage] = useState("");
   const [dataExpanded, setDataExpanded] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
 
   const isQCStage = item.stage === "approval_qc_1" || item.stage === "approval_qc_2";
+  const isIntakeApproval = item.stage === "approval_penerimaan_order";
   const qcReworkOptions: { value: string; label: string }[] = [];
   if (item.stage === "approval_qc_1") {
     qcReworkOptions.push(
@@ -881,32 +886,52 @@ function PendingCard({
     }
   };
 
+  const handleCancelConfirm = async () => {
+    if (!cancelReason.trim()) return;
+    setState({ type: "loading" });
+    try {
+      await onCancel(item.order_id, item.stage, cancelReason);
+      setState({
+        type: "done",
+        result: "cancelled",
+        message: "Dibatalkan — order tidak masuk workshop",
+      });
+    } catch (err) {
+      setState({ type: "idle" });
+      alert(err instanceof Error ? err.message : "Gagal membatalkan");
+    }
+  };
+
   if (state.type === "done") {
     return (
       <div
         className={`rounded-lg border p-3 sm:p-4 transition-all ${
           state.result === "approved"
-            ? "border-emerald-200 bg-emerald-50/60"
-            : "border-slate-200 bg-[#26211c]/60"
+            ? "border-emerald-400/20 bg-emerald-500/10"
+            : state.result === "cancelled"
+              ? "border-amber-400/20 bg-amber-500/10"
+              : "border-rose-400/20 bg-rose-500/10"
         }`}
       >
         <div className="flex items-center gap-2">
           {state.result === "approved" ? (
-            <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600 flex-shrink-0" />
+            <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-300 flex-shrink-0" />
+          ) : state.result === "cancelled" ? (
+            <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-300 flex-shrink-0" />
           ) : (
-            <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500 flex-shrink-0" />
+            <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-white/50 flex-shrink-0" />
           )}
-          <span className="text-sm font-medium text-slate-700 truncate">
+          <span className="text-sm font-medium text-cream truncate">
             {item.order_number} — {item.stage_label}
           </span>
         </div>
-        <p className="mt-1 text-xs text-slate-500">{state.message}</p>
+        <p className="mt-1 text-xs text-white/50">{state.message}</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-lg border border-gold/15 bg-cocoa shadow-sm overflow-hidden">
       {/* Stage group accent bar */}
       <div
         className={`h-1 w-full ${
@@ -919,32 +944,32 @@ function PendingCard({
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-3">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap mb-1">
-              <span className="font-mono text-[13px] font-semibold text-slate-500">
+              <span className="font-mono text-[13px] font-semibold text-white/50">
                 #{item.order_number}
               </span>
               <span
                 className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
                   isProduction
-                    ? "bg-amber-100 text-amber-800 border-amber-200"
-                    : "bg-blue-100 text-blue-800 border-blue-200"
+                    ? "bg-amber-500/10 text-amber-800 border-amber-400/20"
+                    : "bg-sky-500/20 text-blue-800 border-sky-400/20"
                 }`}
               >
                 {item.stage_label}
               </span>
               {(item.attempt_number ?? 0) > 1 && (
-                <span className="rounded-full bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
+                <span className="rounded-full bg-rose-500/10 border border-rose-400/20 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
                   Attempt #{item.attempt_number}
                 </span>
               )}
             </div>
-            <p className="text-[15px] font-semibold text-slate-800 leading-snug">
+            <p className="text-[15px] font-semibold text-cream leading-snug">
               {item.product_name}
             </p>
-            <p className="text-[12px] text-slate-400 mt-0.5">{item.customer_name}</p>
+            <p className="text-[12px] text-white/40 mt-0.5">{item.customer_name}</p>
           </div>
           <div className="sm:text-right shrink-0">
-            <p className="text-[12px] font-medium text-slate-700">{item.worker_name}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">{formatRelative(item.submitted_at)}</p>
+            <p className="text-[12px] font-medium text-cream">{item.worker_name}</p>
+            <p className="text-[11px] text-white/40 mt-0.5">{formatRelative(item.submitted_at)}</p>
           </div>
         </div>
 
@@ -952,14 +977,14 @@ function PendingCard({
         {item.work_order && <WorkOrderCard wo={item.work_order} />}
 
         {/* Submitted data */}
-        <div className="rounded-lg bg-[#26211c] border border-slate-100 px-3 py-2.5 mb-3">
+        <div className="rounded-lg bg-[#26211c] border border-gold/10 px-3 py-2.5 mb-3">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
               Data disubmit
             </p>
             <button
               onClick={() => setShowInfo(true)}
-              className="flex items-center gap-1 rounded-full border border-amber-200 bg-white px-2 py-0.5 text-[10px] font-medium text-amber-700 hover:bg-amber-50 transition-colors"
+              className="flex items-center gap-1 rounded-full border border-amber-400/20 bg-cocoa px-2 py-0.5 text-[10px] font-medium text-amber-300 hover:bg-amber-500/100/10 transition-colors"
             >
               <AlertTriangle className="h-3 w-3" />
               Panduan Verifikasi
@@ -983,15 +1008,23 @@ function PendingCard({
             </button>
             <button
               onClick={() => setState({ type: "confirming_reject" })}
-              className="flex-1 rounded-lg border border-rose-200 bg-white py-3 sm:py-2.5 text-sm font-medium text-rose-600 transition-all hover:bg-rose-50 active:scale-[0.98] min-h-[44px]"
+              className="flex-1 rounded-lg border border-rose-400/20 bg-cocoa py-3 sm:py-2.5 text-sm font-medium text-rose-300 transition-all hover:bg-rose-500/10 active:scale-[0.98] min-h-[44px]"
             >
               Tolak
             </button>
+            {isIntakeApproval && (
+            <button
+              onClick={() => setState({ type: "confirming_cancel" })}
+              className="flex-1 rounded-lg border border-amber-400/20 bg-cocoa py-3 sm:py-2.5 text-sm font-medium text-amber-300 transition-all hover:bg-amber-500/10 active:scale-[0.98] min-h-[44px]"
+            >
+              Batalkan
+            </button>
+            )}
           </div>
         )}
 
         {state.type === "confirming_approve" && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-3">
+          <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 p-3 space-y-3">
             <p className="text-sm text-amber-800">
               Setujui tahap ini? Order akan maju ke tahap berikutnya dan tidak dapat dikembalikan.
             </p>
@@ -1004,7 +1037,7 @@ function PendingCard({
               </button>
               <button
                 onClick={() => setState({ type: "idle" })}
-                className="flex-1 rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-600 transition-all hover:bg-[#26211c] active:scale-[0.98]"
+                className="flex-1 rounded-lg border border-gold/15 bg-cocoa py-2.5 text-sm font-medium text-white/70 transition-all hover:bg-[#26211c] active:scale-[0.98]"
               >
                 Batal
               </button>
@@ -1016,11 +1049,11 @@ function PendingCard({
           <div className="space-y-2">
             {isQCStage && (
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Tujuan Rework</label>
+                <label className="block text-xs font-medium text-white/50 mb-1">Tujuan Rework</label>
                 <select
                   value={reworkStage}
                   onChange={(e) => setReworkStage(e.target.value)}
-                  className="w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                  className="w-full rounded-lg border border-rose-400/20 bg-cocoa px-3 py-2 text-sm text-cream focus:outline-none focus:ring-2 focus:ring-rose-400/20"
                 >
                   <option value="">Pilih tahap rework</option>
                   {qcReworkOptions.map((opt) => (
@@ -1035,7 +1068,7 @@ function PendingCard({
               placeholder="Alasan penolakan (wajib diisi)..."
               rows={3}
               autoFocus
-              className="w-full rounded-lg border border-rose-200 bg-rose-50/40 px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-200 resize-none"
+              className="w-full rounded-lg border border-rose-400/20 bg-rose-500/10/40 px-3 py-2.5 text-sm text-cream placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-rose-400/20 resize-none"
             />
             <div className="flex flex-col sm:flex-row gap-2">
               <button
@@ -1051,7 +1084,7 @@ function PendingCard({
                   setRejectNotes("");
                   setReworkStage("");
                 }}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-3 sm:py-2 text-sm text-slate-600 hover:bg-[#26211c] min-h-[44px]"
+                className="rounded-lg border border-gold/15 bg-cocoa px-4 py-3 sm:py-2 text-sm text-white/70 hover:bg-[#26211c] min-h-[44px]"
               >
                 Batal
               </button>
@@ -1059,10 +1092,44 @@ function PendingCard({
           </div>
         )}
 
+        {state.type === "confirming_cancel" && (
+          <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 p-3 space-y-3">
+            <p className="text-sm text-amber-200">
+              Batalkan order ini? Order akan ditandai selesai dan tidak masuk ke workshop. Pastikan sudah ada konfirmasi dari customer.
+            </p>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Alasan pembatalan (wajib diisi)..."
+              rows={2}
+              autoFocus
+              className="w-full rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-2.5 text-sm text-cream placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-amber-400/20 resize-none"
+            />
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={handleCancelConfirm}
+                disabled={!cancelReason.trim()}
+                className="flex-1 rounded-lg bg-amber-600 py-3 sm:py-2.5 text-sm font-medium text-white transition-all hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
+              >
+                Konfirmasi Batalkan
+              </button>
+              <button
+                onClick={() => {
+                  setState({ type: "idle" });
+                  setCancelReason("");
+                }}
+                className="rounded-lg border border-gold/15 bg-cocoa px-4 py-3 sm:py-2 text-sm text-white/70 hover:bg-white/5 min-h-[44px]"
+              >
+                Kembali
+              </button>
+            </div>
+          </div>
+        )}
+
         {state.type === "loading" && (
           <div className="flex items-center justify-center py-3">
-            <RefreshCw className="h-4 w-4 animate-spin text-slate-400" />
-            <span className="ml-2 text-sm text-slate-500">Memproses...</span>
+            <RefreshCw className="h-4 w-4 animate-spin text-white/40" />
+            <span className="ml-2 text-sm text-white/50">Memproses...</span>
           </div>
         )}
 
@@ -1085,11 +1152,11 @@ function PendingCard({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type FilterTab = "all" | "production" | "operational";
+type FilterTab = string;
 
 export default function SupervisorApprovalPage() {
   const router = useRouter();
-  const [filter, setFilter] = useState<FilterTab>("all");
+  const [filter, setFilter] = useState<FilterTab>("approval_penerimaan_order");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [userEmail, setUserEmail] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -1225,18 +1292,47 @@ export default function SupervisorApprovalPage() {
     [refetch],
   );
 
-  const filteredItems = items.filter((item) => {
-    if (filter === "all") return true;
-    if (supervisorGroup !== "all") return true;
-    return item.stage_group === filter;
-  });
+  const handleCancel = useCallback(
+    async (orderId: string, stage: string, reason: string) => {
+      const res = await fetch("/api/supervisor/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          order_id: orderId,
+          stage,
+          action: "cancel",
+          remarks: reason,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Gagal membatalkan");
+      refetch();
+    },
+    [refetch],
+  );
 
-  const productionCount = items.filter(
-    (i) => i.stage_group === "production",
-  ).length;
-  const operationalCount = items.filter(
-    (i) => i.stage_group === "operational",
-  ).length;
+  // Per-stage tabs based on supervisor group
+  const OPERATIONAL_APPROVAL_STAGES = STAGE_SEQUENCE.filter(
+    (s) => s.startsWith("approval_") && s !== "approval_produksi",
+  );
+  const stageTabs: { key: string; label: string; count: number }[] = (
+    supervisorGroup === "production"
+      ? ["approval_produksi"]
+      : OPERATIONAL_APPROVAL_STAGES
+  ).map((stage) => ({
+    key: stage,
+    label: getStageLabel(stage).replace("Approval ", ""),
+    count: items.filter((i) => i.stage === stage).length,
+  }));
+
+  // Auto-select first tab if current filter doesn't match any
+  if (filter !== "all" && !stageTabs.some((t) => t.key === filter)) {
+    setFilter(stageTabs[0]?.key ?? "all");
+  }
+
+  const filteredItems = stageTabs.some((t) => t.key === filter)
+    ? items.filter((item) => item.stage === filter)
+    : items;
 
   // ── Summary stats ──────────────────────────────────────────────────────────
   const totalWaiting = items.length;
@@ -1248,17 +1344,18 @@ export default function SupervisorApprovalPage() {
     : 0;
 
   const allTabs: {
-    key: FilterTab;
+    key: string;
     label: string;
     icon: React.ElementType;
     count: number;
-  }[] = [
-    { key: "all", label: "Semua", icon: Clock, count: items.length },
-    { key: "production", label: "Produksi", icon: Hammer, count: productionCount },
-    { key: "operational", label: "Operasional", icon: Settings, count: operationalCount },
-  ];
+  }[] = stageTabs.map((t) => ({
+    key: t.key,
+    label: t.label,
+    icon: Clock,
+    count: t.count,
+  }));
 
-  const tabs = supervisorGroup === "all" ? allTabs : [];
+  const tabs = allTabs;
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#26211c]">
@@ -1283,27 +1380,27 @@ export default function SupervisorApprovalPage() {
           <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+                <h2 className="text-lg sm:text-xl font-bold text-ivory">
                   Persetujuan Tahap
                 </h2>
                 {supervisorGroup === "production" && (
-                  <span className="rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                  <span className="rounded-full bg-amber-500/10 border border-amber-400/20 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
                     Supervisor Produksi
                   </span>
                 )}
                 {supervisorGroup === "operational" && (
-                  <span className="rounded-full bg-blue-100 border border-blue-200 px-2 py-0.5 text-[11px] font-semibold text-blue-800">
+                  <span className="rounded-full bg-sky-500/20 border border-sky-400/20 px-2 py-0.5 text-[11px] font-semibold text-blue-800">
                     Supervisor Operasional
                   </span>
                 )}
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              <p className="text-xs sm:text-sm text-white/50 mt-0.5">
                 Review dan setujui hasil kerja tim
               </p>
             </div>
             <div className="flex items-center justify-between sm:justify-end gap-2">
               {lastUpdated && (
-                <span className="text-[10px] sm:text-xs text-slate-400">
+                <span className="text-[10px] sm:text-xs text-white/40">
                   {lastUpdated.toLocaleTimeString("id-ID", {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -1313,7 +1410,7 @@ export default function SupervisorApprovalPage() {
               <button
                 onClick={() => fetchPending(true)}
                 disabled={refreshing}
-                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 sm:py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-[#26211c] disabled:opacity-60 min-h-[36px] sm:min-h-0"
+                className="inline-flex items-center gap-1.5 rounded-md border border-gold/15 bg-cocoa px-3 py-2 sm:py-1.5 text-xs font-medium text-cream shadow-sm transition hover:bg-[#26211c] disabled:opacity-60 min-h-[36px] sm:min-h-0"
               >
                 <RefreshCw
                   className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
@@ -1328,12 +1425,12 @@ export default function SupervisorApprovalPage() {
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center px-4">
               <AlertTriangle className="mb-3 h-8 w-8 text-rose-400" />
-              <p className="text-sm font-medium text-slate-700">
+              <p className="text-sm font-medium text-cream">
                 {error instanceof Error ? error.message : "Terjadi kesalahan"}
               </p>
               <button
                 onClick={() => fetchPending(true)}
-                className="mt-4 rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-[#26211c] min-h-[44px]"
+                className="mt-4 rounded-md border border-gold/15 bg-cocoa px-4 py-2.5 text-sm text-cream hover:bg-[#26211c] min-h-[44px]"
               >
                 Coba lagi
               </button>
@@ -1348,18 +1445,15 @@ export default function SupervisorApprovalPage() {
                   icon={Clock}
                   tone={totalWaiting > 0 ? "amber" : "emerald"}
                 />
-                <InfoCard
-                  label="Produksi"
-                  value={productionCount}
-                  icon={Hammer}
-                  tone={productionCount > 0 ? "amber" : "emerald"}
-                />
-                <InfoCard
-                  label="Operasional"
-                  value={operationalCount}
-                  icon={Settings}
-                  tone={operationalCount > 0 ? "amber" : "emerald"}
-                />
+                {stageTabs.slice(0, 2).map((t) => (
+                  <InfoCard
+                    key={t.key}
+                    label={t.label}
+                    value={t.count}
+                    icon={Clock}
+                    tone={t.count > 0 ? "amber" : "emerald"}
+                  />
+                ))}
                 <InfoCard
                   label="Paling Lama"
                   value={oldestWaitingHours > 0 ? `${oldestWaitingHours}j` : "—"}
@@ -1377,7 +1471,7 @@ export default function SupervisorApprovalPage() {
               </div>
 
               {tabs.length > 0 && (
-                <div className="border-b border-slate-200 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
+                <div className="border-b border-gold/15 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                   <div className="flex items-center gap-1 min-w-max">
                     {tabs.map((tab) => {
                       const Icon = tab.icon;
@@ -1387,8 +1481,8 @@ export default function SupervisorApprovalPage() {
                           onClick={() => setFilter(tab.key)}
                           className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                             filter === tab.key
-                              ? "border-slate-800 text-slate-900"
-                              : "border-transparent text-slate-500 hover:text-slate-700"
+                              ? "border-gold text-ivory"
+                              : "border-transparent text-white/50 hover:text-cream"
                           }`}
                         >
                           <Icon className="h-4 w-4" />
@@ -1396,10 +1490,10 @@ export default function SupervisorApprovalPage() {
                           <span
                             className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
                               filter === tab.key
-                                ? "bg-slate-800 text-white"
+                                ? "bg-gold text-night"
                                 : tab.count > 0
-                                  ? "bg-slate-100 text-slate-700"
-                                  : "bg-[#26211c] text-slate-400"
+                                  ? "bg-white/10 text-cream"
+                                  : "bg-carbon text-white/40"
                             }`}
                           >
                             {tab.count}
@@ -1414,13 +1508,13 @@ export default function SupervisorApprovalPage() {
               {/* Cards */}
               {filteredItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center px-4">
-                  <div className="mb-4 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50">
+                  <div className="mb-4 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full border border-emerald-200 bg-emerald-500/10">
                     <CheckCircle2 className="h-7 w-7 sm:h-8 sm:w-8 text-emerald-500" />
                   </div>
-                  <p className="text-sm font-medium text-slate-700">
+                  <p className="text-sm font-medium text-cream">
                     Semua submission sudah diproses
                   </p>
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="mt-1 text-xs text-white/40">
                     Tidak ada yang menunggu persetujuan di kategori ini
                   </p>
                 </div>
@@ -1432,6 +1526,7 @@ export default function SupervisorApprovalPage() {
                       item={item}
                       onApprove={handleApprove}
                       onReject={handleReject}
+                      onCancel={handleCancel}
                     />
                   ))}
                 </div>
@@ -1458,24 +1553,24 @@ function InfoCard({
   tone: "slate" | "rose" | "amber" | "emerald";
 }) {
   const toneMap = {
-    slate: { bg: "bg-[#26211c]", icon: "text-slate-500", ring: "ring-slate-200" },
-    rose: { bg: "bg-rose-50", icon: "text-rose-600", ring: "ring-rose-200" },
-    amber: { bg: "bg-amber-50", icon: "text-amber-600", ring: "ring-amber-200" },
-    emerald: { bg: "bg-emerald-50", icon: "text-emerald-600", ring: "ring-emerald-200" },
+    slate: { bg: "bg-[#26211c]", icon: "text-white/50", ring: "ring-white/10" },
+    rose: { bg: "bg-rose-500/10", icon: "text-rose-300", ring: "ring-rose-400/20" },
+    amber: { bg: "bg-amber-500/10", icon: "text-amber-300", ring: "ring-amber-400/20" },
+    emerald: { bg: "bg-emerald-500/10", icon: "text-emerald-300", ring: "ring-emerald-400/20" },
   };
   const t = toneMap[tone];
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 sm:p-4">
+    <div className="rounded-lg border border-gold/15 bg-cocoa p-3 sm:p-4">
       <div className="flex items-start justify-between">
         <div className="min-w-0">
-          <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-white/50">
             {label}
           </p>
-          <p className="mt-1 sm:mt-2 text-xl sm:text-2xl font-semibold tabular-nums text-slate-900">
+          <p className="mt-1 sm:mt-2 text-xl sm:text-2xl font-semibold tabular-nums text-ivory">
             {value}
           </p>
           {subtitle && (
-            <p className="mt-0.5 text-[10px] sm:text-xs text-slate-400">
+            <p className="mt-0.5 text-[10px] sm:text-xs text-white/40">
               {subtitle}
             </p>
           )}
@@ -1494,7 +1589,7 @@ function ApprovalSkeleton() {
       {[...Array(6)].map((_, i) => (
         <div
           key={i}
-          className="h-48 sm:h-56 animate-pulse rounded-lg border border-slate-200 bg-white"
+          className="h-48 sm:h-56 animate-pulse rounded-lg border border-gold/15 bg-cocoa"
         />
       ))}
     </div>

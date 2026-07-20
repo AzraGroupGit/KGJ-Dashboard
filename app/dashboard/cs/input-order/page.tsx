@@ -376,8 +376,8 @@ export default function InputOrderPage() {
           {/* Page header */}
           <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-1">Input Order Cincin</h2>
-              <p className="text-gray-600">Buat order baru dan kirimkan link formulir ke pelanggan</p>
+              <h2 className="text-2xl font-bold text-cream mb-1">Input Order Cincin</h2>
+              <p className="text-white/70">Buat order baru dan kirimkan link formulir ke pelanggan</p>
             </div>
             <Button variant="primary" onClick={openCreateModal} leftIcon={<Plus className="w-4 h-4" />}>Buat Order Baru</Button>
           </div>
@@ -385,25 +385,25 @@ export default function InputOrderPage() {
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
             {[
-              { label: "Total Order", value: totalOrders, accent: "border-indigo-500", color: "text-gray-800", sub: "semua waktu" },
-              { label: "Menunggu Pengisian", value: menunggu, accent: "border-amber-500", color: "text-amber-600", sub: "belum diisi pelanggan" },
+              { label: "Total Order", value: totalOrders, accent: "border-indigo-500", color: "text-cream", sub: "semua waktu" },
+              { label: "Menunggu Pengisian", value: menunggu, accent: "border-amber-500", color: "text-amber-300", sub: "belum diisi pelanggan" },
               { label: "Perlu Direview", value: perluDireview, accent: "border-orange-500", color: "text-orange-600", sub: "form terisi, belum direview" },
-              { label: "Sudah Direview", value: sudahDireview, accent: "border-green-500", color: "text-green-600", sub: "sudah direview / dikonversi" },
-              { label: "Bulan Ini", value: bulanIni, accent: "border-blue-500", color: "text-gray-800", sub: "order baru" },
+              { label: "Sudah Direview", value: sudahDireview, accent: "border-green-500", color: "text-emerald-300", sub: "sudah direview / dikonversi" },
+              { label: "Bulan Ini", value: bulanIni, accent: "border-blue-500", color: "text-cream", sub: "order baru" },
             ].map(({ label, value, accent, color, sub }) => (
-              <div key={label} className={`bg-white rounded-xl shadow-sm p-5 border-l-4 ${accent}`}>
-                <p className="text-sm text-gray-500 mb-1">{label}</p>
+              <div key={label} className={`bg-cocoa rounded-xl shadow-sm p-5 border-l-4 ${accent}`}>
+                <p className="text-sm text-white/50 mb-1">{label}</p>
                 <p className={`text-2xl font-bold ${color}`}>{value}</p>
-                <p className="text-xs text-gray-400 mt-1">{sub}</p>
+                <p className="text-xs text-white/40 mt-1">{sub}</p>
               </div>
             ))}
           </div>
 
           {/* Table */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800">Daftar Order</h3>
-              <p className="text-sm text-gray-500">{_orders.length} order · urut dari terbaru</p>
+          <div className="bg-cocoa rounded-xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gold/15">
+              <h3 className="text-lg font-semibold text-cream">Daftar Order</h3>
+              <p className="text-sm text-white/50">{_orders.length} order · urut dari terbaru</p>
             </div>
             {isLoading ? (
               <div className="p-10"><Loading variant="dots" text="Memuat order..." /></div>
@@ -413,14 +413,14 @@ export default function InputOrderPage() {
                   <thead className="bg-[#26211c]">
                     <tr>
                       {["No Order", "Nama Customer", "Tgl Order", "Deadline", "Harga", "Status Form", "Aksi"].map((h) => (
-                        <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                        <th key={h} className="px-4 py-3 text-left text-xs font-medium text-white/50 uppercase tracking-wider whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {_orders.length === 0 ? (
-                      <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-400">
-                        <div className="flex flex-col items-center gap-2"><ClipboardList className="w-10 h-10 text-gray-300" /><p>Belum ada order. Klik <strong>Buat Order Baru</strong> untuk memulai.</p></div>
+                      <tr><td colSpan={7} className="px-6 py-12 text-center text-white/40">
+                        <div className="flex flex-col items-center gap-2"><ClipboardList className="w-10 h-10 text-white/30" /><p>Belum ada order. Klik <strong>Buat Order Baru</strong> untuk memulai.</p></div>
                       </td></tr>
                     ) : (
                       orders.map((order) => (
@@ -428,22 +428,22 @@ export default function InputOrderPage() {
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className="font-mono text-sm font-medium text-indigo-600">{order.order_number}</span>
                             {order.transfer_ke_bank && (
-                              <span className={`ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${paymentCategory(order.transfer_ke_bank) === "ke_pt" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                              <span className={`ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${paymentCategory(order.transfer_ke_bank) === "ke_pt" ? "bg-blue-100 text-blue-700" : "bg-emerald-500/10 text-emerald-300"}`}>
                                 {paymentCategory(order.transfer_ke_bank) === "ke_pt" ? "Ke PT" : "Non PT / Cash"}
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-3 font-medium text-gray-800">{order.customer_name}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-gray-600 text-sm">{new Date(order.tgl_order).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-gray-600 text-sm">{order.deadline ? new Date(order.deadline).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) : <span className="text-gray-400">-</span>}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-gray-700 text-sm">{order.harga != null && order.harga > 0 ? order.harga.toLocaleString("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }) : <span className="text-gray-400">-</span>}</td>
+                          <td className="px-4 py-3 font-medium text-cream">{order.customer_name}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-white/70 text-sm">{new Date(order.tgl_order).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-white/70 text-sm">{order.deadline ? new Date(order.deadline).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) : <span className="text-white/40">-</span>}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-cream text-sm">{order.harga != null && order.harga > 0 ? order.harga.toLocaleString("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }) : <span className="text-white/40">-</span>}</td>
                           <td className="px-4 py-3 whitespace-nowrap"><FormStatusBadge status={order.form_status} /></td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-1">
-                              <button onClick={() => openForm(order, true)} title="Lihat form" className="p-1.5 rounded-lg text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"><Eye className="w-4 h-4" /></button>
-                              <button onClick={() => openForm(order, false)} title="Edit form" className="p-1.5 rounded-lg text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"><Pencil className="w-4 h-4" /></button>
+                              <button onClick={() => openForm(order, true)} title="Lihat form" className="p-1.5 rounded-lg text-white/50 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"><Eye className="w-4 h-4" /></button>
+                              <button onClick={() => openForm(order, false)} title="Edit form" className="p-1.5 rounded-lg text-white/50 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"><Pencil className="w-4 h-4" /></button>
                               <CopyLinkButton order={order} getFormUrl={getFormUrl} />
-                              <button onClick={() => confirmDelete(order)} title="Hapus order" className="p-1.5 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                              <button onClick={() => confirmDelete(order)} title="Hapus order" className="p-1.5 rounded-lg text-white/50 hover:bg-rose-500/100/10 hover:text-rose-300 transition-colors"><Trash2 className="w-4 h-4" /></button>
                             </div>
                           </td>
                         </tr>
@@ -460,11 +460,11 @@ export default function InputOrderPage() {
       {/* ── Modal: Create Order ──────────────────────────── */}
       <Modal isOpen={showCreateModal} onClose={() => !isSaving && setShowCreateModal(false)} title="Buat Order Baru" size="sm">
         <div className="space-y-4">
-          <p className="text-sm text-gray-500">Masukkan nama pelanggan, tanggal chat, dan tipe pembayaran untuk membuat nomor order dan link formulir.</p>
+          <p className="text-sm text-white/50">Masukkan nama pelanggan, tanggal chat, dan tipe pembayaran untuk membuat nomor order dan link formulir.</p>
           <Input label="Nama Customer" value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} placeholder="Contoh: Budi Santoso" disabled={isSaving} autoFocus />
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Chat</label><input type="date" value={newTglChat} onChange={(e) => setNewTglChat(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700" disabled={isSaving} /></div>
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Tipe Pembayaran</label>
-            <select value={newTipePembayaran} onChange={(e) => setNewTipePembayaran(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700" disabled={isSaving}>
+          <div><label className="block text-sm font-medium text-cream mb-1">Tanggal Chat</label><input type="date" value={newTglChat} onChange={(e) => setNewTglChat(e.target.value)} className="w-full px-3 py-2 border border-gold/25 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-cream" disabled={isSaving} /></div>
+          <div><label className="block text-sm font-medium text-cream mb-1">Tipe Pembayaran</label>
+            <select value={newTipePembayaran} onChange={(e) => setNewTipePembayaran(e.target.value)} className="w-full px-3 py-2 border border-gold/25 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-cream" disabled={isSaving}>
               <option value="">Pilih tipe pembayaran</option>
               <option value="Ke PT">Ke PT</option>
               <option value="Non PT / Cash">Non PT / Cash</option>
@@ -481,21 +481,21 @@ export default function InputOrderPage() {
       <Modal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} title="Link Formulir Berhasil Dibuat" size="md">
         {generatedOrder && (
           <div className="space-y-4">
-            <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg p-4">
-              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 bg-emerald-500/10 border border-green-200 rounded-lg p-4">
+              <CheckCircle className="w-5 h-5 text-emerald-300 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-green-800">Order berhasil dibuat!</p>
-                <p className="text-sm text-green-700 mt-0.5">No. Order: <strong>{generatedOrder.order_number}</strong></p>
-                <p className="text-sm text-green-700">Customer: <strong>{generatedOrder.customer_name}</strong></p>
+                <p className="text-sm text-emerald-300 mt-0.5">No. Order: <strong>{generatedOrder.order_number}</strong></p>
+                <p className="text-sm text-emerald-300">Customer: <strong>{generatedOrder.customer_name}</strong></p>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Link Formulir (salin & kirim ke pelanggan):</label>
+              <label className="block text-sm font-medium text-cream mb-2">Link Formulir (salin & kirim ke pelanggan):</label>
               <div className="flex gap-2">
-                <input type="text" readOnly value={getFormUrl(generatedOrder)} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-[#26211c] text-sm text-gray-700 font-mono" />
+                <input type="text" readOnly value={getFormUrl(generatedOrder)} className="flex-1 px-3 py-2 border border-gold/25 rounded-lg bg-[#26211c] text-sm text-cream font-mono" />
                 <button onClick={() => copyLink(generatedOrder)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${linkCopied ? "bg-green-600 text-white" : "bg-indigo-600 hover:bg-indigo-700 text-white"}`}>{linkCopied ? "Tersalin!" : "Salin"}</button>
               </div>
-              <p className="text-xs text-gray-500 mt-1.5">Link ini bisa dilihat kembali melalui tombol salin di tabel order.</p>
+              <p className="text-xs text-white/50 mt-1.5">Link ini bisa dilihat kembali melalui tombol salin di tabel order.</p>
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700"><strong>Cara penggunaan:</strong> Kirim link di atas ke pelanggan melalui WhatsApp. Pelanggan akan mengisi formulir lengkap termasuk detail cincin, alamat, dan ukuran.</div>
             <div className="flex justify-end gap-3 pt-2">
@@ -538,7 +538,7 @@ export default function InputOrderPage() {
       >
         {/* ── Foto Referensi Cincin ─── */}
         <div className="mb-5">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Foto Referensi Cincin</p>
+          <p className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Foto Referensi Cincin</p>
           <div className="grid grid-cols-2 gap-4">
             <RefImageUpload label="Cincin Pria" side="pria" currentUrl={selectedOrder?.reference_image_pria_url ?? null} isUploading={isUploadingImage === "pria"} onUpload={handleImageUpload} />
             <RefImageUpload label="Cincin Wanita" side="wanita" currentUrl={selectedOrder?.reference_image_wanita_url ?? null} isUploading={isUploadingImage === "wanita"} onUpload={handleImageUpload} />
@@ -546,18 +546,18 @@ export default function InputOrderPage() {
         </div>
 
         {!isViewOnly && draftSavedAt && !showClearDraftConfirm && (
-          <div className="mb-4 flex items-center justify-between rounded-lg border border-sky-200 bg-sky-50 px-4 py-2.5">
-            <div className="flex items-center gap-2 text-xs text-sky-700"><Check className="h-3.5 w-3.5" />Draft tersimpan otomatis pukul {draftSavedAt}</div>
-            <button onClick={() => setShowClearDraftConfirm(true)} className="rounded px-2 py-1 text-[11px] font-medium text-sky-600 hover:bg-sky-100 transition-colors">Hapus draft</button>
+          <div className="mb-4 flex items-center justify-between rounded-lg border border-sky-200 bg-sky-500/10 px-4 py-2.5">
+            <div className="flex items-center gap-2 text-xs text-sky-300"><Check className="h-3.5 w-3.5" />Draft tersimpan otomatis pukul {draftSavedAt}</div>
+            <button onClick={() => setShowClearDraftConfirm(true)} className="rounded px-2 py-1 text-[11px] font-medium text-sky-600 hover:bg-sky-500/10 transition-colors">Hapus draft</button>
           </div>
         )}
 
         {showClearDraftConfirm && (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 space-y-2.5">
+          <div className="mb-4 rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3 space-y-2.5">
             <p className="text-xs text-amber-800">Yakin hapus draft? Semua perubahan yang belum disimpan akan hilang.</p>
             <div className="flex gap-2">
               <button onClick={() => { clearDraft(); setShowClearDraftConfirm(false); }} className="rounded px-3 py-1.5 text-[11px] font-medium bg-red-600 text-white hover:bg-red-700 transition-colors">Ya, Hapus</button>
-              <button onClick={() => setShowClearDraftConfirm(false)} className="rounded px-3 py-1.5 text-[11px] font-medium border border-slate-200 bg-white text-slate-600 hover:bg-[#26211c] transition-colors">Batal</button>
+              <button onClick={() => setShowClearDraftConfirm(false)} className="rounded px-3 py-1.5 text-[11px] font-medium border border-gold/15 bg-cocoa text-white/70 hover:bg-[#26211c] transition-colors">Batal</button>
             </div>
           </div>
         )}
@@ -568,11 +568,11 @@ export default function InputOrderPage() {
       {/* ── Modal: Confirm Delete ───────────────────────── */}
       <Modal isOpen={showDeleteConfirm} onClose={() => !isSaving && setShowDeleteConfirm(false)} title="Hapus Order" size="sm">
         <div className="space-y-4">
-          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4">
-            <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 bg-rose-500/10 border border-red-200 rounded-lg p-4">
+            <AlertTriangle className="w-5 h-5 text-rose-300 flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold text-red-800">Yakin ingin menghapus?</p>
-              <p className="text-sm text-red-700 mt-0.5">Order <strong>{orderToDelete?.order_number}</strong> atas nama <strong>{orderToDelete?.customer_name}</strong> akan dihapus permanen.</p>
+              <p className="text-sm text-rose-300 mt-0.5">Order <strong>{orderToDelete?.order_number}</strong> atas nama <strong>{orderToDelete?.customer_name}</strong> akan dihapus permanen.</p>
             </div>
           </div>
           <div className="flex justify-end gap-3">

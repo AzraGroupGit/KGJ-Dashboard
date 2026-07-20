@@ -238,10 +238,10 @@ export default function InputLeadsPage() {
 
           <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-1">
+              <h2 className="text-2xl font-bold text-cream mb-1">
                 Input Data Leads & Closing
               </h2>
-              <p className="text-gray-600">
+              <p className="text-white/70">
                 Cabang {user?.branch?.name ?? "Anda"} · data hari ini bisa
                 diedit sampai tengah malam
               </p>
@@ -257,47 +257,47 @@ export default function InputLeadsPage() {
 
           {/* Ringkasan bulan ini */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500">
-              <p className="text-sm text-gray-600 mb-2">Total Input</p>
-              <p className="text-2xl font-bold text-gray-800">
+            <div className="bg-cocoa rounded-xl shadow-sm p-5 border-l-4 border-blue-500">
+              <p className="text-sm text-white/70 mb-2">Total Input</p>
+              <p className="text-2xl font-bold text-cream">
                 {monthInputs.length}
               </p>
-              <p className="text-xs text-gray-500 mt-1">hari bulan ini</p>
+              <p className="text-xs text-white/50 mt-1">hari bulan ini</p>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
-              <p className="text-sm text-gray-600 mb-2">Total Lead Masuk</p>
-              <p className="text-2xl font-bold text-gray-800">
+            <div className="bg-cocoa rounded-xl shadow-sm p-6 border-l-4 border-green-500">
+              <p className="text-sm text-white/70 mb-2">Total Lead Masuk</p>
+              <p className="text-2xl font-bold text-cream">
                 {totalLeadsMonth.toLocaleString("id-ID")}
               </p>
-              <p className="text-xs text-gray-500 mt-1">bulan ini</p>
+              <p className="text-xs text-white/50 mt-1">bulan ini</p>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
-              <p className="text-sm text-gray-600 mb-2">Total Closing</p>
-              <p className="text-2xl font-bold text-gray-800">
+            <div className="bg-cocoa rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
+              <p className="text-sm text-white/70 mb-2">Total Closing</p>
+              <p className="text-2xl font-bold text-cream">
                 {totalClosingMonth.toLocaleString("id-ID")}
               </p>
-              <p className="text-xs text-gray-500 mt-1">bulan ini</p>
+              <p className="text-xs text-white/50 mt-1">bulan ini</p>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-amber-500">
-              <p className="text-sm text-gray-600 mb-2">Total Omset</p>
-              <p className="text-2xl font-bold text-gray-800">
+            <div className="bg-cocoa rounded-xl shadow-sm p-6 border-l-4 border-amber-500">
+              <p className="text-sm text-white/70 mb-2">Total Omset</p>
+              <p className="text-2xl font-bold text-cream">
                 {totalOmsetMonth.toLocaleString("id-ID", {
                   style: "currency",
                   currency: "IDR",
                   maximumFractionDigits: 0,
                 })}
               </p>
-              <p className="text-xs text-gray-500 mt-1">bulan ini</p>
+              <p className="text-xs text-white/50 mt-1">bulan ini</p>
             </div>
           </div>
 
           {/* Tabel */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800">
+          <div className="bg-cocoa rounded-xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gold/15">
+              <h3 className="text-lg font-semibold text-cream">
                 Riwayat Input Data
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-white/50">
                 {leadInputs.length} entri · urut dari terbaru
               </p>
             </div>
@@ -311,22 +311,22 @@ export default function InputLeadsPage() {
                 <table className="w-full">
                   <thead className="bg-[#26211c]">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                         Tanggal
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                         Lead Masuk
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                         Closing
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                         CR
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                         Omset
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                         Catatan
                       </th>
                     </tr>
@@ -336,7 +336,7 @@ export default function InputLeadsPage() {
                       <tr>
                         <td
                           colSpan={6}
-                          className="px-6 py-10 text-center text-gray-500"
+                          className="px-6 py-10 text-center text-white/50"
                         >
                           Belum ada data input.
                         </td>
@@ -353,7 +353,7 @@ export default function InputLeadsPage() {
                             key={item.id}
                             className={`hover:bg-[#26211c] transition-colors ${isToday ? "bg-indigo-50/40" : ""}`}
                           >
-                            <td className="px-6 py-4 whitespace-nowrap text-gray-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-cream">
                               {new Date(item.input_date).toLocaleDateString(
                                 "id-ID",
                                 {
@@ -368,33 +368,33 @@ export default function InputLeadsPage() {
                                 </span>
                               )}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-gray-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-cream">
                               {item.lead_masuk.toLocaleString("id-ID")}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-gray-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-cream">
                               {item.closing.toLocaleString("id-ID")}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span
                                 className={`text-sm font-semibold ${
                                   cr > 30
-                                    ? "text-green-600"
+                                    ? "text-emerald-300"
                                     : cr > 20
                                       ? "text-yellow-600"
-                                      : "text-red-600"
+                                      : "text-rose-300"
                                 }`}
                               >
                                 {cr.toFixed(1)}%
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-gray-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-cream">
                               {(item.omset ?? 0).toLocaleString("id-ID", {
                                 style: "currency",
                                 currency: "IDR",
                                 maximumFractionDigits: 0,
                               })}
                             </td>
-                            <td className="px-6 py-4 text-gray-500 max-w-xs truncate">
+                            <td className="px-6 py-4 text-white/50 max-w-xs truncate">
                               {item.notes || "-"}
                             </td>
                           </tr>
@@ -416,10 +416,10 @@ export default function InputLeadsPage() {
           >
             <div className="space-y-4">
               <div className="bg-[#26211c] rounded-lg p-3 mb-2">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">
+                <p className="text-xs text-white/50 uppercase tracking-wide">
                   Cabang & Tanggal
                 </p>
-                <p className="font-semibold text-gray-800">
+                <p className="font-semibold text-cream">
                   {user?.branch?.name ?? "-"} ·{" "}
                   {new Date(today).toLocaleDateString("id-ID", {
                     weekday: "long",
@@ -454,40 +454,40 @@ export default function InputLeadsPage() {
 
               {/* Input Omset dengan format Rupiah */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-cream mb-1">
                   Omset (Rp)
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500 sm:text-sm">Rp</span>
+                    <span className="text-white/50 sm:text-sm">Rp</span>
                   </div>
                   <input
                     type="text"
                     value={omsetDisplay}
                     onChange={handleOmsetChange}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full pl-10 pr-3 py-2 border border-gold/25 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="Contoh: 1.000.000"
                     disabled={isSaving}
                   />
                 </div>
                 {omsetDisplay && (
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-white/50">
                     Nilai: Rp {omsetDisplay}
                   </p>
                 )}
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-white/50">
                   Total nilai transaksi / penjualan hari ini
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-cream mb-1">
                   Catatan (Opsional)
                 </label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gold/25 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   rows={3}
                   placeholder="Contoh: Lead dari event offline, campaign baru, dsb."
                   disabled={isSaving}
@@ -497,7 +497,7 @@ export default function InputLeadsPage() {
               {leadMasuk !== "" &&
                 closing !== "" &&
                 parseInt(closing) > parseInt(leadMasuk) && (
-                  <div className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg flex items-start gap-2">
+                  <div className="text-sm text-rose-300 bg-rose-500/10 border border-red-200 p-3 rounded-lg flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                     Closing tidak boleh melebihi Lead Masuk
                   </div>

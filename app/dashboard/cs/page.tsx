@@ -141,7 +141,7 @@ export default function CSDashboard() {
 
   if (isLoading || !user) {
     return (
-      <div className="flex h-screen bg-[#26211c]">
+      <div className="flex h-screen bg-night">
         <Sidebar role="customer_service" />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header userEmail={user?.email || ""} role="customer_service" />
@@ -156,7 +156,7 @@ export default function CSDashboard() {
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-screen bg-[#26211c]">
+    <div className="flex h-screen bg-night">
       <Sidebar role="customer_service" />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userEmail={user.email} role="customer_service" />
@@ -172,7 +172,7 @@ export default function CSDashboard() {
           {/* ── Greeting ── */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <p className="text-sm text-white/50 mt-0.5">
                 {new Date().toLocaleDateString("id-ID", {
                   weekday: "long",
                   day: "numeric",
@@ -204,42 +204,42 @@ export default function CSDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Leads alert */}
             {!stats?.today.hasInput ? (
-              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Clock className="w-4 h-4 text-amber-600" />
+              <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-400/20 rounded-xl p-4">
+                <div className="w-9 h-9 bg-amber-500/10 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-4 h-4 text-amber-300" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-amber-800">
                     Belum input leads hari ini
                   </p>
-                  <p className="text-xs text-amber-700 mt-0.5">
+                  <p className="text-xs text-amber-300 mt-0.5">
                     Data leads & closing hari ini belum tercatat.
                   </p>
                 </div>
                 <button
                   onClick={() => router.push(CS_ROUTES.INPUT_LEADS)}
-                  className="text-xs font-semibold text-amber-700 hover:text-amber-900 whitespace-nowrap"
+                  className="text-xs font-semibold text-amber-300 hover:text-amber-900 whitespace-nowrap"
                 >
                   Input →
                 </button>
               </div>
             ) : (
-              <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
-                <div className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Check className="w-4 h-4 text-green-600" />
+              <div className="flex items-start gap-3 bg-emerald-500/10 border border-emerald-400/20 rounded-xl p-4">
+                <div className="w-9 h-9 bg-emerald-500/10 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Check className="w-4 h-4 text-emerald-300" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-green-800">
                     Leads hari ini sudah diinput
                   </p>
-                  <p className="text-xs text-green-700 mt-0.5">
+                  <p className="text-xs text-emerald-300 mt-0.5">
                     Lead masuk: <strong>{stats.today.leadMasuk}</strong> ·
                     Closing: <strong>{stats.today.closing}</strong>
                   </p>
                 </div>
                 <button
                   onClick={() => router.push(CS_ROUTES.INPUT_LEADS)}
-                  className="text-xs font-semibold text-green-700 hover:text-green-900 whitespace-nowrap"
+                  className="text-xs font-semibold text-emerald-300 hover:text-green-900 whitespace-nowrap"
                 >
                   Edit →
                 </button>
@@ -248,35 +248,35 @@ export default function CSDashboard() {
 
             {/* Order review alert */}
             {needsReview > 0 ? (
-              <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-xl p-4">
-                <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="flex items-start gap-3 bg-orange-500/10 border border-orange-400/20 rounded-xl p-4">
+                <div className="w-9 h-9 bg-orange-500/10 rounded-full flex items-center justify-center flex-shrink-0">
                   <Bell className="w-4 h-4 text-orange-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-orange-800">
                     {needsReview} form perlu direview
                   </p>
-                  <p className="text-xs text-orange-700 mt-0.5">
+                  <p className="text-xs text-orange-300 mt-0.5">
                     Pelanggan sudah mengisi form, menunggu review CS.
                   </p>
                 </div>
                 <button
                   onClick={() => router.push(CS_ROUTES.INPUT_ORDER)}
-                  className="text-xs font-semibold text-orange-700 hover:text-orange-900 whitespace-nowrap"
+                  className="text-xs font-semibold text-orange-300 hover:text-orange-900 whitespace-nowrap"
                 >
                   Review →
                 </button>
               </div>
             ) : (
-              <div className="flex items-start gap-3 bg-[#26211c] border border-gray-200 rounded-xl p-4">
-                <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-4 h-4 text-gray-400" />
+              <div className="flex items-start gap-3 bg-night border border-gold/15 rounded-xl p-4">
+                <div className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="w-4 h-4 text-white/40" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-600">
+                  <p className="text-sm font-semibold text-white/70">
                     Semua form sudah direview
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-white/50 mt-0.5">
                     Tidak ada form yang menunggu review saat ini.
                   </p>
                 </div>
@@ -285,19 +285,19 @@ export default function CSDashboard() {
           </div>
 
           {/* ── Order pipeline ── */}
-          <div className="bg-white rounded-xl shadow-sm p-5">
+          <div className="bg-cocoa rounded-xl shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-bold text-gray-700">
+                <h3 className="text-sm font-bold text-cream">
                   Pipeline Order
                 </h3>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-white/40 mt-0.5">
                   {orders.length} total order · bulan ini {bulanIni.length} baru
                 </p>
               </div>
               <button
                 onClick={() => router.push(CS_ROUTES.INPUT_ORDER)}
-                className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold transition-colors"
+                className="text-xs text-gold hover:text-gold-bright font-semibold transition-colors"
               >
                 Kelola order →
               </button>
@@ -309,33 +309,33 @@ export default function CSDashboard() {
                 {
                   label: "Menunggu Pengisian",
                   count: pending.length,
-                  color: "bg-amber-500",
-                  light: "bg-amber-50",
-                  text: "text-amber-700",
+                  color: "bg-amber-500/100",
+                  light: "bg-amber-500/10",
+                  text: "text-amber-300",
                   desc: "Link dikirim, form belum diisi",
                 },
                 {
                   label: "Terisi Pelanggan",
                   count: submitted.length,
-                  color: "bg-orange-500",
-                  light: "bg-orange-50",
-                  text: "text-orange-700",
+                  color: "bg-orange-500/100",
+                  light: "bg-orange-500/10",
+                  text: "text-orange-300",
                   desc: "Pelanggan sudah mengisi form",
                 },
                 {
                   label: "Sudah Direview",
                   count: reviewed.length,
                   color: "bg-blue-500",
-                  light: "bg-blue-50",
+                  light: "bg-blue-500/10",
                   text: "text-blue-700",
                   desc: "CS sudah review & verifikasi",
                 },
                 {
                   label: "Dikonversi",
                   count: converted.length,
-                  color: "bg-green-500",
-                  light: "bg-green-50",
-                  text: "text-green-700",
+                  color: "bg-emerald-500/100",
+                  light: "bg-emerald-500/10",
+                  text: "text-emerald-300",
                   desc: "Order masuk ke produksi",
                 },
               ].map((stage, idx) => (
@@ -344,7 +344,7 @@ export default function CSDashboard() {
                     className={`flex-1 ${stage.light} rounded-xl p-4 border border-opacity-20`}
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <p className="text-xs font-semibold text-gray-600 leading-tight">
+                      <p className="text-xs font-semibold text-white/70 leading-tight">
                         {stage.label}
                       </p>
                       <span className={`text-2xl font-bold ${stage.text}`}>
@@ -352,7 +352,7 @@ export default function CSDashboard() {
                       </span>
                     </div>
                     {/* Progress bar */}
-                    <div className="h-1.5 bg-white rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-cocoa rounded-full overflow-hidden">
                       <div
                         className={`h-full ${stage.color} rounded-full transition-all`}
                         style={{
@@ -360,10 +360,10 @@ export default function CSDashboard() {
                         }}
                       />
                     </div>
-                    <p className="text-xs text-gray-400 mt-1.5">{stage.desc}</p>
+                    <p className="text-xs text-white/40 mt-1.5">{stage.desc}</p>
                   </div>
                   {idx < 3 && (
-                    <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                    <ChevronRight className="w-4 h-4 text-white/30 flex-shrink-0" />
                   )}
                 </div>
               ))}
@@ -371,7 +371,7 @@ export default function CSDashboard() {
 
             {/* Warning if oldest pending is very old */}
             {oldestPending !== null && oldestPending >= 3 && (
-              <div className="mt-3 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <div className="mt-3 flex items-center gap-2 text-xs text-amber-300 bg-amber-500/10 border border-amber-400/20 rounded-lg px-3 py-2">
                 <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
                 Ada order yang sudah menunggu pengisian selama{" "}
                 <strong className="mx-1">{oldestPending} hari</strong> —
@@ -383,19 +383,19 @@ export default function CSDashboard() {
           {/* ── Two columns: Leads performance + Recent orders ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Leads performance */}
-            <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="bg-cocoa rounded-xl shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-sm font-bold text-gray-700">
+                  <h3 className="text-sm font-bold text-cream">
                     Performa Leads — Bulan Ini
                   </h3>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-white/40 mt-0.5">
                     {stats?.period.daysWithInput ?? 0} hari tercatat
                   </p>
                 </div>
                 <button
                   onClick={() => router.push(CS_ROUTES.INPUT_LEADS)}
-                  className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold"
+                  className="text-xs text-gold hover:text-gold-bright font-semibold"
                 >
                   Input leads →
                 </button>
@@ -403,33 +403,33 @@ export default function CSDashboard() {
 
               {/* Main metrics */}
               <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="text-center p-3 bg-blue-50 rounded-xl">
-                  <p className="text-2xl font-bold text-blue-700">
+                <div className="text-center p-3 bg-sky-500/10 rounded-xl">
+                  <p className="text-2xl font-bold text-sky-300">
                     {stats?.summary.totalLeadMasuk ?? 0}
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">Lead Masuk</p>
+                  <p className="text-xs text-white/50 mt-0.5">Lead Masuk</p>
                 </div>
-                <div className="text-center p-3 bg-green-50 rounded-xl">
-                  <p className="text-2xl font-bold text-green-700">
+                <div className="text-center p-3 bg-emerald-500/10 rounded-xl">
+                  <p className="text-2xl font-bold text-emerald-300">
                     {stats?.summary.totalClosing ?? 0}
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">Closing</p>
+                  <p className="text-xs text-white/50 mt-0.5">Closing</p>
                 </div>
-                <div className="text-center p-3 bg-purple-50 rounded-xl">
-                  <p className="text-2xl font-bold text-purple-700">
+                <div className="text-center p-3 bg-purple-500/10 rounded-xl">
+                  <p className="text-2xl font-bold text-purple-300">
                     {(stats?.summary.conversionRate ?? 0).toFixed(1)}%
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">CR</p>
+                  <p className="text-xs text-white/50 mt-0.5">CR</p>
                 </div>
               </div>
 
               {/* Recent inputs mini-list */}
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+              <p className="text-xs font-semibold text-white/40 uppercase tracking-wide mb-2">
                 Input Terakhir
               </p>
               <div className="space-y-1">
                 {recentInputs.length === 0 ? (
-                  <p className="text-xs text-gray-400 py-3 text-center">
+                  <p className="text-xs text-white/40 py-3 text-center">
                     Belum ada data input.
                   </p>
                 ) : (
@@ -443,22 +443,22 @@ export default function CSDashboard() {
                         key={item.id}
                         className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0"
                       >
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-white/50">
                           {fmtDate(item.input_date)}
                         </span>
                         <div className="flex items-center gap-3">
-                          <span className="text-xs text-gray-700">
+                          <span className="text-xs text-cream">
                             <span className="font-medium">
                               {item.lead_masuk}
                             </span>{" "}
                             lead
                           </span>
-                          <span className="text-xs text-gray-700">
+                          <span className="text-xs text-cream">
                             <span className="font-medium">{item.closing}</span>{" "}
                             closing
                           </span>
                           <span
-                            className={`text-xs font-bold w-12 text-right ${cr >= 30 ? "text-green-600" : cr >= 20 ? "text-yellow-600" : "text-red-500"}`}
+                            className={`text-xs font-bold w-12 text-right ${cr >= 30 ? "text-emerald-300" : cr >= 20 ? "text-yellow-600" : "text-red-500"}`}
                           >
                             {cr.toFixed(1)}%
                           </span>
@@ -471,19 +471,19 @@ export default function CSDashboard() {
             </div>
 
             {/* Recent orders */}
-            <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="bg-cocoa rounded-xl shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-sm font-bold text-gray-700">
+                  <h3 className="text-sm font-bold text-cream">
                     Order Terbaru
                   </h3>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-white/40 mt-0.5">
                     {bulanIni.length} order dibuat bulan ini
                   </p>
                 </div>
                 <button
                   onClick={() => router.push(CS_ROUTES.INPUT_ORDER)}
-                  className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold"
+                  className="text-xs text-gold hover:text-gold-bright font-semibold"
                 >
                   Lihat semua →
                 </button>
@@ -492,7 +492,7 @@ export default function CSDashboard() {
               <div className="space-y-2">
                 {recentOrders.length === 0 ? (
                   <div className="py-8 text-center">
-                    <p className="text-sm text-gray-400 mb-3">
+                    <p className="text-sm text-white/40 mb-3">
                       Belum ada order dibuat.
                     </p>
                     <Button
@@ -509,12 +509,12 @@ export default function CSDashboard() {
                       pending: {
                         label: "Menunggu",
                         dot: "bg-amber-400",
-                        badge: "bg-amber-100 text-amber-700",
+                        badge: "bg-amber-500/10 text-amber-300",
                       },
                       submitted: {
                         label: "Perlu Review",
-                        dot: "bg-orange-500",
-                        badge: "bg-orange-100 text-orange-700",
+                        dot: "bg-orange-500/100",
+                        badge: "bg-orange-500/10 text-orange-300",
                       },
                       reviewed: {
                         label: "Direview",
@@ -523,32 +523,32 @@ export default function CSDashboard() {
                       },
                       converted: {
                         label: "Dikonversi",
-                        dot: "bg-green-500",
-                        badge: "bg-green-100 text-green-700",
+                        dot: "bg-emerald-500/100",
+                        badge: "bg-emerald-500/10 text-emerald-300",
                       },
                     };
                     const st = statusMap[order.form_status];
                     return (
                       <div
                         key={order.id}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-[#26211c] transition-colors cursor-pointer border border-transparent hover:border-gray-200"
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-night transition-colors cursor-pointer border border-transparent hover:border-gold/15"
                         onClick={() => router.push(CS_ROUTES.INPUT_ORDER)}
                       >
                         <div
                           className={`w-2 h-2 rounded-full flex-shrink-0 ${st.dot}`}
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-800 truncate">
+                          <p className="text-sm font-semibold text-cream truncate">
                             {order.customer_name}
                           </p>
-                          <p className="text-xs text-gray-400 font-mono">
+                          <p className="text-xs text-white/40 font-mono">
                             {order.order_number}
                             {order.transfer_ke_bank && (
                               <span
                                 className={`ml-1.5 inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium ${
                                   paymentCategory(order.transfer_ke_bank) === "ke_pt"
                                     ? "bg-blue-100 text-blue-700"
-                                    : "bg-green-100 text-green-700"
+                                    : "bg-emerald-500/10 text-emerald-300"
                                 }`}
                               >
                                 {paymentCategory(order.transfer_ke_bank) === "ke_pt"
@@ -564,7 +564,7 @@ export default function CSDashboard() {
                           >
                             {st.label}
                           </span>
-                          <p className="text-xs text-gray-400 mt-0.5">
+                          <p className="text-xs text-white/40 mt-0.5">
                             {fmtDate(order.tgl_chat)}
                           </p>
                         </div>

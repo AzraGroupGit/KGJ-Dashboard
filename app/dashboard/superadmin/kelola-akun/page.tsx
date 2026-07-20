@@ -611,8 +611,8 @@ export default function KelolaAkunPage() {
             {/* Page header */}
             <div className="flex justify-between items-center mb-8">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Kelola Akun & Data Cabang</h2>
-                <p className="text-gray-600">Buat, edit, dan kelola akses pengguna serta data cabang</p>
+                <h2 className="text-2xl font-bold text-cream mb-2">Kelola Akun & Data Cabang</h2>
+                <p className="text-white/70">Buat, edit, dan kelola akses pengguna serta data cabang</p>
               </div>
               <Button
                 variant="primary"
@@ -631,7 +631,7 @@ export default function KelolaAkunPage() {
             )}
 
             {/* Tabs */}
-            <div className="border-b border-gray-200 mb-8">
+            <div className="border-b border-gold/15 mb-8">
               <nav className="flex gap-6 overflow-x-auto">
                 {([
                   { key: "all" as const, label: "Semua User", icon: Users },
@@ -643,7 +643,7 @@ export default function KelolaAkunPage() {
                   <button
                     key={key}
                     onClick={() => setActiveTab(key)}
-                    className={`flex items-center gap-1.5 pb-4 px-1 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === key ? "text-indigo-600 border-b-2 border-indigo-600" : "text-gray-500 hover:text-gray-700"}`}
+                    className={`flex items-center gap-1.5 pb-4 px-1 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === key ? "text-gold border-b-2 border-gold" : "text-white/50 hover:text-cream"}`}
                   >
                     <Icon className="w-4 h-4" />
                     {label}
@@ -661,26 +661,26 @@ export default function KelolaAkunPage() {
                     {[
                       { label: "Total", value: stats.total, color: "border-indigo-400", text: "text-indigo-700" },
                       { label: "BMS", value: stats.bms, color: "border-purple-400", text: "text-purple-700" },
-                      { label: "Manajemen", value: stats.management, color: "border-orange-400", text: "text-orange-700" },
+                      { label: "Manajemen", value: stats.management, color: "border-orange-400", text: "text-orange-300" },
                       { label: "Operasional", value: stats.operational, color: "border-blue-400", text: "text-blue-700" },
-                      { label: "Produksi", value: stats.production, color: "border-amber-400", text: "text-amber-700" },
-                      { label: "Aktif", value: stats.active, color: "border-green-400", text: "text-green-700" },
+                      { label: "Produksi", value: stats.production, color: "border-amber-400", text: "text-amber-300" },
+                      { label: "Aktif", value: stats.active, color: "border-green-400", text: "text-emerald-300" },
                     ].map(({ label, value, color, text }) => (
-                      <div key={label} className={`bg-white rounded-xl shadow-sm p-4 border-t-2 ${color}`}>
-                        <p className="text-xs text-gray-500">{label}</p>
+                      <div key={label} className={`bg-cocoa rounded-xl shadow-sm p-4 border-t-2 ${color}`}>
+                        <p className="text-xs text-white/50">{label}</p>
                         <p className={`text-xl font-bold ${text}`}>{value}</p>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="flex gap-4 mb-6">
-                    <div className="bg-white rounded-xl shadow-sm p-4 border-t-2 border-indigo-400 flex-1">
-                      <p className="text-xs text-gray-500">Total</p>
+                    <div className="bg-cocoa rounded-xl shadow-sm p-4 border-t-2 border-gold flex-1">
+                      <p className="text-xs text-white/50">Total</p>
                       <p className="text-xl font-bold text-indigo-700">{displayUsers.length}</p>
                     </div>
-                    <div className="bg-white rounded-xl shadow-sm p-4 border-t-2 border-green-400 flex-1">
-                      <p className="text-xs text-gray-500">Aktif</p>
-                      <p className="text-xl font-bold text-green-700">
+                    <div className="bg-cocoa rounded-xl shadow-sm p-4 border-t-2 border-green-400 flex-1">
+                      <p className="text-xs text-white/50">Aktif</p>
+                      <p className="text-xl font-bold text-emerald-300">
                         {displayUsers.filter((u) => u.userType === "bms" ? u.status === "active" : u.is_active).length}
                       </p>
                     </div>
@@ -695,56 +695,56 @@ export default function KelolaAkunPage() {
                         <button
                           key={opt.value}
                           onClick={() => setSegment(opt.value)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${segment === opt.value ? "bg-indigo-600 text-white" : "bg-white text-gray-600 border border-gray-200 hover:border-indigo-300"}`}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${segment === opt.value ? "bg-gold text-night" : "bg-cocoa text-white/70 border border-gold/15 hover:border-gold/40"}`}
                         >
                           {opt.label}
                         </button>
                       ))}
                     </div>
-                    <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-                      <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                    <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer select-none">
+                      <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} className="rounded border-gold/25 bg-carbon accent-gold focus:ring-gold/30" />
                       Tampilkan nonaktif
                     </label>
                   </div>
                 )}
 
                 {/* Table */}
-                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div className="bg-cocoa rounded-xl shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-[#26211c]">
                         <tr>
                           {["Nama / Identitas", "Email / Username", "Role", "Status", "Terakhir Login", "Aksi"].map((h) => (
-                            <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
+                            <th key={h} className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase tracking-wider">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
                         {displayUsers.length === 0 ? (
-                          <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-500 text-sm">Tidak ada data user.</td></tr>
+                          <tr><td colSpan={6} className="px-6 py-10 text-center text-white/50 text-sm">Tidak ada data user.</td></tr>
                         ) : (
                           displayUsers.map((user) => (
                             <tr key={user.id} className="hover:bg-[#26211c]">
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="font-medium text-gray-900">{user.full_name}</div>
-                                <div className="text-xs text-gray-400 font-mono">{user.id.slice(0, 8)}…</div>
+                                <div className="font-medium text-ivory">{user.full_name}</div>
+                                <div className="text-xs text-white/40 font-mono">{user.id.slice(0, 8)}…</div>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                                 {user.userType === "bms" ? (user.email ?? "-") : (
                                   <div>
-                                    <div className="font-medium text-gray-800">{user.username ?? "-"}</div>
-                                    {user.email && !user.email.endsWith("@internal.local") && <div className="text-xs text-gray-400">{user.email}</div>}
+                                    <div className="font-medium text-cream">{user.username ?? "-"}</div>
+                                    {user.email && !user.email.endsWith("@internal.local") && <div className="text-xs text-white/40">{user.email}</div>}
                                   </div>
                                 )}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">{getRoleBadge(user)}</td>
                               <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(user)}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(user.last_login ?? user.last_login_at)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">{formatDate(user.last_login ?? user.last_login_at)}</td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex gap-2">
                                   <button onClick={() => handleOpenEditModal(user)} className="text-indigo-600 hover:text-indigo-900 transition-colors" title="Edit"><Pencil className="w-5 h-5" /></button>
-                                  <button onClick={() => setUserToToggle(user)} className={`${currentUserIsActive(user) ? "text-yellow-600 hover:text-yellow-900" : "text-green-600 hover:text-green-900"} transition-colors`} title={currentUserIsActive(user) ? "Nonaktifkan" : "Aktifkan"}><Power className="w-5 h-5" /></button>
-                                  <button onClick={() => setUserToDelete(user)} className="text-red-600 hover:text-red-900 transition-colors" title="Hapus"><Trash2 className="w-5 h-5" /></button>
+                                  <button onClick={() => setUserToToggle(user)} className={`${currentUserIsActive(user) ? "text-yellow-600 hover:text-yellow-900" : "text-emerald-300 hover:text-green-900"} transition-colors`} title={currentUserIsActive(user) ? "Nonaktifkan" : "Aktifkan"}><Power className="w-5 h-5" /></button>
+                                  <button onClick={() => setUserToDelete(user)} className="text-rose-300 hover:text-red-900 transition-colors" title="Hapus"><Trash2 className="w-5 h-5" /></button>
                                 </div>
                               </td>
                             </tr>
@@ -767,19 +767,19 @@ export default function KelolaAkunPage() {
                     { label: "Total Lead (All Time)", value: branches.reduce((s, b) => s + b.total_leads, 0).toLocaleString("id-ID"), color: "border-purple-500" },
                     { label: "Total Closing (All Time)", value: branches.reduce((s, b) => s + b.total_closing, 0).toLocaleString("id-ID"), color: "border-orange-500" },
                   ].map(({ label, value, color }) => (
-                    <div key={label} className={`bg-white rounded-xl shadow-sm p-6 border-l-4 ${color}`}>
-                      <p className="text-sm text-gray-600 mb-2">{label}</p>
-                      <p className="text-2xl font-bold text-gray-800">{value}</p>
+                    <div key={label} className={`bg-cocoa rounded-xl shadow-sm p-6 border-l-4 ${color}`}>
+                      <p className="text-sm text-white/70 mb-2">{label}</p>
+                      <p className="text-2xl font-bold text-cream">{value}</p>
                     </div>
                   ))}
                 </div>
 
                 {branches.length === 0 ? (
-                  <div className="text-center py-20 text-gray-500 text-sm">Belum ada data cabang.</div>
+                  <div className="text-center py-20 text-white/50 text-sm">Belum ada data cabang.</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {branches.map((branch) => (
-                      <div key={branch.id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                      <div key={branch.id} className="bg-cocoa rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                         <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4">
                           <div className="flex justify-between items-center">
                             <div>
@@ -792,37 +792,37 @@ export default function KelolaAkunPage() {
                         <div className="p-6">
                           <div className="space-y-3">
                             <div className="flex items-start gap-3">
-                              <MapPin className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" />
-                              <div><p className="text-xs text-gray-500">Alamat</p><p className="text-sm text-gray-800">{branch.address}</p></div>
+                              <MapPin className="w-5 h-5 text-white/40 mt-0.5 shrink-0" />
+                              <div><p className="text-xs text-white/50">Alamat</p><p className="text-sm text-cream">{branch.address}</p></div>
                             </div>
                             {branch.phone && (
                               <div className="flex items-center gap-3">
-                                <Phone className="w-5 h-5 text-gray-400 shrink-0" />
-                                <div><p className="text-xs text-gray-500">Telepon</p><p className="text-sm text-gray-800">{branch.phone}</p></div>
+                                <Phone className="w-5 h-5 text-white/40 shrink-0" />
+                                <div><p className="text-xs text-white/50">Telepon</p><p className="text-sm text-cream">{branch.phone}</p></div>
                               </div>
                             )}
                             {branch.pic && (
                               <div className="flex items-center gap-3">
-                                <User className="w-5 h-5 text-gray-400 shrink-0" />
-                                <div><p className="text-xs text-gray-500">PIC</p><p className="text-sm text-gray-800">{branch.pic}</p></div>
+                                <User className="w-5 h-5 text-white/40 shrink-0" />
+                                <div><p className="text-xs text-white/50">PIC</p><p className="text-sm text-cream">{branch.pic}</p></div>
                               </div>
                             )}
                           </div>
-                          <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="mt-4 pt-4 border-t border-gold/15">
                             <div className="flex justify-between text-sm mb-2">
-                              <span className="text-gray-600">Total Lead</span>
-                              <span className="font-semibold text-gray-800">{branch.total_leads.toLocaleString("id-ID")}</span>
+                              <span className="text-white/70">Total Lead</span>
+                              <span className="font-semibold text-cream">{branch.total_leads.toLocaleString("id-ID")}</span>
                             </div>
                             <div className="flex justify-between text-sm mb-4">
-                              <span className="text-gray-600">Total Closing</span>
-                              <span className="font-semibold text-gray-800">{branch.total_closing.toLocaleString("id-ID")}</span>
+                              <span className="text-white/70">Total Closing</span>
+                              <span className="font-semibold text-cream">{branch.total_closing.toLocaleString("id-ID")}</span>
                             </div>
                             <div className="flex gap-2">
                               <Button size="sm" variant="outline" onClick={() => handleOpenBranchModal(branch)} className="flex-1">Edit</Button>
                               <Button size="sm" variant={branch.status === "active" ? "warning" : "success"} onClick={() => setBranchToToggle(branch)} className="flex-1">
                                 {branch.status === "active" ? "Nonaktifkan" : "Aktifkan"}
                               </Button>
-                              <button onClick={() => setBranchToDelete(branch)} className="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors" title="Hapus cabang">
+                              <button onClick={() => setBranchToDelete(branch)} className="p-1.5 rounded-lg text-red-500 hover:text-rose-300 hover:bg-rose-500/100/10 transition-colors" title="Hapus cabang">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>

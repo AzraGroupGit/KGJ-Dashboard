@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/Sidebar";
@@ -173,10 +173,11 @@ export default function StatistikPage() {
   });
 
   const [dismissedError, setDismissedError] = useState<string | null>(null);
-  const [clientUser] = useState<ClientUser | null>(() => {
-    if (typeof window === "undefined") return null;
-    return getClientUser();
-  });
+  const [clientUser, setClientUser] = useState<ClientUser | null>(null);
+
+  useEffect(() => {
+    setClientUser(getClientUser());
+  }, []);
 
   const isDod = comparisonMode === "dod";
 
@@ -459,8 +460,8 @@ export default function StatistikPage() {
 
             {/* Year filter */}
             {comparisonMode !== "dod" && (
-              <div className="flex items-center gap-3 bg-white rounded-xl shadow-sm px-4 py-3">
-                <CalendarDays className="w-4 h-4 text-gray-400" />
+              <div className="flex items-center gap-3 bg-cocoa rounded-xl shadow-sm px-4 py-3">
+                <CalendarDays className="w-4 h-4 text-white/40" />
                 <label className="text-sm text-gray-600 font-medium">
                   Tahun
                 </label>
@@ -482,7 +483,7 @@ export default function StatistikPage() {
           </div>
 
           {/* ── Comparison mode bar ── */}
-          <div className="bg-white rounded-xl shadow-sm px-5 py-4 mb-6">
+          <div className="bg-cocoa rounded-xl shadow-sm px-5 py-4 mb-6">
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm font-medium text-gray-600">
                 Perbandingan:
@@ -501,7 +502,7 @@ export default function StatistikPage() {
                   className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                     comparisonMode === key
                       ? "bg-indigo-600 text-white border-indigo-600"
-                      : "bg-white text-gray-600 border-gray-300 hover:border-indigo-400 hover:text-indigo-600"
+                      : "bg-cocoa text-gray-600 border-gray-300 hover:border-indigo-400 hover:text-indigo-600"
                   }`}
                 >
                   {label}
@@ -509,7 +510,7 @@ export default function StatistikPage() {
               ))}
 
               {comparisonMode !== "none" && compLabel && (
-                <span className="text-xs text-gray-400 ml-auto">
+                <span className="text-xs text-white/40 ml-auto">
                   {compLabel}
                 </span>
               )}
@@ -527,7 +528,7 @@ export default function StatistikPage() {
                     onChange={(e) => setDateA(e.target.value)}
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-white/40">
                     {dateA &&
                       new Date(dateA + "T00:00:00").toLocaleDateString(
                         "id-ID",
@@ -544,7 +545,7 @@ export default function StatistikPage() {
                     onChange={(e) => setDateB(e.target.value)}
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-white/40">
                     {dateB &&
                       new Date(dateB + "T00:00:00").toLocaleDateString(
                         "id-ID",
@@ -554,7 +555,7 @@ export default function StatistikPage() {
                 </div>
                 <div className="flex items-center gap-4 text-xs text-gray-500 ml-2">
                   <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-3 h-0.5 rounded bg-gray-400" />
+                    <span className="inline-block w-3 h-0.5 rounded bg-white/30" />
                     A (pembanding)
                   </span>
                   <span className="flex items-center gap-1.5">
@@ -577,7 +578,7 @@ export default function StatistikPage() {
                       className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
                         selectedMonth === m
                           ? "bg-indigo-600 text-white border-indigo-600"
-                          : "bg-white text-gray-500 border-gray-200 hover:border-indigo-300"
+                          : "bg-cocoa text-gray-500 border-gray-200 hover:border-indigo-300"
                       }`}
                     >
                       {name}
@@ -595,7 +596,7 @@ export default function StatistikPage() {
                   {selectedYear} (sekarang)
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="inline-block w-3 h-0.5 rounded bg-gray-400" />
+                  <span className="inline-block w-3 h-0.5 rounded bg-white/30" />
                   {selectedYear - 1} (pembanding)
                 </span>
               </div>
@@ -664,7 +665,7 @@ export default function StatistikPage() {
                   </div>
 
                   {/* Perbandingan detail table */}
-                  <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+                  <div className="bg-cocoa rounded-xl shadow-sm p-6 mb-8">
                     <h3 className="text-base font-semibold text-gray-800 mb-4">
                       Perbandingan Hari:{" "}
                       <span className="text-gray-500">{dateALabel}</span> vs{" "}
@@ -735,7 +736,7 @@ export default function StatistikPage() {
                                 <td className="py-2.5 pl-4 text-right">
                                   {row.delta !== undefined ? (
                                     <span
-                                      className={`text-xs font-semibold ${row.delta >= 0 ? "text-green-600" : "text-red-500"}`}
+                                      className={`text-xs font-semibold ${row.delta >= 0 ? "text-emerald-300" : "text-rose-300"}`}
                                     >
                                       {row.delta >= 0 ? "+" : ""}
                                       {row.delta.toFixed(1)}%
@@ -750,7 +751,7 @@ export default function StatistikPage() {
                         </table>
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-400">
+                      <p className="text-sm text-white/40">
                         Data tidak tersedia.
                       </p>
                     )}
@@ -758,7 +759,7 @@ export default function StatistikPage() {
 
                   {/* Branch breakdown untuk Tanggal B */}
                   {dailyStatsB.staff.length > 0 && (
-                    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div className="bg-cocoa rounded-xl shadow-sm overflow-hidden">
                       <div className="px-6 py-4 border-b border-gray-100">
                         <h3 className="text-base font-semibold text-gray-800">
                           Performa Cabang - {dateBLabel}
@@ -801,7 +802,7 @@ export default function StatistikPage() {
                                 </td>
                                 <td className="px-6 py-3">
                                   <span
-                                    className={`text-xs font-semibold ${s.cr > 30 ? "text-green-600" : s.cr > 15 ? "text-yellow-600" : "text-red-500"}`}
+                                    className={`text-xs font-semibold ${s.cr > 30 ? "text-emerald-300" : s.cr > 15 ? "text-amber-300" : "text-rose-300"}`}
                                   >
                                     {s.cr.toFixed(1)}%
                                   </span>
@@ -892,7 +893,7 @@ export default function StatistikPage() {
 
               {/* ── MoM comparison summary ── */}
               {comparisonMode === "mom" && momMetrics && momPrevMetrics && (
-                <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+                <div className="bg-cocoa rounded-xl shadow-sm p-6 mb-8">
                   <h3 className="text-base font-semibold text-gray-800 mb-4">
                     Perbandingan Bulan:{" "}
                     <span className="text-indigo-600">
@@ -1008,8 +1009,8 @@ export default function StatistikPage() {
                                         ? row.delta <= 0
                                         : row.delta >= 0
                                     )
-                                      ? "text-green-600"
-                                      : "text-red-500"
+                                      ? "text-emerald-300"
+                                      : "text-rose-300"
                                   }`}
                                 >
                                   {row.delta >= 0 ? "+" : ""}
@@ -1029,7 +1030,7 @@ export default function StatistikPage() {
 
               {/* ── Charts ── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="bg-cocoa rounded-xl shadow-sm p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-base font-semibold text-gray-800">Trend Omzet & Gross Profit</h3>
                     <div className="flex gap-3">
@@ -1092,9 +1093,9 @@ export default function StatistikPage() {
                       )}
                     </LineChart>
                   </ResponsiveContainer>
-                  <p className="mt-3 text-center text-xs text-gray-400">{comparisonMode === "yoy" ? `${selectedYear} vs ${selectedYear - 1}` : `Tahun ${selectedYear}`}</p>
+                  <p className="mt-3 text-center text-xs text-white/40">{comparisonMode === "yoy" ? `${selectedYear} vs ${selectedYear - 1}` : `Tahun ${selectedYear}`}</p>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="bg-cocoa rounded-xl shadow-sm p-6">
                   <h3 className="text-base font-semibold text-gray-800 mb-4">Biaya Marketing per Bulan</h3>
                   <ResponsiveContainer width="100%" height={224}>
                     <BarChart
@@ -1127,12 +1128,12 @@ export default function StatistikPage() {
                       )}
                     </BarChart>
                   </ResponsiveContainer>
-                  <p className="mt-3 text-center text-xs text-gray-400">{comparisonMode === "yoy" ? `${selectedYear} vs ${selectedYear - 1}` : `Tahun ${selectedYear}`}</p>
+                  <p className="mt-3 text-center text-xs text-white/40">{comparisonMode === "yoy" ? `${selectedYear} vs ${selectedYear - 1}` : `Tahun ${selectedYear}`}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="bg-cocoa rounded-xl shadow-sm p-6">
                   <h3 className="text-base font-semibold text-gray-800 mb-4">Closing per Channel</h3>
                   <ResponsiveContainer width="100%" height={224}>
                     <BarChart
@@ -1147,9 +1148,9 @@ export default function StatistikPage() {
                       <Bar dataKey="closing" fill="#8b5cf6" radius={[0, 4, 4, 0]} maxBarSize={20} />
                     </BarChart>
                   </ResponsiveContainer>
-                  <p className="mt-3 text-center text-xs text-gray-400">Tahun {selectedYear}</p>
+                  <p className="mt-3 text-center text-xs text-white/40">Tahun {selectedYear}</p>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="bg-cocoa rounded-xl shadow-sm p-6">
                   <h3 className="text-base font-semibold text-gray-800 mb-4">CPLS per Channel</h3>
                   <ResponsiveContainer width="100%" height={224}>
                     <BarChart
@@ -1170,7 +1171,7 @@ export default function StatistikPage() {
                       <Bar dataKey="cpls" fill="#06b6d4" radius={[0, 4, 4, 0]} maxBarSize={20} />
                     </BarChart>
                   </ResponsiveContainer>
-                  <p className="mt-3 text-center text-xs text-gray-400">Tahun {selectedYear}</p>
+                  <p className="mt-3 text-center text-xs text-white/40">Tahun {selectedYear}</p>
                 </div>
               </div>
 

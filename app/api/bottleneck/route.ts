@@ -162,8 +162,11 @@ export async function GET(request?: NextRequest) {
         (o) => o.status !== "waiting_approval",
       );
 
-      const ordersWithHours = inProgressOrders.map((o) => {
-        const latest = latestByOrder.get(o.id);
+      const ordersWithHours = stageOrders.map((o) => {
+        // Approval/waiting orders: arrival = when tracking pointer was set (updated_at)
+        // In-progress orders: arrival = when last worker submitted (stage_history)
+        const useTrackingArrival = o.status === "waiting_approval";
+        const latest = useTrackingArrival ? null : latestByOrder.get(o.id);
         const arrivedAt = latest?.finished_at || o.updated_at;
         const hours = (now.getTime() - new Date(arrivedAt).getTime()) / 3_600_000;
         const approval = approvalByOrder.get(o.id);

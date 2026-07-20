@@ -72,7 +72,7 @@ export default function AnalisisChannelPage() {
   const getPerformanceBadge = (roi: number) => {
     if (roi > 300) {
       return (
-        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-emerald-500/10 text-green-800">
           Excellent
         </span>
       );
@@ -90,13 +90,13 @@ export default function AnalisisChannelPage() {
       );
     } else if (roi > 0) {
       return (
-        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-500/10 text-orange-800">
           Low
         </span>
       );
     }
     return (
-      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-rose-500/10 text-red-800">
         Poor
       </span>
     );
@@ -249,24 +249,24 @@ export default function AnalisisChannelPage() {
 
           {/* Header */}
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            <h2 className="text-2xl font-bold text-cream mb-2">
               Analisis Channel Marketing
             </h2>
-            <p className="text-gray-600">
+            <p className="text-white/70">
               Analisis performa dan perbandingan antar channel marketing
             </p>
           </div>
 
           {/* Filter Section */}
-          <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+          <div className="bg-cocoa rounded-xl shadow-sm p-4 mb-6">
             <div className="flex flex-wrap gap-4 items-center justify-between">
               <div className="flex flex-wrap gap-4 items-center">
                 <div>
-                  <label className="text-sm text-gray-600 mr-2">Periode:</label>
+                  <label className="text-sm text-white/70 mr-2">Periode:</label>
                   <select
                     value={selectedPeriod}
                     onChange={(e) => setSelectedPeriod(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gold/25 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="monthly">Bulan Ini</option>
                     <option value="quarterly">Triwulan Ini</option>
@@ -274,11 +274,11 @@ export default function AnalisisChannelPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600 mr-2">Channel:</label>
+                  <label className="text-sm text-white/70 mr-2">Channel:</label>
                   <select
                     value={selectedChannel}
                     onChange={(e) => setSelectedChannel(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[180px]"
+                    className="px-3 py-2 border border-gold/25 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[180px]"
                     disabled={isLoadingChannels}
                   >
                     <option value="all">Semua Channel</option>
@@ -305,7 +305,7 @@ export default function AnalisisChannelPage() {
 
                 {/* Info Channel Terpilih */}
                 {selectedChannel !== "all" && selectedChannelStats && (
-                  <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-lg">
+                  <div className="flex items-center gap-2 px-3 py-1 bg-sky-500/10 rounded-lg">
                     <span className="text-sm text-blue-700">
                       ROI: {selectedChannelStats.roi.toFixed(0)}%
                     </span>
@@ -328,15 +328,15 @@ export default function AnalisisChannelPage() {
             </div>
 
             {/* Channel Tabs untuk quick switch */}
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-xs text-gray-500 mb-2">Quick Filter:</p>
+            <div className="mt-4 pt-4 border-t border-gold/15">
+              <p className="text-xs text-white/50 mb-2">Quick Filter:</p>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelectedChannel("all")}
                   className={`px-3 py-1.5 text-sm rounded-full transition-all ${
                     selectedChannel === "all"
                       ? "bg-blue-600 text-white shadow-sm"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      : "bg-white/10 text-white/70 hover:bg-mocha"
                   }`}
                 >
                   Semua
@@ -354,8 +354,8 @@ export default function AnalisisChannelPage() {
                         selectedChannel === channelName
                           ? "bg-blue-600 text-white shadow-sm"
                           : hasData
-                            ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                            : "bg-[#26211c] text-gray-400"
+                            ? "bg-white/10 text-white/70 hover:bg-mocha"
+                            : "bg-[#26211c] text-white/40"
                       }`}
                     >
                       {channelName}
@@ -364,7 +364,7 @@ export default function AnalisisChannelPage() {
                   );
                 })}
                 {allChannels.length > 6 && (
-                  <span className="px-3 py-1.5 text-sm text-gray-400">
+                  <span className="px-3 py-1.5 text-sm text-white/40">
                     +{allChannels.length - 6} lainnya
                   </span>
                 )}
@@ -448,12 +448,12 @@ export default function AnalisisChannelPage() {
               )}
 
           {/* Channel Performance Table */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-8">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800">
+          <div className="bg-cocoa rounded-xl shadow-sm overflow-hidden mb-8">
+            <div className="px-6 py-4 border-b border-gold/15">
+              <h3 className="text-lg font-semibold text-cream">
                 Performa Channel Marketing
               </h3>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-white/50 mt-1">
                 {filteredAnalysis.length} channel{" "}
                 {selectedChannel !== "all" ? "dipilih" : "aktif"}
               </p>
@@ -462,30 +462,30 @@ export default function AnalisisChannelPage() {
               <table className="w-full">
                 <thead className="bg-[#26211c]">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Channel
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Biaya Mkt
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Lead Serius
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Closing
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       CR Serius
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       CAC
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       ROI
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-white/5">
                   {filteredAnalysis.map((item) => {
                     const channelInfo = channels.find(
                       (c) => c.name === item.channel,
@@ -495,39 +495,39 @@ export default function AnalisisChannelPage() {
                       <tr key={item.channel} className="hover:bg-[#26211c]">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-900">
+                            <span className="font-medium text-ivory">
                               {item.channel}
                             </span>
                             {channelInfo && !channelInfo.is_active && (
-                              <span className="px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 rounded">
+                              <span className="px-1.5 py-0.5 text-[10px] font-medium bg-white/10 text-white/50 rounded">
                                 Nonaktif
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-white/70">
                           {formatRupiah(item.biayaMarketing)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-white/70">
                           {item.leadSerius.toLocaleString("id-ID")}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-white/70">
                           {item.closing.toLocaleString("id-ID")}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`font-semibold ${
                               item.crSerius > 35
-                                ? "text-green-600"
+                                ? "text-emerald-300"
                                 : item.crSerius > 25
                                   ? "text-yellow-600"
-                                  : "text-red-600"
+                                  : "text-rose-300"
                             }`}
                           >
                             {item.crSerius.toFixed(1)}%
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-white/70">
                           {formatRupiah(item.cac)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -535,10 +535,10 @@ export default function AnalisisChannelPage() {
                             <span
                               className={`font-semibold ${
                                 item.roi > 200
-                                  ? "text-green-600"
+                                  ? "text-emerald-300"
                                   : item.roi > 100
                                     ? "text-yellow-600"
-                                    : "text-red-600"
+                                    : "text-rose-300"
                               }`}
                             >
                               {item.roi.toFixed(0)}%
@@ -553,7 +553,7 @@ export default function AnalisisChannelPage() {
                     <tr>
                       <td
                         colSpan={7}
-                        className="px-6 py-8 text-center text-gray-500"
+                        className="px-6 py-8 text-center text-white/50"
                       >
                         Belum ada data channel untuk periode yang dipilih
                       </td>
@@ -566,13 +566,13 @@ export default function AnalisisChannelPage() {
 
           {/* Recommendations Section */}
           {recommendations.length > 0 && (
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6">
+            <div className="bg-gradient-to-r from-purple-500/10 to-purple-500/10 rounded-xl p-6">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Lightbulb className="w-6 h-6 text-indigo-600" />
+                <div className="w-10 h-10 bg-purple-500/10 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Lightbulb className="w-6 h-6 text-purple-300" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-3">
+                  <h4 className="text-lg font-semibold text-cream mb-3">
                     Rekomendasi Strategi Marketing
                   </h4>
                   <div className="space-y-3">
@@ -585,9 +585,9 @@ export default function AnalisisChannelPage() {
                       .map((rec, idx) => (
                         <div
                           key={idx}
-                          className="border-b border-indigo-100 last:border-0 pb-2 last:pb-0"
+                          className="border-b border-purple-400/20 last:border-0 pb-2 last:pb-0"
                         >
-                          <p className="text-gray-800">
+                          <p className="text-cream">
                             <span className="font-semibold">
                               {rec.type === "increase" && "📈 "}
                               {rec.type === "decrease" && "📉 "}
@@ -597,7 +597,7 @@ export default function AnalisisChannelPage() {
                             </span>{" "}
                             {rec.reason}
                           </p>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-white/70 mt-1">
                             → {rec.action}
                           </p>
                         </div>
@@ -610,12 +610,12 @@ export default function AnalisisChannelPage() {
 
           {/* Info Box when no data */}
           {channelMetrics.length === 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+            <div className="bg-sky-500/10 border border-sky-400/20 rounded-lg p-6 text-center">
               <Info className="w-12 h-12 text-blue-400 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              <h3 className="text-lg font-semibold text-cream mb-2">
                 Belum Ada Data
               </h3>
-              <p className="text-gray-600">
+              <p className="text-white/70">
                 Silakan input data marketing terlebih dahulu melalui halaman{" "}
                 <a
                   href="/dashboard/marketing/input"
