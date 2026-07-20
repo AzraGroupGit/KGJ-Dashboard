@@ -57,7 +57,7 @@ export default function CycleTimeTab() {
     return (
       <div className="space-y-4 animate-pulse">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-12 rounded-lg bg-slate-100" />
+          <div key={i} className="h-12 rounded-lg bg-white/10" />
         ))}
       </div>
     );
@@ -66,7 +66,7 @@ export default function CycleTimeTab() {
   if (error) {
     return (
       <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-8 text-center">
-        <AlertTriangle className="mx-auto mb-3 h-6 w-6 text-rose-600" />
+        <AlertTriangle className="mx-auto mb-3 h-6 w-6 text-rose-300" />
         <p className="text-sm text-rose-700">{error instanceof Error ? error.message : "Gagal memuat data"}</p>
       </div>
     );
@@ -74,8 +74,8 @@ export default function CycleTimeTab() {
 
   if (!data || data.cycleData.length === 0) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-[#2a2522] p-12 text-center">
-        <Clock className="mx-auto mb-3 h-8 w-8 text-slate-300" />
+      <div className="rounded-lg border border-gold/15 bg-[#2a2522] p-12 text-center">
+        <Clock className="mx-auto mb-3 h-8 w-8 text-white/40" />
         <p className="text-sm text-white/40">Belum ada data cycle time</p>
       </div>
     );
@@ -91,7 +91,7 @@ export default function CycleTimeTab() {
     <div className="space-y-6">
       {/* Summary strip */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div className="rounded-lg border border-slate-200 bg-[#2a2522] p-4">
+        <div className="rounded-lg border border-gold/15 bg-[#2a2522] p-4">
           <p className="text-[10px] uppercase tracking-wide text-white/40">
             Tahap dengan Data
           </p>
@@ -99,7 +99,7 @@ export default function CycleTimeTab() {
             {finishedStages.length}
           </p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-[#2a2522] p-4">
+        <div className="rounded-lg border border-gold/15 bg-[#2a2522] p-4">
           <p className="text-[10px] uppercase tracking-wide text-white/40">
             Total Sampel
           </p>
@@ -107,7 +107,7 @@ export default function CycleTimeTab() {
             {finishedStages.reduce((sum, s) => sum + s.count, 0)}
           </p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-[#2a2522] p-4">
+        <div className="rounded-lg border border-gold/15 bg-[#2a2522] p-4">
           <p className="text-[10px] uppercase tracking-wide text-white/40">
             Rata-rata Total
           </p>
@@ -115,7 +115,7 @@ export default function CycleTimeTab() {
             {fmtHours(totalAvg)}
           </p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-[#2a2522] p-4">
+        <div className="rounded-lg border border-gold/15 bg-[#2a2522] p-4">
           <p className="text-[10px] uppercase tracking-wide text-white/40">
             Tahap Terlama
           </p>
@@ -133,8 +133,8 @@ export default function CycleTimeTab() {
       </div>
 
       {/* Cycle Time table */}
-      <section className="rounded-lg border border-slate-200 bg-[#2a2522] overflow-hidden">
-        <header className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
+      <section className="rounded-lg border border-gold/15 bg-[#2a2522] overflow-hidden">
+        <header className="flex items-center gap-2 border-b border-gold/10 px-5 py-3.5">
           <BarChart3 className="h-4 w-4 text-white/40" />
           <h2 className="text-sm font-semibold text-[#f0f4ff]">
             Cycle Time per Tahap
@@ -146,7 +146,7 @@ export default function CycleTimeTab() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-100 text-xs">
+              <tr className="border-b border-gold/10 text-xs">
                 <th className="px-5 py-2.5 text-left font-medium text-white/40">
                   Tahap
                 </th>
@@ -177,15 +177,15 @@ export default function CycleTimeTab() {
                 return (
                   <tr
                     key={s.stage}
-                    className="border-b border-slate-50 last:border-0 hover:bg-[#1C1917] transition-colors"
+                    className="border-b border-white/5 last:border-0 hover:bg-[#1C1917] transition-colors"
                   >
                     <td className="px-5 py-2.5 text-xs font-medium text-[#f0f4ff]">
                       <div className="flex items-center gap-2">
                         <span
                           className={`w-1.5 h-1.5 rounded-full ${
                             s.count > 0
-                              ? "bg-slate-400"
-                              : "bg-slate-200"
+                              ? "bg-amber-500"
+                              : "bg-mocha"
                           }`}
                         />
                         {s.label}
@@ -200,15 +200,15 @@ export default function CycleTimeTab() {
                           <span className="text-xs font-semibold text-[#f0f4ff]">
                             {fmtDurationHours(s.avg)}
                           </span>
-                          <div className="w-12 h-1.5 rounded-full bg-slate-100 overflow-hidden hidden sm:block">
+                          <div className="w-12 h-1.5 rounded-full bg-white/10 overflow-hidden hidden sm:block">
                             <div
-                              className="h-full rounded-full bg-slate-400"
+                              className="h-full rounded-full bg-amber-500"
                               style={{ width: `${Math.min(barWidth, 100)}%` }}
                             />
                           </div>
                         </div>
                       ) : (
-                        <span className="text-xs text-slate-300">—</span>
+                        <span className="text-xs text-white/40">—</span>
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-right text-xs text-white/40">
@@ -233,8 +233,8 @@ export default function CycleTimeTab() {
 
       {/* Monthly Trend */}
       {data.monthlyTrend.length > 0 && (
-        <section className="rounded-lg border border-slate-200 bg-[#2a2522] overflow-hidden">
-          <header className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
+        <section className="rounded-lg border border-gold/15 bg-[#2a2522] overflow-hidden">
+          <header className="flex items-center gap-2 border-b border-gold/10 px-5 py-3.5">
             <TrendingUp className="h-4 w-4 text-white/40" />
             <h2 className="text-sm font-semibold text-[#f0f4ff]">
               Tren Bulanan
@@ -246,7 +246,7 @@ export default function CycleTimeTab() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 text-xs">
+                <tr className="border-b border-gold/10 text-xs">
                   <th className="px-5 py-2.5 text-left font-medium text-white/40">
                     Bulan
                   </th>
@@ -268,7 +268,7 @@ export default function CycleTimeTab() {
                   return (
                     <tr
                       key={m.month}
-                      className="border-b border-slate-50 last:border-0 hover:bg-[#1C1917] transition-colors"
+                      className="border-b border-white/5 last:border-0 hover:bg-[#1C1917] transition-colors"
                     >
                       <td className="px-5 py-2 text-xs font-medium text-[#f0f4ff] whitespace-nowrap">
                         {new Date(m.month + "-01").toLocaleDateString("id-ID", {
@@ -304,7 +304,7 @@ export default function CycleTimeTab() {
                                 )}
                               </span>
                             ) : (
-                              <span className="text-slate-300">—</span>
+                              <span className="text-white/40">—</span>
                             )}
                           </td>
                         );

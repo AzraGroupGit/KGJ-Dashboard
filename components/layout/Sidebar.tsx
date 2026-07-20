@@ -195,7 +195,12 @@ const iconMap: Record<string, React.ReactNode> = {
 
 export default function Sidebar({ role }: { role: string }) {
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar-collapsed") === "true";
+    }
+    return false;
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [actualRole, setActualRole] = useState<string | null>(null);
   const [collapsedMenus, setCollapsedMenus] = useState<CollapseState>({
@@ -204,29 +209,6 @@ export default function Sidebar({ role }: { role: string }) {
   });
 
   const sidebarRef = useRef<HTMLElement>(null);
-  const [buttonLeft, setButtonLeft] = useState<number | null>(null);
-  const [headerBottom, setHeaderBottom] = useState<number | null>(null);
-
-  useEffect(() => {
-    const sidebar = sidebarRef.current;
-    if (!sidebar) return;
-    const observer = new ResizeObserver(() => {
-      const rect = sidebar.getBoundingClientRect();
-      setButtonLeft(rect.right - 11);
-    });
-    observer.observe(sidebar);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const header = document.getElementById("dashboard-header");
-    if (!header) return;
-    const observer = new ResizeObserver(() => {
-      setHeaderBottom(header.getBoundingClientRect().bottom);
-    });
-    observer.observe(header);
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     startTransition(() => {
@@ -412,7 +394,7 @@ export default function Sidebar({ role }: { role: string }) {
       <aside
         ref={sidebarRef}
         className={`
-          fixed top-0 left-0 z-50 h-full bg-[#1C1917] flex flex-col overflow-hidden
+          fixed top-0 left-0 z-50 h-full bg-[#1C1917] flex flex-col
           transform transition-transform duration-300 ease-in-out
           md:sticky md:top-0 md:translate-x-0 md:flex-shrink-0
           ${isCollapsed ? "md:w-20" : "md:w-64"}
@@ -421,6 +403,22 @@ export default function Sidebar({ role }: { role: string }) {
           border-r border-[#c9a227]/10 shadow-xl md:shadow-none
         `}
       >
+        {/* Collapse Toggle — pure CSS positioning, no JS measurement */}
+        <button
+          onClick={() => {
+            const next = !isCollapsed;
+            setIsCollapsed(next);
+            localStorage.setItem("sidebar-collapsed", String(next));
+          }}
+          className="hidden md:flex absolute z-50 w-8 h-8 bg-[#1C1917] border border-gold rounded-full items-center justify-center shadow-md hover:shadow-lg transition-all duration-200"
+          style={{ right: "0", transform: "translateX(50%)", top: "58px" }}
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <ChevronLeft
+            className={`w-5 h-5 text-gold-bright transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`}
+          />
+        </button>
+
         {/* Mobile close */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-[#c9a227]/10 md:hidden">
           <span className="text-sm font-bold text-[#f0f4ff]">Menu</span>
@@ -440,7 +438,7 @@ export default function Sidebar({ role }: { role: string }) {
         >
           <div className="flex items-center gap-3 overflow-hidden">
             <div
-              className={`${isCollapsed ? "w-10 h-10" : "w-10 h-10"} flex-shrink-0 rounded-xl overflow-hidden`}
+              className={`${isCollapsed ? "w-12 h-12" : "w-12 h-12"} flex-shrink-0 rounded-xl overflow-hidden`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -454,9 +452,6 @@ export default function Sidebar({ role }: { role: string }) {
                 <h2 className="text-base font-bold bg-gradient-to-r from-[#e8e2d4] to-[#c9a227] bg-clip-text text-transparent whitespace-nowrap">
                   KGJ Dashboard
                 </h2>
-                <p className="text-sm font-semibold text-[#e8e2d4] whitespace-nowrap">
-                  ERP System
-                </p>
               </div>
             )}
           </div>
@@ -488,21 +483,6 @@ export default function Sidebar({ role }: { role: string }) {
           </div>
         </div>
       </aside>
-
-      {/* Collapse toggle — outside aside to avoid sticky stacking context */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="hidden md:flex fixed z-50 w-8 h-8 bg-[#1C1917] border border-[#c9a227]/10 rounded-full items-center justify-center shadow-md hover:shadow-lg transition-all duration-200"
-        style={{
-          left: buttonLeft ?? (isCollapsed ? 67 : 243),
-          top: headerBottom != null ? headerBottom - 14 : 84,
-        }}
-        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        <ChevronLeft
-          className={`w-5 h-5 text-[#e8e2d4] transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`}
-        />
-      </button>
     </>
   );
 }

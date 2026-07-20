@@ -76,7 +76,7 @@ export const BMS_ROLES = ["superadmin", "customer_service", "marketing"] as cons
 export const ROLE_GROUP_LABELS: Record<string, { label: string; bg: string }> = {
   management: { label: "Manajemen", bg: "bg-purple-100 text-purple-800" },
   operational: { label: "Operasional", bg: "bg-blue-100 text-blue-800" },
-  production: { label: "Produksi", bg: "bg-amber-100 text-amber-800" },
+  production: { label: "Produksi", bg: "bg-amber-500/10 text-amber-800" },
 };
 
 export const SEGMENT_OPTIONS: { value: UserSegment; label: string }[] = [
@@ -218,10 +218,10 @@ export const getRoleBadge = (user: UnifiedUser) => {
     const map: Record<string, { bg: string; label: string }> = {
       superadmin: { bg: "bg-purple-100 text-purple-800", label: "Super Admin" },
       customer_service: { bg: "bg-blue-100 text-blue-800", label: "Customer Service" },
-      marketing: { bg: "bg-green-100 text-green-800", label: "Marketing" },
+      marketing: { bg: "bg-emerald-500/10 text-green-800", label: "Marketing" },
     };
     const cfg = map[user.role ?? ""] ?? {
-      bg: "bg-gray-100 text-gray-800",
+      bg: "bg-white/10 text-cream",
       label: user.role ?? "-",
     };
     return (
@@ -229,34 +229,34 @@ export const getRoleBadge = (user: UnifiedUser) => {
         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${cfg.bg}`}>
           {cfg.label}
         </span>
-        <span className="text-[10px] text-gray-400">BMS</span>
+        <span className="text-[10px] text-white/40">BMS</span>
       </div>
     );
   }
   const role = user.roles;
   if (!role)
     return (
-      <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-500">
+      <span className="px-2 py-1 text-xs rounded-full bg-white/10 text-white/50">
         -
       </span>
     );
   if (role.name === "operational_supervisor") {
     return (
       <div className="flex flex-col gap-0.5">
-        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-500/10 text-orange-800">
           Spv. Operasional
         </span>
-        <span className="text-[10px] text-gray-400">Manajemen</span>
+        <span className="text-[10px] text-white/40">Manajemen</span>
       </div>
     );
   }
   if (role.name === "production_supervisor") {
     return (
       <div className="flex flex-col gap-0.5">
-        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-rose-100 text-rose-800">
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-rose-500/10 text-rose-800">
           Spv. Produksi
         </span>
-        <span className="text-[10px] text-gray-400">Manajemen</span>
+        <span className="text-[10px] text-white/40">Manajemen</span>
       </div>
     );
   }
@@ -277,23 +277,23 @@ export const getRoleBadge = (user: UnifiedUser) => {
   if (role.role_group === "management" && MGMT_LABELS[role.name]) {
     return (
       <div className="flex flex-col gap-0.5">
-        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-violet-100 text-violet-800">
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-violet-500/10 text-violet-800">
           {MGMT_LABELS[role.name]}
         </span>
-        <span className="text-[10px] text-gray-400">Management</span>
+        <span className="text-[10px] text-white/40">Management</span>
       </div>
     );
   }
   const cfg = ROLE_GROUP_LABELS[role.role_group] ?? {
     label: role.name,
-    bg: "bg-gray-100 text-gray-800",
+    bg: "bg-white/10 text-cream",
   };
   return (
     <div className="flex flex-col gap-0.5">
       <span className={`px-2 py-1 text-xs font-semibold rounded-full ${cfg.bg}`}>
         {role.name}
       </span>
-      <span className="text-[10px] text-gray-400">{cfg.label}</span>
+      <span className="text-[10px] text-white/40">{cfg.label}</span>
     </div>
   );
 };
@@ -302,11 +302,11 @@ export const getStatusBadge = (user: UnifiedUser) => {
   const isActive =
     user.userType === "bms" ? user.status === "active" : user.is_active;
   return isActive ? (
-    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-emerald-500/10 text-green-800">
       Aktif
     </span>
   ) : (
-    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-rose-500/10 text-red-800">
       Nonaktif
     </span>
   );
@@ -314,11 +314,11 @@ export const getStatusBadge = (user: UnifiedUser) => {
 
 export const getBranchStatusBadge = (status: "active" | "inactive") =>
   status === "active" ? (
-    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-emerald-500/10 text-green-800">
       Aktif
     </span>
   ) : (
-    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-rose-500/10 text-red-800">
       Nonaktif
     </span>
   );

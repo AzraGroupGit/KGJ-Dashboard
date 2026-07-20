@@ -169,6 +169,8 @@ async function fetchUserRoleName(
 
 function resolveDashboardPath(roleInfo: { name: string; roleGroup: string } | null): string | null {
   if (!roleInfo) return null;
+  // superadmin is in the management roleGroup but has its own dashboard
+  if (roleInfo.name === "superadmin") return getDashboardPath("superadmin");
   if (roleInfo.roleGroup === "management") return "/dashboard/management";
   return getDashboardPath(roleInfo.name);
 }

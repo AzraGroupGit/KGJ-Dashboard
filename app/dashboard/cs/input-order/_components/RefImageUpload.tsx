@@ -26,11 +26,11 @@ export function RefImageUpload({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+      <p className="text-xs font-semibold text-white/70 uppercase tracking-wide">
         {label}
       </p>
       <div
-        className="relative border-2 border-dashed border-gray-200 rounded-xl overflow-hidden bg-gray-50 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+        className="relative border-2 border-dashed border-gold/15 rounded-xl overflow-hidden bg-carbon cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
         style={{ aspectRatio: "4/3" }}
         onClick={() => !isUploading && inputRef.current?.click()}
       >
@@ -42,10 +42,10 @@ export function RefImageUpload({
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-gray-400">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-white/40">
             <Image aria-hidden="true" className="w-8 h-8" />
             <span className="text-xs">Klik untuk upload foto</span>
-            <span className="text-[10px] text-gray-300">
+            <span className="text-[10px] text-white/30">
               JPG / PNG / WebP · maks 5 MB
             </span>
           </div>
@@ -53,7 +53,7 @@ export function RefImageUpload({
 
         {/* Overlay saat uploading */}
         {isUploading && (
-          <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+          <div className="absolute inset-0 bg-cocoa/80 flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
           </div>
         )}

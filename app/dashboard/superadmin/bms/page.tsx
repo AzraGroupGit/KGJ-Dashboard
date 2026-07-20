@@ -13,7 +13,7 @@ import {
   Area, AreaChart, Bar, BarChart, Cell, Pie, PieChart, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { ArrowUpRight, ArrowDownRight, AlertTriangle, BarChart3, ExternalLink, Sparkles, Star, TrendingUp, Zap } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, AlertTriangle, BarChart3, Sparkles, Star, TrendingUp, Zap } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,7 +75,7 @@ function useAnimatedValue(target: number, duration = 800) {
 
 // ─── Color Tokens ──────────────────────────────────────────────────────────────
 
-const P = { purple: "#7c3aed", purpleLight: "#f5f3ff", purpleMuted: "#c4b5fd", green: "#059669", greenLight: "#ecfdf5", greenMuted: "#a7f3d0", gray: "#6b7280", grayLight: "#f9fafb", grayBorder: "#e5e7eb", orange: "#ea580c", orangeLight: "#fff7ed", blue: "#3b82f6", blueLight: "#eff6ff", red: "#dc2626", redLight: "#fef2f2", ink: "#111827", card: "#fff" };
+const P = { purple: "#7c3aed", purpleLight: "#7c3aed22", purpleMuted: "#a78bfa", green: "#34d399", greenLight: "#05966922", greenMuted: "#6ee7b7", gray: "#a8a29e", grayLight: "#1C1917", grayBorder: "#c9a22733", orange: "#f97316", orangeLight: "#f9731622", blue: "#60a5fa", blueLight: "#60a5fa22", red: "#f87171", redLight: "#f8717122", ink: "#F5EFE3", card: "#2A2522" };
 
 // ─── 1. Hero Banner ────────────────────────────────────────────────────────────
 
@@ -90,11 +90,11 @@ function HeroBanner({ rate, done, total, delta, href }: { rate: number; done: nu
           <div className="flex items-center gap-2 mb-1"><span className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-xs" style={{ background: "rgba(255,255,255,0.2)" }}><Sparkles size={14} /></span><p className="text-sm font-semibold text-white/80">Completion Rate</p></div>
           <p className="text-[56px] font-bold leading-none text-white">{animated}%</p>
           <p className="text-sm mt-1 text-white/60">{done} dari {total} items selesai</p>
-          <div className="h-2 rounded-full mt-3 overflow-hidden w-full max-w-[300px]" style={{ background: "rgba(255,255,255,0.2)" }}><div className="h-full rounded-full bg-white/60 transition-all duration-700" style={{ width: `${Math.min(rate, 100)}%` }} /></div>
+          <div className="h-2 rounded-full mt-3 overflow-hidden w-full max-w-[300px]" style={{ background: "rgba(255,255,255,0.2)" }}><div className="h-full rounded-full bg-white/30 transition-all duration-700" style={{ width: `${Math.min(rate, 100)}%` }} /></div>
         </div>
         <div className="flex flex-col items-end gap-3 shrink-0">
           <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${up ? "bg-green-400/20 text-green-200" : "bg-red-400/20 text-red-200"}`}>{up ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}{Math.abs(delta)}% vs kemarin</span>
-          <a href={href} className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold bg-white text-purple-700 transition-all duration-150 active:scale-[0.96] hover:bg-white/90">View Details <ArrowUpRight size={14} /></a>
+          <a href={href} className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold bg-gold/15 text-gold transition-all duration-150 active:scale-[0.96] hover:bg-gold/25">View Details <ArrowUpRight size={14} /></a>
         </div>
       </div>
     </div>
@@ -128,7 +128,7 @@ function BreakdownList({ items, title, viewAllHref }: { items: { name: string; s
           <div key={name} className="flex items-center gap-3">
             <span className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-xs font-bold text-white" style={{ background: color }}>{name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)}</span>
             <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate" style={{ color: P.ink }}>{name}</p><p className="text-[10px]" style={{ color: P.gray }}>{sub}</p></div>
-            <div className="text-right shrink-0"><p className="text-sm font-bold" style={{ color: P.ink }}>{value}</p>{growth !== undefined && <span className={`text-[10px] font-semibold ${growth >= 0 ? "text-green-600" : "text-red-500"}`}>{growth >= 0 ? "+" : ""}{growth}</span>}</div>
+            <div className="text-right shrink-0"><p className="text-sm font-bold" style={{ color: P.ink }}>{value}</p>{growth !== undefined && <span className={`text-[10px] font-semibold ${growth >= 0 ? "text-emerald-300" : "text-rose-300"}`}>{growth >= 0 ? "+" : ""}{growth}</span>}</div>
           </div>
         ))}
       </div>
@@ -137,30 +137,6 @@ function BreakdownList({ items, title, viewAllHref }: { items: { name: string; s
 }
 
 // ─── 4. Mini Stat + Sparkline ─────────────────────────────────────────────────
-
-function MiniSparkline({ data, color }: { data: number[]; color: string }) {
-  if (data.length < 2) return null; const max = Math.max(...data, 1), min = Math.min(...data), r = max - min || 1, W = 100, H = 30;
-  const pts = data.map((v, i) => `${(i / (data.length - 1)) * W},${H - ((v - min) / r) * H}`);
-  return <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}><polyline points={pts.join(" ")} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" /></svg>;
-}
-
-function MiniStatCard({ title, value, sub, sparkData, sparkColor, barMax, barVal, barColor }: { title: string; value: string | number; sub?: string; sparkData?: number[]; sparkColor?: string; barMax?: number; barVal?: number; barColor?: string }) {
-  return (
-    <div className="rounded-2xl p-4" style={{ background: P.card, border: `1px solid ${P.grayBorder}` }}>
-      <p className="text-[10px] font-medium mb-1" style={{ color: P.gray }}>{title}</p>
-      <p className="text-xl font-bold mb-1" style={{ color: P.ink }}>{value}</p>
-      {sub && <p className="text-[10px] mb-2" style={{ color: P.gray }}>{sub}</p>}
-      {sparkData && <div className="mb-2"><MiniSparkline data={sparkData} color={sparkColor ?? P.purple} /></div>}
-      {barMax !== undefined && barVal !== undefined && (
-        <div className="space-y-1">
-          {[...Array(barMax)].map((_, i) => <div key={i} className="h-1 rounded-full" style={{ background: i < barVal ? (barColor ?? P.purple) : P.grayBorder }} />)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── 5. Donut Card ─────────────────────────────────────────────────────────────
 
 function DonutCard({ pct, total, label }: { pct: number; total: number; label: string }) {
   const d = [{ v: Math.min(pct, 100), c: P.green }, { v: Math.max(100 - pct, 0), c: P.grayBorder }];
@@ -186,7 +162,7 @@ function AreaCard({ data, dataKey, label, color }: { data: { label: string; [k: 
         <AreaChart data={data} margin={{ top: 4, right: 0, left: -16, bottom: 0 }}>
           <defs><linearGradient id={`gfa_${dataKey}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity={0.3} /><stop offset="100%" stopColor={color} stopOpacity={0} /></linearGradient></defs>
           <XAxis dataKey="label" tick={{ fontSize: 10, fill: P.gray }} axisLine={false} tickLine={false} />
-          <Tooltip contentStyle={{ background: "#fff", border: `1px solid ${P.grayBorder}`, borderRadius: 12, fontSize: 11 }} />
+          <Tooltip contentStyle={{ background: P.card, border: `1px solid ${P.grayBorder}`, borderRadius: 12, fontSize: 11, color: P.ink }} />
           <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} fill={`url(#gfa_${dataKey})`} dot={false} activeDot={{ r: 4, fill: color }} />
         </AreaChart>
       </ResponsiveContainer>
@@ -203,7 +179,7 @@ function HighlightedBar({ data }: { data: { name: string; value: number }[] }) {
       <ResponsiveContainer width="100%" height={Math.max(data.length * 28, 120)}>
         <BarChart data={data} layout="vertical" margin={{ top: 0, right: 8, left: 8, bottom: 0 }} barSize={14}>
           <XAxis type="number" hide /><YAxis dataKey="name" tick={{ fontSize: 10, fill: P.gray }} axisLine={false} tickLine={false} width={70} type="category" />
-          <Tooltip contentStyle={{ background: "#fff", border: `1px solid ${P.grayBorder}`, borderRadius: 12, fontSize: 11 }} />
+          <Tooltip contentStyle={{ background: P.card, border: `1px solid ${P.grayBorder}`, borderRadius: 12, fontSize: 11, color: P.ink }} />
           <Bar dataKey="value" radius={[0, 4, 4, 0]}>{data.map((_, i) => <Cell key={i} fill={i === 0 ? P.purple : P.purpleMuted} opacity={i === 0 ? 1 : 0.5} />)}</Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -224,7 +200,7 @@ function RadarPerformance({ today, max }: { today: number[]; max: number[] }) {
           <PolarGrid stroke={P.grayBorder} />
           <PolarAngleAxis dataKey="axis" tick={{ fontSize: 10, fill: P.gray }} />
           <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-          <Tooltip contentStyle={{ background: "#fff", border: `1px solid ${P.grayBorder}`, borderRadius: 12, fontSize: 11 }} />
+          <Tooltip contentStyle={{ background: P.card, border: `1px solid ${P.grayBorder}`, borderRadius: 12, fontSize: 11, color: P.ink }} />
           <Radar dataKey="value" stroke={P.purple} fill={P.purple} fillOpacity={0.2} strokeWidth={2} />
         </RadarChart>
       </ResponsiveContainer>
@@ -232,25 +208,7 @@ function RadarPerformance({ today, max }: { today: number[]; max: number[] }) {
   );
 }
 
-// ─── 9. Two-Column List ────────────────────────────────────────────────────────
-
-function TwoColumnList({ items }: { items: { name: string; sub: string; value: string; positive: boolean }[] }) {
-  return (
-    <div className="rounded-2xl p-5" style={{ background: P.card, border: `1px solid ${P.grayBorder}` }}>
-      <h3 className="text-[13px] font-semibold mb-3" style={{ color: P.ink }}>Cabang Overview</h3>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-        {items.map(({ name, sub, value, positive }) => (
-          <div key={name} className="flex items-center gap-2">
-            <div className="flex-1 min-w-0"><p className="text-xs font-medium truncate" style={{ color: P.ink }}>{name}</p><p className="text-[10px]" style={{ color: P.gray }}>{sub}</p></div>
-            <span className={`text-xs font-semibold shrink-0 ${positive ? "text-green-600" : "text-red-500"}`}>{value}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── 10. Activity Timeline ─────────────────────────────────────────────────────
+// ─── 9. Activity Timeline ─────────────────────────────────────────────────────
 
 function ActivityTimeline({ items }: { items: { name: string; time: string; status: "done" | "pending" }[] }) {
   return (
@@ -260,7 +218,7 @@ function ActivityTimeline({ items }: { items: { name: string; time: string; stat
         <div className="absolute left-[6px] top-2 bottom-2 w-px" style={{ background: P.grayBorder }} />
         {items.map(({ name, time, status }) => (
           <div key={name + time} className="flex items-start gap-3 py-1.5 relative">
-            <span className="w-[13px] h-[13px] rounded-full shrink-0 mt-0.5 z-10 border-2" style={{ background: "#fff", borderColor: status === "done" ? P.green : P.grayBorder }} />
+            <span className="w-[13px] h-[13px] rounded-full shrink-0 mt-0.5 z-10 border-2" style={{ background: P.card, borderColor: status === "done" ? P.green : P.grayBorder }} />
             <div className="flex-1 min-w-0"><p className="text-xs font-medium" style={{ color: P.ink }}>{name}</p></div>
             <span className="text-[10px] shrink-0 mt-0.5" style={{ color: P.gray }}>{time}</span>
           </div>
@@ -270,25 +228,14 @@ function ActivityTimeline({ items }: { items: { name: string; time: string; stat
   );
 }
 
-// ─── 11. CTA Card ──────────────────────────────────────────────────────────────
-
-function CTACard({ title, desc, href, label }: { title: string; desc: string; href: string; label: string }) {
-  return (
-    <div className="rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${P.purple}, #5b21b6)` }}>
-      <div className="absolute top-0 right-0 w-24 h-24 pointer-events-none opacity-20" style={{ background: "radial-gradient(circle, #fff 0%, transparent 70%)" }} />
-      <div className="relative"><span className="inline-flex items-center justify-center w-8 h-8 rounded-xl mb-3 text-white font-bold" style={{ background: "rgba(255,255,255,0.2)" }}><Zap size={16} /></span><p className="text-sm font-semibold text-white/90">{title}</p><p className="text-xs mt-0.5 text-white/60">{desc}</p></div>
-      <a href={href} className="relative inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold bg-white text-purple-700 transition-all duration-150 active:scale-[0.96] mt-3 self-start">{label} <ExternalLink size={14} /></a>
-    </div>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function DailyAnalysisPage() {
-  const [clientUser] = useState<ClientUser | null>(() => {
-    if (typeof window === "undefined") return null;
-    return getClientUser();
-  });
+  const [clientUser, setClientUser] = useState<ClientUser | null>(null);
+
+  useEffect(() => {
+    setClientUser(getClientUser());
+  }, []);
   const [selectedDate, setSelectedDate] = useState(toLocalDate(new Date()));
   const [showAll, setShowAll] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -309,7 +256,7 @@ export default function DailyAnalysisPage() {
 
   const bgStyle = {
     background:
-      "#f8f9fb url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='0.75' fill='rgba(139,92,246,0.06)'/%3E%3C/svg%3E\") repeat",
+      "#26211C url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='0.75' fill='rgba(201,162,39,0.06)'/%3E%3C/svg%3E\") repeat",
   };
 
   // Keyboard navigation: ← / →
@@ -336,8 +283,6 @@ export default function DailyAnalysisPage() {
       ? (data.totals.closing / data.totals.lead_masuk) * 100
       : 0;
 
-  const trend7Lead = data?.trend.map((t) => t.lead_masuk) ?? [];
-  const trend7Closing = data?.trend.map((t) => t.closing) ?? [];
 
   const overallRate = data && data.totals.lead_masuk > 0 ? Math.round((data.totals.closing / data.totals.lead_masuk) * 100) : 0;
   const todayMetrics = data ? [data.totals.lead_masuk, data.totals.closing, data.totals.omset, data.totals.gross_profit] : [0, 0, 0, 0];
@@ -354,7 +299,6 @@ export default function DailyAnalysisPage() {
 
   const breakdownList = data ? [...data.staff].sort((a, b) => b.closing - a.closing).slice(0, 4).map((s) => ({ name: s.name, sub: s.branch, value: fmtRpShort(s.omset), growth: s.closing - Math.round(data.staff.reduce((sum, x) => sum + x.closing, 0) / (data.staff.length || 1)), color: "#7c3aed" })) : [];
 
-  const twoColumnItems = data ? data.staff.filter((s) => s.lead_masuk > 0).slice(0, 6).map((s) => ({ name: s.name, sub: s.branch, value: s.closing > 0 ? `+${s.closing}` : "0", positive: s.closing > 0 })) : [];
 
   const timeline = data ? data.staff.filter((s) => s.closing > 0 || s.lead_masuk > 0).slice(0, 5).map((s) => ({ name: s.name, time: `${s.closing} closing · ${s.lead_masuk} lead`, status: (s.closing > 0 ? "done" : "pending") as "done" | "pending" })) : [];
 
@@ -366,10 +310,10 @@ export default function DailyAnalysisPage() {
           <Header userEmail="" role="superadmin" />
           <main className="flex-1 overflow-y-auto p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="lg:col-span-4 h-[140px] rounded-2xl bg-white/60 animate-pulse" />
-              <div className="lg:col-span-4 h-[100px] rounded-2xl bg-white/60 animate-pulse" />
-              <div className="lg:col-span-2 h-[200px] rounded-2xl bg-white/60 animate-pulse" />
-              <div className="lg:col-span-2 h-[200px] rounded-2xl bg-white/60 animate-pulse" />
+              <div className="lg:col-span-4 h-[140px] rounded-2xl bg-cocoa/60 animate-pulse" />
+              <div className="lg:col-span-4 h-[100px] rounded-2xl bg-cocoa/60 animate-pulse" />
+              <div className="lg:col-span-2 h-[200px] rounded-2xl bg-cocoa/60 animate-pulse" />
+              <div className="lg:col-span-2 h-[200px] rounded-2xl bg-cocoa/60 animate-pulse" />
             </div>
           </main>
         </div>
@@ -377,7 +321,6 @@ export default function DailyAnalysisPage() {
     );
   }
 
-  const avgClosing = data ? Math.round(data.staff.reduce((s, x) => s + x.closing, 0) / (data.staff.length || 1)) : 0;
 
   return (
     <div className="flex h-screen" style={bgStyle}>
@@ -388,13 +331,13 @@ export default function DailyAnalysisPage() {
 
           {/* Date Picker + Filter */}
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <div className="flex items-center gap-2 bg-white rounded-xl border border-gray-200 px-3 py-1.5">
+            <div className="flex items-center gap-2 bg-cocoa rounded-xl border border-gold/15 px-3 py-1.5">
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => { setSelectedDate(e.target.value); setShowAll(false); }}
                 disabled={showAll}
-                className="text-sm text-gray-700 bg-transparent border-none outline-none"
+                className="text-sm text-cream bg-transparent border-none outline-none"
               />
             </div>
             <button
@@ -402,33 +345,35 @@ export default function DailyAnalysisPage() {
               className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
                 showAll
                   ? "text-white shadow-sm"
-                  : "bg-white border border-gray-200 text-gray-600 hover:bg-[#26211c]"
+                  : "bg-cocoa border border-gold/15 text-white/50 hover:bg-white/5"
               }`}
               style={showAll ? { background: P.purple } : undefined}
             >
               Semua Data
             </button>
             {!showAll && (
-              <span className="text-xs text-gray-400 hidden sm:inline">
+              <span className="text-xs text-white/40 hidden sm:inline">
                 ← → navigasi antar tanggal
               </span>
             )}
           </div>
 
           {isLoading ? <div className="p-12"><Loading variant="skeleton" text="Memuat data harian..." /></div> : isError ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-20 text-white/40">
               <AlertTriangle className="w-12 h-12 mb-4" style={{ color: P.red }} />
               <p className="text-sm font-medium mb-1" style={{ color: P.red }}>Gagal memuat data</p>
-              <p className="text-xs mb-4 text-gray-500">{error instanceof Error ? error.message : "Koneksi gagal"}</p>
+              <p className="text-xs mb-4 text-white/50">{error instanceof Error ? error.message : "Koneksi gagal"}</p>
               <button onClick={() => window.location.reload()} className="rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ background: P.purple }}>Coba Lagi</button>
             </div>
           ) : !data ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400"><BarChart3 className="w-12 h-12 mb-4 opacity-40" /><p className="text-sm">Tidak ada data untuk tanggal ini.</p></div>
+            <div className="flex flex-col items-center justify-center py-20 text-white/40"><BarChart3 className="w-12 h-12 mb-4 opacity-40" /><p className="text-sm">Tidak ada data untuk tanggal ini.</p></div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
 
-              {/* Row 1: Hero Banner + Stat Cluster */}
+              {/* Row 1: Hero Banner (full-width) — merged CTA ke statistik */}
               <div className="lg:col-span-4"><HeroBanner rate={overallRate} done={data.totals.closing} total={data.totals.lead_masuk} delta={data.totals.omset_delta} href="/dashboard/superadmin/bms/statistik" /></div>
+
+              {/* Row 2: Stat Cluster — 4 KPI utama */}
               <div className="lg:col-span-4"><StatCluster items={[
                 { label: "Lead Masuk", value: data.totals.lead_masuk, icon: <Sparkles size={14} />, color: P.purple, bg: P.purpleLight },
                 { label: "Closing", value: data.totals.closing, icon: <Star size={14} />, color: P.green, bg: P.greenLight },
@@ -436,27 +381,17 @@ export default function DailyAnalysisPage() {
                 { label: "Gross Profit", value: fmtRpShort(data.totals.gross_profit), icon: <TrendingUp size={14} />, color: P.blue, bg: P.blueLight },
               ]} /></div>
 
-              {/* Row 2: Breakdown List + Mini Stats */}
-              <div className="lg:col-span-2"><BreakdownList title="Top Branches" items={breakdownList} viewAllHref="#" /></div>
-              <div className="lg:col-span-2">
-                <div className="grid grid-cols-1 gap-3">
-                  <MiniStatCard title="Lead Trend" value={data.totals.lead_masuk} sub={`${data.totals.lead_masuk_delta >= 0 ? "+" : ""}${data.totals.lead_masuk_delta} vs kemarin`} sparkData={trend7Lead} sparkColor={P.purple} />
-                  <MiniStatCard title="Closing Trend" value={data.totals.closing} sub={`${data.totals.closing_delta >= 0 ? "+" : ""}${data.totals.closing_delta} vs kemarin`} sparkData={trend7Closing} sparkColor={P.green} barMax={Math.max(data.totals.closing_delta + avgClosing, 1)} barVal={avgClosing} barColor={P.green} />
-                </div>
-              </div>
-
-              {/* Row 3: Donut + Area Chart */}
+              {/* Row 3: Conversion Donut + Omzet Area Chart */}
               <div className="lg:col-span-2"><DonutCard pct={cr} total={data.totals.lead_masuk} label="Conversion Rate" /></div>
               <div className="lg:col-span-2"><AreaCard data={omzetArea} dataKey="Omzet" label="Omzet Trend" color={P.purple} /></div>
 
-              {/* Row 4: Radar + Highlighted Bar */}
-              <div className="lg:col-span-2"><RadarPerformance today={todayMetrics} max={max7Metrics} /></div>
+              {/* Row 4: Top Performers (staff) + Activity Timeline */}
               <div className="lg:col-span-2"><HighlightedBar data={topBars} /></div>
+              <div className="lg:col-span-2"><ActivityTimeline items={timeline} /></div>
 
-              {/* Row 5: Two-Column + Timeline + CTA */}
-              <div className="lg:col-span-2"><TwoColumnList items={twoColumnItems} /></div>
-              <div className="lg:col-span-1"><ActivityTimeline items={timeline} /></div>
-              <div className="lg:col-span-1"><CTACard title="Lihat Laporan" desc="Analisis lengkap di halaman statistik" href="/dashboard/superadmin/bms/statistik" label="Buka Statistik" /></div>
+              {/* Row 5: Radar Performance + Top Branches (by omzet) */}
+              <div className="lg:col-span-2"><RadarPerformance today={todayMetrics} max={max7Metrics} /></div>
+              <div className="lg:col-span-2"><BreakdownList title="Staff Overview" items={breakdownList} viewAllHref="#" /></div>
 
             </div>
           )}

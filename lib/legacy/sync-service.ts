@@ -5,7 +5,13 @@ import { type Yii2OrderPayload } from "@/lib/legacy/adapter";
 const LIVE_SYSTEM_BASE_URL = process.env.LIVE_SYSTEM_BASE_URL || "";
 const LIVE_SYSTEM_API_KEY = process.env.INTEGRATED_SYSTEM_WEBHOOK_SECRET || "";
 
-const FULL_SYNC_SINCE = "2026-01-01 00:00:00";
+// Since for the very first pull (empty table). Uses 3 days back from now
+// so the initial sync is fast — only recent orders, not the entire history.
+function fullSyncSince(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 3);
+  return `${d.toISOString().split("T")[0]} 00:00:00`;
+}
 
 type Db = ReturnType<typeof createAdminClient>;
 
@@ -48,7 +54,7 @@ export async function computeSinceWatermark(db: Db): Promise<string> {
     .from("legacy_orders")
     .select("id", { count: "exact", head: true });
 
-  if (!existingCount) return FULL_SYNC_SINCE;
+  if (!existingCount) return fullSyncSince();
 
   const { data: lastSync } = await db
     .from("sync_logs")
@@ -59,7 +65,7 @@ export async function computeSinceWatermark(db: Db): Promise<string> {
     .limit(1);
 
   const last = lastSync?.[0]?.created_at;
-  if (!last) return FULL_SYNC_SINCE;
+  if (!last) return fullSyncSince();
 
   const watermark = new Date(last);
   watermark.setDate(watermark.getDate() - 1);
@@ -73,7 +79,7 @@ export async function syncNewOrders(
   const result: SyncResult = { synced: 0, skipped: 0, errors: 0 };
   const db = createAdminClient();
 
-  const sinceDate = since || FULL_SYNC_SINCE;
+  const sinceDate = since || fullSyncSince();
 
   const orders = await fetchYii2Orders(sinceDate);
   if (orders === null) {
@@ -135,7 +141,7 @@ const RECONCILE_MAX_DELETE_RATIO = 0.1;
 const RECONCILE_MAX_DELETE_FLOOR = 50;
 
 export async function reconcileDeletedOrders(
-  since: string = FULL_SYNC_SINCE,
+  since: string = fullSyncSince(),
 ): Promise<ReconcileResult> {
   const db = createAdminClient();
 

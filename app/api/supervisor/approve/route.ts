@@ -74,11 +74,11 @@ export async function POST(request: Request) {
         { status: 400 },
       );
 
-    if (action !== "approve" && action !== "reject")
-      return NextResponse.json(
-        { error: "action harus 'approve' atau 'reject'" },
-        { status: 400 },
-      );
+  if (action !== "approve" && action !== "reject" && action !== "cancel")
+    return NextResponse.json(
+      { error: "action harus 'approve', 'reject', atau 'cancel'" },
+      { status: 400 },
+    );
 
     if (!stage.startsWith("approval_"))
       return NextResponse.json(
@@ -153,9 +153,24 @@ export async function POST(request: Request) {
       nextStage = idx >= 0 && idx < STAGE_SEQUENCE.length - 1 ? STAGE_SEQUENCE[idx + 1] : null;
     }
 
-    // ── 1. Update tracking pointer + log the decision in stage_history ──────────
-    // (legacy has no `approvals` table — decision captured here + activity_logs)
-    if (action === "approve") {
+    // ── 1. Update tracking pointer + log the decision ────────────────────────
+    if (action === "cancel") {
+      await admin
+        .from("tracking_stages")
+        .update({ current_stage: "selesai", stage_status: "cancelled", updated_at: now, updated_by: authUser.id })
+        .eq("order_id", order_id);
+
+      await admin.from("stage_history").insert({
+        order_id,
+        stage: "selesai",
+        status: "cancelled",
+        note: `Dibatalkan oleh ${supervisorName}${remarks ? ` — ${remarks}` : ""}`,
+        changed_by: authUser.id,
+        created_at: now,
+      });
+
+      pushStageToYii2(legacyId, "selesai");
+    } else if (action === "approve") {
       await admin
         .from("tracking_stages")
         .update(
@@ -263,7 +278,7 @@ export async function POST(request: Request) {
     // ── 5. Activity log ────────────────────────────────────────────────────────
     await admin.from("activity_logs").insert({
       user_id: authUser.id,
-      action: action === "approve" ? "APPROVE_STAGE" : "REJECT_STAGE",
+      action: action === "approve" ? "APPROVE_STAGE" : action === "reject" ? "REJECT_STAGE" : "CANCEL_ORDER",
       entity_type: "approvals",
       entity_id: order_id,
       new_data: {
@@ -272,24 +287,26 @@ export async function POST(request: Request) {
         production_stage: productionStage,
         action,
         remarks: remarks ?? null,
-        next_stage: action === "approve" ? nextStage : productionStage,
+        next_stage: action === "cancel" ? "selesai" : action === "approve" ? nextStage : productionStage,
       },
     });
 
     return NextResponse.json({
       success: true,
       message:
-        action === "approve"
-          ? nextStage
-            ? `Disetujui. Order maju ke: ${nextStage}`
-            : "Disetujui. Order selesai."
-          : `Ditolak. Order dikembalikan ke ${productionStage} untuk perbaikan.`,
+        action === "cancel"
+          ? "Order dibatalkan."
+          : action === "approve"
+            ? nextStage
+              ? `Disetujui. Order maju ke: ${nextStage}`
+              : "Disetujui. Order selesai."
+            : `Ditolak. Order dikembalikan ke ${productionStage} untuk perbaikan.`,
       data: {
         order_id,
         stage,
         action,
         production_stage: productionStage,
-        next_stage: action === "approve" ? nextStage : productionStage,
+        next_stage: action === "cancel" ? "selesai" : action === "approve" ? nextStage : productionStage,
       },
     });
   } catch (error) {

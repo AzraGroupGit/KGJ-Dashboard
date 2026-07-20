@@ -9,21 +9,21 @@ export function FormStatusBadge({ status }: { status: CsOrder["form_status"] }) 
   > = {
     pending: {
       label: "Menunggu",
-      bg: "bg-amber-100",
-      dot: "bg-amber-500",
-      text: "text-amber-700",
+      bg: "bg-amber-500/10",
+      dot: "bg-amber-500/100",
+      text: "text-amber-300",
     },
     submitted: {
       label: "Perlu Direview",
-      bg: "bg-orange-100",
-      dot: "bg-orange-500",
-      text: "text-orange-700",
+      bg: "bg-orange-500/10",
+      dot: "bg-orange-500/100",
+      text: "text-orange-300",
     },
     reviewed: {
       label: "Sudah Direview",
-      bg: "bg-green-100",
-      dot: "bg-green-500",
-      text: "text-green-700",
+      bg: "bg-emerald-500/10",
+      dot: "bg-emerald-500/100",
+      text: "text-emerald-300",
     },
     converted: {
       label: "Dibuat Order",

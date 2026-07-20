@@ -376,10 +376,10 @@ export default function InputMarketingPage() {
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              <h2 className="text-2xl font-bold text-cream mb-2">
                 Input Data Marketing
               </h2>
-              <p className="text-gray-600">
+              <p className="text-white/70">
                 Input data performa channel marketing berdasarkan data CS
               </p>
             </div>
@@ -397,35 +397,35 @@ export default function InputMarketingPage() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
-              <p className="text-sm text-gray-600 mb-2">Total Input Hari Ini</p>
-              <p className="text-2xl font-bold text-gray-800">
+            <div className="bg-cocoa rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
+              <p className="text-sm text-white/70 mb-2">Total Input Hari Ini</p>
+              <p className="text-2xl font-bold text-cream">
                 {todayInputs.length}
               </p>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
-              <p className="text-sm text-gray-600 mb-2">Total Data Tersimpan</p>
-              <p className="text-2xl font-bold text-gray-800">
+            <div className="bg-cocoa rounded-xl shadow-sm p-6 border-l-4 border-green-500">
+              <p className="text-sm text-white/70 mb-2">Total Data Tersimpan</p>
+              <p className="text-2xl font-bold text-cream">
                 {marketingInputs.length}
               </p>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-orange-500">
-              <p className="text-sm text-gray-600 mb-2">
+            <div className="bg-cocoa rounded-xl shadow-sm p-6 border-l-4 border-orange-500">
+              <p className="text-sm text-white/70 mb-2">
                 Total Biaya Marketing (Bulan Ini)
               </p>
-              <p className="text-2xl font-bold text-gray-800">
+              <p className="text-2xl font-bold text-cream">
                 {formatRupiah(totalBiayaBulanIni)}
               </p>
             </div>
           </div>
 
           {/* History Table */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800">
+          <div className="bg-cocoa rounded-xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gold/15">
+              <h3 className="text-lg font-semibold text-cream">
                 Riwayat Input Data Marketing
               </h3>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-white/50 mt-1">
                 {marketingInputs.length} data tersimpan
               </p>
             </div>
@@ -433,65 +433,65 @@ export default function InputMarketingPage() {
               <table className="w-full">
                 <thead className="bg-[#26211c]">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Tanggal
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Channel
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Biaya Mkt
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Lead Serius
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Lead All
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Closing
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       CR
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase">
                       Aksi
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-white/5">
                   {marketingInputs.map((item) => {
                     const metrics = calculateMetrics(item);
                     return (
                       <tr key={item.id} className="hover:bg-[#26211c]">
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-white/70">
                           {new Date(item.input_date).toLocaleDateString(
                             "id-ID",
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-ivory">
                           {item.channel}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-white/70">
                           {formatRupiah(item.biaya_marketing)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-white/70">
                           {item.lead_serius.toLocaleString("id-ID")}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-white/70">
                           {item.lead_all.toLocaleString("id-ID")}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-white/70">
                           {item.closing.toLocaleString("id-ID")}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`text-sm font-semibold ${
                               metrics.crSerius > 30
-                                ? "text-green-600"
+                                ? "text-emerald-300"
                                 : metrics.crSerius > 20
                                   ? "text-yellow-600"
-                                  : "text-red-600"
+                                  : "text-rose-300"
                             }`}
                           >
                             {metrics.crSerius.toFixed(1)}%
@@ -502,7 +502,7 @@ export default function InputMarketingPage() {
                             onClick={() =>
                               handleDeleteClick(item.id, item.channel)
                             }
-                            className="text-red-600 hover:text-red-900 transition-colors"
+                            className="text-rose-300 hover:text-red-900 transition-colors"
                             title="Hapus data"
                           >
                             <Trash2 className="w-5 h-5" />
@@ -515,7 +515,7 @@ export default function InputMarketingPage() {
                     <tr>
                       <td
                         colSpan={8}
-                        className="px-6 py-8 text-center text-gray-500"
+                        className="px-6 py-8 text-center text-white/50"
                       >
                         Belum ada data input. Klik &ldquo;Input Data Baru&rdquo; untuk
                         mulai.
@@ -542,13 +542,13 @@ export default function InputMarketingPage() {
             <div className="space-y-4">
               {/* Pilih CS User */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-cream mb-1">
                   Pilih Data CS <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={selectedCSUser}
                   onChange={(e) => handleCSUserChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gold/25 rounded-lg focus:ring-2 focus:ring-gold/30 focus:border-transparent bg-carbon text-cream"
                   disabled={isSaving}
                 >
                   <option value="">Pilih CS</option>
@@ -558,7 +558,7 @@ export default function InputMarketingPage() {
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-white/50 mt-1">
                   Pilih CS untuk mengambil data lead dan closing dari input CS
                 </p>
               </div>
@@ -566,13 +566,13 @@ export default function InputMarketingPage() {
               {/* Pilih Input CS */}
               {selectedCSUser && csInputs.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-cream mb-1">
                     Pilih Input CS
                   </label>
                   <select
                     value={selectedCSInputId}
                     onChange={(e) => handleCSInputChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gold/25 rounded-lg focus:ring-2 focus:ring-gold/30 focus:border-transparent bg-carbon text-cream"
                     disabled={isSaving}
                   >
                     <option value="">Pilih Input CS</option>
@@ -584,7 +584,7 @@ export default function InputMarketingPage() {
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-white/50 mt-1">
                     Pilih input CS untuk mengisi Lead Serius dan Closing secara
                     otomatis
                   </p>
@@ -598,20 +598,20 @@ export default function InputMarketingPage() {
               )}
 
               <div className="border-t pt-4 mt-2">
-                <p className="text-sm font-medium text-gray-700 mb-3">
+                <p className="text-sm font-medium text-cream mb-3">
                   Data Marketing
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-cream mb-1">
                     Channel Marketing <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={selectedChannel}
                     onChange={(e) => setSelectedChannel(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gold/25 rounded-lg focus:ring-2 focus:ring-gold/30 focus:border-transparent bg-carbon text-cream"
                     disabled={isSaving}
                     required
                   >
@@ -650,7 +650,7 @@ export default function InputMarketingPage() {
               {/* Input dengan validasi visual */}
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-cream mb-1">
                     Lead All <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -660,18 +660,18 @@ export default function InputMarketingPage() {
                       handleNumberInput(e.target.value, setLeadAll)
                     }
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                      leadAllNum > 0 ? "border-gray-300" : "border-red-300"
+                      leadAllNum > 0 ? "border-gold/25" : "border-red-300"
                     }`}
                     placeholder="Total semua leads"
                     disabled={isSaving}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-white/50 mt-1">
                     Total leads dari channel
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-cream mb-1">
                     Lead Serius
                   </label>
                   <input
@@ -682,8 +682,8 @@ export default function InputMarketingPage() {
                     }
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
                       leadSeriusError
-                        ? "border-red-300 bg-red-50"
-                        : "border-gray-300"
+                        ? "border-red-300 bg-rose-500/10"
+                        : "border-gold/25"
                     }`}
                     placeholder="0"
                     disabled={isSaving}
@@ -694,13 +694,13 @@ export default function InputMarketingPage() {
                       ⚠️ Maksimal {leadAllNum.toLocaleString("id-ID")}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-white/50 mt-1">
                     Dari data CS (terisi otomatis)
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-cream mb-1">
                     Closing
                   </label>
                   <input
@@ -711,8 +711,8 @@ export default function InputMarketingPage() {
                     }
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
                       closingError
-                        ? "border-red-300 bg-red-50"
-                        : "border-gray-300"
+                        ? "border-red-300 bg-rose-500/10"
+                        : "border-gold/25"
                     }`}
                     placeholder="0"
                     disabled={isSaving}
@@ -723,20 +723,20 @@ export default function InputMarketingPage() {
                       ⚠️ Maksimal {leadSeriusNum.toLocaleString("id-ID")}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-white/50 mt-1">
                     Dari data CS (terisi otomatis)
                   </p>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-cream mb-1">
                   Catatan (Opsional)
                 </label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gold/25 rounded-lg focus:ring-2 focus:ring-gold/30 focus:border-transparent bg-carbon text-cream"
                   rows={3}
                   placeholder="Tambahkan catatan tentang campaign..."
                   disabled={isSaving}
@@ -745,7 +745,7 @@ export default function InputMarketingPage() {
 
               {/* Error Messages */}
               {leadSeriusError && (
-                <div className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg flex items-start gap-2">
+                <div className="text-sm text-rose-300 bg-rose-500/10 border border-red-200 p-3 rounded-lg flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   <span>
                     Lead Serius ({leadSeriusNum.toLocaleString("id-ID")}) tidak
@@ -756,7 +756,7 @@ export default function InputMarketingPage() {
               )}
 
               {closingError && (
-                <div className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg flex items-start gap-2">
+                <div className="text-sm text-rose-300 bg-rose-500/10 border border-red-200 p-3 rounded-lg flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   <span>
                     Closing ({closingNum.toLocaleString("id-ID")}) tidak boleh
@@ -767,7 +767,7 @@ export default function InputMarketingPage() {
               )}
 
               {modalError && (
-                <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-rose-500/10 p-3 text-sm text-rose-300">
                   <svg
                     className="mt-0.5 h-4 w-4 flex-shrink-0"
                     fill="none"
