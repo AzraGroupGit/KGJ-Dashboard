@@ -73,10 +73,17 @@ describe("shouldAdvanceTracking", () => {
 });
 
 describe("resolveTargetStage", () => {
-  it("returns selesai when tgl_selesai is set", () => {
+  it("returns selesai only when both tgl_selesai AND id_status=15", () => {
+    expect(
+      resolveTargetStage({ ...baseOrder, tgl_selesai: "2026-07-15", id_status: 15 }),
+    ).toBe("selesai");
+  });
+
+  it("does NOT return selesai when tgl_selesai is set but id_status is not 15", () => {
+    // tgl_selesai is a deadline field set on every order — should not force completion
     expect(
       resolveTargetStage({ ...baseOrder, tgl_selesai: "2026-07-15", id_status: 12 }),
-    ).toBe("selesai");
+    ).toBe("pembentukan_cincin");
   });
 
   it("returns null for Pelunasan without tgl_selesai", () => {

@@ -188,7 +188,7 @@ export function resolveCurrentStage(
   tracking?: TrackingStageRow | null,
 ): string {
   if (tracking?.current_stage) return tracking.current_stage;
-  if (order.tgl_selesai) return "selesai";
+  if (order.id_status === 15) return "selesai";
   return mapStatusToStage(order.id_status ?? undefined);
 }
 

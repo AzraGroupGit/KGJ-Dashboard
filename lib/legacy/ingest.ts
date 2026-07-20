@@ -56,8 +56,13 @@ export function shouldAdvanceTracking(
   return idStatus in YII2_STATUS_TO_STAGE;
 }
 
+// Only force "selesai" when Yii2 confirms the order is truly completed
+// (id_status = 15). tgl_selesai is set as a deadline on EVERY order — if we
+// always treat it as completion, any status change on an order with a deadline
+// would regress the tracking pointer to "selesai", skipping all stages in
+// between. The mapped status takes priority for all other id_status values.
 export function resolveTargetStage(order: Yii2OrderPayload): string | null {
-  if (order.tgl_selesai) return "selesai";
+  if (order.tgl_selesai && order.id_status === 15) return "selesai";
   if (!shouldAdvanceTracking(order.id_status)) return null;
   return mapStatusToStage(order.id_status);
 }
@@ -173,7 +178,7 @@ export async function ingestLegacyOrder(
     );
   }
 
-  const rawStage = order.tgl_selesai
+  const rawStage = order.tgl_selesai && order.id_status === 15
     ? "selesai"
     : mapStatusToStage(order.id_status);
 
