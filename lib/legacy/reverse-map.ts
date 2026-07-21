@@ -25,6 +25,7 @@ export const STAGE_TO_YII2_STATUS: Record<string, number> = {
   packing:                   46,
   pengiriman:                14,
   selesai:                   15,
+  dibatalkan:                20,
 };
 
 // Set of stages that the ERP pushes back to Yii2 — FULL 20-stage sync since
