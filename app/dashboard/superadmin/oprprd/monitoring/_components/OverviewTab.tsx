@@ -137,10 +137,10 @@ export function OverviewTab({
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${
                   reworkData.reworkRate > 20
-                    ? "bg-rose-50 text-rose-200 ring-rose-400/20"
+                    ? "bg-rose-500/10 text-rose-300 ring-rose-400/20"
                     : reworkData.reworkRate > 10
-                      ? "bg-amber-50 text-amber-300 ring-amber-400/20"
-                      : "bg-emerald-50 text-emerald-300 ring-emerald-400/20"
+                      ? "bg-amber-500/10 text-amber-300 ring-amber-400/20"
+                      : "bg-emerald-500/100/10 text-emerald-300 ring-emerald-400/20"
                 }`}
               >
                 {reworkData.reworkRate}% rework rate
@@ -191,7 +191,7 @@ export function OverviewTab({
                 {reworkData.topStageRework.map((item, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-medium text-rose-200 ring-1 ring-inset ring-rose-400/20"
+                    className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-1 text-[10px] font-medium text-rose-300 ring-1 ring-inset ring-rose-400/20"
                   >
                     {item.flow}
                     <span className="ml-0.5 font-bold">{item.count}x</span>
@@ -223,7 +223,7 @@ export function OverviewTab({
               )}
             </div>
             {criticalBn > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-200 ring-1 ring-inset ring-rose-400/20">
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-medium text-rose-300 ring-1 ring-inset ring-rose-400/20">
                 <AlertTriangle className="h-3 w-3" />
                 {criticalBn} kritis
               </span>
@@ -268,7 +268,7 @@ export function OverviewTab({
               <span
                 className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
                   bnFilter === tab.key
-                    ? "bg-slate-800 text-white"
+                    ? "bg-gold text-night"
                     : tab.count > 0
                       ? "bg-white/10 text-cream"
                       : "bg-carbon text-white/40"
@@ -403,7 +403,7 @@ export function OverviewTab({
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${isActive ? "bg-emerald-50" : "bg-carbon"}`}
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${isActive ? "bg-emerald-500/10" : "bg-carbon"}`}
                       >
                         <Icon
                           className={`h-3.5 w-3.5 ${isActive ? "text-emerald-300" : "text-white/40"}`}
@@ -489,19 +489,19 @@ export function OverviewTab({
                     key={label}
                     className={`rounded-lg border p-3 ${
                       accent === "sky"
-                        ? "border-sky-100 bg-sky-50/50"
+                        ? "border-sky-400/20 bg-sky-500/10"
                         : accent === "amber"
-                          ? "border-amber-100 bg-amber-50/50"
-                          : "border-emerald-100 bg-emerald-50/50"
+                          ? "border-amber-400/20 bg-amber-500/10"
+                          : "border-emerald-400/20 bg-emerald-500/100/10"
                     }`}
                   >
                     <Icon
                       className={`h-3.5 w-3.5 mb-1 ${
                         accent === "sky"
-                          ? "text-sky-500"
+                          ? "text-sky-300"
                           : accent === "amber"
-                            ? "text-amber-500"
-                            : "text-emerald-500"
+                            ? "text-amber-300"
+                            : "text-emerald-300"
                       }`}
                     />
                     <p className="text-xl font-bold text-ivory tabular-nums">
@@ -513,7 +513,7 @@ export function OverviewTab({
               </div>
 
               {urgentCount > 0 && (
-                <div className="flex items-start gap-2 rounded-md border border-rose-400/20 bg-rose-50/60 p-2.5">
+                <div className="flex items-start gap-2 rounded-md border border-rose-400/20 bg-rose-500/10 p-2.5">
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-rose-300" />
                   <p className="text-xs text-rose-200">
                     <span className="font-semibold">{urgentCount} order</span>{" "}
@@ -558,7 +558,7 @@ export function OverviewTab({
                         </div>
                         <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                           <div
-                            className={`h-full rounded-full ${rate && rate >= 80 ? "bg-emerald-500" : rate && rate >= 60 ? "bg-amber-500" : "bg-rose-500"}`}
+                            className={`h-full rounded-full ${rate && rate >= 80 ? "bg-emerald-500/100" : rate && rate >= 60 ? "bg-amber-500" : "bg-rose-500"}`}
                             style={{ width: `${rate ?? 0}%` }}
                           />
                         </div>

@@ -22,18 +22,12 @@ import {
   type ReworkData,
 } from "./_components/shared";
 import { OverviewTab } from "./_components/OverviewTab";
-import { ProduksiTab } from "./_components/ProduksiTab";
-import { OperasionalTab } from "./_components/OperasionalTab";
 import { FilterPresets } from "./_components/FilterPresets";
-
-type ActiveTab = "overview" | "produksi" | "operasional";
-
 export const dynamic = "force-dynamic";
 
 export default function MonitoringPage() {
   const router = useRouter();
   const [clientUser, setClientUser] = useState<ClientUser | null>(null);
-  const [activeTab, setActiveTab] = useState<ActiveTab>("overview");
   const [bnFilter, setBnFilter] = useState<
     "all" | "production" | "operational" | "completed"
   >("all");
@@ -211,21 +205,7 @@ export default function MonitoringPage() {
     }
   }
 
-  const TABS: { key: ActiveTab; label: string; desc: string }[] = [
-    { key: "overview", label: "Overview", desc: "KPI & Bottleneck" },
-    {
-      key: "produksi",
-      label: "Produksi",
-      desc: "Tukang, Micro Setting, Yield",
-    },
-    {
-      key: "operasional",
-      label: "Operasional",
-      desc: "After Sales, QC, Racik/Laser",
-    },
-  ];
-
-  return (
+    return (
     <div className="flex h-screen bg-[#26211c]">
       <Sidebar role="superadmin" />
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -289,8 +269,6 @@ export default function MonitoringPage() {
                   setDateFrom={setDateFrom}
                   dateTo={dateTo}
                   setDateTo={setDateTo}
-                  activeTab={activeTab}
-                  setActiveTab={(v) => setActiveTab(v as ActiveTab)}
                   bnFilter={bnFilter}
                   setBnFilter={(v) => setBnFilter(v as "all" | "production" | "operational" | "completed")}
                 />
@@ -298,61 +276,33 @@ export default function MonitoringPage() {
             </div>
           </div>
 
-          {/* Tab Bar */}
-          <div className="flex items-end border-b border-[#c9a227]/10 mb-6 gap-0">
-            {TABS.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`group flex flex-col items-start px-5 py-3 text-left transition-colors border-b-2 -mb-px ${
-                  activeTab === tab.key
-                    ? "border-gold text-ivory"
-                    : "border-transparent text-white/40 hover:text-cream hover:border-white/20"
-                }`}
-              >
-                <span className="text-sm font-semibold">{tab.label}</span>
-                <span
-                  className={`text-[10px] mt-0.5 transition-colors ${activeTab === tab.key ? "text-white/40" : "text-white/40"}`}
-                >
-                  {tab.desc}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Content */}
+          {/* Content — single unified view */}
           {initialLoading ? (
             <Loading variant="skeleton" text="Memuat data monitoring..." />
           ) : error ? (
             <ErrorState error={error} onRetry={refreshAll} />
           ) : (
-            <>
-              {activeTab === "overview" && (
-                <OverviewTab
-                  prodData={prodData}
-                  opData={opData}
-                  bnData={bnData}
-                  activeExperts={activeExperts}
-                  avgYield={avgYield}
-                  urgentCount={urgentCount}
-                  qcPassRate={qcPassRate}
-                  criticalBn={criticalBn}
-                  bnFilter={bnFilter}
-                  setBnFilter={setBnFilter}
-                  filteredBn={filteredBn}
-                  prodBnCount={prodBnCount}
-                  opBnCount={opBnCount}
-                  completedOrders={completedOrders}
-                  reworkData={reworkData}
-                  onOrderClick={(orderId, orderNumber) => {
-                    setDetailOrderId(orderId);
-                    setDetailOrderNumber(orderNumber);
-                  }}
-                />
-              )}
-              {activeTab === "produksi" && <ProduksiTab data={prodData} searchQuery={searchQuery} />}
-              {activeTab === "operasional" && <OperasionalTab data={opData} searchQuery={searchQuery} />}
-            </>
+            <OverviewTab
+              prodData={prodData}
+              opData={opData}
+              bnData={bnData}
+              activeExperts={activeExperts}
+              avgYield={avgYield}
+              urgentCount={urgentCount}
+              qcPassRate={qcPassRate}
+              criticalBn={criticalBn}
+              bnFilter={bnFilter}
+              setBnFilter={setBnFilter}
+              filteredBn={filteredBn}
+              prodBnCount={prodBnCount}
+              opBnCount={opBnCount}
+              completedOrders={completedOrders}
+              reworkData={reworkData}
+              onOrderClick={(orderId, orderNumber) => {
+                setDetailOrderId(orderId);
+                setDetailOrderNumber(orderNumber);
+              }}
+            />
           )}
         </main>
         {detailOrderId && (

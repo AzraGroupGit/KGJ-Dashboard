@@ -362,7 +362,7 @@ export default function SupervisorBottleneckPage() {
     useState<SupervisorGroup>("all");
   const [filterGroup, setFilterGroup] =
     useState<SupervisorGroup>("all");
-  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [activeTab, setActiveTab] = useState<"heatmap" | "details">("details");
 
   const { data: res, isLoading, error, refetch, dataUpdatedAt, isRefetching } = useQuery<{ data: BottleneckData }>({
     queryKey: ["bottleneck-monitoring"],
@@ -592,27 +592,31 @@ export default function SupervisorBottleneckPage() {
                 ) : null;
               })()}
 
-              {/* Heatmap toggle */}
-              <div className="rounded-lg border border-gold/15 bg-cocoa overflow-hidden">
-                <button
-                  onClick={() => setShowHeatmap(!showHeatmap)}
-                  className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-semibold text-ivory hover:bg-[#26211c] transition-colors"
-                >
-                  <span>Heatmap Kepadatan Order (90 hari)</span>
-                  <ChevronDown
-                    className={`h-4 w-4 text-white/40 transition-transform ${
-                      showHeatmap ? "rotate-180" : ""
+              {/* Tab bar — Heatmap + Detail */}
+              <div className="border-b border-gold/15 flex items-end gap-0 mb-4">
+                {(["heatmap", "details"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-5 py-3 text-sm font-semibold border-b-2 transition-colors -mb-px ${
+                      activeTab === tab
+                        ? "border-gold text-ivory"
+                        : "border-transparent text-white/40 hover:text-cream"
                     }`}
-                  />
-                </button>
-                {showHeatmap && (
+                  >
+                    {tab === "heatmap" ? "Heatmap" : "Detail per Tahap"}
+                  </button>
+                ))}
+              </div>
+
+              {activeTab === "heatmap" && (
+                <div className="rounded-lg border border-gold/15 bg-cocoa overflow-hidden">
                   <div className="border-t border-gold/10 p-5">
                     <BottleneckHeatmap />
                   </div>
-                )}
-              </div>
-
-              {/* Main table */}
+                </div>
+              )}
+              {activeTab === "details" && (
               <div className="rounded-lg border border-gold/15 bg-cocoa overflow-hidden">
                 <div className="border-b border-gold/10 px-5 py-3.5">
                   <div className="flex items-center justify-between">
@@ -702,6 +706,7 @@ export default function SupervisorBottleneckPage() {
                   </div>
                 )}
               </div>
+              )}
             </div>
           )}
         </main>

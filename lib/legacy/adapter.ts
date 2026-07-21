@@ -36,6 +36,7 @@ export interface Yii2OrderPayload {
   order_down_payment?: string;
   nilai_promo?: string;
   biaya_pengiriman?: string;
+  id_promo_diskon?: number | null;
   id_produk?: number | null;
   id_jenis_order?: number | null;
   berat_cincin_pria?: string;
@@ -82,6 +83,7 @@ export function buildLegacyOrderRow(order: Yii2OrderPayload) {
     order_down_payment: toNumeric(order.order_down_payment),
     nilai_promo: toNumeric(order.nilai_promo),
     biaya_pengiriman: toNumeric(order.biaya_pengiriman),
+    id_promo_diskon: order.id_promo_diskon ?? null,
     id_produk: order.id_produk ?? null,
     id_jenis_order: order.id_jenis_order ?? null,
     berat_cincin_pria: toNumeric(order.berat_cincin_pria),
@@ -138,6 +140,7 @@ export interface LegacyOrderRow {
   order_down_payment: number | null;
   nilai_promo: number | null;
   biaya_pengiriman: number | null;
+  id_promo_diskon: number | null;
   id_produk: number | null;
   id_jenis_order: number | null;
   berat_cincin_pria: number | null;
