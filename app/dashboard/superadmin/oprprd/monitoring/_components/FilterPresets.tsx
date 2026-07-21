@@ -8,7 +8,7 @@ interface Preset {
   searchQuery: string;
   dateFrom: string;
   dateTo: string;
-  activeTab: string;
+  activeTab?: string;
   bnFilter: string;
 }
 
@@ -33,8 +33,8 @@ export function FilterPresets({
   setDateFrom: (v: string) => void;
   dateTo: string;
   setDateTo: (v: string) => void;
-  activeTab: string;
-  setActiveTab: (v: string) => void;
+  activeTab?: string;
+  setActiveTab?: (v: string) => void;
   bnFilter: string;
   setBnFilter: (v: string) => void;
 }) {
@@ -85,7 +85,7 @@ export function FilterPresets({
     setSearchQuery(preset.searchQuery);
     setDateFrom(preset.dateFrom);
     setDateTo(preset.dateTo);
-    setActiveTab(preset.activeTab);
+    if (setActiveTab && preset.activeTab) setActiveTab(preset.activeTab);
     setBnFilter(preset.bnFilter);
     setIsOpen(false);
   };

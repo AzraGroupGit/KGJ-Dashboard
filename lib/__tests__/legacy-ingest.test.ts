@@ -216,6 +216,7 @@ describe("legacyToOrderDetail komponen resolution", () => {
     order_down_payment: 0,
     nilai_promo: 61700,
     biaya_pengiriman: null,
+    id_promo_diskon: null,
     id_produk: null,
     id_jenis_order: 1,
     berat_cincin_pria: 3.486,

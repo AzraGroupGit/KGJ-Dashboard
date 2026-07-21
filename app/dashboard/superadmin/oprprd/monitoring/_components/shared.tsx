@@ -236,16 +236,16 @@ export function getSLA(hours: number) {
   if (hours > 48)
     return {
       label: "Terlambat",
-      cls: "bg-rose-50 text-rose-200 ring-rose-400/20",
+      cls: "bg-rose-500/10 text-rose-300 ring-rose-400/20",
     };
   if (hours > 24)
     return {
       label: "Perhatian",
-      cls: "bg-amber-50 text-amber-300 ring-amber-400/20",
+      cls: "bg-amber-500/10 text-amber-300 ring-amber-400/20",
     };
   return {
     label: "On Track",
-    cls: "bg-emerald-50 text-emerald-300 ring-emerald-400/20",
+    cls: "bg-emerald-500/10 text-emerald-300 ring-emerald-400/20",
   };
 }
 
@@ -274,19 +274,19 @@ export function KpiChip({
 }) {
   const aMap = {
     emerald: {
-      bg: "bg-emerald-50",
+      bg: "bg-emerald-500/10",
       text: "text-emerald-300",
       ring: "ring-emerald-400/20",
       val: "text-emerald-300",
     },
     amber: {
-      bg: "bg-amber-50",
+      bg: "bg-amber-500/10",
       text: "text-amber-300",
       ring: "ring-amber-400/20",
       val: "text-amber-300",
     },
     rose: {
-      bg: "bg-rose-50",
+      bg: "bg-rose-500/10",
       text: "text-rose-300",
       ring: "ring-rose-400/20",
       val: "text-rose-200",
@@ -298,7 +298,7 @@ export function KpiChip({
       val: "text-violet-700",
     },
     sky: {
-      bg: "bg-sky-50",
+      bg: "bg-sky-500/10",
       text: "text-sky-600",
       ring: "ring-sky-100",
       val: "text-sky-700",
@@ -361,7 +361,7 @@ export function ExpertCard({ expert }: { expert: Expert }) {
           </p>
         </div>
         {isActive ? (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
             Bekerja
           </span>
@@ -372,7 +372,7 @@ export function ExpertCard({ expert }: { expert: Expert }) {
         )}
       </div>
       {expert.activeOrder && (
-        <div className="mb-3 rounded-md bg-emerald-50/50 p-2 ring-1 ring-inset ring-emerald-400/20">
+        <div className="mb-3 rounded-md bg-emerald-500/10 p-2 ring-1 ring-inset ring-emerald-400/20">
           <p className="mb-0.5 text-[10px] uppercase tracking-wide text-emerald-300">
             Sedang dikerjakan
           </p>
@@ -512,17 +512,17 @@ export function BnRow({
         </td>
         <td className="px-5 py-3 text-center">
           {isCritical ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-200 ring-1 ring-inset ring-rose-400/20">
+            <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-medium text-rose-300 ring-1 ring-inset ring-rose-400/20">
               <AlertTriangle className="h-3 w-3" />
               Kritis
             </span>
           ) : isSlow ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-300 ring-1 ring-inset ring-amber-400/20">
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-300 ring-1 ring-inset ring-amber-400/20">
               <Clock className="h-3 w-3" />
               Lambat
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
               <CheckCircle2 className="h-3 w-3" />
               Normal
             </span>
@@ -569,7 +569,7 @@ export function BnRow({
                           const dl = getStageDeadlineStatus(item.tgl_order, item.deadline, item.current_stage);
                           if (!dl) return <span className="text-white/40">—</span>;
                           return (
-                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${dl.isOverdue ? "bg-rose-50 text-rose-200 ring-rose-400/20" : "bg-emerald-50 text-emerald-300 ring-emerald-400/20"}`}>
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${dl.isOverdue ? "bg-rose-500/10 text-rose-300 ring-rose-400/20" : "bg-emerald-500/10 text-emerald-300 ring-emerald-400/20"}`}>
                               {dl.isOverdue ? `⚠ ${Math.abs(dl.daysRemaining)}h` : `✔ H-${Math.max(dl.daysRemaining, 1)}`}
                             </span>
                           );
@@ -577,17 +577,17 @@ export function BnRow({
                       </td>
                       <td className="px-3 py-2.5 text-center">
                         {item.approval_decision === "approved" ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
                             <CheckCircle2 className="h-2.5 w-2.5" />
                             {item.approved_by || "Disetujui"}
                           </span>
                         ) : item.approval_decision === "rejected" ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-200 ring-1 ring-inset ring-rose-400/20">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-medium text-rose-300 ring-1 ring-inset ring-rose-400/20">
                             <AlertTriangle className="h-2.5 w-2.5" />
                             Ditolak
                           </span>
                         ) : item.status === "waiting_approval" ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-300 ring-1 ring-inset ring-amber-400/20">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-300 ring-1 ring-inset ring-amber-400/20">
                             <Clock className="h-2.5 w-2.5" />
                             Menunggu
                           </span>
@@ -618,14 +618,14 @@ export function MicroStatusBadge({
 }) {
   if (status === "completed")
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
         <CheckCircle2 className="h-3 w-3" />
         Selesai
       </span>
     );
   if (status === "in_progress")
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700 ring-1 ring-inset ring-sky-200">
+      <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-medium text-sky-300 ring-1 ring-inset ring-sky-400/20">
         <Loader2 className="h-3 w-3 animate-spin" />
         Proses
       </span>
@@ -652,9 +652,9 @@ export function KanbanCol({
   children: React.ReactNode;
 }) {
   const accentMap = {
-    sky: "bg-sky-50 text-sky-700 ring-sky-200",
-    amber: "bg-amber-50 text-amber-300 ring-amber-400/20",
-    emerald: "bg-emerald-50 text-emerald-300 ring-emerald-400/20",
+    sky: "bg-sky-500/10 text-sky-300 ring-sky-400/20",
+    amber: "bg-amber-500/10 text-amber-300 ring-amber-400/20",
+    emerald: "bg-emerald-500/10 text-emerald-300 ring-emerald-400/20",
   };
   const items = Array.isArray(children)
     ? children.filter(Boolean)
@@ -697,8 +697,8 @@ export function Badge({
   children: React.ReactNode;
 }) {
   const map = {
-    rose: "bg-rose-50 text-rose-200 ring-rose-400/20",
-    emerald: "bg-emerald-50 text-emerald-300 ring-emerald-400/20",
+    rose: "bg-rose-500/10 text-rose-300 ring-rose-400/20",
+    emerald: "bg-emerald-500/10 text-emerald-300 ring-emerald-400/20",
     slate: "bg-carbon text-white/70 ring-white/10",
   };
   return (

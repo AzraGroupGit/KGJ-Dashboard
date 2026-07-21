@@ -127,7 +127,6 @@ const menuItems: Record<string, MenuItem[]> = {
       icon: "dashboard",
       href: SUPERVISOR_ROUTES.DASHBOARD,
     },
-    { name: "Monitoring", icon: "scan", href: SUPERVISOR_ROUTES.MONITORING },
     { name: "Persetujuan", icon: "approval", href: SUPERVISOR_ROUTES.APPROVAL },
     { name: "Kelola Akun", icon: "users", href: SUPERVISOR_ROUTES.ACCOUNTS },
     { name: "Personnel", icon: "personnel", href: SUPERVISOR_ROUTES.PERSONNEL },
