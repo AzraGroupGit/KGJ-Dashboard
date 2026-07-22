@@ -169,7 +169,7 @@ export async function POST(request: Request) {
         created_at: now,
       });
 
-      pushStageToYii2(legacyId, "selesai");
+      pushStageToYii2(legacyId, "dibatalkan");
     } else if (action === "approve") {
       await admin
         .from("tracking_stages")
