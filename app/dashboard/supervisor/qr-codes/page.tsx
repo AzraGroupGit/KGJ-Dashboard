@@ -25,6 +25,9 @@ import QRCodeLib from "qrcode";
 
 // ─── Constants ──────────────────────────────────────────────────────
 
+const formatRoleName = (name: string) =>
+  name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
 const ROLE_GROUP_STYLES: Record<
   string,
   { label: string; bg: string; border: string; text: string }
@@ -285,7 +288,7 @@ export default function SupervisorQRCodesPage() {
       h2{margin-bottom:4px}h3{color:#666;font-weight:normal;margin-top:0}</style></head>
       <body>
         <h2>${qr.workstation_name}</h2>
-        <h3>${qr.role_name ?? ""}</h3>
+        <h3>${formatRoleName(qr.role_name ?? "")}</h3>
         <img src="${dataUrl}" />
         <p style="color:#999;font-size:12px">Scan QR untuk login ke workstation</p>
         <script>window.print()</script>
@@ -494,7 +497,7 @@ export default function SupervisorQRCodesPage() {
                       <p>
                         Role:{" "}
                         <span className="font-medium text-cream">
-                          {qr.role_name ?? "-"}
+                          {formatRoleName(qr.role_name ?? "-")}
                         </span>
                       </p>
                       {qr.location && (
@@ -734,7 +737,7 @@ export default function SupervisorQRCodesPage() {
             <h3 className="mt-4 text-base font-bold text-cream">
               {selectedQR.workstation_name}
             </h3>
-            <p className="text-sm text-white/50">{selectedQR.role_name}</p>
+            <p className="text-sm text-white/50">{formatRoleName(selectedQR.role_name ?? "-")}</p>
             {selectedQR.location && (
               <p className="text-xs text-white/40 mt-1">
                 {selectedQR.location}

@@ -26,7 +26,7 @@ function subtractWorkingDays(endDate: string, workingDays: number): string {
     const day = date.getDay();
     const holidays = getIndonesianHolidays(date.getFullYear());
     const dateStr = date.toISOString().split("T")[0];
-    if (day !== 0 && day !== 6 && !holidays.includes(dateStr)) {
+    if (day !== 0 && !holidays.includes(dateStr)) {
       count++;
     }
   }

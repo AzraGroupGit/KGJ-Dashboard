@@ -9,6 +9,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import Image from "next/image";
 import { ArrowLeft, Loader2, Check, Delete, User, Lock, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { getDashboardPath } from "@/lib/routes";
+import Loading from "@/components/ui/Loading";
 
 type Step = "loading" | "workers" | "pin" | "setup" | "manual";
 
@@ -23,11 +24,11 @@ const PIN_LENGTH = 6;
 
 function PinDots({ filled }: { filled: number }) {
   return (
-    <div className="flex justify-center gap-3">
+    <div className="flex justify-center gap-2 sm:gap-3">
       {Array.from({ length: PIN_LENGTH }).map((_, i) => (
         <div
           key={i}
-          className={`flex h-10 w-10 items-center justify-center rounded-xl border text-lg font-bold transition-all ${
+          className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl border text-lg font-bold transition-all ${
             i < filled
               ? "border-[#c9a227] bg-[#c9a227] text-[#15130f]"
               : "border-white/[0.08] bg-white/[0.04] text-transparent"
@@ -57,7 +58,7 @@ function Numpad({
         ["7", "8", "9"],
         ["", "0", ""],
       ].map((row, rowIdx) => (
-        <div key={rowIdx} className="mb-3 flex justify-center gap-3">
+        <div key={rowIdx} className="mb-2 sm:mb-3 flex justify-center gap-2 sm:gap-3">
           {row.map((digit, colIdx) => {
             if (rowIdx === 3 && colIdx === 0) {
               return (
@@ -66,7 +67,7 @@ function Numpad({
                   type="button"
                   onClick={onClear}
                   disabled={disabled}
-                  className="flex h-16 w-16 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-[13px] font-medium text-white/30 transition-all hover:border-white/[0.15] hover:bg-white/[0.08] active:scale-[0.95] disabled:opacity-20"
+                  className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-[12px] sm:text-[13px] font-medium text-white/30 transition-all hover:border-white/[0.15] hover:bg-white/[0.08] active:scale-[0.95] disabled:opacity-20"
                 >
                   Hapus
                 </button>
@@ -79,7 +80,7 @@ function Numpad({
                   type="button"
                   onClick={onSubmit}
                   disabled={disabled}
-                  className="flex h-16 w-16 items-center justify-center rounded-xl bg-[#c9a227] text-[#15130f] transition-all hover:bg-[#d4ae3a] active:scale-[0.95] disabled:opacity-30"
+                  className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-xl bg-[#c9a227] text-[#15130f] transition-all hover:bg-[#d4ae3a] active:scale-[0.95] disabled:opacity-30"
                 >
                   {disabled ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -88,17 +89,17 @@ function Numpad({
                   )}
                 </button>
               ) : (
-                <div key="sp" className="h-16 w-16" />
+                <div key="sp" className="h-14 w-14 sm:h-16 sm:w-16" />
               );
             }
-            if (digit === "") return <div key={`e-${colIdx}`} className="h-16 w-16" />;
+            if (digit === "") return <div key={`e-${colIdx}`} className="h-14 w-14 sm:h-16 sm:w-16" />;
             return (
               <button
                 key={digit}
                 type="button"
                 onClick={() => onDigit(digit)}
                 disabled={disabled}
-                className="flex h-16 w-16 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-[22px] font-semibold text-[#e8e2d4] transition-all hover:border-white/[0.15] hover:bg-white/[0.08] active:scale-[0.95] disabled:opacity-30"
+                className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-[20px] sm:text-[22px] font-semibold text-[#e8e2d4] transition-all hover:border-white/[0.15] hover:bg-white/[0.08] active:scale-[0.95] disabled:opacity-30"
               >
                 {digit}
               </button>
@@ -143,6 +144,11 @@ function WorkshopLoginContent() {
   const setupNewPinRef = useRef("");
 
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const loadingText =
+    step === "manual" ? "Memverifikasi..." :
+    step === "setup" ? "Menyimpan PIN..." :
+    "Memverifikasi PIN...";
 
   // ── Manual login state ──────────────────────────────────────────
 
@@ -432,17 +438,16 @@ function WorkshopLoginContent() {
         </Link>
 
         {/* Main content column */}
-        <div className="relative z-10 flex flex-col items-center w-full max-w-[580px] px-6 sm:px-12 pt-0 pb-6 sm:pt-0 sm:pb-8 gap-y-3 sm:gap-y-4">
+        <div className="relative z-10 flex flex-col items-center w-full max-w-[580px] px-6 sm:px-12 pt-2 sm:pt-4 pb-4 gap-y-1.5 sm:gap-y-3 md:gap-y-4">
           {/* Logo */}
-          <Image src="/logo.png" alt="KGJ" width={100} height={100} className="w-36 h-36 sm:w-44 sm:h-44 object-contain shrink-0" priority />
+          <Image src="/logo.png" alt="KGJ" width={100} height={100} className="w-20 h-20 sm:w-32 sm:h-32 md:w-44 md:h-44 object-contain shrink-0" priority />
 
           {/* Brand title */}
-          <h1 className="font-[var(--font-dm-serif)] text-base sm:text-lg md:text-2xl text-[#c9a227] tracking-[0.1em]">
+          <h1 className="font-[var(--font-dm-serif)] text-sm sm:text-lg md:text-2xl text-[#c9a227] tracking-[0.1em]">
             Kotagede Jewellery
           </h1>
 
-          {/* Gold filigree ornament */}
-          <div className="w-48 sm:w-56 h-4 opacity-50 mb-2 sm:mb-3">
+          <div className="hidden sm:block w-48 sm:w-56 h-4 opacity-50 mb-2 sm:mb-3">
             <svg viewBox="0 0 200 12" className="w-full h-full text-[#c9a227]" fill="none">
               <line x1="0" y1="6" x2="72" y2="6" stroke="currentColor" strokeWidth="0.5" />
               <path d="M72 6 Q80 0 88 6" stroke="currentColor" strokeWidth="0.5" />
@@ -456,14 +461,14 @@ function WorkshopLoginContent() {
 
            {/* Stage info */}
            {stageLabel && (
-             <div className="rounded-xl border border-[#c9a227]/[0.15] bg-[#c9a227]/[0.06] px-5 py-2.5 text-center">
+              <div className="rounded-xl border border-[#c9a227]/[0.15] bg-[#c9a227]/[0.06] px-3 py-1.5 text-center">
                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#c9a227]/70">Akses Stage</p>
                <p className="mt-0.5 text-sm font-medium text-[#e8e2d4] capitalize">{stageLabel}</p>
              </div>
            )}
 
            {/* Frosted glass card - gold border + true glassmorphism with inner border */}
-            <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-6 sm:px-8 md:px-10 py-5 sm:py-6 md:py-8 bg-[#1C1917]/40 backdrop-blur-[20px] relative shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_rgba(0,0,0,0.35)]">
+            <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-4 sm:px-6 md:px-10 py-3 sm:py-5 md:py-8 bg-[#1C1917]/40 backdrop-blur-[20px] relative shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_rgba(0,0,0,0.35)]">
             {/* Inner 1px border for glass refraction */}
             <div className="absolute inset-[1px] rounded-[19px] border border-white/[0.03] pointer-events-none" />
             <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -474,7 +479,7 @@ function WorkshopLoginContent() {
             {/* Worker select */}
             {step === "workers" && (
               <div>
-                <div className="mb-6 text-center">
+                <div className="mb-4 sm:mb-6 text-center">
                   <p className="text-[11px] uppercase tracking-wider text-white/30">Pilih Pekerja</p>
                   <p className="mt-1 text-sm text-white/40">Siapa yang akan bekerja di workstation ini?</p>
                 </div>
@@ -492,7 +497,7 @@ function WorkshopLoginContent() {
                         type="button"
                         onClick={() => handleSelectWorker(worker)}
                         disabled={isLoading}
-                        className="group flex flex-col items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-5 transition-all hover:border-[#c9a227]/[0.3] hover:bg-[#c9a227]/[0.05] active:scale-[0.97] disabled:opacity-30"
+                        className="group flex flex-col items-center gap-1.5 sm:gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] px-2 sm:px-3 py-3 sm:py-5 transition-all hover:border-[#c9a227]/[0.3] hover:bg-[#c9a227]/[0.05] active:scale-[0.97] disabled:opacity-30"
                       >
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.06] text-lg font-semibold text-white/40 transition-colors group-hover:bg-[#c9a227] group-hover:text-[#15130f]">
                           {worker.full_name.charAt(0).toUpperCase()}
@@ -532,7 +537,7 @@ function WorkshopLoginContent() {
             {/* PIN setup */}
             {step === "setup" && selectedWorker && (
               <div ref={containerRef} tabIndex={0} onKeyDown={handleSetupKeyDown} className="outline-none">
-                <div className="mb-6 text-center">
+                <div className="mb-4 sm:mb-6 text-center">
                   <p className="text-[11px] uppercase tracking-wider text-white/30">
                     {setupPhase === "enter" ? "Buat PIN Baru (6 digit)" : "Konfirmasi PIN"}
                   </p>
@@ -560,12 +565,12 @@ function WorkshopLoginContent() {
                   showSubmit={false}
                 />
 
-                <div className="mt-6 text-center">
+                <div className="mt-4 sm:mt-6 text-center">
                   <button
                     type="button"
                     onClick={handleSetupDelete}
                     disabled={setupPin.length === 0 || setupSubmitting}
-                    className="mb-3 flex h-12 w-[148px] items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.04] text-[14px] font-medium text-white/40 transition-all hover:border-white/[0.15] hover:bg-white/[0.08] active:scale-[0.95] disabled:opacity-20 mx-auto"
+                    className="mb-2 sm:mb-3 flex h-10 sm:h-12 w-[148px] items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.04] text-[13px] sm:text-[14px] font-medium text-white/40 transition-all hover:border-white/[0.15] hover:bg-white/[0.08] active:scale-[0.95] disabled:opacity-20 mx-auto"
                   >
                     <Delete className="h-4 w-4" strokeWidth={1.5} />
                     Hapus
@@ -596,8 +601,14 @@ function WorkshopLoginContent() {
             )}
           </div>
 
+          {(isLoading || setupSubmitting) && (
+            <div className="fixed inset-0 bg-[#1C1917]/[0.85] backdrop-blur-[4px] flex items-center justify-center z-50">
+              <Loading variant="dots" size="lg" text={loadingText} />
+            </div>
+          )}
+
           {/* Footer */}
-          <p className="mt-3 text-center text-[11px] text-white leading-relaxed">
+          <p className="mt-2 sm:mt-3 text-center text-[11px] text-white leading-relaxed">
             Hanya untuk staf workshop terdaftar.
             <br />
             Hubungi admin jika mengalami kendala akses.
@@ -654,7 +665,7 @@ function PinPadInline({
         <p className="mt-1 text-xl font-semibold text-[#f0f4ff]">{workerName}</p>
       </div>
 
-      <div className="mb-8 flex justify-center gap-3">
+      <div className="mb-8 sm:mb-8 flex justify-center gap-2 sm:gap-3">
         {Array.from({ length: PIN_LENGTH }).map((_, i) => (
           <div
             key={i}
@@ -689,12 +700,12 @@ function PinPadInline({
         showSubmit={true}
       />
 
-      <div className="mt-3 flex justify-center">
+      <div className="mt-3 sm:mt-3 flex justify-center">
         <button
           type="button"
           onClick={handleDelete}
           disabled={pin.length === 0 || isLoading}
-          className="flex h-12 w-[148px] items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.04] text-[14px] font-medium text-white/40 transition-all hover:border-white/[0.15] hover:bg-white/[0.08] active:scale-[0.95] disabled:opacity-20"
+          className="flex h-10 sm:h-12 w-[148px] items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.04] text-[13px] sm:text-[14px] font-medium text-white/40 transition-all hover:border-white/[0.15] hover:bg-white/[0.08] active:scale-[0.95] disabled:opacity-20"
         >
           <Delete className="h-4 w-4" />
           Hapus
@@ -752,7 +763,7 @@ function ManualLoginForm({
             onChange={(e) => setUsername(e.target.value)}
             placeholder="username atau email"
             disabled={isLoading}
-            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2.5 pl-10 pr-4 text-[15px] text-[#e8e2d4] placeholder:text-white/[0.12] focus:border-[#c9a227] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-[#c9a227]/[0.08] transition-all disabled:opacity-30"
+            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2 sm:py-2.5 pl-10 pr-4 text-[14px] sm:text-[15px] text-[#e8e2d4] placeholder:text-white/[0.12] focus:border-[#c9a227] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-[#c9a227]/[0.08] transition-all disabled:opacity-30"
             autoComplete="username"
             autoCapitalize="none"
             autoCorrect="off"
@@ -773,7 +784,7 @@ function ManualLoginForm({
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             disabled={isLoading}
-            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2.5 pl-10 pr-12 text-[15px] text-[#e8e2d4] placeholder:text-white/[0.12] focus:border-[#c9a227] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-[#c9a227]/[0.08] transition-all disabled:opacity-30"
+            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2 sm:py-2.5 pl-10 pr-12 text-[14px] sm:text-[15px] text-[#e8e2d4] placeholder:text-white/[0.12] focus:border-[#c9a227] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-[#c9a227]/[0.08] transition-all disabled:opacity-30"
             autoComplete="current-password"
             required
           />
@@ -793,7 +804,7 @@ function ManualLoginForm({
       <button
         type="submit"
         disabled={isLoading || !username.trim() || !password.trim()}
-        className="mt-2 w-full rounded-xl bg-[#c9a227] py-2.5 text-[14px] font-medium text-[#15130f] transition-all hover:bg-[#d4ae3a] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30"
+        className="mt-2 w-full rounded-xl bg-[#c9a227] py-2 sm:py-2.5 text-[13px] sm:text-[14px] font-medium text-[#15130f] transition-all hover:bg-[#d4ae3a] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30"
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">
