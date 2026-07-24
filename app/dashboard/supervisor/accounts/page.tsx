@@ -4,15 +4,17 @@
 
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetcher } from "@/lib/api";
+import { fetcher, mutator } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
 import Alert from "@/components/ui/Alert";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import {
   AlertTriangle,
   Clock,
   Key,
+  KeyRound,
   Pencil,
   Plus,
   Search,
@@ -56,6 +58,9 @@ export default function SupervisorAccountsPage() {
   const [userEmail, setUserEmail] = useState("");
 
   const [alert, setAlert] = useState<{ type: "success" | "error" | "warning" | "info"; message: string } | null>(null);
+
+  const [resetPinTarget, setResetPinTarget] = useState<Account | null>(null);
+  const [reseatingPin, setReseatingPin] = useState(false);
 
   const [_filter, _setFilter] = useState<FilterTab>("all");
   const [supervisorGroup, setSupervisorGroup] =
@@ -128,6 +133,24 @@ export default function SupervisorAccountsPage() {
   const handleDeactivated = () => {
     refetchAccounts();
     closeModal();
+  };
+
+  const handleResetPin = async () => {
+    if (!resetPinTarget) return;
+    setReseatingPin(true);
+    try {
+      const res = await mutator<{ success: boolean; message: string }>(
+        `/api/supervisor/accounts/${resetPinTarget.id}/reset-pin`,
+        { method: "POST" },
+      );
+      setAlert({ type: "success", message: res.message });
+      refetchAccounts();
+    } catch (err) {
+      setAlert({ type: "error", message: err instanceof Error ? err.message : "Gagal mereset PIN" });
+    } finally {
+      setReseatingPin(false);
+      setResetPinTarget(null);
+    }
   };
 
   const filtered = accounts.filter((a) => {
@@ -413,6 +436,16 @@ export default function SupervisorAccountsPage() {
                             >
                               <Key className="h-4 w-4" />
                             </button>
+                            {/* Reset PIN — hanya untuk workshop worker */}
+                            {account.role?.role_group === "production" || account.role?.role_group === "operational" ? (
+                              <button
+                                onClick={() => setResetPinTarget(account)}
+                                title="Reset PIN"
+                                className="rounded-lg p-1.5 text-white/40 hover:bg-amber-500/10 hover:text-amber-300 transition-colors"
+                              >
+                                <KeyRound className="h-4 w-4" />
+                              </button>
+                            ) : null}
                             {/* Deactivate/Activate */}
                             <button
                               onClick={() => {
@@ -515,6 +548,15 @@ export default function SupervisorAccountsPage() {
                         <Key className="h-3 w-3" />
                         Reset PW
                       </button>
+                      {account.role?.role_group === "production" || account.role?.role_group === "operational" ? (
+                        <button
+                          onClick={() => setResetPinTarget(account)}
+                          className="rounded-lg border border-amber-400/20 px-2.5 py-2.5 text-xs font-medium text-amber-300 hover:bg-amber-500/10 active:bg-amber-500/20 transition-colors flex items-center justify-center"
+                          title="Reset PIN"
+                        >
+                          <KeyRound className="h-3.5 w-3.5" />
+                        </button>
+                      ) : null}
                       <button
                         onClick={() => {
                           setSelectedAccount(account);
@@ -589,6 +631,18 @@ export default function SupervisorAccountsPage() {
           onDeleted={handleDeleted}
         />
       )}
+
+      {/* Reset PIN confirmation */}
+      <ConfirmDialog
+        isOpen={resetPinTarget !== null}
+        title="Reset PIN"
+        message={`Reset PIN untuk ${resetPinTarget?.full_name}? Worker harus mengatur PIN baru saat login berikutnya.`}
+        confirmText="Reset PIN"
+        variant="warning"
+        isLoading={reseatingPin}
+        onConfirm={handleResetPin}
+        onCancel={() => setResetPinTarget(null)}
+      />
     </div>
   );
 }

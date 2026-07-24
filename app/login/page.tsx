@@ -375,18 +375,18 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
-
-            {isLoading && (
-              <div className="absolute inset-0 bg-[#15130f]/[0.85] backdrop-blur-[4px] rounded-[20px] flex items-center justify-center z-20">
-                <Loading
-                  variant="dots"
-                  size="lg"
-                  text="Memverifikasi akun..."
-                />
-              </div>
-            )}
           </div>
         </div>
+
+        {isLoading && (
+          <div className="fixed inset-0 bg-[#15130f]/[0.85] backdrop-blur-[4px] flex items-center justify-center z-50">
+            <Loading
+              variant="dots"
+              size="lg"
+              text="Memverifikasi akun..."
+            />
+          </div>
+        )}
 
         {/* Forgot Password Dialog */}
         {showForgotDialog && (

@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { STAGE_SEQUENCE } from "@/lib/stages";
 import {
   legacyToOrderDetail,
   type LegacyOrderRow,
@@ -52,6 +53,32 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: true });
     if (histErr) console.error("[OrderDetail] stage_history error:", histErr);
 
+    const prodToGate: Record<string, string> = {};
+    STAGE_SEQUENCE.forEach((s, i) => {
+      if (s.startsWith("approval_") && i > 0) {
+        prodToGate[STAGE_SEQUENCE[i - 1]] = s;
+      }
+    });
+
+    const approvals = (history ?? [])
+      .filter((h) => {
+        const d = (h as { data?: Record<string, unknown> }).data;
+        return d && typeof d._sv_action === "string";
+      })
+      .map((h) => {
+        const d = (h as { data?: Record<string, unknown> }).data!;
+        const action = d._sv_action as string;
+        const gate = prodToGate[h.stage] ?? h.stage;
+        return {
+          id: `${orderId}-approval-${h.stage}-${h.created_at}`,
+          stage: action === "cancel" ? "selesai" : gate,
+          decision: action === "approve" ? "approved" : "rejected",
+          remarks: (d._sv_notes as string) ?? null,
+          decided_at: (d._sv_at as string) ?? h.created_at,
+          users: { full_name: (d._sv_by as string) ?? "Supervisor" },
+        };
+      });
+
     const transitions = (history ?? []).map((h) => ({
       from_stage: null,
       to_stage: h.stage,
@@ -82,7 +109,7 @@ export async function GET(request: Request) {
         stageResults,
         deliveries: [],
         scanEvents: [],
-        approvals: [],
+        approvals,
       },
     });
   } catch (error) {
