@@ -34,13 +34,13 @@ const ROLE_GROUP_STYLES: Record<
 > = {
   operational: {
     label: "Operasional",
-    bg: "bg-sky-500/10",
+    bg: "bg-sky-500/20",
     border: "border-sky-400/20",
     text: "text-sky-300",
   },
   production: {
     label: "Produksi",
-    bg: "bg-amber-500/10",
+    bg: "bg-amber-500/20",
     border: "border-amber-400/20",
     text: "text-amber-300",
   },
@@ -728,7 +728,7 @@ export default function SupervisorQRCodesPage() {
           onClick={() => setSelectedQR(null)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-cocoa p-6 shadow-xl text-center"
+            className="w-full max-w-lg rounded-2xl bg-cocoa p-6 shadow-xl text-center"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="inline-block rounded-xl bg-white p-4 mx-auto mb-2">

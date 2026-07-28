@@ -46,13 +46,15 @@ async function getAttemptNumber(
 ): Promise<number> {
   const { data } = await admin
     .from("stage_history")
-    .select("attempt_number")
+    .select("attempt_number, data")
     .eq("order_id", orderId)
     .eq("stage", stage)
     .order("attempt_number", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return ((data as { attempt_number?: number } | null)?.attempt_number ?? 0) + 1;
+  const row = data as { attempt_number?: number; data?: Record<string, unknown> } | null;
+  const hasData = row?.data && typeof row.data === "object" && Object.keys(row.data).length > 0;
+  return (hasData ? (row?.attempt_number ?? 1) : 0) + 1;
 }
 
 function nextInSequence(stage: string): string | null {

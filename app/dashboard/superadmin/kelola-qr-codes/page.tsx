@@ -34,22 +34,25 @@ interface ScanEvent {
 
 const ROLE_GROUP_STYLES: Record<
   string,
-  { label: string; bg: string; border: string }
+  { label: string; bg: string; border: string; text: string }
 > = {
   management: {
     label: "Manajemen",
-    bg: "bg-purple-50",
-    border: "border-purple-200",
+    bg: "bg-purple-500/20",
+    border: "border-purple-400/20",
+    text: "text-purple-300",
   },
   operational: {
     label: "Operasional",
-    bg: "bg-blue-50",
-    border: "border-blue-200",
+    bg: "bg-blue-500/20",
+    border: "border-blue-400/20",
+    text: "text-blue-300",
   },
   production: {
     label: "Produksi",
-    bg: "bg-amber-500/10",
+    bg: "bg-amber-500/20",
     border: "border-amber-400/20",
+    text: "text-amber-300",
   },
 };
 
@@ -114,8 +117,8 @@ function QRCodeImage({
         width: size,
         margin: 2,
         color: {
-          dark: "#1e293b",
-          light: "#2A2522",
+          dark: "#111111",
+          light: "#ffffff",
         },
         errorCorrectionLevel: "M",
       });
@@ -422,10 +425,11 @@ export default function KelolaQRPage() {
       label: group,
       bg: "bg-[#26211c]",
       border: "border-gold/15",
+      text: "text-white/70",
     };
     return (
       <span
-        className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border ${config.bg} ${config.border}`}
+        className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border ${config.bg} ${config.border} ${config.text}`}
       >
         {config.label}
       </span>
@@ -532,7 +536,7 @@ export default function KelolaQRPage() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-              <div className="bg-cocoa rounded-xl p-5 border border-stone-200 border-l-4 border-l-stone-400 shadow-sm">
+              <div className="bg-cocoa rounded-xl p-5 border border-gold/10 border-t-2 border-t-stone-400">
                 <p className="text-white/50 text-xs mb-1.5">
                   Total Workstation
                 </p>
@@ -540,27 +544,27 @@ export default function KelolaQRPage() {
                   {workstationStats.total}
                 </p>
               </div>
-              <div className="bg-cocoa rounded-xl p-4 shadow-sm border border-gold/10">
+              <div className="bg-cocoa rounded-xl p-4 border border-gold/10 border-t-2 border-t-emerald-400">
                 <p className="text-white/50 text-xs mb-1.5">Aktif</p>
                 <p className="text-2xl font-semibold text-emerald-300">
                   {workstationStats.active}
                 </p>
               </div>
-              <div className="bg-cocoa rounded-xl p-4 shadow-sm border border-gold/10 border-t-2 border-t-blue-400">
+              <div className="bg-cocoa rounded-xl p-4 border border-gold/10 border-t-2 border-t-blue-400">
                 <p className="text-white/50 text-xs mb-1.5">Operasional</p>
-                <p className="text-2xl font-semibold text-blue-600">
+                <p className="text-2xl font-semibold text-blue-300">
                   {workstationStats.operational}
                 </p>
               </div>
-              <div className="bg-cocoa rounded-xl p-4 shadow-sm border border-gold/10 border-t-2 border-t-amber-400">
+              <div className="bg-cocoa rounded-xl p-4 border border-gold/10 border-t-2 border-t-amber-400">
                 <p className="text-white/50 text-xs mb-1.5">Produksi</p>
                 <p className="text-2xl font-semibold text-amber-300">
                   {workstationStats.production}
                 </p>
               </div>
-              <div className="bg-cocoa rounded-xl p-4 shadow-sm border border-gold/10">
+              <div className="bg-cocoa rounded-xl p-4 border border-gold/10 border-t-2 border-t-indigo-400">
                 <p className="text-white/50 text-xs mb-1.5">Scan Hari Ini</p>
-                <p className="text-2xl font-semibold text-indigo-600">
+                <p className="text-2xl font-semibold text-indigo-300">
                   {scansToday}
                 </p>
               </div>
@@ -817,7 +821,7 @@ export default function KelolaQRPage() {
               return (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {stages.map((s) => (
-                    <span key={s} className="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    <span key={s} className="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-indigo-500/[0.12] text-indigo-300 border border-indigo-400/20">
                       {STAGE_LABELS[s] ?? s}
                     </span>
                   ))}
@@ -849,7 +853,7 @@ export default function KelolaQRPage() {
             disabled={isGenerating}
           />
 
-          <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
+          <div className="bg-blue-500/[0.08] rounded-lg p-3 text-xs text-blue-300">
             <span className="font-medium">Info:</span> QR Code ini akan
             digunakan di workstation. Pekerja akan scan QR ini untuk mencatat
             aktivitas pengerjaan order.
@@ -882,7 +886,7 @@ export default function KelolaQRPage() {
         isOpen={!!selectedQR}
         onClose={() => { setSelectedQR(null); setCopiedLink(false); }}
         title="Detail QR Code"
-        size="sm"
+        size="md"
       >
         {selectedQR && (
           <div className="space-y-5">
@@ -921,7 +925,7 @@ export default function KelolaQRPage() {
                   <p className="text-white/50 text-sm mb-2">Tahap yang Ditangani</p>
                   <div className="flex flex-wrap gap-1.5">
                     {selectedQR.allowed_stages.map((s) => (
-                      <span key={s} className="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                      <span key={s} className="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-indigo-500/[0.12] text-indigo-300 border border-indigo-400/20">
                         {STAGE_LABELS[s] ?? s}
                       </span>
                     ))}
@@ -942,7 +946,7 @@ export default function KelolaQRPage() {
                     className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${
                       copiedLink
                         ? "bg-emerald-500/10 text-emerald-300"
-                        : "bg-cocoa text-indigo-600 border border-gold/15 hover:bg-indigo-50"
+                        : "bg-cocoa text-indigo-300 border border-gold/15 hover:bg-indigo-500/10"
                     }`}
                   >
                     {copiedLink ? "✓ Tersalin!" : "Salin"}

@@ -249,7 +249,7 @@ export function legacyToOrderDetail(
       produkKategoriLabel(k.id_produk_kategori),
       k.jumlah ? `Jumlah: ${k.jumlah}` : null,
       typeof k.keterangan === "string" && k.keterangan.trim()
-        ? k.keterangan.trim()
+        ? k.keterangan.replace(/<[^>]*>/g, "").trim()
         : null,
     ].filter(Boolean) as string[];
     return items.length > 0 ? items : null;

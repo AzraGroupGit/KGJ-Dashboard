@@ -87,16 +87,21 @@ export async function GET(request: Request) {
       users: (h as { users?: { full_name?: string } }).users ?? null,
     }));
 
-    const stageResults = (history ?? []).map((h, i) => ({
-      id: `${orderId}-${i}`,
-      stage: h.stage,
-      attempt_number: (h as { attempt_number?: number }).attempt_number ?? 1,
-      data: (h as { data?: unknown }).data ?? {},
-      notes: h.note ?? null,
-      started_at: h.created_at,
-      finished_at: h.created_at,
-      users: (h as { users?: { full_name?: string } }).users ?? null,
-    }));
+    const stageResults = (history ?? [])
+      .filter((h) => {
+        const d = (h as { data?: Record<string, unknown> }).data;
+        return d && typeof d === "object" && Object.keys(d).length > 0;
+      })
+      .map((h, i) => ({
+        id: `${orderId}-${i}`,
+        stage: h.stage,
+        attempt_number: (h as { attempt_number?: number }).attempt_number ?? 1,
+        data: (h as { data?: unknown }).data ?? {},
+        notes: h.note ?? null,
+        started_at: h.created_at,
+        finished_at: h.created_at,
+        users: (h as { users?: { full_name?: string } }).users ?? null,
+      }));
 
     return NextResponse.json({
       success: true,
