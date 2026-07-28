@@ -472,7 +472,7 @@ function WorkshopLoginContent() {
             {/* Inner 1px border for glass refraction */}
             <div className="absolute inset-[1px] rounded-[19px] border border-white/[0.03] pointer-events-none" />
             <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-              <span className="rounded-full border border-[#c9a227]/40 bg-[#1C1917] px-4 py-0.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#c9a227]">
+              <span className="rounded-full border border-[#c9a227]/40 bg-[#1C1917] px-3 sm:px-4 py-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.12em] sm:tracking-[0.15em] text-[#c9a227] whitespace-nowrap">
                 Workshop Access
               </span>
             </div>
