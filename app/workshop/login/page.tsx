@@ -438,9 +438,9 @@ function WorkshopLoginContent() {
         </Link>
 
         {/* Main content column */}
-        <div className="relative z-10 flex flex-col items-center w-full max-w-[580px] px-6 sm:px-12 pt-2 sm:pt-4 pb-4 gap-y-1.5 sm:gap-y-3 md:gap-y-4">
+        <div className="relative z-10 flex flex-col items-center w-full max-w-[580px] px-6 sm:px-12 pt-1 sm:pt-4 pb-4 gap-y-1 sm:gap-y-3 md:gap-y-4">
           {/* Logo */}
-          <Image src="/logo.png" alt="KGJ" width={100} height={100} className="w-20 h-20 sm:w-32 sm:h-32 md:w-44 md:h-44 object-contain shrink-0" priority />
+          <Image src="/logo.png" alt="KGJ" width={100} height={100} className="w-28 h-28 sm:w-36 sm:h-36 md:w-44 md:h-44 object-contain shrink-0" priority />
 
           {/* Brand title */}
           <h1 className="font-[var(--font-dm-serif)] text-sm sm:text-lg md:text-2xl text-[#c9a227] tracking-[0.1em]">
@@ -608,7 +608,7 @@ function WorkshopLoginContent() {
           )}
 
           {/* Footer */}
-          <p className="mt-2 sm:mt-3 text-center text-[11px] text-white leading-relaxed">
+          <p className="mt-1 sm:mt-3 text-center text-[11px] text-white leading-relaxed">
             Hanya untuk staf workshop terdaftar.
             <br />
             Hubungi admin jika mengalami kendala akses.
