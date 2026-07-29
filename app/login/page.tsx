@@ -262,7 +262,7 @@ export default function LoginPage() {
                 Pilih Role
               </p>
               {/* Role selection - responsive grid with per-role colors */}
-              <div className="grid grid-cols-4 gap-2 sm:gap-3 mb-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-2">
                 {visibleRoles.map((config) => {
                   const isActive = role === config.value;
                   return (
@@ -271,7 +271,7 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => setRole(config.value)}
                       disabled={isLoading}
-                      className={`flex flex-col items-center justify-center gap-1.5 py-3 px-1.5 sm:px-4 rounded-xl border-2 text-[13px] font-medium transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed w-full ${
+                      className={`flex flex-col items-center justify-center gap-1.5 py-3 px-4 rounded-xl border-2 text-[13px] font-medium transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed w-full ${
                         isActive
                           ? "text-white"
                           : "border-white/10 bg-white/[0.03] text-white/50 hover:bg-white/[0.06]"
@@ -288,7 +288,7 @@ export default function LoginPage() {
                       }
                     >
                       <div className="w-5 h-5 flex-shrink-0">{config.icon}</div>
-                      <span className="text-center leading-tight text-[11px] sm:text-[13px]">
+                      <span className="text-center leading-tight">
                         {config.label}
                       </span>
                     </button>
