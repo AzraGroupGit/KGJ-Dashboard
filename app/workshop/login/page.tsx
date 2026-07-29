@@ -438,12 +438,12 @@ function WorkshopLoginContent() {
         </Link>
 
         {/* Main content column */}
-        <div className="relative z-10 flex flex-col items-center w-full max-w-[580px] px-6 sm:px-12 pt-1 sm:pt-4 pb-4 gap-y-1 sm:gap-y-3 md:gap-y-4">
+        <div className="relative z-10 flex flex-col items-center w-full max-w-[580px] px-6 sm:px-12 pt-1 sm:pt-4 pb-4 gap-y-1 sm:gap-y-3">
           {/* Logo */}
-          <Image src="/logo.png" alt="KGJ" width={100} height={100} className="w-28 h-28 sm:w-36 sm:h-36 md:w-44 md:h-44 object-contain shrink-0" priority />
+          <Image src="/logo.png" alt="KGJ" width={100} height={100} className="w-36 h-36 sm:w-44 sm:h-44 object-contain shrink-0" priority />
 
           {/* Brand title */}
-          <h1 className="font-[var(--font-dm-serif)] text-sm sm:text-lg md:text-2xl text-[#c9a227] tracking-[0.1em]">
+          <h1 className="font-[var(--font-dm-serif)] text-base sm:text-lg md:text-2xl text-[#c9a227] tracking-[0.1em] mb-2">
             Kotagede Jewellery
           </h1>
 
@@ -468,7 +468,7 @@ function WorkshopLoginContent() {
            )}
 
            {/* Frosted glass card - gold border + true glassmorphism with inner border */}
-            <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-4 sm:px-6 md:px-10 py-3 sm:py-5 md:py-8 bg-[#1C1917]/40 backdrop-blur-[20px] relative shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_rgba(0,0,0,0.35)]">
+            <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-4 sm:px-6 md:px-10 py-2.5 sm:py-5 md:py-8 bg-[#1C1917]/40 backdrop-blur-[20px] relative shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_rgba(0,0,0,0.35)]">
             {/* Inner 1px border for glass refraction */}
             <div className="absolute inset-[1px] rounded-[19px] border border-white/[0.03] pointer-events-none" />
             <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -479,7 +479,7 @@ function WorkshopLoginContent() {
             {/* Worker select */}
             {step === "workers" && (
               <div>
-                <div className="mb-4 sm:mb-6 text-center">
+                <div className="mb-3 sm:mb-6 text-center">
                   <p className="text-[11px] uppercase tracking-wider text-white/30">Pilih Pekerja</p>
                   <p className="mt-1 text-sm text-white/40">Siapa yang akan bekerja di workstation ini?</p>
                 </div>
@@ -502,7 +502,7 @@ function WorkshopLoginContent() {
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.06] text-lg font-semibold text-white/40 transition-colors group-hover:bg-[#c9a227] group-hover:text-[#15130f]">
                           {worker.full_name.charAt(0).toUpperCase()}
                         </div>
-                        <span className="text-center text-[13px] font-medium text-white/50 transition-colors group-hover:text-white/80">
+                        <span className="text-center text-[13px] font-medium text-white/50 transition-colors group-hover:text-white/80 truncate w-full">
                           {worker.full_name}
                         </span>
                       </button>
@@ -510,7 +510,7 @@ function WorkshopLoginContent() {
                   </div>
                 )}
 
-                <div className="mt-6 text-center">
+                <div className="mt-4 text-center">
                   <button
                     type="button"
                     onClick={handleSwitchToManual}
@@ -608,10 +608,8 @@ function WorkshopLoginContent() {
           )}
 
           {/* Footer */}
-          <p className="mt-1 sm:mt-3 text-center text-[11px] text-white leading-relaxed">
-            Hanya untuk staf workshop terdaftar.
-            <br />
-            Hubungi admin jika mengalami kendala akses.
+          <p className="mt-0.5 sm:mt-3 text-center text-[11px] text-white leading-relaxed">
+            Hanya staf workshop terdaftar. Hubungi admin jika kendala.
           </p>
         </div>
       </div>
@@ -660,12 +658,12 @@ function PinPadInline({
 
   return (
     <div ref={containerRef} tabIndex={0} onKeyDown={handleKeyDown} className="outline-none">
-      <div className="mb-6 text-center">
+      <div className="mb-4 text-center">
         <p className="text-[11px] uppercase tracking-wider text-white/30">Masukkan PIN</p>
         <p className="mt-1 text-xl font-semibold text-[#f0f4ff]">{workerName}</p>
       </div>
 
-      <div className="mb-8 sm:mb-8 flex justify-center gap-2 sm:gap-3">
+      <div className="mb-5 flex justify-center gap-2 sm:gap-3">
         {Array.from({ length: PIN_LENGTH }).map((_, i) => (
           <div
             key={i}
@@ -681,13 +679,13 @@ function PinPadInline({
       </div>
 
       {error && (
-        <div className="mb-6 rounded-lg bg-red-500/[0.08] border border-red-500/[0.15] px-4 py-2.5 text-center text-[13px] text-red-300">
+        <div className="mb-4 rounded-lg bg-red-500/[0.08] border border-red-500/[0.15] px-4 py-2.5 text-center text-[13px] text-red-300">
           {error}
         </div>
       )}
 
       {remainingAttempts !== null && remainingAttempts > 0 && (
-        <p className="mb-4 text-center text-[12px] text-[#c9a227]/70">
+        <p className="mb-3 text-center text-[12px] text-[#c9a227]/70">
           Sisa percobaan: {remainingAttempts}
         </p>
       )}
@@ -700,7 +698,7 @@ function PinPadInline({
         showSubmit={true}
       />
 
-      <div className="mt-3 sm:mt-3 flex justify-center">
+      <div className="mt-2 sm:mt-3 flex justify-center">
         <button
           type="button"
           onClick={handleDelete}
@@ -712,7 +710,7 @@ function PinPadInline({
         </button>
       </div>
 
-      <div className="mt-6 text-center">
+      <div className="mt-4 text-center">
         <button
           type="button"
           onClick={onBack}
