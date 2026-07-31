@@ -8,6 +8,7 @@ import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { Search, Trash2, Plus, X, Save } from "lucide-react";
 
 interface PersonnelUser {
@@ -44,6 +45,8 @@ export default function PersonnelPage() {
   const [assignSubType, setAssignSubType] = useState("");
   const [assignCode, setAssignCode] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Assignment | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -72,8 +75,10 @@ export default function PersonnelPage() {
     u.assignments.some((a) => a.person_code.toLowerCase().includes(search.toLowerCase()))
   );
 
-  async function handleDelete(id: string) {
-    const res = await fetch(`/api/supervisor/personnel?id=${id}`, { method: "DELETE" });
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const res = await fetch(`/api/supervisor/personnel?id=${deleteTarget.id}`, { method: "DELETE" });
     const json = await res.json();
     if (json.success) {
       setMessage({ type: "success", text: "Berhasil dihapus" });
@@ -81,6 +86,8 @@ export default function PersonnelPage() {
     } else {
       setMessage({ type: "error", text: json.error || "Gagal menghapus" });
     }
+    setDeleting(false);
+    setDeleteTarget(null);
   }
 
   async function handleAssign(e: React.FormEvent) {
@@ -196,7 +203,7 @@ export default function PersonnelPage() {
                                     <span className="text-purple-300/70">—</span>
                                     <span className="text-purple-300">{a.stage}{a.sub_type ? ` (${a.sub_type})` : ""}</span>
                                     <button
-                                      onClick={() => handleDelete(a.id)}
+                                      onClick={() => setDeleteTarget(a)}
                                       className="ml-0.5 text-purple-300/50 hover:text-rose-300 transition-colors"
                                     >
                                       <Trash2 className="w-3 h-3" />
@@ -308,6 +315,17 @@ export default function PersonnelPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        title="Hapus Penugasan"
+        message={`Hapus kode "${deleteTarget?.person_code}" dari stage ${deleteTarget?.stage}${deleteTarget?.sub_type ? ` (${deleteTarget.sub_type})` : ""}?`}
+        confirmText="Hapus"
+        variant="danger"
+        isLoading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
