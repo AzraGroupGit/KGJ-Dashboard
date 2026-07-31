@@ -245,6 +245,8 @@ describe("legacyToOrderDetail komponen resolution", () => {
         keterangan: "Model klasik",
       },
     ],
+    reference_image_pria_url: null,
+    reference_image_wanita_url: null,
     last_synced_at: null,
     deleted_at: null,
     created_at: null,

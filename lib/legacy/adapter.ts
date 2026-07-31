@@ -51,6 +51,8 @@ export interface Yii2OrderPayload {
   jumlah_bayar?: string;
   sisa_bayar?: string;
   komponen?: Record<string, unknown>[];
+  reference_image_pria_url?: string;
+  reference_image_wanita_url?: string;
 }
 
 function toNumeric(value: string | undefined): number | null {
@@ -98,6 +100,8 @@ export function buildLegacyOrderRow(order: Yii2OrderPayload) {
     jumlah_bayar: toNumeric(order.jumlah_bayar),
     sisa_bayar: toNumeric(order.sisa_bayar),
     komponen: order.komponen ?? [],
+    reference_image_pria_url: order.reference_image_pria_url ?? null,
+    reference_image_wanita_url: order.reference_image_wanita_url ?? null,
     last_synced_at: new Date().toISOString(),
   };
 }
@@ -116,6 +120,8 @@ export function buildLegacyOrderUpdate(order: Yii2OrderPayload) {
   if (order.biaya_pengiriman === undefined) delete update.biaya_pengiriman;
   if (order.id_produk === undefined) delete update.id_produk;
   if (order.id_jenis_order === undefined) delete update.id_jenis_order;
+  if (order.reference_image_pria_url === undefined) delete update.reference_image_pria_url;
+  if (order.reference_image_wanita_url === undefined) delete update.reference_image_wanita_url;
   return update;
 }
 
@@ -155,6 +161,8 @@ export interface LegacyOrderRow {
   jumlah_bayar: number | null;
   sisa_bayar: number | null;
   komponen: Record<string, unknown>[] | null;
+  reference_image_pria_url: string | null;
+  reference_image_wanita_url: string | null;
   last_synced_at: string | null;
   deleted_at: string | null;
   created_at: string | null;
@@ -358,8 +366,8 @@ export function legacyToOrderDetail(
     kabupaten_kota: null,
     provinsi: null,
     kodepos: null,
-    reference_image_pria_url: null,
-    reference_image_wanita_url: null,
+    reference_image_pria_url: order.reference_image_pria_url ?? null,
+    reference_image_wanita_url: order.reference_image_wanita_url ?? null,
     current_stage,
     status: mapLegacyStatus(tracking?.stage_status, current_stage),
     form_status: null,
