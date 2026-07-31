@@ -5,6 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleProps } from "@/lib/auth/session";
 import { STAGE_SEQUENCE, STAGE_GROUP, STAGE_LABELS } from "@/lib/stages";
+import {
+  komponenLabel,
+  fontLabel,
+  produkKategoriLabel,
+} from "@/lib/legacy/komponen-labels";
 
 const APPROVAL_STAGES_ARRAY = STAGE_SEQUENCE.filter(s => s.startsWith("approval_"));
 
@@ -80,7 +85,7 @@ export async function GET() {
       .from("tracking_stages")
       .select(
         `order_id, current_stage, stage_status, updated_at,
-         legacy_orders!tracking_stages_order_id_fkey ( id, kode_order, nama, no_hp, email, tgl_order, tgl_selesai, catatan )`,
+         legacy_orders!tracking_stages_order_id_fkey ( id, kode_order, nama, no_hp, email, tgl_order, tgl_selesai, catatan, komponen, berat_cincin_pria, berat_cincin_wanita, reference_image_pria_url, reference_image_wanita_url )`,
       )
       .in("current_stage", visibleApprovalStages)
       .order("updated_at", { ascending: false })
@@ -94,6 +99,9 @@ export async function GET() {
     type LegacyEmbed = {
       id: string; kode_order: string; nama: string | null; no_hp: string | null;
       email: string | null; tgl_order: string | null; tgl_selesai: string | null; catatan: string | null;
+      komponen: Record<string, unknown>[] | null; berat_cincin_pria: number | null;
+      berat_cincin_wanita: number | null; reference_image_pria_url: string | null;
+      reference_image_wanita_url: string | null;
     };
     const pendingOrders = (trackingRows ?? []).map((t) => {
       const lo = (Array.isArray(t.legacy_orders) ? t.legacy_orders[0] : t.legacy_orders) as LegacyEmbed | undefined;
@@ -108,6 +116,11 @@ export async function GET() {
         tgl_order: lo?.tgl_order ?? null,
         deadline: lo?.tgl_selesai ?? null,
         catatan: lo?.catatan ?? null,
+        komponen: lo?.komponen ?? null,
+        berat_cincin_pria: lo?.berat_cincin_pria ?? null,
+        berat_cincin_wanita: lo?.berat_cincin_wanita ?? null,
+        reference_image_pria_url: lo?.reference_image_pria_url ?? null,
+        reference_image_wanita_url: lo?.reference_image_wanita_url ?? null,
       };
     });
 
@@ -180,37 +193,66 @@ export async function GET() {
         const isPenerimaanOrder = productionStage === "penerimaan_order";
         const sr = stageResultMap[o.id] ?? null;
 
-        // work_order: legacy has no ring-spec fields → nulls (UI renders "—")
+        // work_order: resolve Yii2 komponen JSONB → ring specs
+        const komponenList = (o.komponen ?? []) as Array<Record<string, unknown>>;
+        const pria = komponenList.find((k) => k.id_gender === 1);
+        const wanita = komponenList.find((k) => k.id_gender === 2);
+
+        const labelArr = (id: unknown): string[] | null => {
+          const label = komponenLabel(id);
+          return label ? [label] : null;
+        };
+
+        const buildKeterangan = (k?: Record<string, unknown>) => {
+          if (!k) return null;
+          const items = [
+            produkKategoriLabel(k.id_produk_kategori),
+            k.jumlah ? `Jumlah: ${k.jumlah}` : null,
+            typeof k.keterangan === "string" && k.keterangan.trim()
+              ? k.keterangan.replace(/<[^>]*>/g, "").trim()
+              : null,
+          ].filter(Boolean) as string[];
+          return items.length > 0 ? items : null;
+        };
+
+        const fonts = [
+          fontLabel(pria?.id_ukiran),
+          fontLabel(wanita?.id_ukiran),
+        ].filter(Boolean) as string[];
+
         const work_order = {
           cs_order_id: o.id,
           cs_order_number: o.order_number,
           customer_name: o.customer_name,
           customer_wa: o.customer_wa ?? null,
           customer_email: o.customer_email ?? null,
-          ukuran_pria: null,
-          ukiran_pria: null,
-          jenis_cincin_pria: null,
+          ukuran_pria: pria?.ukuran as string ?? null,
+          ukiran_pria: pria?.teks as string ?? null,
+          jenis_cincin_pria: komponenLabel(pria?.id_jenis_bahan),
           model_bentuk_pria: null,
-          microsetting_pria: null,
-          detail_laser_pria: null,
-          detail_finishing_pria: null,
-          ukuran_wanita: null,
-          ukiran_wanita: null,
-          jenis_cincin_wanita: null,
+          microsetting_pria: labelArr(pria?.id_microsetting),
+          detail_laser_pria: labelArr(pria?.id_laser),
+          detail_finishing_pria: labelArr(pria?.id_finishing),
+          ukuran_wanita: wanita?.ukuran as string ?? null,
+          ukiran_wanita: wanita?.teks as string ?? null,
+          jenis_cincin_wanita: komponenLabel(wanita?.id_jenis_bahan),
           model_bentuk_wanita: null,
-          microsetting_wanita: null,
-          detail_laser_wanita: null,
-          detail_finishing_wanita: null,
-          font: null,
+          microsetting_wanita: labelArr(wanita?.id_microsetting),
+          detail_laser_wanita: labelArr(wanita?.id_laser),
+          detail_finishing_wanita: labelArr(wanita?.id_finishing),
+          font: fonts.length > 0 ? [...new Set(fonts)].join(" / ") : null,
           laser_position: null,
           acara: null,
           kategori: null,
           transfer_ke_bank: null,
-          jenis_cincin_features: null,
+          jenis_cincin_features: [
+            komponenLabel(pria?.id_permata),
+            komponenLabel(wanita?.id_permata),
+          ].filter(Boolean) as string[] | null,
           dari_artis_detail: null,
           alat_ukur: null,
-          gramasi_pria: null,
-          gramasi_wanita: null,
+          gramasi_pria: o.berat_cincin_pria ?? null,
+          gramasi_wanita: o.berat_cincin_wanita ?? null,
           ukiran_cincin_pria: null,
           ukiran_cincin_wanita: null,
           harga: null,
@@ -218,8 +260,8 @@ export async function GET() {
           deadline: o.deadline ?? null,
           pengiriman: null,
           alamat_pengiriman: null,
-          reference_image_pria_url: null,
-          reference_image_wanita_url: null,
+          reference_image_pria_url: o.reference_image_pria_url ?? null,
+          reference_image_wanita_url: o.reference_image_wanita_url ?? null,
         };
 
         // For penerimaan_order: no stage_result; legacy fields only
