@@ -533,7 +533,7 @@ export async function GET(request: Request) {
 
     const komponenNote = (k?: Record<string, unknown>): string | null =>
       typeof k?.keterangan === "string" && k.keterangan.trim()
-        ? k.keterangan.trim()
+        ? k.keterangan.replace(/<[^>]*>/g, "").trim()
         : null;
 
     const fonts = [
