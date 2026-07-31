@@ -210,7 +210,7 @@ export default function LoginPage() {
         </Link>
 
         {/* Main content column - larger spacing to fill page */}
-        <div className="relative z-10 flex flex-col items-center w-full max-w-[580px] px-6 sm:px-12 py-3 sm:py-4 gap-y-2 sm:gap-y-3">
+        <div className="relative z-10 flex flex-col items-center w-full max-w-[580px] px-6 sm:px-12 py-2 sm:py-4 gap-y-1.5 sm:gap-y-3">
           {/* Logo */}
           <Image
             src="/logo.png"
@@ -227,7 +227,7 @@ export default function LoginPage() {
           </h1>
 
           {/* Gold filigree ornament */}
-          <div className="w-48 sm:w-56 h-4 opacity-50 mb-2 sm:mb-3">
+          <div className="w-48 sm:w-56 h-4 opacity-50 mb-1 sm:mb-3">
             <svg viewBox="0 0 200 12" className="w-full h-full text-[#c9a227]" fill="none">
               <line x1="0" y1="6" x2="72" y2="6" stroke="currentColor" strokeWidth="0.5" />
               <path d="M72 6 Q80 0 88 6" stroke="currentColor" strokeWidth="0.5" />
@@ -240,7 +240,7 @@ export default function LoginPage() {
           </div>
 
           {/* Frosted glass card - gold border + true glassmorphism with inner border */}
-          <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-5 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 bg-[#1C1917]/70 backdrop-blur-[20px] relative shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_rgba(0,0,0,0.35)]">
+           <div className="w-full rounded-[20px] border border-[#c9a227]/30 px-5 sm:px-6 md:px-8 py-3 sm:py-5 md:py-6 bg-[#1C1917]/70 backdrop-blur-[20px] relative shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_rgba(0,0,0,0.35)]">
             {/* Inner 1px border for glass refraction */}
             <div className="absolute inset-[1px] rounded-[19px] border border-white/[0.03] pointer-events-none" />
             <h2 className="font-[var(--font-dm-serif)] text-lg sm:text-2xl text-[#f0f4ff] text-center mb-2 tracking-[-0.01em] [text-wrap:balance]">
@@ -271,7 +271,7 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => setRole(config.value)}
                       disabled={isLoading}
-                      className={`flex flex-col items-center justify-center gap-1.5 py-3 px-4 rounded-xl border-2 text-[13px] font-medium transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed w-full ${
+                      className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl border-2 text-[13px] font-medium transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed w-full ${
                         isActive
                           ? "text-white"
                           : "border-white/10 bg-white/[0.03] text-white/50 hover:bg-white/[0.06]"
