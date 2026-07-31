@@ -491,7 +491,7 @@ export async function GET(request: Request) {
 
     const { data: legacyOrder, error: orderError } = await admin
       .from("legacy_orders")
-      .select("id, kode_order, nama, no_hp, email, alamat, alamat_lengkap, tgl_selesai, catatan, harga_final, total_harga, order_down_payment, berat_cincin_pria, berat_cincin_wanita, jenis_acara, id_produk, komponen")
+      .select("id, kode_order, nama, no_hp, email, alamat, alamat_lengkap, tgl_selesai, catatan, harga_final, total_harga, order_down_payment, berat_cincin_pria, berat_cincin_wanita, jenis_acara, id_produk, komponen, reference_image_pria_url, reference_image_wanita_url")
       .eq("id", orderId)
       .single();
 
@@ -565,7 +565,7 @@ export async function GET(request: Request) {
       ukuran_pria: pria?.ukuran as string ?? null,
       ukiran_pria: pria?.teks as string ?? null,
       jenis_cincin_pria: komponenLabel(pria?.id_jenis_bahan),
-      reference_image_pria_url: null,
+      reference_image_pria_url: legacyOrder.reference_image_pria_url ?? null,
       model_bentuk_pria: null,
       microsetting_pria: labelArr(pria?.id_microsetting),
       detail_laser_pria: labelArr(pria?.id_laser),
@@ -573,7 +573,7 @@ export async function GET(request: Request) {
       ukuran_wanita: wanita?.ukuran as string ?? null,
       ukiran_wanita: wanita?.teks as string ?? null,
       jenis_cincin_wanita: komponenLabel(wanita?.id_jenis_bahan),
-      reference_image_wanita_url: null,
+      reference_image_wanita_url: legacyOrder.reference_image_wanita_url ?? null,
       model_bentuk_wanita: null,
       microsetting_wanita: labelArr(wanita?.id_microsetting),
       detail_laser_wanita: labelArr(wanita?.id_laser),
