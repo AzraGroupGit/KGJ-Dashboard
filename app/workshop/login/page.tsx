@@ -510,7 +510,7 @@ function WorkshopLoginContent() {
                   </div>
                 )}
 
-                <div className="mt-4 text-center">
+      <div className="mt-3 text-center">
                   <button
                     type="button"
                     onClick={handleSwitchToManual}
@@ -658,12 +658,12 @@ function PinPadInline({
 
   return (
     <div ref={containerRef} tabIndex={0} onKeyDown={handleKeyDown} className="outline-none">
-      <div className="mb-4 text-center">
+      <div className="mb-3 text-center">
         <p className="text-[11px] uppercase tracking-wider text-white/30">Masukkan PIN</p>
         <p className="mt-1 text-xl font-semibold text-[#f0f4ff]">{workerName}</p>
       </div>
 
-      <div className="mb-5 flex justify-center gap-2 sm:gap-3">
+      <div className="mb-4 flex justify-center gap-2 sm:gap-3">
         {Array.from({ length: PIN_LENGTH }).map((_, i) => (
           <div
             key={i}
@@ -698,7 +698,7 @@ function PinPadInline({
         showSubmit={true}
       />
 
-      <div className="mt-2 sm:mt-3 flex justify-center">
+      <div className="mt-1.5 sm:mt-3 flex justify-center">
         <button
           type="button"
           onClick={handleDelete}
