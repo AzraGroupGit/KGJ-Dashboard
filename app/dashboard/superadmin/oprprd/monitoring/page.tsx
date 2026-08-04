@@ -14,6 +14,7 @@ import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
 import type { BottleneckData } from "@/types/bottleneck";
 import { Search, RefreshCw } from "lucide-react";
 import type { Channel } from "pusher-js";
+import { getBrandPrefix } from "@/lib/legacy/brands";
 import {
   buildUrl,
   ErrorState,
@@ -39,6 +40,7 @@ export default function MonitoringPage() {
 
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [brandFilter, setBrandFilter] = useState<string>("all");
 
   const queryClient = useQueryClient();
 
@@ -84,6 +86,7 @@ export default function MonitoringPage() {
     (bnQuery.data as { data: BottleneckData } | undefined)?.data ?? null;
   const completedOrders: Array<{ id: string; order_number: string; customer_name: string; completed_at: string }> =
     (supervisorQuery.data as { data: { completedOrders: Array<{ id: string; order_number: string; customer_name: string; completed_at: string }> } } | undefined)?.data?.completedOrders ?? [];
+  const filteredCompletedOrders = completedOrders.filter((o) => brandFilter === "all" || getBrandPrefix(o.order_number) === brandFilter);
   const reworkData: ReworkData | null =
     (reworkQuery.data as { data: ReworkData } | undefined)?.data ?? null;
 
@@ -169,13 +172,15 @@ export default function MonitoringPage() {
       .filter((b) => bnFilter === "all" ? true : b.stage_group === bnFilter)
       .map((b) => ({
         ...b,
-        orders: !searchQuery ? b.orders : b.orders.filter(
-          (o) =>
-            o.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (o.customer_name ?? "").toLowerCase().includes(searchQuery.toLowerCase())
+        orders: (!searchQuery && brandFilter === "all") ? b.orders : b.orders.filter(
+          (o) => {
+            const matchSearch = !searchQuery || o.order_number.toLowerCase().includes(searchQuery.toLowerCase()) || (o.customer_name ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+            const matchBrand = brandFilter === "all" || getBrandPrefix(o.order_number) === brandFilter;
+            return matchSearch && matchBrand;
+          }
         ),
       }))
-      .filter((b) => searchQuery ? b.orders.length > 0 : true) ?? [];
+      .filter((b) => (searchQuery || brandFilter !== "all") ? b.orders.length > 0 : true) ?? [];
   const prodBnCount =
     bnData?.bottlenecks.filter((b) => b.stage_group === "production").length ??
     0;
@@ -272,6 +277,16 @@ export default function MonitoringPage() {
                   bnFilter={bnFilter}
                   setBnFilter={(v) => setBnFilter(v as "all" | "production" | "operational" | "completed")}
                 />
+                <select
+                  value={brandFilter}
+                  onChange={(e) => setBrandFilter(e.target.value)}
+                  className="rounded-md border border-[#c9a227]/10 bg-carbon px-2 py-1.5 text-xs text-cream focus:border-gold/50 focus:outline-none"
+                >
+                  <option value="all">Semua Brand</option>
+                  <option value="KGJ">KGJ</option>
+                  <option value="HJZ">Hijaz</option>
+                  <option value="MPM">MPM</option>
+                </select>
               </div>
             </div>
           </div>
@@ -296,7 +311,7 @@ export default function MonitoringPage() {
               filteredBn={filteredBn}
               prodBnCount={prodBnCount}
               opBnCount={opBnCount}
-              completedOrders={completedOrders}
+              completedOrders={filteredCompletedOrders}
               reworkData={reworkData}
               onOrderClick={(orderId, orderNumber) => {
                 setDetailOrderId(orderId);

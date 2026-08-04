@@ -24,6 +24,7 @@ import BottleneckHeatmap from "@/components/analytics/BottleneckHeatmap";
 import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
 import type { StageBottleneck, BottleneckData } from "@/types/bottleneck";
 import type { SupervisorGroup } from "@/types/roles";
+import { getBrandPrefix } from "@/lib/legacy/brands";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -362,6 +363,7 @@ export default function SupervisorBottleneckPage() {
     useState<SupervisorGroup>("all");
   const [filterGroup, setFilterGroup] =
     useState<SupervisorGroup>("all");
+  const [brandFilter, setBrandFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<"heatmap" | "details">("details");
 
   const { data: res, isLoading, error, refetch, dataUpdatedAt, isRefetching } = useQuery<{ data: BottleneckData }>({
@@ -423,13 +425,20 @@ export default function SupervisorBottleneckPage() {
     });
   };
 
-  const filteredBn = data?.bottlenecks.filter((b) =>
-    filterGroup === "all"
-      ? true
-      : filterGroup === "approval"
-        ? b.stage_group === "approval" || b.stage.startsWith("approval_")
-        : b.stage_group === filterGroup
-  ) || [];
+  const filteredBn = (data?.bottlenecks ?? [])
+    .filter((b) =>
+      filterGroup === "all"
+        ? true
+        : filterGroup === "approval"
+          ? b.stage_group === "approval" || b.stage.startsWith("approval_")
+          : b.stage_group === filterGroup
+    )
+    .map((b) => ({
+      ...b,
+      orders: brandFilter === "all" ? b.orders : b.orders.filter((o) => getBrandPrefix(o.order_number) === brandFilter),
+      order_count: brandFilter === "all" ? b.order_count : b.orders.filter((o) => getBrandPrefix(o.order_number) === brandFilter).length,
+    }))
+    .filter((b) => brandFilter === "all" || b.orders.length > 0);
 
   const criticalCount =
     filteredBn.filter((b) => (b.avg_hours || 0) > 24).length || 0;
@@ -652,6 +661,19 @@ export default function SupervisorBottleneckPage() {
                         </span>
                       </button>
                     ))}
+                    <div className="ml-auto flex items-center gap-1.5">
+                      <span className="text-[10px] text-white/40 whitespace-nowrap">Brand:</span>
+                      <select
+                        value={brandFilter}
+                        onChange={(e) => setBrandFilter(e.target.value)}
+                        className="rounded-md border border-gold/15 bg-carbon px-1.5 py-1 text-[10px] text-cream focus:border-gold/50 focus:outline-none"
+                      >
+                        <option value="all">Semua</option>
+                        <option value="KGJ">KGJ</option>
+                        <option value="HJZ">Hijaz</option>
+                        <option value="MPM">MPM</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 
