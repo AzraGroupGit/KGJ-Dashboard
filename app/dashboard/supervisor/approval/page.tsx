@@ -11,6 +11,7 @@ import Header from "@/components/layout/MobileHeader";
 import { formatAddsOnList } from "@/lib/adds-on";
 import type { SupervisorGroup } from "@/types/roles";
 import { STAGE_SEQUENCE, getStageLabel } from "@/lib/stages";
+import { getBrandPrefix } from "@/lib/legacy/brands";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -1157,6 +1158,7 @@ type FilterTab = string;
 export default function SupervisorApprovalPage() {
   const router = useRouter();
   const [filter, setFilter] = useState<FilterTab>("approval_penerimaan_order");
+  const [brandFilter, setBrandFilter] = useState<string>("all");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [userEmail, setUserEmail] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -1330,9 +1332,11 @@ export default function SupervisorApprovalPage() {
     setFilter(stageTabs[0]?.key ?? "all");
   }
 
-  const filteredItems = stageTabs.some((t) => t.key === filter)
+  const filteredItems = (stageTabs.some((t) => t.key === filter)
     ? items.filter((item) => item.stage === filter)
-    : items;
+    : items).filter((item) =>
+      brandFilter === "all" ? true : getBrandPrefix(item.order_number) === brandFilter,
+    );
 
   // ── Summary stats ──────────────────────────────────────────────────────────
   const totalWaiting = items.length;
@@ -1504,6 +1508,21 @@ export default function SupervisorApprovalPage() {
                   </div>
                 </div>
               )}
+
+              {/* Brand filter */}
+              <div className="flex items-center gap-2 pt-3">
+                <span className="text-xs text-white/50">Brand:</span>
+                <select
+                  value={brandFilter}
+                  onChange={(e) => setBrandFilter(e.target.value)}
+                  className="px-2.5 py-1 text-xs border border-gold/25 rounded-lg bg-carbon text-cream focus:ring-2 focus:ring-gold/30 outline-none"
+                >
+                  <option value="all">Semua Brand</option>
+                  <option value="KGJ">KGJ</option>
+                  <option value="HJZ">Hijaz</option>
+                  <option value="MPM">MPM</option>
+                </select>
+              </div>
 
               {/* Cards */}
               {filteredItems.length === 0 ? (

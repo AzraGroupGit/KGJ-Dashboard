@@ -51,6 +51,7 @@ export interface Yii2OrderPayload {
   jumlah_bayar?: string;
   sisa_bayar?: string;
   komponen?: Record<string, unknown>[];
+  id_brand?: number;
   reference_image_pria_url?: string;
   reference_image_wanita_url?: string;
 }
@@ -100,6 +101,7 @@ export function buildLegacyOrderRow(order: Yii2OrderPayload) {
     jumlah_bayar: toNumeric(order.jumlah_bayar),
     sisa_bayar: toNumeric(order.sisa_bayar),
     komponen: order.komponen ?? [],
+    id_brand: order.id_brand ?? 1,
     reference_image_pria_url: order.reference_image_pria_url ?? null,
     reference_image_wanita_url: order.reference_image_wanita_url ?? null,
     last_synced_at: new Date().toISOString(),
@@ -120,6 +122,7 @@ export function buildLegacyOrderUpdate(order: Yii2OrderPayload) {
   if (order.biaya_pengiriman === undefined) delete update.biaya_pengiriman;
   if (order.id_produk === undefined) delete update.id_produk;
   if (order.id_jenis_order === undefined) delete update.id_jenis_order;
+  if (order.id_brand === undefined) delete update.id_brand;
   if (order.reference_image_pria_url === undefined) delete update.reference_image_pria_url;
   if (order.reference_image_wanita_url === undefined) delete update.reference_image_wanita_url;
   return update;
@@ -161,6 +164,7 @@ export interface LegacyOrderRow {
   jumlah_bayar: number | null;
   sisa_bayar: number | null;
   komponen: Record<string, unknown>[] | null;
+  id_brand: number | null;
   reference_image_pria_url: string | null;
   reference_image_wanita_url: string | null;
   last_synced_at: string | null;

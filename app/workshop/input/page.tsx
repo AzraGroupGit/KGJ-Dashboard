@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { formatAddsOnList } from "@/lib/adds-on";
 import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
+import { getBrandPrefix } from "@/lib/legacy/brands";
 import type { Field } from "@/components/fields/types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -274,6 +275,7 @@ function PhaseOrderList({
   theme,
   search,
   sortBy,
+  brandFilter,
   onSelect,
   _onLogout,
 }: {
@@ -281,6 +283,7 @@ function PhaseOrderList({
   theme: Theme;
   search: string;
   sortBy: "newest" | "deadline";
+  brandFilter: string;
   onSelect: (order: WorkshopOrderInfo) => Promise<void>;
   _onLogout: () => void;
 }) {
@@ -322,7 +325,8 @@ function PhaseOrderList({
         (roleStages.length === 0 || roleStages.includes(o.current_stage)) &&
         o.status !== "completed" &&
         o.status !== "cancelled" &&
-        o.status !== "waiting_approval",
+        o.status !== "waiting_approval" &&
+        (brandFilter === "all" || getBrandPrefix(o.order_number) === brandFilter),
     )
     .sort((a, b) => {
       if (sortBy === "deadline") {
@@ -1505,6 +1509,7 @@ function WorkshopInputContent() {
   const [listSearch, setListSearch] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "deadline">("deadline");
   const [listTab, setListTab] = useState<"orders" | "history">("orders");
+  const [brandFilter, setBrandFilter] = useState<string>("all");
 
   const { data: workerHistory = [], refetch: refetchHistory } = useQuery<
     WorkerHistoryItem[]
@@ -1718,6 +1723,16 @@ function WorkshopInputContent() {
               <option value="deadline">Deadline ⬆</option>
               <option value="newest">Terbaru</option>
             </select>
+            <select
+              value={brandFilter}
+              onChange={(e) => setBrandFilter(e.target.value)}
+              className={`rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-[13px] text-stone-600 focus:outline-none focus:ring-2 transition-all ${theme.ring}`}
+            >
+              <option value="all">Semua Brand</option>
+              <option value="KGJ">KGJ</option>
+              <option value="HJZ">Hijaz</option>
+              <option value="MPM">MPM</option>
+            </select>
           </div>
         </div>
 
@@ -1751,6 +1766,7 @@ function WorkshopInputContent() {
             theme={theme}
             search={listSearch}
             sortBy={sortBy}
+            brandFilter={brandFilter}
             onSelect={handleSelect}
             _onLogout={handleLogout}
           />

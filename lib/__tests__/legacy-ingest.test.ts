@@ -247,6 +247,7 @@ describe("legacyToOrderDetail komponen resolution", () => {
     ],
     reference_image_pria_url: null,
     reference_image_wanita_url: null,
+    id_brand: 1,
     last_synced_at: null,
     deleted_at: null,
     created_at: null,
