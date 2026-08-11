@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleProps } from "@/lib/auth/session";
 import { sendNotification } from "@/lib/notifications";
-import { STAGE_SEQUENCE } from "@/lib/stages";
+import { STAGE_SEQUENCE, effectiveNext } from "@/lib/stages";
 import { pushStageToYii2 } from "@/lib/legacy/push-status";
 
 const PRODUCTION_TO_APPROVAL_STAGE: Record<string, string> = {};
@@ -149,8 +149,7 @@ export async function POST(request: Request) {
 
     let nextStage: string | null = null;
     if (action === "approve") {
-      const idx = STAGE_SEQUENCE.indexOf(stage);
-      nextStage = idx >= 0 && idx < STAGE_SEQUENCE.length - 1 ? STAGE_SEQUENCE[idx + 1] : null;
+      nextStage = effectiveNext(stage);
     }
 
     // ── 1. Update tracking pointer + log the decision ────────────────────────
