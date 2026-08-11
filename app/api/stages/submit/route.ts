@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleProps } from "@/lib/auth/session";
 import { notifySupervisors, getSupervisorRoleForApproval, notifyCsForOrder } from "@/lib/notifications";
-import { STAGE_SEQUENCE, STAGE_GROUP, getStageIndex } from "@/lib/stages";
+import { STAGE_SEQUENCE, STAGE_GROUP, getStageIndex, effectiveNext } from "@/lib/stages";
 import { pushStageToYii2 } from "@/lib/legacy/push-status";
 
 // ── Role access ────────────────────────────────────────────────────────────────
@@ -55,16 +55,6 @@ async function getAttemptNumber(
   const row = data as { attempt_number?: number; data?: Record<string, unknown> } | null;
   const hasData = row?.data && typeof row.data === "object" && Object.keys(row.data).length > 0;
   return (hasData ? (row?.attempt_number ?? 1) : 0) + 1;
-}
-
-function nextInSequence(stage: string): string | null {
-  const idx = getStageIndex(stage);
-  return idx >= 0 && idx < STAGE_SEQUENCE.length - 1 ? STAGE_SEQUENCE[idx + 1] : null;
-}
-
-function _prevInSequence(stage: string): string | null {
-  const idx = getStageIndex(stage);
-  return idx > 0 ? STAGE_SEQUENCE[idx - 1] : null;
 }
 
 // Advance the legacy tracking pointer. The completion of `fromStage` is logged
@@ -292,7 +282,7 @@ export async function POST(request: Request) {
         });
       }
 
-      const next = nextInSequence("cek_kadar");
+      const next = effectiveNext("cek_kadar");
       if (next) {
         await advanceOrder(
           admin,
@@ -388,7 +378,7 @@ export async function POST(request: Request) {
       }
 
       // Approved → packing
-      const next = nextInSequence("konfirmasi");
+      const next = effectiveNext("konfirmasi");
       if (next) {
         await advanceOrder(
           admin,
@@ -461,7 +451,7 @@ export async function POST(request: Request) {
         data: {
           order_id: orderId,
           order_number: order.order_number,
-          next_stage: approvalStage ?? nextInSequence(stage),
+          next_stage: approvalStage ?? effectiveNext(stage),
           waiting_approval: !!approvalStage,
         },
       });
@@ -488,7 +478,7 @@ export async function POST(request: Request) {
         });
       }
 
-      const next = nextInSequence("packing");
+      const next = effectiveNext("packing");
       if (next) {
         await advanceOrder(
           admin,
@@ -609,7 +599,7 @@ export async function POST(request: Request) {
       { ...data }, (data as Record<string, unknown>).notes as string | null ?? null);
 
     const approvalStage = APPROVAL_GATE_MAP[stage];
-    const resolvedNext = approvalStage ?? nextInSequence(stage);
+    const resolvedNext = approvalStage ?? effectiveNext(stage);
     const isWaiting = !!approvalStage;
 
     if (resolvedNext && resolvedNext !== "selesai") {
