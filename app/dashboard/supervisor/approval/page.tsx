@@ -36,10 +36,12 @@ interface WorkOrder {
   ukiran_pria: string | null;
   jenis_cincin_pria: string | null;
   keterangan_pria: string[] | string | null;
+  gramasi_pria: number | null;
   ukuran_wanita: string | null;
   ukiran_wanita: string | null;
   jenis_cincin_wanita: string | null;
   keterangan_wanita: string[] | string | null;
+  gramasi_wanita: number | null;
   font: string | null;
   laser_position: string | null;
   acara: string | null;
@@ -664,8 +666,8 @@ function DataViewer({
 function WorkOrderCard({ wo }: { wo: WorkOrder }) {
   const [open, setOpen] = useState(false);
 
-  const hasPria = wo.ukuran_pria || wo.jenis_cincin_pria || wo.ukiran_pria;
-  const hasWanita = wo.ukuran_wanita || wo.jenis_cincin_wanita || wo.ukiran_wanita;
+  const hasPria = wo.ukuran_pria || wo.jenis_cincin_pria || wo.ukiran_pria || wo.gramasi_pria != null;
+  const hasWanita = wo.ukuran_wanita || wo.jenis_cincin_wanita || wo.ukiran_wanita || wo.gramasi_wanita != null;
 
   return (
     <div className="rounded-lg border border-gold/15 bg-[#26211c] overflow-hidden mb-3">
@@ -701,6 +703,12 @@ function WorkOrderCard({ wo }: { wo: WorkOrder }) {
                     <dd className="text-[11px] font-semibold text-cream text-right max-w-[60%] break-words">{wo.jenis_cincin_pria}</dd>
                   </div>
                 )}
+                {wo.gramasi_pria != null && (
+                  <div className="flex justify-between">
+                    <dt className="text-[11px] text-white/50">Gramasi</dt>
+                    <dd className="text-[11px] font-semibold text-cream">{wo.gramasi_pria} g</dd>
+                  </div>
+                )}
                 {wo.ukiran_pria && (
                   <div className="flex justify-between">
                     <dt className="text-[11px] text-white/50">Ukiran</dt>
@@ -733,6 +741,12 @@ function WorkOrderCard({ wo }: { wo: WorkOrder }) {
                   <div className="flex justify-between">
                     <dt className="text-[11px] text-white/50">Jenis</dt>
                     <dd className="text-[11px] font-semibold text-cream text-right max-w-[60%] break-words">{wo.jenis_cincin_wanita}</dd>
+                  </div>
+                )}
+                {wo.gramasi_wanita != null && (
+                  <div className="flex justify-between">
+                    <dt className="text-[11px] text-white/50">Gramasi</dt>
+                    <dd className="text-[11px] font-semibold text-cream">{wo.gramasi_wanita} g</dd>
                   </div>
                 )}
                 {wo.ukiran_wanita && (
