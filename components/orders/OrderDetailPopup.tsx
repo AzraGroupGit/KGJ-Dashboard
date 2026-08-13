@@ -550,7 +550,7 @@ export default function OrderDetailPopup({
                               className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${dl.isOverdue ? "bg-rose-50 text-rose-700 ring-rose-200" : "bg-emerald-500/[0.08] text-emerald-300 ring-emerald-200"}`}
                             >
                               {dl.isOverdue
-                                ? `\u26a0 ${Math.abs(dl.daysRemaining)}h`
+                                ? `\u26a0 Terlambat ${Math.abs(dl.daysRemaining)} hari`
                                 : `\u2714 H-${Math.max(dl.daysRemaining, 1)}`}
                             </span>
                           );
