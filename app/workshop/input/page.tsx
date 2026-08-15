@@ -1731,7 +1731,7 @@ function WorkshopInputContent() {
               <option value="all">Semua Brand</option>
               <option value="KGJ">KGJ</option>
               <option value="HJZ">Hijaz</option>
-              <option value="MPM">MPM</option>
+              <option value="MP">MP</option>
             </select>
           </div>
         </div>

@@ -128,6 +128,11 @@ const menuItems: Record<string, MenuItem[]> = {
           icon: "report",
           href: SUPERADMIN_ROUTES.OPRPRD_LAPORAN,
         },
+        {
+          name: "Riwayat Order",
+          icon: "order",
+          href: SUPERADMIN_ROUTES.OPRPRD_HISTORY,
+        },
       ],
     },
   ],
@@ -161,6 +166,12 @@ const menuItems: Record<string, MenuItem[]> = {
       href: SUPERVISOR_ROUTES.SLOT_MANAGEMENT,
     },
     { name: "QR Code", icon: "qr", href: SUPERVISOR_ROUTES.QR_CODES },
+    { name: "Riwayat Order", icon: "order", href: SUPERVISOR_ROUTES.HISTORY },
+    {
+      name: "Riwayat Persetujuan",
+      icon: "approval",
+      href: SUPERVISOR_ROUTES.APPROVAL_HISTORY,
+    },
   ],
   management: [
     { name: "Dashboard", icon: "dashboard", href: MANAGEMENT_ROUTES.DASHBOARD },

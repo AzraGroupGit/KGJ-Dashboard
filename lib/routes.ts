@@ -92,6 +92,7 @@ export const SUPERADMIN_ROUTES = {
   OPRPRD_MONITORING_PRODUKSI: "/dashboard/superadmin/oprprd/produksi",
   OPRPRD_ANALISIS: "/dashboard/superadmin/oprprd/analisis",
   OPRPRD_LAPORAN: "/dashboard/superadmin/oprprd/laporan",
+  OPRPRD_HISTORY: "/dashboard/superadmin/oprprd/history",
   MONITORING_MANAJEMEN: "/dashboard/superadmin/management/monitoring",
   MANAGEMENT_DASHBOARD: "/dashboard/superadmin/management",
   MANAGEMENT_HISTORY: "/dashboard/superadmin/management/history",
@@ -128,6 +129,8 @@ export const SUPERVISOR_ROUTES = {
   PERSONNEL: "/dashboard/supervisor/personnel",
   SLOT_MANAGEMENT: "/dashboard/supervisor/slot-management",
   QR_CODES: "/dashboard/supervisor/qr-codes",
+  HISTORY: "/dashboard/supervisor/history",
+  APPROVAL_HISTORY: "/dashboard/supervisor/history-approval",
 } as const;
 
 export const MANAGEMENT_ROUTES = {

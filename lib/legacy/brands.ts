@@ -4,7 +4,7 @@
 export const BRANDS: Record<number, { code: string; name: string }> = {
   1: { code: "KGJ", name: "Kota Gede Jewellery" },
   2: { code: "HJZ", name: "Hijaz" },
-  3: { code: "MPM", name: "Marketplace" },
+  3: { code: "MP", name: "Marketplace" },
 };
 
 export function getBrandPrefix(kodeOrder: string): string | null {

@@ -267,6 +267,7 @@ export async function POST(request: Request) {
             ...((sr as { data?: Record<string, unknown> } | null)?.data ?? {}),
             _sv_action: action,
             _sv_by: supervisorName,
+            _sv_by_id: authUser.id,
             _sv_at: now,
             ...(remarks ? { _sv_notes: remarks } : {}),
           },
