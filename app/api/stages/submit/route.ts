@@ -490,6 +490,23 @@ export async function POST(request: Request) {
           "Packing selesai — siap kirim",
         );
         pushStageToYii2(legacyId, next);
+
+        // Order memasuki pengiriman → siapkan baris delivery pending (di-update
+        // saat stage pengiriman selesai). Idempoten: jangan buat duplikat.
+        if (next === "pengiriman") {
+          const { data: existingDelivery } = await admin
+            .from("legacy_deliveries")
+            .select("id")
+            .eq("order_id", orderId)
+            .maybeSingle();
+          if (!existingDelivery) {
+            await admin.from("legacy_deliveries").insert({
+              order_id: orderId,
+              status: "pending",
+              created_at: now,
+            });
+          }
+        }
       }
 
       notifySupervisors(
