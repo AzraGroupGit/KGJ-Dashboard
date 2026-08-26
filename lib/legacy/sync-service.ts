@@ -21,28 +21,73 @@ interface SyncResult {
   errors: number;
 }
 
-async function fetchYii2Orders(since: string): Promise<Yii2OrderPayload[] | null> {
-  const url = `${LIVE_SYSTEM_BASE_URL}/api/order-sync/new-orders?since=${encodeURIComponent(since)}`;
+const FETCH_TIMEOUT_MS = 60_000;
+const FETCH_MAX_ATTEMPTS = 2;
+
+// Fetch with a hard timeout so a slow upstream (Yii2) can't hang the function
+// until Vercel's maxDuration kills it without a traceable error.
+async function fetchWithTimeout(
+  url: string,
+  headers: Record<string, string>,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const response = await fetch(url, {
-      headers: { "X-API-Key": LIVE_SYSTEM_API_KEY },
-    });
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      console.error("[sync] Fetch failed:", response.status, "Body:", body, "URL:", url);
-      return null;
-    }
-
-    const responseData = (await response.json()) as {
-      orders: Yii2OrderPayload[];
-    };
-    console.log("[sync] Yii2 returned", responseData.orders?.length ?? 0, "orders, since:", since);
-    return responseData.orders ?? [];
-  } catch (err) {
-    console.error("[sync] Fetch error:", err, "URL:", url);
-    return null;
+    return await fetch(url, { headers, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
   }
+}
+
+export interface Yii2FetchResult {
+  orders: Yii2OrderPayload[] | null;
+  errorDetail: string | null;
+}
+
+async function fetchYii2Orders(since: string): Promise<Yii2FetchResult> {
+  const url = `${LIVE_SYSTEM_BASE_URL}/api/order-sync/new-orders?since=${encodeURIComponent(since)}`;
+
+  let lastError: string | null = null;
+  for (let attempt = 1; attempt <= FETCH_MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetchWithTimeout(url, {
+        "X-API-Key": LIVE_SYSTEM_API_KEY,
+      });
+
+      if (!response.ok) {
+        const body = (await response.text().catch(() => "")).slice(0, 300);
+        lastError = `HTTP ${response.status} — ${body || "(empty body)"}`;
+        console.error(
+          `[sync] Fetch failed (attempt ${attempt}/${FETCH_MAX_ATTEMPTS}):`,
+          lastError,
+          "URL:",
+          url,
+        );
+        continue;
+      }
+
+      const responseData = (await response.json()) as {
+        orders: Yii2OrderPayload[];
+      };
+      console.log("[sync] Yii2 returned", responseData.orders?.length ?? 0, "orders, since:", since);
+      return { orders: responseData.orders ?? [], errorDetail: null };
+    } catch (err) {
+      lastError =
+        err instanceof Error && err.name === "AbortError"
+          ? `timeout setelah ${FETCH_TIMEOUT_MS / 1000}s`
+          : err instanceof Error
+            ? err.message
+            : String(err);
+      console.error(
+        `[sync] Fetch error (attempt ${attempt}/${FETCH_MAX_ATTEMPTS}):`,
+        lastError,
+        "URL:",
+        url,
+      );
+    }
+  }
+
+  return { orders: null, errorDetail: lastError ?? "unknown" };
 }
 
 // Fetch the full set of ACTIVE kode_order from Yii2 (B1). Lightweight — just
@@ -51,8 +96,8 @@ async function fetchYii2Orders(since: string): Promise<Yii2OrderPayload[] | null
 async function fetchActiveCodes(): Promise<string[] | null> {
   const url = `${LIVE_SYSTEM_BASE_URL}/api/order-sync/active-codes`;
   try {
-    const response = await fetch(url, {
-      headers: { "X-API-Key": LIVE_SYSTEM_API_KEY },
+    const response = await fetchWithTimeout(url, {
+      "X-API-Key": LIVE_SYSTEM_API_KEY,
     });
 
     if (!response.ok) {
@@ -114,13 +159,18 @@ export async function syncNewOrders(
   const sinceDate = since || fullSyncSince();
 
   const orders = await fetchYii2Orders(sinceDate);
-  if (orders === null) {
+  if (orders.orders === null) {
     result.errors++;
-    await logSync(db, syncType, result, "fetch new-orders gagal");
+    await logSync(
+      db,
+      syncType,
+      result,
+      `fetch new-orders gagal: ${orders.errorDetail ?? "unknown"}`,
+    );
     return result;
   }
 
-  for (const order of orders) {
+  for (const order of orders.orders) {
     try {
       const ingest = await ingestLegacyOrder(db, order);
       if (ingest.action === "inserted" || ingest.stageChanged) {

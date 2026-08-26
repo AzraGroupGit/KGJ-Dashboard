@@ -44,6 +44,13 @@ export async function GET(request: Request) {
       .eq("order_id", orderId)
       .maybeSingle();
 
+    // ── 2b. Deliveries (shipping) ──────────────────────────────────────────────
+    const { data: deliveryRows } = await admin
+      .from("legacy_deliveries")
+      .select("id, delivery_method, status, courier_name, tracking_number, dispatched_at, delivered_at")
+      .eq("order_id", orderId)
+      .order("created_at", { ascending: true });
+
     // ── 3. Stage history → mapped into the transitions shape ───────────────────
     const { data: history, error: histErr } = await admin
       .from("stage_history")
@@ -79,13 +86,28 @@ export async function GET(request: Request) {
         };
       });
 
-    const transitions = (history ?? []).map((h) => ({
-      from_stage: null,
-      to_stage: h.stage,
-      reason: h.note ?? null,
-      transitioned_at: h.created_at,
-      users: (h as { users?: { full_name?: string } }).users ?? null,
-    }));
+    const transitions = (history ?? [])
+      .filter((h) => (h as { status?: string }).status !== "rework")
+      .map((h) => ({
+        from_stage: null,
+        to_stage: h.stage,
+        reason: h.note ?? null,
+        transitioned_at: h.created_at,
+        users: (h as { users?: { full_name?: string } }).users ?? null,
+      }));
+
+    // Derived scan events (legacy has no QR-scan table): surface supervisor
+    // rejections (status "rework") as proper "Tolak" scan events instead of the
+    // misleading "Dimulai" transition they would otherwise become.
+    const scanEvents = (history ?? [])
+      .filter((h) => (h as { status?: string }).status === "rework")
+      .map((h) => ({
+        id: `${orderId}-scan-${h.stage}-${h.created_at}`,
+        stage: h.stage,
+        action: "reject",
+        scanned_at: h.created_at,
+        users: (h as { users?: { full_name?: string } }).users ?? null,
+      }));
 
     const stageResults = (history ?? [])
       .filter((h) => {
@@ -112,8 +134,16 @@ export async function GET(request: Request) {
         ),
         transitions,
         stageResults,
-        deliveries: [],
-        scanEvents: [],
+        deliveries: (deliveryRows ?? []).map((d) => ({
+          id: (d as { id: string }).id,
+          delivery_method: (d as { delivery_method?: string }).delivery_method ?? "Pengiriman",
+          status: (d as { status?: string }).status ?? "pending",
+          courier_name: (d as { courier_name?: string }).courier_name ?? null,
+          tracking_number: (d as { tracking_number?: string }).tracking_number ?? null,
+          dispatched_at: (d as { dispatched_at?: string }).dispatched_at ?? null,
+          delivered_at: (d as { delivered_at?: string }).delivered_at ?? null,
+        })),
+        scanEvents,
         approvals,
       },
     });
