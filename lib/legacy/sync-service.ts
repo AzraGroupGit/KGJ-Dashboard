@@ -45,6 +45,38 @@ async function fetchYii2Orders(since: string): Promise<Yii2OrderPayload[] | null
   }
 }
 
+// Fetch the full set of ACTIVE kode_order from Yii2 (B1). Lightweight — just
+// codes, no full payload — so reconcile can compare against the entire local
+// table instead of a bounded `since` window.
+async function fetchActiveCodes(): Promise<string[] | null> {
+  const url = `${LIVE_SYSTEM_BASE_URL}/api/order-sync/active-codes`;
+  try {
+    const response = await fetch(url, {
+      headers: { "X-API-Key": LIVE_SYSTEM_API_KEY },
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      console.error("[reconcile] active-codes failed:", response.status, "Body:", body, "URL:", url);
+      return null;
+    }
+
+    const data = (await response.json()) as {
+      success?: boolean;
+      count?: number;
+      orders?: { kode_order: string }[];
+    };
+    const codes = (data.orders ?? [])
+      .map((o) => o.kode_order)
+      .filter((code): code is string => Boolean(code && code.trim()));
+    console.log("[reconcile] Yii2 active-codes returned", codes.length, "orders");
+    return codes;
+  } catch (err) {
+    console.error("[reconcile] active-codes fetch error:", err, "URL:", url);
+    return null;
+  }
+}
+
 // Watermark for the pull fallback (spec checklist item 4). Yii2's `since`
 // compares against DATE columns (tgl_update_status / tgl_order, Asia/Jakarta)
 // — so overlap must be date-level (1 day), not minutes. Dedupe by kode_order
@@ -124,11 +156,11 @@ async function logSync(
 
 // ── Soft-delete reconciliation (spec checklist item 3) ────────────────────────
 //
-// Yii2 excludes soft-deleted orders from new-orders and never fires webhooks
-// for them — the ERP is never told about deletions. This job pulls the full
-// feed and marks local rows that disappeared as deleted (deleted_at + drop
-// the tracking pointer so they vanish from all worklists). Rows that
-// reappear are resurrected by ingestLegacyOrder.
+// Yii2 excludes soft-deleted orders from new-orders and (historically) never
+// fired webhooks for them. This job pulls the full set of ACTIVE kode_order via
+// active-codes (B1) and marks local rows that disappeared as deleted
+// (deleted_at + drop the tracking pointer so they vanish from all worklists).
+// Rows that reappear are resurrected by ingestLegacyOrder.
 
 export interface ReconcileResult {
   checked: number;
@@ -140,16 +172,31 @@ export interface ReconcileResult {
 const RECONCILE_MAX_DELETE_RATIO = 0.1;
 const RECONCILE_MAX_DELETE_FLOOR = 50;
 
-export async function reconcileDeletedOrders(
-  since: string = fullSyncSince(),
-): Promise<ReconcileResult> {
+// Soft-delete local orders and drop their tracking pointers so they disappear
+// from every worklist. stage_history stays for audit. Shared by reconcile and
+// the order_deleted webhook.
+export async function softDeleteLocalOrders(
+  db: Db,
+  orderIds: string[],
+): Promise<void> {
+  if (orderIds.length === 0) return;
+
+  await db
+    .from("legacy_orders")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", orderIds);
+
+  await db.from("tracking_stages").delete().in("order_id", orderIds);
+}
+
+export async function reconcileDeletedOrders(): Promise<ReconcileResult> {
   const db = createAdminClient();
 
-  const orders = await fetchYii2Orders(since);
+  const liveCodes = await fetchActiveCodes();
 
   // Never mass-delete on a bad/empty feed.
-  if (orders === null || orders.length === 0) {
-    const reason = orders === null ? "fetch new-orders gagal" : "feed kosong — reconcile dibatalkan";
+  if (liveCodes === null || liveCodes.length === 0) {
+    const reason = liveCodes === null ? "fetch active-codes gagal" : "feed kosong — reconcile dibatalkan";
     await db.from("sync_logs").insert({
       sync_type: "reconcile",
       orders_synced: 0,
@@ -160,7 +207,7 @@ export async function reconcileDeletedOrders(
     return { checked: 0, deleted: 0, aborted: true, reason };
   }
 
-  const liveCodes = new Set(orders.map((o) => o.kode_order));
+  const liveSet = new Set(liveCodes);
 
   const { data: localRows, error } = await db
     .from("legacy_orders")
@@ -179,7 +226,7 @@ export async function reconcileDeletedOrders(
     return { checked: 0, deleted: 0, aborted: true, reason };
   }
 
-  const missing = localRows.filter((row) => !liveCodes.has(row.kode_order));
+  const missing = localRows.filter((row) => !liveSet.has(row.kode_order));
 
   // Safety valve: a suspiciously large deletion set means the feed is
   // truncated/broken, not that half the workshop got deleted.
@@ -202,16 +249,7 @@ export async function reconcileDeletedOrders(
 
   if (missing.length > 0) {
     const ids = missing.map((row) => row.id);
-
-    await db
-      .from("legacy_orders")
-      .update({ deleted_at: new Date().toISOString() })
-      .in("id", ids);
-
-    // Remove tracking pointers: every worklist starts from tracking_stages,
-    // so deleted orders disappear everywhere. stage_history stays for audit.
-    await db.from("tracking_stages").delete().in("order_id", ids);
-
+    await softDeleteLocalOrders(db, ids);
     console.log(
       "[reconcile] Marked deleted:",
       missing.map((row) => row.kode_order).join(", "),
