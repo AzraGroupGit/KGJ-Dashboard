@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ingestLegacyOrder } from "@/lib/legacy/ingest";
+import { softDeleteLocalOrders } from "@/lib/legacy/sync-service";
 import { type Yii2OrderPayload } from "@/lib/legacy/adapter";
 
 const WEBHOOK_SECRET = process.env.INTEGRATED_SYSTEM_WEBHOOK_SECRET;
@@ -25,6 +26,46 @@ export async function POST(request: Request) {
     }
 
     const payload = await request.json();
+    const db = createAdminClient();
+
+    // ── order_deleted event (A) ────────────────────────────────────────────
+    // Yii2 fires this on actionRemove/actionDelete_all. Soft-delete the local
+    // order + drop its tracking pointer. Idempotent — a repeated/duplicate
+    // event for an already-gone order is a no-op.
+    if (payload?.event === "order_deleted") {
+      const kodeOrder = payload?.kode_order as string | undefined;
+      if (!kodeOrder) {
+        return NextResponse.json(
+          { error: "Payload tidak valid: kode_order diperlukan" },
+          { status: 400 },
+        );
+      }
+
+      const { data: local } = await db
+        .from("legacy_orders")
+        .select("id")
+        .eq("kode_order", kodeOrder)
+        .maybeSingle();
+
+      if (local) {
+        await softDeleteLocalOrders(db, [local.id]);
+      }
+
+      await db.from("sync_logs").insert({
+        sync_type: "webhook",
+        orders_synced: local ? 1 : 0,
+        status: "success",
+        error_message: `${kodeOrder}: deleted${local ? "" : " (tidak ditemukan)"}`,
+        created_at: new Date().toISOString(),
+      });
+
+      return NextResponse.json({
+        received: true,
+        status: local ? "deleted" : "not_found",
+      });
+    }
+
+    // ── Upsert event (existing) ────────────────────────────────────────────
     const { order } = payload as { order: Yii2OrderPayload };
 
     if (!order?.kode_order || !order?.id) {
@@ -33,8 +74,6 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-
-    const db = createAdminClient();
 
     const result = await ingestLegacyOrder(db, order);
 
