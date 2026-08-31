@@ -64,7 +64,7 @@ export async function GET(request?: NextRequest) {
 
     const query = admin
       .from("tracking_stages")
-      .select("order_id, current_stage, stage_status, updated_at, legacy_orders!tracking_stages_order_id_fkey(kode_order, nama, tgl_selesai, created_at, proses_produksi)")
+      .select("order_id, current_stage, stage_status, updated_at, legacy_orders!tracking_stages_order_id_fkey(kode_order, nama, tgl_selesai, created_at, proses_produksi, proses_produksi_label)")
       .neq("current_stage", "selesai")
       .in("current_stage", ACTIVE_STAGES as unknown as string[]);
 
@@ -73,7 +73,7 @@ export async function GET(request?: NextRequest) {
     if (ordersError)
       return NextResponse.json({ error: "Gagal mengambil data" }, { status: 500 });
 
-    type LegacyEmbed = { kode_order: string; nama: string | null; tgl_selesai: string | null; created_at: string | null; proses_produksi: string | null };
+    type LegacyEmbed = { kode_order: string; nama: string | null; tgl_selesai: string | null; created_at: string | null; proses_produksi: string | null; proses_produksi_label: string | null };
     type TrackRow = {
       order_id: string;
       current_stage: string;
@@ -99,6 +99,7 @@ export async function GET(request?: NextRequest) {
           deadline: lo?.tgl_selesai ?? null,
           created_at: lo?.created_at ?? null,
           proses_produksi: lo?.proses_produksi ?? null,
+          proses_produksi_label: lo?.proses_produksi_label ?? null,
         };
       })
       .filter((o) => {
@@ -146,7 +147,7 @@ export async function GET(request?: NextRequest) {
     }
 
     // Group by stage
-    type OrderRec = { id: string; current_stage: string; status: string; order_number: string; customer_name: string | null; updated_at: string; deadline: string | null; proses_produksi: string | null };
+    type OrderRec = { id: string; current_stage: string; status: string; order_number: string; customer_name: string | null; updated_at: string; deadline: string | null; proses_produksi: string | null; proses_produksi_label: string | null };
     const stageMap = new Map<string, OrderRec[]>();
     for (const order of orders || []) {
       const stage = order.current_stage;
@@ -180,6 +181,7 @@ export async function GET(request?: NextRequest) {
           current_stage: o.current_stage,
           deadline: o.deadline ?? null,
           proses_produksi: o.proses_produksi ?? null,
+          proses_produksi_label: o.proses_produksi_label ?? null,
           last_worker: latest?.users?.full_name ?? null,
           last_submission: latest?.finished_at ?? null,
           approval_decision: approval?.decision ?? null,

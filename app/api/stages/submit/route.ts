@@ -611,6 +611,46 @@ export async function POST(request: Request) {
       });
     }
 
+    // ── pembentukan_cincin: optional microsetting skip ───────────────────────
+    // Tidak semua order perlu micro setting (id_microsetting 8 = "Sesuai Model").
+    // Tukang memilih lanjut ke pemasangan_permata atau langsung ke pemolesan.
+    if (stage === "pembentukan_cincin") {
+      const perlu = data.perlu_microsetting as string | undefined;
+      if (!perlu)
+        return NextResponse.json(
+          { error: "perlu_microsetting wajib diisi untuk pembentukan_cincin" },
+          { status: 400 },
+        );
+
+      await recordSubmission(admin, orderId, userId, "pembentukan_cincin", attemptNumber,
+        { ...data }, (data.notes as string) ?? null);
+
+      const nextStage = perlu === "skip" ? "pemolesan" : "pemasangan_permata";
+
+      await advanceOrder(
+        admin,
+        orderId,
+        "pembentukan_cincin",
+        nextStage,
+        userId,
+        false,
+      );
+      pushStageToYii2(legacyId, nextStage);
+
+      return NextResponse.json({
+        success: true,
+        message:
+          perlu === "skip"
+            ? "Pembentukan selesai. Tanpa micro setting — lanjut ke pemolesan."
+            : "Pembentukan selesai. Lanjut ke micro setting.",
+        data: {
+          order_id: orderId,
+          order_number: order.order_number,
+          next_stage: nextStage,
+        },
+      });
+    }
+
     // ── Standard "Done" stages ─────────────────────────────────────────────────
     await recordSubmission(admin, orderId, userId, stage, attemptNumber,
       { ...data }, (data as Record<string, unknown>).notes as string | null ?? null);
