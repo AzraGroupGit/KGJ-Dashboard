@@ -12,6 +12,7 @@ export interface BottleneckItem {
   tgl_order?: string | null;
   last_worker: string | null;
   last_submission?: string | null;
+  proses_produksi?: string | null;
   approval_decision: string | null;
   approved_by: string | null;
   approved_at?: string | null;
