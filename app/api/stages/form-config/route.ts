@@ -99,6 +99,16 @@ const STAGE_CONFIGS: Record<string, StageConfig> = {
     stageType: "select_action",
     fields: [
       {
+        name: "perlu_microsetting",
+        label: "Perlu Micro Setting?",
+        type: "select",
+        required: true,
+        options: [
+          { value: "lanjut", label: "Lanjut ke Micro Setting" },
+          { value: "skip", label: "Tidak Perlu — Langsung Pemolesan" },
+        ],
+      },
+      {
         name: "tukang",
         label: "Tukang",
         type: "select",
@@ -607,7 +617,43 @@ export async function GET(request: Request) {
       .maybeSingle();
 
     const stageConfig = STAGE_CONFIGS[stage];
-    const fields = await enrichTukangOptions(admin, stage, stageConfig?.fields ?? []);
+    let fields = await enrichTukangOptions(admin, stage, stageConfig?.fields ?? []);
+
+    // ── pembentukan_cincin: pre-fill "perlu microsetting" from order data ─────
+    // id_microsetting: 8 = "Sesuai Model" (skip), 9 = "Request Khusus" (perlu).
+    let perluMicrosettingDefault: string | null = null;
+    if (stage === "pembentukan_cincin") {
+      const microIds = [pria, wanita]
+        .map((k) => Number(k?.id_microsetting))
+        .filter((v) => Number.isFinite(v));
+      perluMicrosettingDefault =
+        microIds.length > 0 && microIds.every((v) => v === 8) ? "skip" : "lanjut";
+    }
+
+    // ── qc_1: hide microsetting checklist item when it was skipped ────────────
+    if (stage === "qc_1") {
+      const { data: pembentukanResult } = await admin
+        .from("stage_history")
+        .select("data")
+        .eq("order_id", orderId)
+        .eq("stage", "pembentukan_cincin")
+        .order("attempt_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const pd = pembentukanResult?.data as Record<string, unknown> | undefined;
+      if (pd?.perlu_microsetting === "skip") {
+        fields = fields.map((f) =>
+          f.type === "quality_checklist"
+            ? {
+                ...f,
+                items: (f.items ?? []).filter(
+                  (it) => it.key !== "pemasangan_permata",
+                ),
+              }
+            : f,
+        );
+      }
+    }
 
     // ── Konfirmasi data for downstream stages ──────────────────────────────────
     let konfirmasiInfo: { tanggal_packing?: string; nomor_resi?: string } | null = null;
@@ -698,7 +744,12 @@ export async function GET(request: Request) {
           product_name: order.customer_name,
           fields,
           permissions: { can_submit: canSubmit, can_edit: canEdit },
-          current_data: lastResult?.data ?? {},
+          current_data: {
+            ...(perluMicrosettingDefault
+              ? { perlu_microsetting: perluMicrosettingDefault }
+              : {}),
+            ...(lastResult?.data ?? {}),
+          },
           work_order: workOrder,
           konfirmasi_info: konfirmasiInfo,
         },

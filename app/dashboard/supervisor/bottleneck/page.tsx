@@ -279,7 +279,10 @@ function BottleneckTableRow({
                         {item.customer_name || item.product_name || "—"}
                       </td>
                       <td className="px-2 py-2 text-center">
-                        <span className="text-white/70">
+                        <span
+                          className="text-white/70 cursor-default"
+                          title={item.proses_produksi_label ?? item.proses_produksi ?? undefined}
+                        >
                           {item.proses_produksi ?? "—"}
                         </span>
                       </td>

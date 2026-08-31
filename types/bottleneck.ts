@@ -13,6 +13,7 @@ export interface BottleneckItem {
   last_worker: string | null;
   last_submission?: string | null;
   proses_produksi?: string | null;
+  proses_produksi_label?: string | null;
   approval_decision: string | null;
   approved_by: string | null;
   approved_at?: string | null;
