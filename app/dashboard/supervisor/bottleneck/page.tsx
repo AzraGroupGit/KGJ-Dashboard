@@ -41,6 +41,16 @@ function formatHours(hours: number | null): string {
   return `${Math.round(hours * 10) / 10}j`;
 }
 
+function formatDateTimeCompact(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function getStatusInfo(avgHours: number | null): {
   label: string;
   className: string;
@@ -239,10 +249,13 @@ function BottleneckTableRow({
                 <thead>
                   <tr className="border-b border-gold/15 text-[10px] uppercase tracking-wide text-white/40">
                     <th className="px-2 py-1.5 text-left font-semibold">Order</th>
+                    <th className="px-2 py-1.5 text-center font-semibold">Brand</th>
                     <th className="px-2 py-1.5 text-left font-semibold">Customer</th>
+                    <th className="px-2 py-1.5 text-center font-semibold">Paket</th>
                     <th className="px-2 py-1.5 text-center font-semibold">Waktu</th>
                     <th className="px-2 py-1.5 text-center font-semibold">Deadline</th>
                     <th className="px-2 py-1.5 text-center font-semibold">Pekerja</th>
+                    <th className="px-2 py-1.5 text-center font-semibold">Submit</th>
                     <th className="px-2 py-1.5 text-center font-semibold">Approval</th>
                     <th className="px-2 py-1.5 text-center font-semibold">Status</th>
                   </tr>
@@ -257,8 +270,18 @@ function BottleneckTableRow({
                       <td className="px-2 py-2 font-mono text-white/70">
                         {item.order_number}
                       </td>
+                      <td className="px-2 py-2 text-center">
+                        <span className="text-white/70">
+                          {getBrandPrefix(item.order_number) ?? "—"}
+                        </span>
+                      </td>
                       <td className="px-2 py-2 text-cream truncate max-w-[140px]">
                         {item.customer_name || item.product_name || "—"}
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <span className="text-white/70">
+                          {item.proses_produksi ?? "—"}
+                        </span>
                       </td>
                       <td className="px-2 py-2 text-center">
                         <span className={`font-semibold ${
@@ -293,6 +316,9 @@ function BottleneckTableRow({
                       </td>
                       <td className="px-2 py-2 text-center text-white/70">
                         {item.last_worker || "—"}
+                      </td>
+                      <td className="px-2 py-2 text-center text-white/50">
+                        {formatDateTimeCompact(item.last_submission)}
                       </td>
                       <td className="px-2 py-2 text-center">
                         {item.approval_decision ? (

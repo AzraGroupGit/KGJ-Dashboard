@@ -52,6 +52,9 @@ export interface Yii2OrderPayload {
   sisa_bayar?: string;
   komponen?: Record<string, unknown>[];
   id_brand?: number;
+  id_proses_produksi?: number | null;
+  proses_produksi?: string | null;
+  proses_produksi_label?: string | null;
   reference_image_pria_url?: string;
   reference_image_wanita_url?: string;
 }
@@ -102,6 +105,9 @@ export function buildLegacyOrderRow(order: Yii2OrderPayload) {
     sisa_bayar: toNumeric(order.sisa_bayar),
     komponen: order.komponen ?? [],
     id_brand: order.id_brand ?? 1,
+    id_proses_produksi: order.id_proses_produksi ?? null,
+    proses_produksi: order.proses_produksi ?? null,
+    proses_produksi_label: order.proses_produksi_label ?? null,
     reference_image_pria_url: order.reference_image_pria_url ?? null,
     reference_image_wanita_url: order.reference_image_wanita_url ?? null,
     last_synced_at: new Date().toISOString(),
@@ -123,6 +129,9 @@ export function buildLegacyOrderUpdate(order: Yii2OrderPayload) {
   if (order.id_produk === undefined) delete update.id_produk;
   if (order.id_jenis_order === undefined) delete update.id_jenis_order;
   if (order.id_brand === undefined) delete update.id_brand;
+  if (order.id_proses_produksi === undefined) delete update.id_proses_produksi;
+  if (order.proses_produksi === undefined) delete update.proses_produksi;
+  if (order.proses_produksi_label === undefined) delete update.proses_produksi_label;
   if (order.reference_image_pria_url === undefined) delete update.reference_image_pria_url;
   if (order.reference_image_wanita_url === undefined) delete update.reference_image_wanita_url;
   return update;
@@ -165,6 +174,9 @@ export interface LegacyOrderRow {
   sisa_bayar: number | null;
   komponen: Record<string, unknown>[] | null;
   id_brand: number | null;
+  id_proses_produksi: number | null;
+  proses_produksi: string | null;
+  proses_produksi_label: string | null;
   reference_image_pria_url: string | null;
   reference_image_wanita_url: string | null;
   last_synced_at: string | null;
@@ -354,7 +366,9 @@ export function legacyToOrderDetail(
     sisa_bayar: sisaBayar,
     order_via: null,
     sumber_media: order.sumber_closing ?? null,
-    kategori: null,
+    kategori: order.proses_produksi ?? null,
+    proses_produksi: order.proses_produksi ?? null,
+    proses_produksi_label: order.proses_produksi_label ?? null,
     transfer_ke_bank: null,
     // Build jenis_cincin_features from komponen gemstone labels
     jenis_cincin_features: [
