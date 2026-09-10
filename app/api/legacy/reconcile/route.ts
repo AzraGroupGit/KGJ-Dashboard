@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { reconcileDeletedOrders } from "@/lib/legacy/sync-service";
-import { getReconcileMode } from "@/lib/legacy/reconcile-mode";
 
 export const maxDuration = 300;
 
 // Soft-delete reconciliation (spec checklist item 3): Yii2 never tells the
 // ERP about deleted orders — this job pulls the full feed and marks local
-// rows that disappeared as deleted.
+// rows that disappeared as deleted. Triggered daily by Vercel Cron.
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
@@ -17,16 +16,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const mode = getReconcileMode();
-  if (mode === "disabled") {
-    return NextResponse.json(
-      { error: "Reconcile dinonaktifkan sementara untuk recovery data" },
-      { status: 503 },
-    );
-  }
-
   try {
-    const result = await reconcileDeletedOrders(mode);
+    const result = await reconcileDeletedOrders();
     return NextResponse.json(result, { status: result.aborted ? 502 : 200 });
   } catch (error) {
     console.error("[GET /api/legacy/reconcile] unexpected:", error);
