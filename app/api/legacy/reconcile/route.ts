@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { reconcileDeletedOrders } from "@/lib/legacy/sync-service";
+import { getReconcileMode } from "@/lib/legacy/reconcile-mode";
 
 export const maxDuration = 300;
 
@@ -14,6 +15,13 @@ export async function GET(request: Request) {
   }
   if (request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (getReconcileMode() !== "apply") {
+    return NextResponse.json(
+      { error: "Reconcile dinonaktifkan sementara untuk recovery data" },
+      { status: 503 },
+    );
   }
 
   try {
