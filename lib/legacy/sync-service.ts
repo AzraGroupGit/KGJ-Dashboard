@@ -1,12 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ingestLegacyOrder } from "@/lib/legacy/ingest";
 import { type Yii2OrderPayload } from "@/lib/legacy/adapter";
-import {
-  exceedsReconcileDeleteThreshold,
-  normalizeUniqueCodes,
-  type ReconcileMode,
-  validateActiveCodesPayload,
-} from "@/lib/legacy/reconcile-mode";
 
 const LIVE_SYSTEM_BASE_URL = process.env.LIVE_SYSTEM_BASE_URL || "";
 const LIVE_SYSTEM_API_KEY = process.env.INTEGRATED_SYSTEM_WEBHOOK_SECRET || "";
@@ -99,10 +93,7 @@ async function fetchYii2Orders(since: string): Promise<Yii2FetchResult> {
 // Fetch the full set of ACTIVE kode_order from Yii2 (B1). Lightweight — just
 // codes, no full payload — so reconcile can compare against the entire local
 // table instead of a bounded `since` window.
-async function fetchActiveCodes(): Promise<{
-  codes: string[] | null;
-  errorDetail: string | null;
-}> {
+async function fetchActiveCodes(): Promise<string[] | null> {
   const url = `${LIVE_SYSTEM_BASE_URL}/api/order-sync/active-codes`;
   try {
     const response = await fetchWithTimeout(url, {
@@ -112,23 +103,22 @@ async function fetchActiveCodes(): Promise<{
     if (!response.ok) {
       const body = await response.text().catch(() => "");
       console.error("[reconcile] active-codes failed:", response.status, "Body:", body, "URL:", url);
-      return { codes: null, errorDetail: `HTTP ${response.status}` };
+      return null;
     }
 
-    const validation = validateActiveCodesPayload(await response.json());
-    if (!validation.ok) {
-      console.error("[reconcile] active-codes tidak valid:", validation.reason, "URL:", url);
-      return { codes: null, errorDetail: validation.reason };
-    }
-
-    console.log("[reconcile] Yii2 active-codes returned", validation.codes.length, "orders");
-    return { codes: validation.codes, errorDetail: null };
+    const data = (await response.json()) as {
+      success?: boolean;
+      count?: number;
+      orders?: { kode_order: string }[];
+    };
+    const codes = (data.orders ?? [])
+      .map((o) => o.kode_order)
+      .filter((code): code is string => Boolean(code && code.trim()));
+    console.log("[reconcile] Yii2 active-codes returned", codes.length, "orders");
+    return codes;
   } catch (err) {
     console.error("[reconcile] active-codes fetch error:", err, "URL:", url);
-    return {
-      codes: null,
-      errorDetail: err instanceof Error ? err.message : String(err),
-    };
+    return null;
   }
 }
 
@@ -225,11 +215,12 @@ async function logSync(
 export interface ReconcileResult {
   checked: number;
   deleted: number;
-  wouldDelete: number;
-  mode: ReconcileMode;
   aborted: boolean;
   reason: string | null;
 }
+
+const RECONCILE_MAX_DELETE_RATIO = 0.1;
+const RECONCILE_MAX_DELETE_FLOOR = 50;
 
 // Soft-delete local orders and drop their tracking pointers so they disappear
 // from every worklist. stage_history stays for audit. Shared by reconcile and
@@ -248,13 +239,10 @@ export async function softDeleteLocalOrders(
   await db.from("tracking_stages").delete().in("order_id", orderIds);
 }
 
-export async function reconcileDeletedOrders(
-  mode: ReconcileMode = "apply",
-): Promise<ReconcileResult> {
+export async function reconcileDeletedOrders(): Promise<ReconcileResult> {
   const db = createAdminClient();
 
-  const activeCodes = await fetchActiveCodes();
-  const liveCodes = activeCodes.codes;
+  const liveCodes = await fetchActiveCodes();
 
   // Never mass-delete on a bad/empty feed.
   if (liveCodes === null || liveCodes.length === 0) {
@@ -266,7 +254,7 @@ export async function reconcileDeletedOrders(
       error_message: reason,
       created_at: new Date().toISOString(),
     });
-    return { checked: 0, deleted: 0, wouldDelete: 0, mode, aborted: true, reason };
+    return { checked: 0, deleted: 0, aborted: true, reason };
   }
 
   const liveSet = new Set(liveCodes);
@@ -285,60 +273,19 @@ export async function reconcileDeletedOrders(
       error_message: reason,
       created_at: new Date().toISOString(),
     });
-    return { checked: 0, deleted: 0, wouldDelete: 0, mode, aborted: true, reason };
+    return { checked: 0, deleted: 0, aborted: true, reason };
   }
 
-  const localCodes = normalizeUniqueCodes(localRows.map((row) => row.kode_order));
-  if (!localCodes.ok) {
-    const reason = `legacy_orders tidak valid: ${localCodes.reason}`;
-    await db.from("sync_logs").insert({
-      sync_type: "reconcile",
-      orders_synced: 0,
-      status: "failed",
-      error_message: reason,
-      created_at: new Date().toISOString(),
-    });
-    return {
-      checked: localRows.length,
-      deleted: 0,
-      wouldDelete: 0,
-      mode,
-      aborted: true,
-      reason,
-    };
-  }
-
-  const missing = localRows.filter((row) => !liveSet.has(row.kode_order.trim()));
+  const missing = localRows.filter((row) => !liveSet.has(row.kode_order));
 
   // Safety valve: a suspiciously large deletion set means the feed is
   // truncated/broken, not that half the workshop got deleted.
-  const exceedsThreshold = exceedsReconcileDeleteThreshold(
-    missing.length,
-    localRows.length,
+  const maxAllowed = Math.max(
+    RECONCILE_MAX_DELETE_FLOOR,
+    Math.floor(localRows.length * RECONCILE_MAX_DELETE_RATIO),
   );
-  if (mode === "dry_run") {
-    const reason = exceedsThreshold
-      ? `${missing.length} kandidat melebihi batas 5 order atau 1%`
-      : `${missing.length} kandidat deletion`;
-    await db.from("sync_logs").insert({
-      sync_type: "reconcile",
-      orders_synced: 0,
-      status: "success",
-      error_message: `dry-run: ${reason}`,
-      created_at: new Date().toISOString(),
-    });
-    return {
-      checked: localRows.length,
-      deleted: 0,
-      wouldDelete: missing.length,
-      mode,
-      aborted: false,
-      reason,
-    };
-  }
-
-  if (exceedsThreshold) {
-    const reason = `${missing.length} order akan terhapus (batas 5 order atau 1%) — reconcile dibatalkan`;
+  if (missing.length > maxAllowed) {
+    const reason = `${missing.length} order akan terhapus (batas ${maxAllowed}) — reconcile dibatalkan`;
     console.error("[reconcile]", reason);
     await db.from("sync_logs").insert({
       sync_type: "reconcile",
@@ -347,14 +294,7 @@ export async function reconcileDeletedOrders(
       error_message: reason,
       created_at: new Date().toISOString(),
     });
-    return {
-      checked: localRows.length,
-      deleted: 0,
-      wouldDelete: missing.length,
-      mode,
-      aborted: true,
-      reason,
-    };
+    return { checked: localRows.length, deleted: 0, aborted: true, reason };
   }
 
   if (missing.length > 0) {
@@ -378,8 +318,6 @@ export async function reconcileDeletedOrders(
   return {
     checked: localRows.length,
     deleted: missing.length,
-    wouldDelete: missing.length,
-    mode,
     aborted: false,
     reason: null,
   };
