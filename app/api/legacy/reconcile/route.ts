@@ -6,7 +6,7 @@ export const maxDuration = 300;
 
 // Soft-delete reconciliation (spec checklist item 3): Yii2 never tells the
 // ERP about deleted orders — this job pulls the full feed and marks local
-// rows that disappeared as deleted. Triggered daily by Vercel Cron.
+// rows that disappeared as deleted.
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
@@ -17,7 +17,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (getReconcileMode() !== "apply") {
+  const mode = getReconcileMode();
+  if (mode === "disabled") {
     return NextResponse.json(
       { error: "Reconcile dinonaktifkan sementara untuk recovery data" },
       { status: 503 },
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await reconcileDeletedOrders();
+    const result = await reconcileDeletedOrders(mode);
     return NextResponse.json(result, { status: result.aborted ? 502 : 200 });
   } catch (error) {
     console.error("[GET /api/legacy/reconcile] unexpected:", error);
