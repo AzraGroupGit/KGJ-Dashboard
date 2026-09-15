@@ -168,7 +168,7 @@ export async function POST(request: Request) {
         created_at: now,
       });
 
-      pushStageToYii2(legacyId, "dibatalkan");
+      await pushStageToYii2(order_id, legacyId, "dibatalkan");
     } else if (action === "approve") {
       await admin
         .from("tracking_stages")
@@ -188,8 +188,8 @@ export async function POST(request: Request) {
         created_at: now,
       });
 
-      // Sinkronkan stage terkini ke Yii2 (fire-and-forget).
-      pushStageToYii2(legacyId, nextStage ?? "selesai");
+      // Sinkronkan stage terkini ke Yii2.
+      await pushStageToYii2(order_id, legacyId, nextStage ?? "selesai");
     } else {
       await admin
         .from("tracking_stages")
@@ -216,7 +216,7 @@ export async function POST(request: Request) {
       });
 
       // Order kembali ke stage produksi — sinkronkan ke Yii2.
-      pushStageToYii2(legacyId, productionStage);
+      await pushStageToYii2(order_id, legacyId, productionStage);
     }
 
     // ── 2. Notify worker ────────────────────────────────────────────────────────
