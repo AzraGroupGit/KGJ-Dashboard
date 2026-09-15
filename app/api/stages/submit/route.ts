@@ -267,7 +267,7 @@ export async function POST(request: Request) {
           `/workshop/input?order_id=${orderId}`,
         );
 
-        pushStageToYii2(legacyId, "lebur_bahan");
+        await pushStageToYii2(orderId, legacyId, "lebur_bahan");
 
         return NextResponse.json({
           success: true,
@@ -293,7 +293,7 @@ export async function POST(request: Request) {
           false,
           "Cek kadar lolos",
         );
-        pushStageToYii2(legacyId, next);
+        await pushStageToYii2(orderId, legacyId, next);
       }
 
       return NextResponse.json({
@@ -363,7 +363,7 @@ export async function POST(request: Request) {
           `/workshop/input?order_id=${orderId}`,
         );
 
-        pushStageToYii2(legacyId, prevStage);
+        await pushStageToYii2(orderId, legacyId, prevStage);
 
         return NextResponse.json({
           success: true,
@@ -389,7 +389,7 @@ export async function POST(request: Request) {
           false,
           "Konfirmasi customer care disetujui",
         );
-        pushStageToYii2(legacyId, next);
+        await pushStageToYii2(orderId, legacyId, next);
       }
 
       return NextResponse.json({
@@ -429,7 +429,7 @@ export async function POST(request: Request) {
       const approvalStage = APPROVAL_GATE_MAP[stage];
       if (approvalStage) {
         await advanceOrder(admin, orderId, stage, approvalStage, userId, true);
-        pushStageToYii2(legacyId, approvalStage);
+        await pushStageToYii2(orderId, legacyId, approvalStage);
         // Notify the right supervisor
         const supRole = getSupervisorRoleForApproval(approvalStage);
         if (supRole) {
@@ -489,7 +489,7 @@ export async function POST(request: Request) {
           false,
           "Packing selesai — siap kirim",
         );
-        pushStageToYii2(legacyId, next);
+        await pushStageToYii2(orderId, legacyId, next);
 
         // Order memasuki pengiriman → siapkan baris delivery pending (di-update
         // saat stage pengiriman selesai). Idempoten: jangan buat duplikat.
@@ -585,7 +585,7 @@ export async function POST(request: Request) {
         notifyCsForOrder(orderId);
 
         // Pengiriman berhasil → order masuk tahap selesai.
-        pushStageToYii2(legacyId, "selesai");
+        await pushStageToYii2(orderId, legacyId, "selesai");
 
         return NextResponse.json({
           success: true,
@@ -635,7 +635,7 @@ export async function POST(request: Request) {
         userId,
         false,
       );
-      pushStageToYii2(legacyId, nextStage);
+      await pushStageToYii2(orderId, legacyId, nextStage);
 
       return NextResponse.json({
         success: true,
@@ -669,7 +669,7 @@ export async function POST(request: Request) {
         isWaiting,
       );
       // Push the stage the order has ENTERED so Yii2 mirrors the ERP.
-      pushStageToYii2(legacyId, resolvedNext);
+      await pushStageToYii2(orderId, legacyId, resolvedNext);
     }
 
     if (isWaiting && approvalStage) {

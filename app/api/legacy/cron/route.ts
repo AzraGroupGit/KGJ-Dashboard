@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncNewOrders, computeSinceWatermark } from "@/lib/legacy/sync-service";
+import { retryPendingStatusSyncs } from "@/lib/legacy/push-status";
 
 export const maxDuration = 300;
 
@@ -21,12 +22,14 @@ export async function GET(request: Request) {
     const db = createAdminClient();
     const since = await computeSinceWatermark(db);
     const result = await syncNewOrders(since, "cron");
+    const statusSync = await retryPendingStatusSyncs();
 
     return NextResponse.json({
       synced: result.synced,
       skipped: result.skipped,
       errors: result.errors,
       since,
+      statusSync,
     });
   } catch (error) {
     console.error("[GET /api/legacy/cron] unexpected:", error);
