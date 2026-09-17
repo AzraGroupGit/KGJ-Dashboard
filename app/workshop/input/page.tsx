@@ -852,6 +852,11 @@ function PhaseForm({
         <span className="text-[12px] text-stone-400">
           #{order.order_number}
         </span>
+        {order.proses_produksi && (
+          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+            Proses: {order.proses_produksi}
+          </span>
+        )}
         {order.status === "rework" && (
           <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
             Rework
