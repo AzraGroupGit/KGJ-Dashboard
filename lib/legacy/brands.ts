@@ -16,3 +16,7 @@ export function getBrandName(idBrand: number | null | undefined): string {
   if (idBrand == null) return "KGJ";
   return BRANDS[idBrand]?.name ?? `Brand #${idBrand}`;
 }
+
+export function getBrandCode(idBrand: number | null | undefined): string {
+  return BRANDS[idBrand ?? 1]?.code ?? "KGJ";
+}

@@ -231,12 +231,45 @@ export async function softDeleteLocalOrders(
 ): Promise<void> {
   if (orderIds.length === 0) return;
 
+  const [{ data: intakes, error: intakeError }, { data: trackingRows, error: trackingError }] = await Promise.all([
+    db
+      .from("legacy_order_intakes")
+      .select("id, legacy_order_id")
+      .in("legacy_order_id", orderIds)
+      .in("state", ["pending_spv_cs_validation", "returned_for_revision"]),
+    db
+      .from("tracking_stages")
+      .select("order_id")
+      .in("order_id", orderIds),
+  ]);
+  if (intakeError) throw new Error(`legacy_order_intakes query gagal: ${intakeError.message}`);
+  if (trackingError) throw new Error(`tracking_stages query gagal: ${trackingError.message}`);
+
+  const trackedIds = new Set((trackingRows ?? []).map((row) => row.order_id));
+  const intakeIds = (intakes ?? [])
+    .filter((row) => !trackedIds.has(row.legacy_order_id))
+    .map((row) => row.id);
+  if (intakeIds.length > 0) {
+    await db
+      .from("legacy_order_intakes")
+      .update({ state: "cancelled_from_source", updated_at: new Date().toISOString() })
+      .in("id", intakeIds);
+  }
+
+  const pendingOrderIds = new Set(
+    (intakes ?? [])
+      .filter((row) => !trackedIds.has(row.legacy_order_id))
+      .map((row) => row.legacy_order_id),
+  );
+  const deletableOrderIds = orderIds.filter((id) => !pendingOrderIds.has(id));
+  if (deletableOrderIds.length === 0) return;
+
   await db
     .from("legacy_orders")
     .update({ deleted_at: new Date().toISOString() })
-    .in("id", orderIds);
+    .in("id", deletableOrderIds);
 
-  await db.from("tracking_stages").delete().in("order_id", orderIds);
+  await db.from("tracking_stages").delete().in("order_id", deletableOrderIds);
 }
 
 export async function reconcileDeletedOrders(): Promise<ReconcileResult> {

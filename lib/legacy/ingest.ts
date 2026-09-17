@@ -17,6 +17,8 @@ import {
   buildLegacyOrderUpdate,
   type Yii2OrderPayload,
 } from "@/lib/legacy/adapter";
+import { getBrandCode } from "@/lib/legacy/brands";
+import { requiresPreReceiptValidation, type BrandIntakePolicy } from "@/lib/legacy/intake";
 
 type Db = ReturnType<typeof createAdminClient>;
 
@@ -71,6 +73,53 @@ export interface IngestResult {
   action: "inserted" | "updated";
   stage: string | null;
   stageChanged: boolean;
+  intakePending?: boolean;
+}
+
+async function orderRequiresIntakeValidation(
+  db: Db,
+  order: Yii2OrderPayload,
+): Promise<boolean> {
+  const { data, error } = await db
+    .from("brand_intake_policies")
+    .select("brand_code, requires_pre_receipt_validation, is_active")
+    .eq("brand_code", getBrandCode(order.id_brand))
+    .maybeSingle();
+
+  if (error) {
+    console.error("[legacy intake] policy lookup gagal:", error.message);
+    return false;
+  }
+
+  return requiresPreReceiptValidation(
+    data ? [data as BrandIntakePolicy] : [],
+    getBrandCode(order.id_brand),
+  );
+}
+
+async function queueIntakeValidation(db: Db, orderId: string): Promise<void> {
+  const { data: existing, error } = await db
+    .from("legacy_order_intakes")
+    .select("state")
+    .eq("legacy_order_id", orderId)
+    .maybeSingle();
+  if (error) throw new Error(`legacy_order_intakes query gagal: ${error.message}`);
+
+  if (existing?.state === "approved_spv_cs" || existing?.state === "rejected_by_spv_cs" || existing?.state === "cancelled_from_source") {
+    return;
+  }
+
+  const { error: upsertError } = await db
+    .from("legacy_order_intakes")
+    .upsert(
+      {
+        legacy_order_id: orderId,
+        state: "pending_spv_cs_validation",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "legacy_order_id" },
+    );
+  if (upsertError) throw new Error(`legacy_order_intakes upsert gagal: ${upsertError.message}`);
 }
 
 async function advanceTracking(
@@ -115,6 +164,36 @@ async function advanceTracking(
   return true;
 }
 
+export async function admitLegacyOrderToReceiptApproval(
+  db: Db,
+  orderId: string,
+): Promise<boolean> {
+  const { data: tracking, error } = await db
+    .from("tracking_stages")
+    .select("id")
+    .eq("order_id", orderId)
+    .maybeSingle();
+  if (error) throw new Error(`tracking_stages query gagal: ${error.message}`);
+  if (tracking) return false;
+
+  const admitted = await advanceTracking(db, orderId, "approval_penerimaan_order", "waiting_approval");
+  if (admitted) {
+    const { data: order } = await db
+      .from("legacy_orders")
+      .select("kode_order, nama")
+      .eq("id", orderId)
+      .single();
+    notifySupervisors(
+      "operational_supervisor",
+      "Order Baru â€” Menunggu Persetujuan",
+      `Order ${order?.kode_order ?? "—"} (${order?.nama ?? "—"}) menunggu approval.`,
+      "info",
+      "/dashboard/supervisor/approval",
+    );
+  }
+  return admitted;
+}
+
 export async function ingestLegacyOrder(
   db: Db,
   order: Yii2OrderPayload,
@@ -134,6 +213,18 @@ export async function ingestLegacyOrder(
       .eq("id", existing.id);
     if (updateError) {
       throw new Error(`legacy_orders update gagal: ${updateError.message}`);
+    }
+
+    const { data: tracking, error: trackingError } = await db
+      .from("tracking_stages")
+      .select("id")
+      .eq("order_id", existing.id)
+      .maybeSingle();
+    if (trackingError) throw new Error(`tracking_stages query gagal: ${trackingError.message}`);
+
+    if (!tracking && await orderRequiresIntakeValidation(db, order)) {
+      await queueIntakeValidation(db, existing.id);
+      return { action: "updated", stage: null, stageChanged: false, intakePending: true };
     }
 
     // Move the tracking pointer only when Yii2's id_status actually changed.
@@ -176,6 +267,11 @@ export async function ingestLegacyOrder(
     throw new Error(
       `legacy_orders insert gagal: ${insertError?.message ?? "unknown"}`,
     );
+  }
+
+  if (await orderRequiresIntakeValidation(db, order)) {
+    await queueIntakeValidation(db, inserted.id);
+    return { action: "inserted", stage: null, stageChanged: false, intakePending: true };
   }
 
   const rawStage = order.tgl_selesai && order.id_status === 15

@@ -14,6 +14,23 @@ export const LOGIN_ROLES = [
 
 export type LoginRole = (typeof LOGIN_ROLES)[number];
 
+export const SUPERVISOR_ROLE_NAMES = [
+  "operational_supervisor",
+  "production_supervisor",
+  "customer_service_supervisor",
+] as const;
+
+export type SupervisorRoleName = (typeof SUPERVISOR_ROLE_NAMES)[number];
+
+export function isSupervisorRoleName(
+  value: unknown,
+): value is SupervisorRoleName {
+  return (
+    typeof value === "string" &&
+    (SUPERVISOR_ROLE_NAMES as readonly string[]).includes(value)
+  );
+}
+
 /** role_group dari tabel roles di database. */
 export type RoleGroup =
   | "management"
@@ -27,6 +44,7 @@ export interface RolePermissions {
   can_insert: boolean;
   can_update: boolean;
   can_delete: boolean;
+  can_validate_intake?: boolean;
 }
 
 /**
