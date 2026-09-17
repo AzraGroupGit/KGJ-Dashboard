@@ -22,7 +22,7 @@ async function authorize() {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
 
-  return { admin };
+  return { admin, role };
 }
 
 export async function GET() {
@@ -49,7 +49,11 @@ export async function GET() {
       return NextResponse.json({ error: "Gagal mengambil antrean intake" }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: data ?? [] });
+    const intakeData = auth.role.name === "customer_service_supervisor"
+      ? (data ?? []).filter((intake) => intake.legacy_orders?.id_brand === 3)
+      : data ?? [];
+
+    return NextResponse.json({ success: true, data: intakeData });
   } catch (error) {
     console.error("[GET /api/intake/pending]", error);
     return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });

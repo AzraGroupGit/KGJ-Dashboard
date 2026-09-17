@@ -11,7 +11,7 @@ import Header from "@/components/layout/MobileHeader";
 import { formatAddsOnList } from "@/lib/adds-on";
 import type { SupervisorGroup } from "@/types/roles";
 import { STAGE_SEQUENCE, getStageLabel } from "@/lib/stages";
-import { getBrandCode, getBrandPrefix } from "@/lib/legacy/brands";
+import { BRAND_FILTER_OPTIONS, getBrandCode, getBrandDisplayName, getBrandPrefix } from "@/lib/legacy/brands";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -137,7 +137,7 @@ function IntakeCard({
       <dl className="space-y-1.5 text-xs">
         <div className="flex justify-between gap-3"><dt className="text-white/45">WhatsApp</dt><dd className="text-cream text-right">{order?.no_hp ?? "—"}</dd></div>
         <div className="flex justify-between gap-3"><dt className="text-white/45">Deadline</dt><dd className="text-cream text-right">{order?.tgl_selesai ?? "—"}</dd></div>
-        <div className="flex justify-between gap-3"><dt className="text-white/45">Brand</dt><dd className="text-cream text-right">{getBrandCode(order?.id_brand)}</dd></div>
+        <div className="flex justify-between gap-3"><dt className="text-white/45">Brand</dt><dd className="text-cream text-right">{getBrandDisplayName(order?.id_brand)}</dd></div>
       </dl>
       {order?.catatan && <p className="rounded-md bg-black/15 p-2 text-xs text-white/65">{order.catatan}</p>}
       <textarea
@@ -1255,6 +1255,7 @@ export default function SupervisorApprovalPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [canValidateIntake, setCanValidateIntake] = useState(false);
   const [canAccessPending, setCanAccessPending] = useState(false);
+  const [isCustomerServiceSupervisor, setIsCustomerServiceSupervisor] = useState(false);
   const [accessResolved, setAccessResolved] = useState(false);
 
   // Verify supervisor identity
@@ -1280,6 +1281,7 @@ export default function SupervisorApprovalPage() {
       }
       setUserEmail(u.username || u.full_name || "");
       setCanValidateIntake(isIntakeValidator);
+      setIsCustomerServiceSupervisor(isCustomerServiceSupervisor);
       setCanAccessPending(
         !isCustomerServiceSupervisor &&
         (u.role?.role_group === "management" ||
@@ -1349,7 +1351,8 @@ export default function SupervisorApprovalPage() {
 
         channel = pusher.subscribe(`private-user-${userId}`);
         channel.bind("new-notification", () => {
-          refetch();
+          if (canAccessPending) refetch();
+          if (canValidateIntake) refetchIntake();
         });
       } catch {
         // Pusher failed — polling fallback via refetchInterval
@@ -1359,14 +1362,17 @@ export default function SupervisorApprovalPage() {
     return () => {
       if (channel) channel.unsubscribe();
     };
-  }, [refetch]);
+  }, [canAccessPending, canValidateIntake, refetch, refetchIntake]);
 
   const fetchPending = useCallback(async (manual = false) => {
     if (manual) setRefreshing(true);
-    await Promise.all([refetch(), canValidateIntake ? refetchIntake() : Promise.resolve()]);
+    await Promise.all([
+      canAccessPending ? refetch() : Promise.resolve(),
+      canValidateIntake ? refetchIntake() : Promise.resolve(),
+    ]);
     setLastUpdated(new Date());
     setRefreshing(false);
-  }, [canValidateIntake, refetch, refetchIntake]);
+  }, [canAccessPending, canValidateIntake, refetch, refetchIntake]);
 
   const handleIntakeDecision = useCallback(async (
     orderId: string,
@@ -1380,8 +1386,11 @@ export default function SupervisorApprovalPage() {
     });
     const json = await response.json();
     if (!response.ok) throw new Error(json.error || "Gagal memproses intake");
-    await Promise.all([refetch(), refetchIntake()]);
-  }, [refetch, refetchIntake]);
+    await Promise.all([
+      canAccessPending ? refetch() : Promise.resolve(),
+      refetchIntake(),
+    ]);
+  }, [canAccessPending, refetch, refetchIntake]);
 
   const handleApprove = useCallback(
     async (stageResultId: string | null, orderId: string, stage: string) => {
@@ -1453,7 +1462,9 @@ export default function SupervisorApprovalPage() {
   const OPERATIONAL_APPROVAL_STAGES = STAGE_SEQUENCE.filter(
     (s) => s.startsWith("approval_") && s !== "approval_produksi",
   );
-  const stageTabs: { key: string; label: string; count: number }[] = (
+  const stageTabs: { key: string; label: string; count: number }[] = isCustomerServiceSupervisor
+    ? []
+    : (
     supervisorGroup === "production"
       ? ["approval_produksi"]
       : OPERATIONAL_APPROVAL_STAGES
@@ -1462,7 +1473,7 @@ export default function SupervisorApprovalPage() {
     label: getStageLabel(stage).replace("Approval ", ""),
     count: items.filter((i) => i.stage === stage).length,
   }));
-  if (canValidateIntake) {
+  if (canValidateIntake && !isCustomerServiceSupervisor) {
     stageTabs.unshift({
       key: "intake_validation",
       label: "Validasi CS",
@@ -1478,10 +1489,15 @@ export default function SupervisorApprovalPage() {
   const filteredItems = (stageTabs.some((t) => t.key === filter)
     ? items.filter((item) => item.stage === filter)
     : items).filter((item) =>
-      brandFilter === "all" ? true : getBrandPrefix(item.order_number) === brandFilter,
+      brandFilter === "all"
+        ? true
+        : getBrandPrefix(item.order_number) === brandFilter,
     );
-  const isIntakeTab = filter === "intake_validation";
-  const filteredIntakeItems = intakeItems.filter((item) =>
+  const isIntakeTab = isCustomerServiceSupervisor || filter === "intake_validation";
+  const scopedIntakeItems = isCustomerServiceSupervisor
+    ? intakeItems.filter((item) => item.legacy_orders?.id_brand === 3)
+    : intakeItems;
+  const filteredIntakeItems = scopedIntakeItems.filter((item) =>
     brandFilter === "all" || getBrandCode(item.legacy_orders?.id_brand) === brandFilter,
   );
 
@@ -1534,7 +1550,7 @@ export default function SupervisorApprovalPage() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-lg sm:text-xl font-bold text-ivory">
-                  Persetujuan Tahap
+                  {isCustomerServiceSupervisor ? "Validasi Order MPM" : "Persetujuan Tahap"}
                 </h2>
                 {supervisorGroup === "production" && (
                   <span className="rounded-full bg-amber-500/10 border border-amber-400/20 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
@@ -1548,7 +1564,9 @@ export default function SupervisorApprovalPage() {
                 )}
               </div>
               <p className="text-xs sm:text-sm text-white/50 mt-0.5">
-                Review dan setujui hasil kerja tim
+                {isCustomerServiceSupervisor
+                  ? "Validasi order sebelum masuk penerimaan order"
+                  : "Review dan setujui hasil kerja tim"}
               </p>
             </div>
             <div className="flex items-center justify-between sm:justify-end gap-2">
@@ -1597,12 +1615,12 @@ export default function SupervisorApprovalPage() {
               {/* Summary cards */}
               <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 <InfoCard
-                  label="Total Menunggu"
+                  label={isCustomerServiceSupervisor ? "Menunggu Validasi MPM" : "Total Menunggu"}
                   value={totalWaiting}
                   icon={Clock}
                   tone={totalWaiting > 0 ? "amber" : "emerald"}
                 />
-                {stageTabs.slice(0, 2).map((t) => (
+                {!isCustomerServiceSupervisor && stageTabs.slice(0, 2).map((t) => (
                   <InfoCard
                     key={t.key}
                     label={t.label}
@@ -1677,9 +1695,9 @@ export default function SupervisorApprovalPage() {
                   className="px-2.5 py-1 text-xs border border-gold/25 rounded-lg bg-carbon text-cream focus:ring-2 focus:ring-gold/30 outline-none"
                 >
                   <option value="all">Semua Brand</option>
-                  <option value="KGJ">KGJ</option>
-                  <option value="HJZ">Hijaz</option>
-                  <option value="MP">MP</option>
+                  {BRAND_FILTER_OPTIONS.map((brand) => (
+                    <option key={brand.value} value={brand.value}>{brand.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -1690,7 +1708,9 @@ export default function SupervisorApprovalPage() {
                     <CheckCircle2 className="h-7 w-7 sm:h-8 sm:w-8 text-emerald-500" />
                   </div>
                   <p className="text-sm font-medium text-cream">
-                    {isIntakeTab ? "Semua intake sudah diproses" : "Semua submission sudah diproses"}
+                    {isCustomerServiceSupervisor
+                      ? "Semua intake MPM sudah diproses"
+                      : isIntakeTab ? "Semua intake sudah diproses" : "Semua submission sudah diproses"}
                   </p>
                   <p className="mt-1 text-xs text-white/40">
                     Tidak ada yang menunggu persetujuan di kategori ini

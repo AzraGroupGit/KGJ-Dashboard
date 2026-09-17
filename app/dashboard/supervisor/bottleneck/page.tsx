@@ -24,7 +24,7 @@ import BottleneckHeatmap from "@/components/analytics/BottleneckHeatmap";
 import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
 import type { StageBottleneck, BottleneckData } from "@/types/bottleneck";
 import type { SupervisorGroup } from "@/types/roles";
-import { getBrandPrefix } from "@/lib/legacy/brands";
+import { BRAND_FILTER_OPTIONS, getBrandPrefix } from "@/lib/legacy/brands";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -698,9 +698,9 @@ export default function SupervisorBottleneckPage() {
                         className="rounded-md border border-gold/15 bg-carbon px-1.5 py-1 text-[10px] text-cream focus:border-gold/50 focus:outline-none"
                       >
                         <option value="all">Semua</option>
-                        <option value="KGJ">KGJ</option>
-                        <option value="HJZ">Hijaz</option>
-                        <option value="MP">MP</option>
+                        {BRAND_FILTER_OPTIONS.map((brand) => (
+                          <option key={brand.value} value={brand.value}>{brand.label}</option>
+                        ))}
                       </select>
                     </div>
                   </div>

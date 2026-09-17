@@ -7,6 +7,12 @@ export const BRANDS: Record<number, { code: string; name: string }> = {
   3: { code: "MP", name: "Marketplace" },
 };
 
+export const BRAND_FILTER_OPTIONS = [
+  { value: "KGJ", label: "KGJ" },
+  { value: "HJZ", label: "Hijaz" },
+  { value: "MP", label: "MPM" },
+] as const;
+
 export function getBrandPrefix(kodeOrder: string): string | null {
   const match = kodeOrder.match(/^([A-Z]+)\d/);
   return match ? match[1] : null;
@@ -19,4 +25,9 @@ export function getBrandName(idBrand: number | null | undefined): string {
 
 export function getBrandCode(idBrand: number | null | undefined): string {
   return BRANDS[idBrand ?? 1]?.code ?? "KGJ";
+}
+
+export function getBrandDisplayName(idBrand: number | null | undefined): string {
+  if (idBrand === 3) return "MPM";
+  return getBrandCode(idBrand);
 }
