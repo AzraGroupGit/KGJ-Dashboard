@@ -230,6 +230,7 @@ export interface OrderSummary {
   updated_at: string | null;
   customer_name: string | null;
   customer_wa: string | null;
+  proses_produksi: string | null;
 }
 
 export function legacyToOrderSummary(
@@ -246,6 +247,7 @@ export function legacyToOrderSummary(
     updated_at: tracking?.updated_at ?? order.last_synced_at ?? order.created_at ?? null,
     customer_name: order.nama ?? null,
     customer_wa: order.no_hp ?? null,
+    proses_produksi: order.proses_produksi ?? null,
   };
 }
 

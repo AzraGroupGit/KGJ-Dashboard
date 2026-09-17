@@ -8,6 +8,7 @@ import {
   buildLegacyOrderRow,
   buildLegacyOrderUpdate,
   legacyToOrderDetail,
+  legacyToOrderSummary,
   type LegacyOrderRow,
   type Yii2OrderPayload,
 } from "@/lib/legacy/adapter";
@@ -287,6 +288,11 @@ describe("legacyToOrderDetail komponen resolution", () => {
     expect(detail.jenis_pembayaran).toBe("Transfer");
     expect(detail.jumlah_bayar).toBe(2000000);
     expect(detail.sisa_bayar).toBe(2000000);
+  });
+
+  it("exposes proses produksi for the workshop order list", () => {
+    const summary = legacyToOrderSummary(row, null);
+    expect(summary.proses_produksi).toBe("Kilat");
   });
 
   it("prefers alamat_lengkap and exposes no_nota + deadline_tukang", () => {
