@@ -50,7 +50,9 @@ export async function GET() {
     }
 
     const intakeData = auth.role.name === "customer_service_supervisor"
-      ? (data ?? []).filter((intake) => intake.legacy_orders?.id_brand === 3)
+      ? (data ?? []).filter((intake) =>
+        intake.legacy_orders?.some((order) => order.id_brand === 3),
+      )
       : data ?? [];
 
     return NextResponse.json({ success: true, data: intakeData });
