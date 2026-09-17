@@ -112,7 +112,7 @@ export const EMPTY_SUPERVISOR_FORM = {
   full_name: "",
   email: "",
   password: "",
-  role: "operational_supervisor" as "operational_supervisor" | "production_supervisor",
+  role: "operational_supervisor" as "operational_supervisor" | "production_supervisor" | "customer_service_supervisor",
 };
 
 export const EMPTY_BRANCH_FORM = {
@@ -190,7 +190,7 @@ export const resolveUserType = (u: { role?: string; roles?: { name?: string; rol
   if (u.role && (BMS_ROLES as readonly string[]).includes(u.role))
     return "bms";
   const roleName = u.roles?.name;
-  if (roleName === "operational_supervisor" || roleName === "production_supervisor")
+  if (roleName === "operational_supervisor" || roleName === "production_supervisor" || roleName === "customer_service_supervisor")
     return "supervisor";
   if (u.roles?.role_group === "management") return "management";
   if (u.roles?.role_group) return "oprprd";
@@ -255,6 +255,16 @@ export const getRoleBadge = (user: UnifiedUser) => {
       <div className="flex flex-col gap-0.5">
         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-rose-500/10 text-rose-800">
           Spv. Produksi
+        </span>
+        <span className="text-[10px] text-white/40">Manajemen</span>
+      </div>
+    );
+  }
+  if (role.name === "customer_service_supervisor") {
+    return (
+      <div className="flex flex-col gap-0.5">
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-sky-500/10 text-sky-800">
+          Spv. Customer Service
         </span>
         <span className="text-[10px] text-white/40">Manajemen</span>
       </div>

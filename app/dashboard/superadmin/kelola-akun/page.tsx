@@ -228,7 +228,7 @@ export default function KelolaAkunPage() {
         full_name: user.full_name,
         email: user.email?.endsWith("@noreply.kodagede.id") ? "" : (user.email ?? ""),
         password: "",
-        role: (user.roles?.name as "operational_supervisor" | "production_supervisor") ?? "operational_supervisor",
+        role: (user.roles?.name as "operational_supervisor" | "production_supervisor" | "customer_service_supervisor") ?? "operational_supervisor",
       });
     } else if (user.userType === "management") {
       setManagementForm({

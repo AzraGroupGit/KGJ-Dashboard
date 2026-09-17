@@ -53,7 +53,7 @@ export const SupervisorUserSchema = z.object({
   full_name: z.string().min(1, "Nama lengkap wajib diisi"),
   email: z.string().email("Format email tidak valid"),
   password: z.string().min(6, "Password minimal 6 karakter"),
-  role: z.enum(["operational_supervisor", "production_supervisor"], {
+  role: z.enum(["operational_supervisor", "production_supervisor", "customer_service_supervisor"], {
     message: "Role wajib dipilih",
   }),
 });
@@ -62,7 +62,7 @@ export const SupervisorEditUserSchema = z.object({
   username: z.string().optional(),
   full_name: z.string().min(1, "Nama lengkap wajib diisi"),
   email: z.string().email("Format email tidak valid"),
-  role: z.enum(["operational_supervisor", "production_supervisor"], {
+  role: z.enum(["operational_supervisor", "production_supervisor", "customer_service_supervisor"], {
     message: "Role wajib dipilih",
   }),
 });

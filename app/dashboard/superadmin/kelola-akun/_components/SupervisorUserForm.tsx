@@ -10,7 +10,7 @@ interface SupervisorFormState {
   full_name: string;
   email: string;
   password: string;
-  role: "operational_supervisor" | "production_supervisor";
+  role: "operational_supervisor" | "production_supervisor" | "customer_service_supervisor";
 }
 
 interface SupervisorUserFormProps {
@@ -94,11 +94,14 @@ export function SupervisorUserForm({
         >
           <option value="operational_supervisor">Supervisor Operasional</option>
           <option value="production_supervisor">Supervisor Produksi</option>
+          <option value="customer_service_supervisor">Supervisor Customer Service</option>
         </select>
         <p className="mt-1.5 text-xs text-white/50 italic">
           {form.role === "operational_supervisor"
             ? "Approval: Penerimaan Order, Persiapan Bahan, QC Awal, QC Akhir"
-            : "Approval: Produksi (Finishing)"}
+            : form.role === "production_supervisor"
+              ? "Approval: Produksi (Finishing)"
+              : "Validasi intake order sebelum Approval Penerimaan Order"}
         </p>
       </div>
       <div className="flex justify-end gap-3 mt-6">

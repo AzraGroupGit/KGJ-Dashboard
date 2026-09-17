@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperadmin, mapUserResponse } from "../route";
 
 const BMS_ROLE_NAMES = ["superadmin", "customer_service", "marketing"] as const;
-const MANAGEMENT_ROLE_NAMES = ["operational_supervisor", "production_supervisor", "leader_hc", "leader_operational", "leader_production", "leader_marketing", "leader_sales", "leader_fat", "leader_rnd", "leader_safar", "leader_ga", "leader_sekdir", "leader_rji"] as const;
+const MANAGEMENT_ROLE_NAMES = ["operational_supervisor", "production_supervisor", "customer_service_supervisor", "leader_hc", "leader_operational", "leader_production", "leader_marketing", "leader_sales", "leader_fat", "leader_rnd", "leader_safar", "leader_ga", "leader_sekdir", "leader_rji"] as const;
 type BmsRoleName = (typeof BMS_ROLE_NAMES)[number];
 
 function isBmsRoleName(v: unknown): v is BmsRoleName {
@@ -141,7 +141,7 @@ export async function PUT(
         return NextResponse.json(
           {
             error:
-              "Role harus: superadmin, customer_service, marketing, operational_supervisor, atau production_supervisor",
+              "Role harus: superadmin, customer_service, marketing, operational_supervisor, production_supervisor, atau customer_service_supervisor",
           },
           { status: 400 },
         );
