@@ -60,6 +60,13 @@ export async function GET() {
     const roleGroup: string = getRoleProps(profile).role_group;
     const allowedStages: string[] = getRoleProps(profile).allowed_stages;
 
+    if (roleName === "customer_service_supervisor") {
+      return NextResponse.json(
+        { error: "Gunakan antrean validasi SPV CS" },
+        { status: 403 },
+      );
+    }
+
     const isSupervisor =
       roleName === "superadmin" ||
       roleGroup === "management" ||

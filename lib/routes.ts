@@ -14,7 +14,11 @@
  *   - Sediakan helper proteksi route untuk middleware
  */
 
-import { LOGIN_ROLES, type LoginRole } from "@/lib/auth/session";
+import {
+  isSupervisorRoleName,
+  LOGIN_ROLES,
+  type LoginRole,
+} from "@/lib/auth/session";
 
 // ════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -249,11 +253,7 @@ export function getDashboardPath(role: unknown): string | null {
   }
 
   // Supervisor roles — punya dashboard sendiri
-  if (
-    role === "operational_supervisor" ||
-    role === "production_supervisor" ||
-    role === "supervisor"
-  ) {
+  if (role === "supervisor" || isSupervisorRoleName(role)) {
     return SUPERVISOR_ROUTES.DASHBOARD;
   }
 
@@ -279,11 +279,7 @@ export function canAccessPath(role: string, path: string): boolean {
   }
 
   // Supervisor roles — hanya akses dashboard supervisor
-  if (
-    role === "operational_supervisor" ||
-    role === "production_supervisor" ||
-    role === "supervisor"
-  ) {
+  if (role === "supervisor" || isSupervisorRoleName(role)) {
     return (
       path.startsWith(ROUTES.DASHBOARD_SUPERVISOR) || path.startsWith("/api/")
     );

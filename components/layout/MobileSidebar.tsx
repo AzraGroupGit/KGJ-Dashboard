@@ -182,6 +182,7 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
     return false;
   });
   const [actualRole, setActualRole] = useState<string | null>(null);
+  const [isIntakeValidator, setIsIntakeValidator] = useState(false);
   const [collapsedMenus, setCollapsedMenus] = useState<CollapseState>({
     BMS: false,
     OPRPRD: true,
@@ -191,13 +192,24 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
     if (role !== "supervisor") return;
     fetch("/api/me")
       .then((r) => r.json())
-      .then((j) => setActualRole(j.data?.role?.name ?? null))
+      .then((j) => {
+        setActualRole(j.data?.role?.name ?? null);
+        setIsIntakeValidator(j.data?.role?.permissions?.can_validate_intake === true);
+      })
       .catch(() => {});
   }, [role]);
 
   let items = menuItems[role as keyof typeof menuItems] || [];
   if (actualRole === "production_supervisor") {
     items = items.filter((i) => i.name !== "Slot Management");
+  }
+  if (role === "supervisor" && isIntakeValidator) {
+    items = items.filter((item) => [
+      "Dashboard",
+      "Persetujuan",
+      "Riwayat Order",
+      "Riwayat Persetujuan",
+    ].includes(item.name));
   }
 
   // Always hold the latest onClose without re-triggering effects

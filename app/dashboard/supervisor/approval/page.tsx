@@ -11,7 +11,7 @@ import Header from "@/components/layout/MobileHeader";
 import { formatAddsOnList } from "@/lib/adds-on";
 import type { SupervisorGroup } from "@/types/roles";
 import { STAGE_SEQUENCE, getStageLabel } from "@/lib/stages";
-import { getBrandPrefix } from "@/lib/legacy/brands";
+import { getBrandCode, getBrandPrefix } from "@/lib/legacy/brands";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -73,6 +73,27 @@ interface PendingItem {
   work_order: WorkOrder | null;
 }
 
+interface IntakeItem {
+  id: string;
+  legacy_order_id: string;
+  state: string;
+  reason: string | null;
+  created_at: string;
+  updated_at: string;
+  legacy_orders: {
+    kode_order: string;
+    nama: string | null;
+    no_hp: string | null;
+    tgl_order: string | null;
+    tgl_selesai: string | null;
+    catatan: string | null;
+    harga_final: number | null;
+    jumlah_bayar: number | null;
+    sisa_bayar: number | null;
+    id_brand: number | null;
+  } | null;
+}
+
 type ActionState =
   | { type: "idle" }
   | { type: "confirming_approve" }
@@ -80,6 +101,60 @@ type ActionState =
   | { type: "confirming_cancel" }
   | { type: "loading" }
   | { type: "done"; result: "approved" | "rejected" | "cancelled"; message: string };
+
+function IntakeCard({
+  item,
+  onDecision,
+}: {
+  item: IntakeItem;
+  onDecision: (orderId: string, action: "approve" | "return" | "reject", reason?: string) => Promise<void>;
+}) {
+  const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
+  const order = item.legacy_orders;
+
+  const decide = async (action: "approve" | "return" | "reject") => {
+    if (action !== "approve" && !reason.trim()) return;
+    setLoading(true);
+    try {
+      await onDecision(item.legacy_order_id, action, reason);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-gold/15 bg-cocoa p-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-base font-semibold text-ivory">{order?.kode_order ?? "—"}</p>
+          <p className="text-sm text-white/60">{order?.nama ?? "—"}</p>
+        </div>
+        <span className="rounded-full bg-sky-500/15 px-2 py-1 text-[10px] font-semibold text-sky-200">
+          Validasi SPV CS
+        </span>
+      </div>
+      <dl className="space-y-1.5 text-xs">
+        <div className="flex justify-between gap-3"><dt className="text-white/45">WhatsApp</dt><dd className="text-cream text-right">{order?.no_hp ?? "—"}</dd></div>
+        <div className="flex justify-between gap-3"><dt className="text-white/45">Deadline</dt><dd className="text-cream text-right">{order?.tgl_selesai ?? "—"}</dd></div>
+        <div className="flex justify-between gap-3"><dt className="text-white/45">Brand</dt><dd className="text-cream text-right">{getBrandCode(order?.id_brand)}</dd></div>
+      </dl>
+      {order?.catatan && <p className="rounded-md bg-black/15 p-2 text-xs text-white/65">{order.catatan}</p>}
+      <textarea
+        value={reason}
+        onChange={(event) => setReason(event.target.value)}
+        rows={2}
+        placeholder="Catatan validasi (wajib untuk dikembalikan/ditolak)"
+        className="w-full rounded-lg border border-gold/15 bg-carbon px-3 py-2 text-xs text-cream placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-gold/30"
+      />
+      <div className="grid grid-cols-3 gap-2">
+        <button disabled={loading} onClick={() => decide("approve")} className="rounded-lg bg-emerald-600 px-2 py-2 text-xs font-medium text-white disabled:opacity-50">Setujui</button>
+        <button disabled={loading || !reason.trim()} onClick={() => decide("return")} className="rounded-lg border border-amber-400/25 px-2 py-2 text-xs font-medium text-amber-200 disabled:opacity-50">Kembalikan</button>
+        <button disabled={loading || !reason.trim()} onClick={() => decide("reject")} className="rounded-lg border border-rose-400/25 px-2 py-2 text-xs font-medium text-rose-200 disabled:opacity-50">Tolak</button>
+      </div>
+    </div>
+  );
+}
 
 // ── Stage Verification Guidelines + Real Data Display ────────────────────────
 
@@ -1178,6 +1253,9 @@ export default function SupervisorApprovalPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [supervisorGroup, setSupervisorGroup] = useState<SupervisorGroup>("all");
   const [refreshing, setRefreshing] = useState(false);
+  const [canValidateIntake, setCanValidateIntake] = useState(false);
+  const [canAccessPending, setCanAccessPending] = useState(false);
+  const [accessResolved, setAccessResolved] = useState(false);
 
   // Verify supervisor identity
   useEffect(() => {
@@ -1190,7 +1268,10 @@ export default function SupervisorApprovalPage() {
       const json = await res.json();
       const u = json.data;
       const allowedStages: string[] = u.role?.allowed_stages ?? [];
+      const isCustomerServiceSupervisor = u.role?.name === "customer_service_supervisor";
+      const isIntakeValidator = u.role?.name === "superadmin" || u.role?.permissions?.can_validate_intake === true;
       const canAccess =
+        isIntakeValidator ||
         u.role?.role_group === "management" ||
         allowedStages.some((s: string) => s.startsWith("approval_"));
       if (!canAccess) {
@@ -1198,6 +1279,18 @@ export default function SupervisorApprovalPage() {
         return;
       }
       setUserEmail(u.username || u.full_name || "");
+      setCanValidateIntake(isIntakeValidator);
+      setCanAccessPending(
+        !isCustomerServiceSupervisor &&
+        (u.role?.role_group === "management" ||
+          allowedStages.some((s: string) => s.startsWith("approval_"))),
+      );
+      setAccessResolved(true);
+      if (isIntakeValidator) {
+        setSupervisorGroup("all");
+        setFilter("intake_validation");
+        return;
+      }
       if (u.role?.name === "production_supervisor") {
         setSupervisorGroup("production");
         setFilter("production");
@@ -1216,6 +1309,20 @@ export default function SupervisorApprovalPage() {
     queryKey: ["supervisor", "pending"],
     queryFn: () => fetcher<{ data: PendingItem[] }>("/api/supervisor/pending"),
     select: (res) => res.data ?? [],
+    enabled: accessResolved && canAccessPending,
+    refetchInterval,
+  });
+
+  const {
+    data: intakeItems = [],
+    isLoading: intakeLoading,
+    error: intakeError,
+    refetch: refetchIntake,
+  } = useQuery({
+    queryKey: ["intake", "pending"],
+    queryFn: () => fetcher<{ data: IntakeItem[] }>("/api/intake/pending"),
+    select: (res) => res.data ?? [],
+    enabled: accessResolved && canValidateIntake,
     refetchInterval,
   });
 
@@ -1256,10 +1363,25 @@ export default function SupervisorApprovalPage() {
 
   const fetchPending = useCallback(async (manual = false) => {
     if (manual) setRefreshing(true);
-    await refetch();
+    await Promise.all([refetch(), canValidateIntake ? refetchIntake() : Promise.resolve()]);
     setLastUpdated(new Date());
     setRefreshing(false);
-  }, [refetch]);
+  }, [canValidateIntake, refetch, refetchIntake]);
+
+  const handleIntakeDecision = useCallback(async (
+    orderId: string,
+    action: "approve" | "return" | "reject",
+    reason?: string,
+  ) => {
+    const response = await fetch(`/api/intake/${orderId}/decision`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, reason }),
+    });
+    const json = await response.json();
+    if (!response.ok) throw new Error(json.error || "Gagal memproses intake");
+    await Promise.all([refetch(), refetchIntake()]);
+  }, [refetch, refetchIntake]);
 
   const handleApprove = useCallback(
     async (stageResultId: string | null, orderId: string, stage: string) => {
@@ -1340,6 +1462,13 @@ export default function SupervisorApprovalPage() {
     label: getStageLabel(stage).replace("Approval ", ""),
     count: items.filter((i) => i.stage === stage).length,
   }));
+  if (canValidateIntake) {
+    stageTabs.unshift({
+      key: "intake_validation",
+      label: "Validasi CS",
+      count: intakeItems.length,
+    });
+  }
 
   // Auto-select first tab if current filter doesn't match any
   if (filter !== "all" && !stageTabs.some((t) => t.key === filter)) {
@@ -1351,11 +1480,17 @@ export default function SupervisorApprovalPage() {
     : items).filter((item) =>
       brandFilter === "all" ? true : getBrandPrefix(item.order_number) === brandFilter,
     );
+  const isIntakeTab = filter === "intake_validation";
+  const filteredIntakeItems = intakeItems.filter((item) =>
+    brandFilter === "all" || getBrandCode(item.legacy_orders?.id_brand) === brandFilter,
+  );
 
   // ── Summary stats ──────────────────────────────────────────────────────────
-  const totalWaiting = items.length;
-  const oldestWaiting = items.length > 0
-    ? Math.max(...items.map((i) => new Date(i.waiting_since).getTime()), 0)
+  const totalWaiting = isIntakeTab ? filteredIntakeItems.length : items.length;
+  const oldestWaiting = isIntakeTab && filteredIntakeItems.length > 0
+    ? Math.max(...filteredIntakeItems.map((i) => new Date(i.updated_at).getTime()), 0)
+    : items.length > 0
+      ? Math.max(...items.map((i) => new Date(i.waiting_since).getTime()), 0)
     : 0;
   const oldestWaitingHours = oldestWaiting
     ? Math.round((Date.now() - oldestWaiting) / 36e5)
@@ -1438,13 +1573,17 @@ export default function SupervisorApprovalPage() {
             </div>
           </div>
 
-          {loading ? (
+          {loading || intakeLoading ? (
             <ApprovalSkeleton />
-          ) : error ? (
+          ) : error || intakeError ? (
             <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center px-4">
               <AlertTriangle className="mb-3 h-8 w-8 text-rose-400" />
               <p className="text-sm font-medium text-cream">
-                {error instanceof Error ? error.message : "Terjadi kesalahan"}
+                {error instanceof Error
+                  ? error.message
+                  : intakeError instanceof Error
+                    ? intakeError.message
+                    : "Terjadi kesalahan"}
               </p>
               <button
                 onClick={() => fetchPending(true)}
@@ -1481,8 +1620,14 @@ export default function SupervisorApprovalPage() {
                 />
                 <InfoCard
                   label="Terbaru"
-                  value={items.length > 0 ? new Date(items[0].waiting_since).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) : "—"}
-                  subtitle="Submission"
+                  value={isIntakeTab
+                    ? filteredIntakeItems.length > 0
+                      ? new Date(filteredIntakeItems[0].updated_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })
+                      : "—"
+                    : items.length > 0
+                      ? new Date(items[0].waiting_since).toLocaleDateString("id-ID", { day: "numeric", month: "short" })
+                      : "—"}
+                  subtitle={isIntakeTab ? "Validasi" : "Submission"}
                   icon={CheckCircle2}
                   tone="slate"
                 />
@@ -1539,13 +1684,13 @@ export default function SupervisorApprovalPage() {
               </div>
 
               {/* Cards */}
-              {filteredItems.length === 0 ? (
+              {(isIntakeTab ? filteredIntakeItems : filteredItems).length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center px-4">
                   <div className="mb-4 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full border border-emerald-200 bg-emerald-500/10">
                     <CheckCircle2 className="h-7 w-7 sm:h-8 sm:w-8 text-emerald-500" />
                   </div>
                   <p className="text-sm font-medium text-cream">
-                    Semua submission sudah diproses
+                    {isIntakeTab ? "Semua intake sudah diproses" : "Semua submission sudah diproses"}
                   </p>
                   <p className="mt-1 text-xs text-white/40">
                     Tidak ada yang menunggu persetujuan di kategori ini
@@ -1553,15 +1698,19 @@ export default function SupervisorApprovalPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {filteredItems.map((item) => (
-                    <PendingCard
-                      key={`${item.order_id}_${item.stage}`}
-                      item={item}
-                      onApprove={handleApprove}
-                      onReject={handleReject}
-                      onCancel={handleCancel}
-                    />
-                  ))}
+                  {isIntakeTab
+                    ? filteredIntakeItems.map((item) => (
+                      <IntakeCard key={item.id} item={item} onDecision={handleIntakeDecision} />
+                    ))
+                    : filteredItems.map((item) => (
+                      <PendingCard
+                        key={`${item.order_id}_${item.stage}`}
+                        item={item}
+                        onApprove={handleApprove}
+                        onReject={handleReject}
+                        onCancel={handleCancel}
+                      />
+                    ))}
                 </div>
               )}
             </div>

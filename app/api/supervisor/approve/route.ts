@@ -53,6 +53,13 @@ export async function POST(request: Request) {
     const roleGroup: string = getRoleProps(profile).role_group;
     const allowedStages: string[] = getRoleProps(profile).allowed_stages;
 
+    if (roleName === "customer_service_supervisor") {
+      return NextResponse.json(
+        { error: "SPV CS hanya dapat memvalidasi intake order" },
+        { status: 403 },
+      );
+    }
+
     const isSupervisor =
       roleName === "superadmin" ||
       roleGroup === "management" ||

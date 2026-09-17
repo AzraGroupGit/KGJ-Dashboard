@@ -3,7 +3,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getRoleProps } from "@/lib/auth/session";
+import { getRoleProps, isSupervisorRoleName } from "@/lib/auth/session";
 import {
   ROUTES,
   getDashboardPath,
@@ -171,6 +171,7 @@ function resolveDashboardPath(roleInfo: { name: string; roleGroup: string } | nu
   if (!roleInfo) return null;
   // superadmin is in the management roleGroup but has its own dashboard
   if (roleInfo.name === "superadmin") return getDashboardPath("superadmin");
+  if (isSupervisorRoleName(roleInfo.name)) return getDashboardPath("supervisor");
   if (roleInfo.roleGroup === "management") return "/dashboard/management";
   return getDashboardPath(roleInfo.name);
 }
