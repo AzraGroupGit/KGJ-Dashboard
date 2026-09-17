@@ -400,6 +400,7 @@ export default function KelolaAkunPage() {
         role: supervisorForm.role,
       };
       if (supervisorForm.username.trim()) payload.username = supervisorForm.username.trim();
+      if (supervisorForm.password) payload.password = supervisorForm.password;
 
       const res = await fetch(
         isEditMode ? `/api/users/${selectedUser!.id}` : "/api/users",
