@@ -10,6 +10,7 @@ import { fetcher } from "@/lib/api";
 import { Search, RefreshCw } from "lucide-react";
 import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
 import { STAGE_SEQUENCE, STAGE_LABELS } from "@/lib/stages";
+import { BRAND_FILTER_OPTIONS } from "@/lib/legacy/brands";
 
 interface HistoryOrder {
   id: string;
@@ -100,9 +101,9 @@ export default function OrderHistoryList() {
           className="rounded-lg border border-gold/15 bg-carbon px-2.5 py-2 text-xs text-cream focus:border-gold/50 focus:outline-none"
         >
           <option value="all">Semua Brand</option>
-          <option value="KGJ">KGJ</option>
-          <option value="HJZ">Hijaz</option>
-          <option value="MP">MP</option>
+          {BRAND_FILTER_OPTIONS.map((brand) => (
+            <option key={brand.value} value={brand.value}>{brand.label}</option>
+          ))}
         </select>
 
         <select

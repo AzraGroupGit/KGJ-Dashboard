@@ -14,7 +14,7 @@ import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
 import type { BottleneckData } from "@/types/bottleneck";
 import { Search, RefreshCw } from "lucide-react";
 import type { Channel } from "pusher-js";
-import { getBrandPrefix } from "@/lib/legacy/brands";
+import { BRAND_FILTER_OPTIONS, getBrandPrefix } from "@/lib/legacy/brands";
 import {
   buildUrl,
   ErrorState,
@@ -283,9 +283,9 @@ export default function MonitoringPage() {
                   className="rounded-md border border-[#c9a227]/10 bg-carbon px-2 py-1.5 text-xs text-cream focus:border-gold/50 focus:outline-none"
                 >
                   <option value="all">Semua Brand</option>
-                  <option value="KGJ">KGJ</option>
-                  <option value="HJZ">Hijaz</option>
-                  <option value="MP">MP</option>
+                  {BRAND_FILTER_OPTIONS.map((brand) => (
+                    <option key={brand.value} value={brand.value}>{brand.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
