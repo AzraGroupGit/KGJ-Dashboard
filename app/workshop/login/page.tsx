@@ -9,6 +9,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import Image from "next/image";
 import { ArrowLeft, Loader2, Check, Delete, User, Lock, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { getDashboardPath } from "@/lib/routes";
+import { setClientUser, type UserRoleDetail } from "@/lib/auth/session";
 import Loading from "@/components/ui/Loading";
 
 type Step = "loading" | "workers" | "pin" | "setup" | "manual";
@@ -174,6 +175,19 @@ function WorkshopLoginContent() {
     [redirectTo, orderId, stage, qrToken],
   );
 
+  const saveSupervisorSession = useCallback((email: string, user: WorkshopLoginUser | undefined) => {
+    if (!email || !user || user.roleDetail?.role_group !== "management") return;
+    setClientUser({
+      id: user.id,
+      email,
+      fullName: user.fullName,
+      username: user.username,
+      role: "supervisor",
+      roleDetail: user.roleDetail,
+      branch: null,
+    });
+  }, []);
+
   // ── Client-side Supabase client ─────────────────────────────────
 
   const browserSupabase = useRef<ReturnType<typeof createBrowserClient> | null>(null);
@@ -188,13 +202,14 @@ function WorkshopLoginContent() {
   }, []);
 
   const signInAndRedirect = useCallback(
-    async (email: string, password: string, roleName: string, roleGroup: string) => {
+    async (email: string, password: string, user: WorkshopLoginUser) => {
       const sb = getBrowserClient();
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw new Error(error.message);
-      doRedirect(roleName, roleGroup);
+      saveSupervisorSession(email, user);
+      doRedirect(user.role, user.roleDetail?.role_group ?? "");
     },
-    [getBrowserClient, doRedirect],
+    [getBrowserClient, doRedirect, saveSupervisorSession],
   );
 
   // ── Manual login handler ────────────────────────────────────────
@@ -215,6 +230,7 @@ function WorkshopLoginContent() {
 
         if (!res.ok) throw new Error(data.error || "Login gagal");
 
+        saveSupervisorSession(data.user?.email ?? "", data.user);
         doRedirect(data.user?.role ?? "", data.user?.roleDetail?.role_group ?? "");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Terjadi kesalahan, coba lagi");
@@ -222,7 +238,7 @@ function WorkshopLoginContent() {
         setIsLoading(false);
       }
     },
-    [doRedirect],
+    [doRedirect, saveSupervisorSession],
   );
 
   // ── PIN login handler ───────────────────────────────────────────
@@ -265,8 +281,7 @@ function WorkshopLoginContent() {
         await signInAndRedirect(
           data.email,
           data.workshopPassword,
-          data.user?.role ?? "",
-          data.user?.roleDetail?.role_group ?? "",
+          data.user,
         );
       } catch (err) {
         setError(err instanceof Error ? err.message : "Terjadi kesalahan, coba lagi");
@@ -304,8 +319,7 @@ function WorkshopLoginContent() {
         await signInAndRedirect(
           data.email,
           data.workshopPassword,
-          data.user?.role ?? "",
-          data.user?.roleDetail?.role_group ?? "",
+          data.user,
         );
       } catch (err) {
         setSetupError(err instanceof Error ? err.message : "Terjadi kesalahan, coba lagi");
@@ -839,4 +853,12 @@ export default function WorkshopLoginPage() {
       <WorkshopLoginContent />
     </Suspense>
   );
+}
+
+interface WorkshopLoginUser {
+  id: string;
+  fullName: string;
+  username: string | null;
+  role: string;
+  roleDetail: UserRoleDetail | null;
 }

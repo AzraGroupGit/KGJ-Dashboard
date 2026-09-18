@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
+import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
 import { formatAddsOnList } from "@/lib/adds-on";
 import type { SupervisorGroup } from "@/types/roles";
 import { STAGE_SEQUENCE, getStageLabel } from "@/lib/stages";
@@ -111,6 +112,7 @@ function IntakeCard({
 }) {
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const order = item.legacy_orders;
 
   const decide = async (action: "approve" | "return" | "reject") => {
@@ -140,6 +142,13 @@ function IntakeCard({
         <div className="flex justify-between gap-3"><dt className="text-white/45">Brand</dt><dd className="text-cream text-right">{getBrandDisplayName(order?.id_brand)}</dd></div>
       </dl>
       {order?.catatan && <p className="rounded-md bg-black/15 p-2 text-xs text-white/65">{order.catatan}</p>}
+      <button
+        type="button"
+        onClick={() => setShowDetail(true)}
+        className="w-full rounded-lg border border-gold/20 bg-gold/5 px-3 py-2 text-xs font-medium text-gold-bright hover:bg-gold/10"
+      >
+        Lihat Detail Order
+      </button>
       <textarea
         value={reason}
         onChange={(event) => setReason(event.target.value)}
@@ -152,6 +161,14 @@ function IntakeCard({
         <button disabled={loading || !reason.trim()} onClick={() => decide("return")} className="rounded-lg border border-amber-400/25 px-2 py-2 text-xs font-medium text-amber-200 disabled:opacity-50">Kembalikan</button>
         <button disabled={loading || !reason.trim()} onClick={() => decide("reject")} className="rounded-lg border border-rose-400/25 px-2 py-2 text-xs font-medium text-rose-200 disabled:opacity-50">Tolak</button>
       </div>
+      {showDetail && (
+        <OrderDetailPopup
+          orderId={item.legacy_order_id}
+          orderNumber={order?.kode_order ?? "Order"}
+          view="intake"
+          onClose={() => setShowDetail(false)}
+        />
+      )}
     </div>
   );
 }

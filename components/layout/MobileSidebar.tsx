@@ -32,6 +32,8 @@ import {
   MARKETING_ROUTES,
   SUPERVISOR_ROUTES,
 } from "@/lib/routes";
+import { getClientUser } from "@/lib/auth/session";
+import { getSupervisorMenuItems } from "@/lib/auth/supervisor-navigation";
 
 import type { MenuItem, CollapseState } from "@/types/layout";
 
@@ -183,6 +185,7 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
   });
   const [actualRole, setActualRole] = useState<string | null>(null);
   const [isIntakeValidator, setIsIntakeValidator] = useState(false);
+  const [isSupervisorMenuReady, setIsSupervisorMenuReady] = useState(role !== "supervisor");
   const [collapsedMenus, setCollapsedMenus] = useState<CollapseState>({
     BMS: false,
     OPRPRD: true,
@@ -190,27 +193,31 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
   useEffect(() => {
     if (role !== "supervisor") return;
+    const cachedUser = getClientUser();
+    if (cachedUser?.role === "supervisor" && cachedUser.roleDetail) {
+      setActualRole(cachedUser.roleDetail.name);
+      setIsIntakeValidator(cachedUser.roleDetail.permissions.can_validate_intake === true);
+      setIsSupervisorMenuReady(true);
+    }
+
     fetch("/api/me")
-      .then((r) => r.json())
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return response.json();
+      })
       .then((j) => {
+        if (!j?.data?.role) return;
         setActualRole(j.data?.role?.name ?? null);
         setIsIntakeValidator(j.data?.role?.permissions?.can_validate_intake === true);
+        setIsSupervisorMenuReady(true);
       })
       .catch(() => {});
   }, [role]);
 
-  let items = menuItems[role as keyof typeof menuItems] || [];
-  if (actualRole === "production_supervisor") {
-    items = items.filter((i) => i.name !== "Slot Management");
-  }
-  if (role === "supervisor" && isIntakeValidator) {
-    items = items.filter((item) => [
-      "Dashboard",
-      "Persetujuan",
-      "Riwayat Order",
-      "Riwayat Persetujuan",
-    ].includes(item.name));
-  }
+  const baseItems = menuItems[role as keyof typeof menuItems] || [];
+  const items = role === "supervisor"
+    ? getSupervisorMenuItems(baseItems, actualRole, isIntakeValidator)
+    : baseItems;
 
   // Always hold the latest onClose without re-triggering effects
   const onCloseRef = useRef(onClose);
@@ -443,7 +450,15 @@ export default function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 mt-4 md:mt-6 px-3 overflow-y-auto">
-        {items.map((item, index) => renderMenuItem(item, index))}
+        {role === "supervisor" && !isSupervisorMenuReady ? (
+          <div className="space-y-2 animate-pulse" aria-label="Memuat menu supervisor">
+            {["one", "two", "three", "four"].map((key) => (
+              <div key={key} className="h-10 rounded-lg bg-white/5" />
+            ))}
+          </div>
+        ) : (
+          items.map((item, index) => renderMenuItem(item, index))
+        )}
       </nav>
 
       {/* Bottom Section */}

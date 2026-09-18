@@ -8,6 +8,7 @@ import { X, RefreshCw, AlertTriangle } from "lucide-react";
 import { getStageLabel } from "@/lib/stages";
 import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
 import { formatAddsOnList } from "@/lib/adds-on";
+import { getOrderDetailTabs, type OrderDetailView } from "@/lib/orders/order-detail-view";
 import StageTimeline from "@/components/orders/StageTimeline";
 import EstimatedCompletion from "@/components/analytics/EstimatedCompletion";
 
@@ -52,6 +53,7 @@ export interface OrderDetail {
     jenis_pembayaran: string | null;
     jumlah_bayar: number | null;
     sisa_bayar: number | null;
+    proses_produksi: string | null;
     order_via: string | null;
     sumber_media: string | null;
     kategori: string | null;
@@ -224,12 +226,15 @@ export default function OrderDetailPopup({
   orderId,
   orderNumber,
   onClose,
+  view = "tracking",
 }: {
   orderId: string;
   orderNumber: string;
   onClose: () => void;
+  view?: OrderDetailView;
 }) {
   const [tab, setTab] = useState<"info" | "stages" | "approvals">("info");
+  const tabs = getOrderDetailTabs(view);
 
   const { data: detailRes, isLoading, error } = useQuery<{ data: OrderDetail }>({
     queryKey: ["order-detail", orderId],
@@ -258,7 +263,11 @@ export default function OrderDetailPopup({
               <h3 className="text-sm font-semibold text-[#f0f4ff] mt-0.5 truncate">
                 {o?.customer_name || "Memuat..."}
               </h3>
-              {o && (
+              {view === "intake" ? (
+                <span className="inline-block rounded-full border border-sky-400/20 bg-sky-500/10 px-2 py-0.5 text-[10px] font-medium text-sky-200 mt-1">
+                  Menunggu Validasi SPV CS
+                </span>
+              ) : o && (
                 <span
                   className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium mt-1 ${
                     STAGE_COLORS[
@@ -294,7 +303,7 @@ export default function OrderDetailPopup({
           <>
             {/* Tabs */}
             <div className="flex border-b border-slate-100 px-5">
-              {(["info", "stages", "approvals"] as const).map((t) => (
+              {tabs.map((t) => (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
@@ -379,6 +388,10 @@ export default function OrderDetailPopup({
                         )}
                       </div>
                     </div>
+                  )}
+
+                  {o.proses_produksi && (
+                    <InfoRow label="Proses Produksi" value={o.proses_produksi} />
                   )}
 
                   {/* Ring specs */}
