@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canValidateIntake,
+  hasIntakeBrand,
   requiresPreReceiptValidation,
 } from "@/lib/legacy/intake";
 
@@ -35,5 +36,20 @@ describe("intake validator permission", () => {
   it("mengizinkan permission validasi intake tanpa mengecek nama role", () => {
     expect(canValidateIntake({ can_validate_intake: true })).toBe(true);
     expect(canValidateIntake({ can_read: true })).toBe(false);
+  });
+});
+
+describe("intake brand filter", () => {
+  it("mendukung relasi order Supabase berbentuk satu objek", () => {
+    expect(hasIntakeBrand({ id_brand: 3 }, 3)).toBe(true);
+  });
+
+  it("mendukung relasi order Supabase berbentuk array", () => {
+    expect(hasIntakeBrand([{ id_brand: 3 }], 3)).toBe(true);
+  });
+
+  it("mengabaikan relasi kosong atau brand lain", () => {
+    expect(hasIntakeBrand(null, 3)).toBe(false);
+    expect(hasIntakeBrand({ id_brand: 1 }, 3)).toBe(false);
   });
 });
