@@ -13,6 +13,12 @@ export interface BrandIntakePolicy {
   is_active: boolean;
 }
 
+type IntakeOrderRelation =
+  | { id_brand: number | null }
+  | { id_brand: number | null }[]
+  | null
+  | undefined;
+
 export function requiresPreReceiptValidation(
   policies: BrandIntakePolicy[],
   brandCode: string,
@@ -25,4 +31,14 @@ export function canValidateIntake(
   permissions: Record<string, unknown> | null | undefined,
 ): boolean {
   return permissions?.[INTAKE_VALIDATION_PERMISSION] === true;
+}
+
+export function hasIntakeBrand(
+  legacyOrders: IntakeOrderRelation,
+  brandId: number,
+): boolean {
+  if (Array.isArray(legacyOrders)) {
+    return legacyOrders.some((order) => order.id_brand === brandId);
+  }
+  return legacyOrders?.id_brand === brandId;
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { canValidateIntake } from "@/lib/legacy/intake";
+import { canValidateIntake, hasIntakeBrand } from "@/lib/legacy/intake";
 import { getRoleProps } from "@/lib/auth/session";
 
 async function authorize() {
@@ -51,7 +51,7 @@ export async function GET() {
 
     const intakeData = auth.role.name === "customer_service_supervisor"
       ? (data ?? []).filter((intake) =>
-        intake.legacy_orders?.some((order) => order.id_brand === 3),
+        hasIntakeBrand(intake.legacy_orders, 3),
       )
       : data ?? [];
 
