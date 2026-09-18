@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   resolveIngestionStage,
   shouldAdvanceTracking,
+  shouldApplyIncomingStage,
   resolveTargetStage,
 } from "@/lib/legacy/ingest";
 import {
@@ -58,8 +59,8 @@ describe("shouldAdvanceTracking", () => {
     expect(shouldAdvanceTracking(undefined)).toBe(false);
   });
 
-  it("skips Pelunasan (id_status=13) — payment status, not a stage", () => {
-    expect(shouldAdvanceTracking(YII2_STATUS_PELUNASAN)).toBe(false);
+  it("advances Pelunasan (id_status=13) to Customer Care", () => {
+    expect(shouldAdvanceTracking(YII2_STATUS_PELUNASAN)).toBe(true);
   });
 
   it("skips unknown statuses so the fallback can never regress an order", () => {
@@ -87,10 +88,10 @@ describe("resolveTargetStage", () => {
     ).toBe("pembentukan_cincin");
   });
 
-  it("returns null for Pelunasan without tgl_selesai", () => {
+  it("maps Pelunasan to Konfirmasi Customer Care", () => {
     expect(
       resolveTargetStage({ ...baseOrder, id_status: YII2_STATUS_PELUNASAN }),
-    ).toBeNull();
+    ).toBe("konfirmasi");
   });
 
   it("maps known statuses to stages", () => {
@@ -102,6 +103,48 @@ describe("resolveTargetStage", () => {
 
   it("returns null for unknown statuses", () => {
     expect(resolveTargetStage({ ...baseOrder, id_status: 999 })).toBeNull();
+  });
+});
+
+describe("shouldApplyIncomingStage", () => {
+  it("moves Pelunasan forward to Konfirmasi Customer Care", () => {
+    expect(
+      shouldApplyIncomingStage(
+        "racik_bahan",
+        "konfirmasi",
+        YII2_STATUS_PELUNASAN,
+      ),
+    ).toBe(true);
+  });
+
+  it("does not let a delayed Pelunasan webhook regress a later stage", () => {
+    expect(
+      shouldApplyIncomingStage(
+        "packing",
+        "konfirmasi",
+        YII2_STATUS_PELUNASAN,
+      ),
+    ).toBe(false);
+    expect(
+      shouldApplyIncomingStage(
+        "pengiriman",
+        "konfirmasi",
+        YII2_STATUS_PELUNASAN,
+      ),
+    ).toBe(false);
+    expect(
+      shouldApplyIncomingStage(
+        "selesai",
+        "konfirmasi",
+        YII2_STATUS_PELUNASAN,
+      ),
+    ).toBe(false);
+  });
+
+  it("preserves the existing behavior for other Yii2 statuses", () => {
+    expect(
+      shouldApplyIncomingStage("packing", "pembentukan_cincin", 12),
+    ).toBe(true);
   });
 });
 

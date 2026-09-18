@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { filterBottleneckStages } from "@/lib/bottleneck/search";
+import {
+  filterBottleneckStages,
+  getBottleneckSearchResult,
+} from "@/lib/bottleneck/search";
 import type { StageBottleneck } from "@/types/bottleneck";
 
 const stages: StageBottleneck[] = [
@@ -40,5 +43,12 @@ describe("bottleneck search", () => {
     expect(result).toHaveLength(1);
     expect(result[0].stage).toBe("racik_bahan");
     expect(result[0].bottlenecks).toHaveLength(1);
+  });
+
+  it("mengembalikan total hasil bersama tahap yang telah difilter", () => {
+    const result = getBottleneckSearchResult(stages, "cincin");
+
+    expect(result.totalMatches).toBe(2);
+    expect(result.stages).toHaveLength(2);
   });
 });

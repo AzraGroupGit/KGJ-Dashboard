@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleProps } from "@/lib/auth/session";
 import { notifySupervisors, getSupervisorRoleForApproval, notifyCsForOrder } from "@/lib/notifications";
-import { STAGE_SEQUENCE, STAGE_GROUP, getStageIndex, effectiveNext } from "@/lib/stages";
+import { STAGE_SEQUENCE, STAGE_GROUP, effectiveNext } from "@/lib/stages";
 import { pushStageToYii2 } from "@/lib/legacy/push-status";
 
 // ── Role access ────────────────────────────────────────────────────────────────

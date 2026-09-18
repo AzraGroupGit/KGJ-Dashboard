@@ -1,8 +1,6 @@
 import type { BottleneckItem, StageBottleneck } from "@/types/bottleneck";
 
-function matchesBottleneckItem(item: BottleneckItem, query: string): boolean {
-  const normalizedQuery = query.trim().toLocaleLowerCase("id-ID");
-  if (!normalizedQuery) return true;
+function matchesBottleneckItem(item: BottleneckItem, normalizedQuery: string): boolean {
   return [
     item.order_number,
     item.customer_name,
@@ -20,14 +18,24 @@ export function filterBottleneckStages(
   stages: StageBottleneck[],
   query: string,
 ): StageBottleneck[] {
-  if (!query.trim()) return stages;
+  return getBottleneckSearchResult(stages, query).stages;
+}
 
-  return stages.flatMap((stage) => {
+export function getBottleneckSearchResult(
+  stages: StageBottleneck[],
+  query: string,
+): { stages: StageBottleneck[]; totalMatches: number } {
+  const normalizedQuery = query.trim().toLocaleLowerCase("id-ID");
+  if (!normalizedQuery) return { stages, totalMatches: 0 };
+
+  let totalMatches = 0;
+  const matchedStages = stages.flatMap((stage) => {
     const approval = isApprovalStage(stage);
     const matches = (approval ? stage.orders : stage.bottlenecks)
-      .filter((item) => matchesBottleneckItem(item, query));
+      .filter((item) => matchesBottleneckItem(item, normalizedQuery));
     if (matches.length === 0) return [];
 
+    totalMatches += matches.length;
     return [{
       ...stage,
       order_count: matches.length,
@@ -35,4 +43,6 @@ export function filterBottleneckStages(
       bottlenecks: approval ? stage.bottlenecks : matches,
     }];
   });
+
+  return { stages: matchedStages, totalMatches };
 }

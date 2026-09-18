@@ -6,6 +6,7 @@
 // creates duplicate stage_history rows or moves the tracking pointer.
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getStageIndex } from "@/lib/stages";
 import {
   mapStatusToStage,
   YII2_STATUS_TO_STAGE,
@@ -46,16 +47,22 @@ export function resolveIngestionStage(rawStage: string): {
   };
 }
 
-// Spec checklist item 6: id_status=13 (Pelunasan) is a Yii2-native payment
-// status — apply the field update but keep the current stage unchanged.
 // Unknown/missing statuses are also skipped for EXISTING orders, so the
 // mapStatusToStage fallback (penerimaan_order) can never regress an order.
 export function shouldAdvanceTracking(
   idStatus: number | null | undefined,
 ): boolean {
   if (idStatus == null) return false;
-  if (idStatus === YII2_STATUS_PELUNASAN) return false;
   return idStatus in YII2_STATUS_TO_STAGE;
+}
+
+export function shouldApplyIncomingStage(
+  currentStage: string | null | undefined,
+  targetStage: string,
+  idStatus: number | null | undefined,
+): boolean {
+  if (idStatus !== YII2_STATUS_PELUNASAN) return true;
+  return getStageIndex(currentStage ?? "") <= getStageIndex(targetStage);
 }
 
 // Only force "selesai" when Yii2 confirms the order is truly completed
@@ -217,7 +224,7 @@ export async function ingestLegacyOrder(
 
     const { data: tracking, error: trackingError } = await db
       .from("tracking_stages")
-      .select("id")
+      .select("id, current_stage")
       .eq("order_id", existing.id)
       .maybeSingle();
     if (trackingError) throw new Error(`tracking_stages query gagal: ${trackingError.message}`);
@@ -244,6 +251,10 @@ export async function ingestLegacyOrder(
     }
 
     if (targetStage === null) {
+      return { action: "updated", stage: null, stageChanged: false };
+    }
+
+    if (!shouldApplyIncomingStage(tracking?.current_stage, targetStage, incomingStatus)) {
       return { action: "updated", stage: null, stageChanged: false };
     }
 
