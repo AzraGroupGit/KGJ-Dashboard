@@ -45,10 +45,10 @@ export default function SupervisorHistoryPage() {
               Riwayat Order
             </h1>
             <p className="mt-0.5 text-xs sm:text-sm text-white/50">
-              Semua order berjalan dan selesai
+              Order yang pernah Anda tangani
             </p>
           </div>
-          <OrderHistoryList />
+          <OrderHistoryList scope="mine" />
         </main>
       </div>
     </div>
