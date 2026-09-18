@@ -17,6 +17,8 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  Search,
+  X,
 } from "lucide-react";
 import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
 import { getStageLabel } from "@/lib/stages";
@@ -25,6 +27,7 @@ import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
 import type { StageBottleneck, BottleneckData } from "@/types/bottleneck";
 import type { SupervisorGroup } from "@/types/roles";
 import { BRAND_FILTER_OPTIONS, getBrandPrefix } from "@/lib/legacy/brands";
+import { filterBottleneckStages } from "@/lib/bottleneck/search";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -393,6 +396,7 @@ export default function SupervisorBottleneckPage() {
   const [filterGroup, setFilterGroup] =
     useState<SupervisorGroup>("all");
   const [brandFilter, setBrandFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"heatmap" | "details">("details");
 
   const { data: res, isLoading, error, refetch, dataUpdatedAt, isRefetching } = useQuery<{ data: BottleneckData }>({
@@ -462,12 +466,35 @@ export default function SupervisorBottleneckPage() {
           ? b.stage_group === "approval" || b.stage.startsWith("approval_")
           : b.stage_group === filterGroup
     )
-    .map((b) => ({
-      ...b,
-      orders: brandFilter === "all" ? b.orders : b.orders.filter((o) => getBrandPrefix(o.order_number) === brandFilter),
-      order_count: brandFilter === "all" ? b.order_count : b.orders.filter((o) => getBrandPrefix(o.order_number) === brandFilter).length,
-    }))
-    .filter((b) => brandFilter === "all" || b.orders.length > 0);
+    .map((b) => {
+      const approval = b.stage_group === "approval" || b.stage.startsWith("approval_");
+      const orders = brandFilter === "all"
+        ? b.orders
+        : b.orders.filter((order) => getBrandPrefix(order.order_number) === brandFilter);
+      const bottlenecks = brandFilter === "all"
+        ? b.bottlenecks
+        : b.bottlenecks.filter((order) => getBrandPrefix(order.order_number) === brandFilter);
+      const displayItems = approval ? orders : bottlenecks;
+      return {
+        ...b,
+        orders,
+        bottlenecks,
+        order_count: brandFilter === "all" ? b.order_count : displayItems.length,
+      };
+    })
+    .filter((b) => {
+      if (brandFilter === "all") return true;
+      return (b.stage_group === "approval" || b.stage.startsWith("approval_"))
+        ? b.orders.length > 0
+        : b.bottlenecks.length > 0;
+    });
+  const detailBn = filterBottleneckStages(filteredBn, searchQuery);
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (!value.trim()) return;
+    setExpandedStages(new Set(filterBottleneckStages(filteredBn, value).map((stage) => stage.stage)));
+  };
 
   const criticalCount =
     filteredBn.filter((b) => (b.avg_hours || 0) > 24).length || 0;
@@ -662,6 +689,26 @@ export default function SupervisorBottleneckPage() {
                       Detail Per Tahap
                     </h3>
                   </div>
+                  <div className="relative mt-3">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                    <input
+                      value={searchQuery}
+                      onChange={(event) => handleSearchChange(event.target.value)}
+                      placeholder="Cari kode order, customer, produk, atau proses produksi"
+                      aria-label="Cari order pada detail per tahap"
+                      className="w-full rounded-lg border border-gold/15 bg-carbon py-2 pl-9 pr-9 text-xs text-cream placeholder:text-white/30 focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => handleSearchChange("")}
+                        aria-label="Hapus pencarian"
+                        className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-white/45 hover:bg-white/10 hover:text-cream"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                   {/* Tabbed layout for grouping */}
                   <div className="flex items-center gap-1 mt-3 border-b border-gold/15 overflow-x-auto -mx-5 px-5">
                     {([
@@ -706,14 +753,16 @@ export default function SupervisorBottleneckPage() {
                   </div>
                 </div>
 
-                {filteredBn.length === 0 ? (
+                {detailBn.length === 0 ? (
                   <div className="py-16 text-center">
                     <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-300" />
                     <p className="text-sm font-medium text-white/50">
-                      Tidak ada bottleneck terdeteksi
+                      {searchQuery ? "Order tidak ditemukan" : "Tidak ada bottleneck terdeteksi"}
                     </p>
                     <p className="text-xs text-white/40 mt-1">
-                      Semua order berjalan lancar
+                      {searchQuery
+                        ? "Coba kode order, nama customer, produk, atau proses produksi lain"
+                        : "Semua order berjalan lancar"}
                     </p>
                   </div>
                 ) : (
@@ -740,7 +789,7 @@ export default function SupervisorBottleneckPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
-                        {filteredBn.map((stage) => (
+                        {detailBn.map((stage) => (
                           <BottleneckTableRow
                             key={stage.stage}
                             stage={stage}
