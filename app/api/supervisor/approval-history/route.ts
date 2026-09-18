@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleProps } from "@/lib/auth/session";
 import { STAGE_LABELS } from "@/lib/stages";
 import { getBrandPrefix } from "@/lib/legacy/brands";
+import { getPersonalApprovalAction, PERSONAL_HISTORY_ACTIONS } from "@/lib/supervisor/history";
 
 async function verifySupervisor(userId: string) {
   const admin = createAdminClient();
@@ -53,59 +54,75 @@ export async function GET(request: Request) {
     const admin = createAdminClient();
 
     const { data: history, error } = await admin
-      .from("stage_history")
-      .select(
-        `id, order_id, stage, data, created_at,
-         legacy_orders!stage_history_order_id_fkey(kode_order, nama)`,
-      )
-      .not("data", "is", null)
+      .from("activity_logs")
+      .select("entity_id, action, new_data, created_at")
+      .eq("user_id", authUser.id)
+      .in("action", [...PERSONAL_HISTORY_ACTIONS])
       .order("created_at", { ascending: false })
       .limit(limit * 3);
 
     if (error) {
       console.error("[approval-history] query error:", error.message);
-      return NextResponse.json({ error: "Gagal mengambil data" }, { status: 500 });
+      return NextResponse.json({ error: "Gagal mengambil riwayat persetujuan" }, { status: 500 });
     }
 
-    type LegacyEmbed = { kode_order: string; nama: string | null } | { kode_order: string; nama: string | null }[] | null;
-    type HistoryRow = {
-      id: string; order_id: string; stage: string; created_at: string;
-      data: Record<string, unknown> | null;
-      legacy_orders?: LegacyEmbed;
+    type ActivityRow = {
+      entity_id: string;
+      action: string;
+      new_data: Record<string, unknown> | null;
+      created_at: string;
     };
-
-    const items = (history as HistoryRow[] ?? [])
-      .filter((h) => {
-        const d = h.data as Record<string, unknown> | null;
-        if (!d) return false;
-        const action = d._sv_action;
-        if (action !== "approve" && action !== "reject") return false;
-        // Only this supervisor's decisions (id match, fallback name match)
-        if (d._sv_by_id && d._sv_by_id !== authUser.id) return false;
-        if (!d._sv_by_id && d._sv_by !== supervisorName) return false;
-        return true;
-      })
-      .map((h) => {
-        const d = h.data as Record<string, unknown>;
-        const lo = Array.isArray(h.legacy_orders)
-          ? (h.legacy_orders as { kode_order: string; nama: string | null }[])[0]
-          : (h.legacy_orders as { kode_order: string; nama: string | null } | null);
-        const orderNumber = lo?.kode_order ?? "—";
+    const decisions = (history as ActivityRow[] ?? [])
+      .map((history) => {
+        const data = history.new_data ?? {};
+        const action = getPersonalApprovalAction(history.action, data);
+        if (!action) return null;
+        const isIntake = history.action === "INTAKE_VALIDATION";
+        const stage = isIntake
+          ? "intake_validation"
+          : typeof data.stage === "string" ? data.stage : "";
         return {
-          id: h.id,
-          order_id: h.order_id,
+          id: `${history.action}-${history.entity_id}-${history.created_at}`,
+          order_id: history.entity_id,
+          stage,
+          stage_label: isIntake
+            ? "Validasi SPV CS"
+            : STAGE_LABELS[stage] ?? "Persetujuan Supervisor",
+          action,
+          remarks: isIntake
+            ? typeof data.reason === "string" ? data.reason : null
+            : typeof data.remarks === "string" ? data.remarks : null,
+          decided_by: supervisorName || null,
+          decided_at: history.created_at,
+        };
+      })
+      .filter((decision): decision is NonNullable<typeof decision> => decision !== null);
+
+    const orderIds = [...new Set(decisions.map((decision) => decision.order_id))];
+    const { data: orders, error: ordersError } = orderIds.length > 0
+      ? await admin
+        .from("legacy_orders")
+        .select("id, kode_order, nama")
+        .in("id", orderIds)
+      : { data: [], error: null };
+    if (ordersError) {
+      console.error("[approval-history] orders query error:", ordersError.message);
+      return NextResponse.json({ error: "Gagal mengambil data order" }, { status: 500 });
+    }
+
+    const ordersById = new Map((orders ?? []).map((order) => [order.id, order]));
+    const items = decisions
+      .map((decision) => {
+        const order = ordersById.get(decision.order_id);
+        const orderNumber = order?.kode_order ?? "—";
+        return {
+          ...decision,
           order_number: orderNumber,
-          customer_name: lo?.nama ?? null,
-          stage: h.stage,
-          stage_label: STAGE_LABELS[h.stage] ?? h.stage,
-          action: d._sv_action as string,
-          remarks: (d._sv_notes as string) ?? null,
-          decided_by: (d._sv_by as string) ?? null,
-          decided_at: (d._sv_at as string) ?? h.created_at,
+          customer_name: order?.nama ?? null,
           brand: getBrandPrefix(orderNumber) ?? "—",
         };
       })
-      .filter((o) => brand === "all" || o.brand === brand)
+      .filter((item) => brand === "all" || item.brand === brand)
       .slice(0, limit);
 
     return NextResponse.json({

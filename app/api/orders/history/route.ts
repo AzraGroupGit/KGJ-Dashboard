@@ -7,6 +7,7 @@ import { getRoleProps } from "@/lib/auth/session";
 import { STAGE_LABELS } from "@/lib/stages";
 import { mapLegacyStatus } from "@/lib/legacy/adapter";
 import { getBrandPrefix } from "@/lib/legacy/brands";
+import { PERSONAL_HISTORY_ACTIONS } from "@/lib/supervisor/history";
 
 async function verifyAccess(userId: string) {
   const admin = createAdminClient();
@@ -50,10 +51,34 @@ export async function GET(request: Request) {
     const stage = searchParams.get("stage") ?? "";
     const brand = searchParams.get("brand") ?? "all";
     const q = searchParams.get("q") ?? "";
+    const scope = searchParams.get("scope") ?? "all";
     const limit = Math.min(Number(searchParams.get("limit") ?? 50), 200);
     const offset = Math.max(Number(searchParams.get("offset") ?? 0), 0);
+    if (scope !== "all" && scope !== "mine") {
+      return NextResponse.json({ error: "Scope riwayat tidak valid" }, { status: 400 });
+    }
 
     const admin = createAdminClient();
+    let handledOrderIds: string[] | null = null;
+
+    if (scope === "mine") {
+      const { data: activities, error: activitiesError } = await admin
+        .from("activity_logs")
+        .select("entity_id")
+        .eq("user_id", authUser.id)
+        .in("action", [...PERSONAL_HISTORY_ACTIONS])
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      if (activitiesError) {
+        console.error("[GET /api/orders/history] activities error:", activitiesError.message);
+        return NextResponse.json({ error: "Gagal mengambil riwayat supervisor" }, { status: 500 });
+      }
+
+      handledOrderIds = [...new Set((activities ?? []).map((activity) => activity.entity_id))];
+      if (handledOrderIds.length === 0) {
+        return NextResponse.json({ success: true, data: { orders: [], total: 0 } });
+      }
+    }
 
     let query = admin
       .from("tracking_stages")
@@ -62,6 +87,8 @@ export async function GET(request: Request) {
          legacy_orders!tracking_stages_order_id_fkey(id, kode_order, nama, tgl_order, tgl_selesai)`,
         { count: "exact" },
       );
+
+    if (handledOrderIds) query = query.in("order_id", handledOrderIds);
 
     if (status === "active") query = query.neq("current_stage", "selesai");
     else if (status === "completed") query = query.eq("current_stage", "selesai");

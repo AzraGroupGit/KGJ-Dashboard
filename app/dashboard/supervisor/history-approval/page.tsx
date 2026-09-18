@@ -19,7 +19,7 @@ interface ApprovalItem {
   customer_name: string | null;
   stage: string;
   stage_label: string;
-  action: "approve" | "reject";
+  action: "approve" | "reject" | "return";
   remarks: string | null;
   decided_by: string | null;
   decided_at: string;
@@ -89,7 +89,7 @@ export default function SupervisorApprovalHistoryPage() {
                 Riwayat Persetujuan
               </h1>
               <p className="mt-0.5 text-xs sm:text-sm text-white/50">
-                Keputusan approve/reject yang Anda buat
+                Keputusan persetujuan dan validasi yang Anda buat
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -154,6 +154,10 @@ export default function SupervisorApprovalHistoryPage() {
                           {item.action === "approve" ? (
                             <span className="inline-flex items-center gap-1 text-emerald-300 text-xs font-medium">
                               <CheckCircle2 className="h-3.5 w-3.5" /> Disetujui
+                            </span>
+                          ) : item.action === "return" ? (
+                            <span className="inline-flex items-center gap-1 text-amber-300 text-xs font-medium">
+                              <RefreshCw className="h-3.5 w-3.5" /> Dikembalikan
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-rose-300 text-xs font-medium">

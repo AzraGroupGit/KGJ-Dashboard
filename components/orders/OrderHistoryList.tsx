@@ -42,7 +42,7 @@ function formatDate(iso: string | null): string {
   });
 }
 
-export default function OrderHistoryList() {
+export default function OrderHistoryList({ scope = "all" }: { scope?: "all" | "mine" }) {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
   const [brand, setBrand] = useState("all");
@@ -53,6 +53,7 @@ export default function OrderHistoryList() {
   const params = new URLSearchParams();
   if (status !== "all") params.set("status", status);
   if (brand !== "all") params.set("brand", brand);
+  if (scope === "mine") params.set("scope", scope);
   if (stage) params.set("stage", stage);
   if (q) params.set("q", q);
   params.set("limit", "100");
