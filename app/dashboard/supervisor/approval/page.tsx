@@ -3,16 +3,16 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
+import SupervisorPageLoading from "@/components/layout/SupervisorPageLoading";
 import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
 import { formatAddsOnList } from "@/lib/adds-on";
-import type { SupervisorGroup } from "@/types/roles";
 import { STAGE_SEQUENCE, getStageLabel } from "@/lib/stages";
 import { BRAND_FILTER_OPTIONS, getBrandCode, getBrandDisplayName, getBrandPrefix } from "@/lib/legacy/brands";
+import { useSupervisorPageAccess } from "@/lib/auth/use-supervisor-page-access";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -1262,70 +1262,27 @@ function PendingCard({
 type FilterTab = string;
 
 export default function SupervisorApprovalPage() {
-  const router = useRouter();
-  const [filter, setFilter] = useState<FilterTab>("approval_penerimaan_order");
+  const { access, isResolved: accessResolved, userEmail } = useSupervisorPageAccess();
+  const [filter, setFilter] = useState<FilterTab>(
+    () => access?.defaultApprovalFilter ?? "approval_penerimaan_order",
+  );
   const [brandFilter, setBrandFilter] = useState<string>("all");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [userEmail, setUserEmail] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [supervisorGroup, setSupervisorGroup] = useState<SupervisorGroup>("all");
   const [refreshing, setRefreshing] = useState(false);
-  const [canValidateIntake, setCanValidateIntake] = useState(false);
-  const [canAccessPending, setCanAccessPending] = useState(false);
-  const [isCustomerServiceSupervisor, setIsCustomerServiceSupervisor] = useState(false);
-  const [accessResolved, setAccessResolved] = useState(false);
+  const supervisorGroup = access?.supervisorGroup ?? "all";
+  const canValidateIntake = access?.canValidateIntake ?? false;
+  const canAccessPending = access?.canAccessPending ?? false;
+  const isCustomerServiceSupervisor = access?.isCustomerServiceSupervisor ?? false;
 
-  // Verify supervisor identity
   useEffect(() => {
-    (async () => {
-      const res = await fetch("/api/me");
-      if (!res.ok) {
-        router.push("/workshop/login");
-        return;
-      }
-      const json = await res.json();
-      const u = json.data;
-      const allowedStages: string[] = u.role?.allowed_stages ?? [];
-      const isCustomerServiceSupervisor = u.role?.name === "customer_service_supervisor";
-      const isIntakeValidator = u.role?.name === "superadmin" || u.role?.permissions?.can_validate_intake === true;
-      const canAccess =
-        isIntakeValidator ||
-        u.role?.role_group === "management" ||
-        allowedStages.some((s: string) => s.startsWith("approval_"));
-      if (!canAccess) {
-        router.push("/workshop/login");
-        return;
-      }
-      setUserEmail(u.username || u.full_name || "");
-      setCanValidateIntake(isIntakeValidator);
-      setIsCustomerServiceSupervisor(isCustomerServiceSupervisor);
-      setCanAccessPending(
-        !isCustomerServiceSupervisor &&
-        (u.role?.role_group === "management" ||
-          allowedStages.some((s: string) => s.startsWith("approval_"))),
-      );
-      setAccessResolved(true);
-      if (isIntakeValidator) {
-        setSupervisorGroup("all");
-        setFilter("intake_validation");
-        return;
-      }
-      if (u.role?.name === "production_supervisor") {
-        setSupervisorGroup("production");
-        setFilter("production");
-      } else if (u.role?.name === "operational_supervisor") {
-        setSupervisorGroup("operational");
-        setFilter("operational");
-      } else {
-        setSupervisorGroup("all");
-      }
-    })();
-  }, [router]);
+    if (access) setFilter(access.defaultApprovalFilter);
+  }, [access]);
 
   const [refetchInterval, setRefetchInterval] = useState<number | false>(30_000);
 
   const { data: items = [], isLoading: loading, error, refetch } = useQuery({
-    queryKey: ["supervisor", "pending"],
+    queryKey: ["supervisor", "pending", access?.roleName],
     queryFn: () => fetcher<{ data: PendingItem[] }>("/api/supervisor/pending"),
     select: (res) => res.data ?? [],
     enabled: accessResolved && canAccessPending,
@@ -1338,7 +1295,7 @@ export default function SupervisorApprovalPage() {
     error: intakeError,
     refetch: refetchIntake,
   } = useQuery({
-    queryKey: ["intake", "pending"],
+    queryKey: ["intake", "pending", access?.roleName],
     queryFn: () => fetcher<{ data: IntakeItem[] }>("/api/intake/pending"),
     select: (res) => res.data ?? [],
     enabled: accessResolved && canValidateIntake,
@@ -1346,6 +1303,7 @@ export default function SupervisorApprovalPage() {
   });
 
   useEffect(() => {
+    if (!accessResolved) return;
     let channel: import("pusher-js").Channel | null = null;
 
     (async () => {
@@ -1379,7 +1337,7 @@ export default function SupervisorApprovalPage() {
     return () => {
       if (channel) channel.unsubscribe();
     };
-  }, [canAccessPending, canValidateIntake, refetch, refetchIntake]);
+  }, [accessResolved, canAccessPending, canValidateIntake, refetch, refetchIntake]);
 
   const fetchPending = useCallback(async (manual = false) => {
     if (manual) setRefreshing(true);
@@ -1474,6 +1432,17 @@ export default function SupervisorApprovalPage() {
     },
     [refetch],
   );
+
+  if (!accessResolved) {
+    return (
+      <SupervisorPageLoading
+        sidebarOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onMenuClick={() => setSidebarOpen(true)}
+        userEmail={userEmail}
+      />
+    );
+  }
 
   // Per-stage tabs based on supervisor group
   const OPERATIONAL_APPROVAL_STAGES = STAGE_SEQUENCE.filter(

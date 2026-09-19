@@ -2,12 +2,12 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api";
-import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
+import SupervisorPageLoading from "@/components/layout/SupervisorPageLoading";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -27,7 +27,8 @@ import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
 import type { StageBottleneck, BottleneckData } from "@/types/bottleneck";
 import type { SupervisorGroup } from "@/types/roles";
 import { BRAND_FILTER_OPTIONS, getBrandPrefix } from "@/lib/legacy/brands";
-import { filterBottleneckStages } from "@/lib/bottleneck/search";
+import { getBottleneckSearchResult } from "@/lib/bottleneck/search";
+import { useSupervisorPageAccess } from "@/lib/auth/use-supervisor-page-access";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -385,64 +386,31 @@ function StatusBadge({ status }: { status: string }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SupervisorBottleneckPage() {
-  const router = useRouter();
-  const [userEmail, setUserEmail] = useState("");
+  const { access, isResolved: accessResolved, userEmail } = useSupervisorPageAccess();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
   const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
   const [detailOrderNumber, setDetailOrderNumber] = useState<string>("");
-  const [supervisorGroup, setSupervisorGroup] =
-    useState<SupervisorGroup>("all");
   const [filterGroup, setFilterGroup] =
-    useState<SupervisorGroup>("all");
+    useState<SupervisorGroup>(() => access?.supervisorGroup ?? "all");
   const [brandFilter, setBrandFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [activeTab, setActiveTab] = useState<"heatmap" | "details">("details");
+  const supervisorGroup = access?.supervisorGroup ?? "all";
 
   const { data: res, isLoading, error, refetch, dataUpdatedAt, isRefetching } = useQuery<{ data: BottleneckData }>({
-    queryKey: ["bottleneck-monitoring"],
+    queryKey: ["bottleneck-monitoring", access?.roleName],
     queryFn: () => fetcher<{ data: BottleneckData }>("/api/bottleneck"),
+    enabled: accessResolved,
     refetchInterval: 60_000,
   });
   const data = res?.data ?? null;
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
 
   useEffect(() => {
-    (async () => {
-      const res = await fetch("/api/me");
-      if (!res.ok) {
-        router.push("/workshop/login");
-        return;
-      }
-      const json = await res.json();
-      const u = json.data;
-      const allowedStages: string[] = u.role?.allowed_stages ?? [];
-      const isSupervisor = [
-        "production_supervisor",
-        "operational_supervisor",
-        "supervisor",
-      ].includes(u.role?.name);
-      const canAccess =
-        u.role?.role_group === "management" ||
-        isSupervisor ||
-        allowedStages.some((s: string) => s.startsWith("approval_"));
-      if (!canAccess) {
-        router.push("/workshop/login");
-        return;
-      }
-      setUserEmail(u.username || u.full_name || "");
-      if (u.role?.name === "production_supervisor") {
-        setSupervisorGroup("production");
-        setFilterGroup("production");
-      } else if (u.role?.name === "operational_supervisor") {
-        setSupervisorGroup("operational");
-        setFilterGroup("operational");
-      } else {
-        setSupervisorGroup("all");
-        setFilterGroup("all");
-      }
-    })();
-  }, [router]);
+    if (access) setFilterGroup(access.supervisorGroup);
+  }, [access]);
 
 
 
@@ -458,42 +426,46 @@ export default function SupervisorBottleneckPage() {
     });
   };
 
-  const filteredBn = (data?.bottlenecks ?? [])
-    .filter((b) =>
-      filterGroup === "all"
-        ? true
-        : filterGroup === "approval"
-          ? b.stage_group === "approval" || b.stage.startsWith("approval_")
-          : b.stage_group === filterGroup
-    )
-    .map((b) => {
-      const approval = b.stage_group === "approval" || b.stage.startsWith("approval_");
-      const orders = brandFilter === "all"
-        ? b.orders
-        : b.orders.filter((order) => getBrandPrefix(order.order_number) === brandFilter);
-      const bottlenecks = brandFilter === "all"
-        ? b.bottlenecks
-        : b.bottlenecks.filter((order) => getBrandPrefix(order.order_number) === brandFilter);
-      const displayItems = approval ? orders : bottlenecks;
-      return {
-        ...b,
-        orders,
-        bottlenecks,
-        order_count: brandFilter === "all" ? b.order_count : displayItems.length,
-      };
-    })
-    .filter((b) => {
-      if (brandFilter === "all") return true;
-      return (b.stage_group === "approval" || b.stage.startsWith("approval_"))
-        ? b.orders.length > 0
-        : b.bottlenecks.length > 0;
-    });
-  const detailBn = filterBottleneckStages(filteredBn, searchQuery);
+  const filteredBn = useMemo(() => (
+    (data?.bottlenecks ?? [])
+      .filter((b) =>
+        filterGroup === "all"
+          ? true
+          : filterGroup === "approval"
+            ? b.stage_group === "approval" || b.stage.startsWith("approval_")
+            : b.stage_group === filterGroup
+      )
+      .map((b) => {
+        const approval = b.stage_group === "approval" || b.stage.startsWith("approval_");
+        const orders = brandFilter === "all"
+          ? b.orders
+          : b.orders.filter((order) => getBrandPrefix(order.order_number) === brandFilter);
+        const bottlenecks = brandFilter === "all"
+          ? b.bottlenecks
+          : b.bottlenecks.filter((order) => getBrandPrefix(order.order_number) === brandFilter);
+        const displayItems = approval ? orders : bottlenecks;
+        return {
+          ...b,
+          orders,
+          bottlenecks,
+          order_count: brandFilter === "all" ? b.order_count : displayItems.length,
+        };
+      })
+      .filter((b) => {
+        if (brandFilter === "all") return true;
+        return (b.stage_group === "approval" || b.stage.startsWith("approval_"))
+          ? b.orders.length > 0
+          : b.bottlenecks.length > 0;
+      })
+  ), [brandFilter, data?.bottlenecks, filterGroup]);
+  const searchResult = useMemo(
+    () => getBottleneckSearchResult(filteredBn, deferredSearchQuery),
+    [deferredSearchQuery, filteredBn],
+  );
+  const detailBn = searchResult.stages;
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    if (!value.trim()) return;
-    setExpandedStages(new Set(filterBottleneckStages(filteredBn, value).map((stage) => stage.stage)));
   };
 
   const criticalCount =
@@ -512,6 +484,17 @@ export default function SupervisorBottleneckPage() {
       .reduce((s, b) => s + b.order_count, 0) || 0;
   const waitingCount =
     filteredBn.reduce((s, b) => s + (b.waiting_orders || 0), 0) || 0;
+
+  if (!accessResolved) {
+    return (
+      <SupervisorPageLoading
+        sidebarOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onMenuClick={() => setSidebarOpen(true)}
+        userEmail={userEmail}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#26211c]">
@@ -696,6 +679,7 @@ export default function SupervisorBottleneckPage() {
                       onChange={(event) => handleSearchChange(event.target.value)}
                       placeholder="Cari kode order, customer, produk, atau proses produksi"
                       aria-label="Cari order pada detail per tahap"
+                      aria-busy={searchQuery !== deferredSearchQuery}
                       className="w-full rounded-lg border border-gold/15 bg-carbon py-2 pl-9 pr-9 text-xs text-cream placeholder:text-white/30 focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20"
                     />
                     {searchQuery && (
@@ -709,6 +693,11 @@ export default function SupervisorBottleneckPage() {
                       </button>
                     )}
                   </div>
+                  {searchQuery && searchQuery === deferredSearchQuery && (
+                    <p className="mt-2 text-[11px] text-white/40">
+                      {searchResult.totalMatches} order ditemukan. Pilih tahap untuk melihat detail.
+                    </p>
+                  )}
                   {/* Tabbed layout for grouping */}
                   <div className="flex items-center gap-1 mt-3 border-b border-gold/15 overflow-x-auto -mx-5 px-5">
                     {([

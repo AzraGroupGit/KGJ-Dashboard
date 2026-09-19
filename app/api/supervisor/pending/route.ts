@@ -8,7 +8,6 @@ import { STAGE_SEQUENCE, STAGE_GROUP, STAGE_LABELS } from "@/lib/stages";
 import {
   komponenLabel,
   fontLabel,
-  produkKategoriLabel,
 } from "@/lib/legacy/komponen-labels";
 
 const APPROVAL_STAGES_ARRAY = STAGE_SEQUENCE.filter(s => s.startsWith("approval_"));
@@ -208,18 +207,6 @@ export async function GET() {
         const labelArr = (id: unknown): string[] | null => {
           const label = komponenLabel(id);
           return label ? [label] : null;
-        };
-
-        const buildKeterangan = (k?: Record<string, unknown>) => {
-          if (!k) return null;
-          const items = [
-            produkKategoriLabel(k.id_produk_kategori),
-            k.jumlah ? `Jumlah: ${k.jumlah}` : null,
-            typeof k.keterangan === "string" && k.keterangan.trim()
-              ? k.keterangan.replace(/<[^>]*>/g, "").trim()
-              : null,
-          ].filter(Boolean) as string[];
-          return items.length > 0 ? items : null;
         };
 
         const fonts = [
