@@ -162,8 +162,7 @@ function BottleneckTableRow({
   const status = getStatusInfo(stage.avg_hours);
   const StatusIcon = status.Icon;
   const isProduction = stage.stage_group === "production";
-  const isApproval = stage.stage_group === "approval" || stage.stage.startsWith("approval_");
-  const displayItems = isApproval ? stage.orders : stage.bottlenecks;
+  const displayItems = stage.orders;
   const hasData = displayItems.length > 0;
 
   return (
@@ -436,26 +435,18 @@ export default function SupervisorBottleneckPage() {
             : b.stage_group === filterGroup
       )
       .map((b) => {
-        const approval = b.stage_group === "approval" || b.stage.startsWith("approval_");
         const orders = brandFilter === "all"
           ? b.orders
           : b.orders.filter((order) => getBrandPrefix(order.order_number) === brandFilter);
-        const bottlenecks = brandFilter === "all"
-          ? b.bottlenecks
-          : b.bottlenecks.filter((order) => getBrandPrefix(order.order_number) === brandFilter);
-        const displayItems = approval ? orders : bottlenecks;
         return {
           ...b,
           orders,
-          bottlenecks,
-          order_count: brandFilter === "all" ? b.order_count : displayItems.length,
+          order_count: brandFilter === "all" ? b.order_count : orders.length,
         };
       })
       .filter((b) => {
         if (brandFilter === "all") return true;
-        return (b.stage_group === "approval" || b.stage.startsWith("approval_"))
-          ? b.orders.length > 0
-          : b.bottlenecks.length > 0;
+        return b.orders.length > 0;
       })
   ), [brandFilter, data?.bottlenecks, filterGroup]);
   const searchResult = useMemo(

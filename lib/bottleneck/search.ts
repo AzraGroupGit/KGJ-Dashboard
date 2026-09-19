@@ -10,10 +10,6 @@ function matchesBottleneckItem(item: BottleneckItem, normalizedQuery: string): b
   ].some((value) => value?.toLocaleLowerCase("id-ID").includes(normalizedQuery));
 }
 
-function isApprovalStage(stage: StageBottleneck): boolean {
-  return stage.stage_group === "approval" || stage.stage.startsWith("approval_");
-}
-
 export function filterBottleneckStages(
   stages: StageBottleneck[],
   query: string,
@@ -30,8 +26,7 @@ export function getBottleneckSearchResult(
 
   let totalMatches = 0;
   const matchedStages = stages.flatMap((stage) => {
-    const approval = isApprovalStage(stage);
-    const matches = (approval ? stage.orders : stage.bottlenecks)
+    const matches = stage.orders
       .filter((item) => matchesBottleneckItem(item, normalizedQuery));
     if (matches.length === 0) return [];
 
@@ -39,8 +34,7 @@ export function getBottleneckSearchResult(
     return [{
       ...stage,
       order_count: matches.length,
-      orders: approval ? matches : stage.orders,
-      bottlenecks: approval ? stage.bottlenecks : matches,
+      orders: matches,
     }];
   });
 
