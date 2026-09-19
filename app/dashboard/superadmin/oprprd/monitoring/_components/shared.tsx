@@ -485,10 +485,10 @@ export function BnRow({
         </td>
         <td className="px-3 py-3">
           <div className="space-y-0.5">
-            {stage.bottlenecks.length === 0 ? (
+            {stage.orders.length === 0 ? (
               <span className="text-xs text-white/40">—</span>
             ) : (
-              stage.bottlenecks.slice(0, 2).map((item, idx) => (
+              stage.orders.slice(0, 2).map((item, idx) => (
                 <button
                   key={idx}
                   onClick={(e) => {

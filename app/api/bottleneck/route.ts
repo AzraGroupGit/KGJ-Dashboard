@@ -18,12 +18,16 @@ interface StageBottleneck {
   in_progress_orders: number;
   avg_hours: number | null;
   longest_hours: number | null;
-  bottlenecks: {
+  orders: {
     order_number: string;
     customer_name: string;
     hours_waiting: number | null;
     status: string;
   }[];
+}
+
+function toStageSummary({ orders: _orders, ...stage }: StageBottleneck) {
+  return stage;
 }
 
 export async function GET(request?: NextRequest) {
@@ -209,7 +213,6 @@ export async function GET(request?: NextRequest) {
         in_progress_orders: inProgressOrders.length,
         avg_hours: avgHours ? Math.round(avgHours * 10) / 10 : null,
         longest_hours: longestHours ? Math.round(longestHours * 10) / 10 : null,
-        bottlenecks: sortedOrders,
         orders: sortedOrders,
       };
     }).filter((b) => b.order_count > 0);
@@ -223,13 +226,13 @@ export async function GET(request?: NextRequest) {
           total_orders: (orders || []).length,
           busiest_stage:
             bottlenecks.length > 0
-              ? bottlenecks.reduce((a, b) => (a.order_count > b.order_count ? a : b))
+              ? toStageSummary(bottlenecks.reduce((a, b) => (a.order_count > b.order_count ? a : b)))
               : null,
           slowest_stage:
             bottlenecks.filter((b) => b.avg_hours).length > 0
-              ? bottlenecks
+              ? toStageSummary(bottlenecks
                   .filter((b) => b.avg_hours)
-                  .reduce((a, b) => ((a.avg_hours || 0) > (b.avg_hours || 0) ? a : b))
+                  .reduce((a, b) => ((a.avg_hours || 0) > (b.avg_hours || 0) ? a : b)))
               : null,
         },
       },
