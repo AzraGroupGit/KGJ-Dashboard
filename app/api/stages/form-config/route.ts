@@ -531,7 +531,7 @@ export async function GET(request: Request) {
 
     // Map legacy order into the shape the rest of this handler expects.
     // Komponen IDs are resolved to labels via the Yii2 master-data mapping
-    // (lib/legacy/komponen-labels.ts); cs_orders-only fields stay null.
+    // (lib/legacy/komponen-labels.ts); unavailable legacy fields stay null.
     const komponenList = (legacyOrder.komponen ?? []) as Array<Record<string, unknown>>;
     const pria = komponenList.find((k) => k.id_gender === 1);
     const wanita = komponenList.find((k) => k.id_gender === 2);

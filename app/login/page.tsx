@@ -11,8 +11,6 @@ import { getDashboardPath, queryParamToAppRole } from "@/lib/routes";
 import { setClientUser, type LoginRole } from "@/lib/auth/session";
 import {
   Shield,
-  Headphones,
-  BarChart3,
   ArrowLeft,
   AlertCircle,
   Mail,
@@ -20,6 +18,7 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
+  BriefcaseBusiness,
 } from "lucide-react";
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -42,27 +41,7 @@ const ROLE_CONFIGS: RoleConfig[] = [
       bg: "rgba(240,201,107,0.1)",
       text: "#b8860b",
     },
-    icon: <Shield className="w-full h-full" />,
-  },
-  {
-    value: "customer_service",
-    label: "CS",
-    colors: {
-      border: "#4f8ef7",
-      bg: "rgba(79,142,247,0.1)",
-      text: "#2563eb",
-    },
-    icon: <Headphones className="w-full h-full" />,
-  },
-  {
-    value: "marketing",
-    label: "Marketing",
-    colors: {
-      border: "#82c882",
-      bg: "rgba(130,200,130,0.1)",
-      text: "#16a34a",
-    },
-    icon: <BarChart3 className="w-full h-full" />,
+    icon: <BriefcaseBusiness className="w-full h-full" />,
   },
   {
     value: "management",
@@ -135,7 +114,6 @@ export default function LoginPage() {
         role: data.user.role,
         username: data.user.username ?? null,
         roleDetail: data.user.roleDetail ?? null,
-        branch: data.user.branch ?? null,
       });
 
       const targetPath = getDashboardPath(data.user.role);
@@ -262,7 +240,7 @@ export default function LoginPage() {
                 Pilih Role
               </p>
               {/* Role selection - responsive grid with per-role colors */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-2">
+              <div className="grid grid-cols-2 gap-3 mb-3">
                 {visibleRoles.map((config) => {
                   const isActive = role === config.value;
                   return (
@@ -271,7 +249,8 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => setRole(config.value)}
                       disabled={isLoading}
-                      className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl border-2 text-[13px] font-medium transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed w-full ${
+                      aria-pressed={isActive}
+                      className={`flex min-h-[84px] flex-col items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl border-2 text-[13px] font-medium transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed w-full ${
                         isActive
                           ? "text-white"
                           : "border-white/10 bg-white/[0.03] text-white/50 hover:bg-white/[0.06]"

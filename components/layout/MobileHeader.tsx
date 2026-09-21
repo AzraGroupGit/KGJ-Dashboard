@@ -83,7 +83,6 @@ export default function Header({
     email: string | null;
     status: string;
     role: { id: string; name: string; role_group: string; description: string | null };
-    branch: { id: string; name: string; code: string } | null;
   }
 
   const { data: profile } = useQuery<ProfileData>({
@@ -244,10 +243,6 @@ export default function Header({
     switch (role) {
       case "superadmin":
         return "from-[#e8c547] to-[#c9a227]";
-      case "customer_service":
-        return "from-[#e8c547] to-[#c9a227]";
-      case "marketing":
-        return "from-[#e8c547] to-[#c9a227]";
       case "supervisor":
         return "from-[#e8c547] to-[#c9a227]";
       default:
@@ -259,10 +254,6 @@ export default function Header({
     switch (role) {
       case "superadmin":
         return "Super Admin";
-      case "customer_service":
-        return "Customer Service";
-      case "marketing":
-        return "Marketing";
       case "supervisor":
         return "Supervisor";
       default:

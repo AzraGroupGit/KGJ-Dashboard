@@ -6,8 +6,6 @@
  */
 export const LOGIN_ROLES = [
   "superadmin",
-  "customer_service",
-  "marketing",
   "management",
   "supervisor",
 ] as const;
@@ -35,9 +33,7 @@ export function isSupervisorRoleName(
 export type RoleGroup =
   | "management"
   | "operational"
-  | "production"
-  | "marketing"
-  | "customer_service";
+  | "production";
 
 export interface RolePermissions {
   can_read: boolean;
@@ -63,12 +59,6 @@ export interface UserRoleDetail {
   permissions: RolePermissions;
 }
 
-export interface UserBranch {
-  id: string;
-  name: string;
-  code: string;
-}
-
 export interface ClientUser {
   id: string;
   email: string;
@@ -78,8 +68,6 @@ export interface ClientUser {
   role: LoginRole;
   /** Detail role lengkap dari database (permissions, role_group, dll). */
   roleDetail: UserRoleDetail | null;
-  /** Cabang — biasanya hanya ada untuk role Customer Service. */
-  branch: UserBranch | null;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -93,7 +81,6 @@ const STORAGE_KEYS = {
   username: "userUsername",
   role: "userRole",
   roleDetail: "userRoleDetail",
-  branch: "userBranch",
 } as const;
 
 /** Role yang masuk kategori management (akses tinggi). */
@@ -102,17 +89,10 @@ export const MANAGEMENT_ROLES = [
 ] as const satisfies readonly LoginRole[];
 
 /** Role yang masuk kategori operasional (input data harian). */
-export const OPERATIONAL_ROLES = [
-  "customer_service",
-  "marketing",
-] as const satisfies readonly LoginRole[];
-
 const VALID_ROLE_GROUPS: readonly string[] = [
   "management",
   "operational",
   "production",
-  "marketing",
-  "customer_service",
 ];
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -164,8 +144,6 @@ export function getClientUser(): ClientUser | null {
 
   const username = localStorage.getItem(STORAGE_KEYS.username);
   const roleDetailRaw = localStorage.getItem(STORAGE_KEYS.roleDetail);
-  const branchRaw = localStorage.getItem(STORAGE_KEYS.branch);
-
   let roleDetail: UserRoleDetail | null = null;
   if (roleDetailRaw) {
     try {
@@ -178,15 +156,6 @@ export function getClientUser(): ClientUser | null {
     }
   }
 
-  let branch: UserBranch | null = null;
-  if (branchRaw) {
-    try {
-      branch = JSON.parse(branchRaw);
-    } catch {
-      branch = null;
-    }
-  }
-
   return {
     id,
     email,
@@ -194,7 +163,6 @@ export function getClientUser(): ClientUser | null {
     username: username || null,
     role: roleRaw,
     roleDetail,
-    branch,
   };
 }
 
@@ -212,7 +180,6 @@ export function setClientUser(user: {
   role: LoginRole;
   username?: string | null;
   roleDetail?: UserRoleDetail | null;
-  branch?: UserBranch | null;
 }): void {
   if (typeof window === "undefined") return;
 
@@ -236,11 +203,6 @@ export function setClientUser(user: {
     localStorage.removeItem(STORAGE_KEYS.roleDetail);
   }
 
-  if (user.branch) {
-    localStorage.setItem(STORAGE_KEYS.branch, JSON.stringify(user.branch));
-  } else {
-    localStorage.removeItem(STORAGE_KEYS.branch);
-  }
 }
 
 /** Hapus semua data user di localStorage. Dipanggil saat logout. */
@@ -258,15 +220,9 @@ export function isSuperadmin(user: ClientUser | null): boolean {
   return user?.role === "superadmin";
 }
 
-/** Cek apakah user masuk kategori operational (customer_service/marketing). */
-export function isOperationalUser(user: ClientUser | null): boolean {
-  if (!user) return false;
-  return (OPERATIONAL_ROLES as readonly string[]).includes(user.role);
-}
-
 /**
  * Cek apakah user punya salah satu role dari daftar.
- * Contoh: hasAnyRole(user, ["customer_service", "marketing"])
+ * Contoh: hasAnyRole(user, ["superadmin", "management"])
  */
 export function hasAnyRole(
   user: ClientUser | null,
@@ -317,8 +273,6 @@ export function getRoleProps(user: unknown): { id: string; name: string; role_gr
 export function getRoleDisplayName(role: LoginRole): string {
   const map: Record<LoginRole, string> = {
     superadmin: "Super Admin",
-    customer_service: "Customer Service",
-    marketing: "Marketing",
     management: "Management",
     supervisor: "Supervisor",
   };

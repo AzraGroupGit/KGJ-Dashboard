@@ -7,28 +7,14 @@ export const BmsUserSchema = z.object({
   full_name: z.string().min(1, "Nama lengkap wajib diisi"),
   email: z.string().email("Format email tidak valid"),
   password: z.string().min(6, "Password minimal 6 karakter"),
-  role: z.enum(["superadmin", "customer_service", "marketing"], {
-    message: "Role wajib dipilih",
-  }),
-  branch_id: z.string().optional(),
-}).superRefine((data, ctx) => {
-  if (data.role === "customer_service" && !data.branch_id) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Pilih cabang terlebih dahulu untuk role Customer Service",
-      path: ["branch_id"],
-    });
-  }
+  role: z.literal("superadmin"),
 });
 
 export const BmsEditUserSchema = z.object({
   username: z.string().optional(),
   full_name: z.string().min(1, "Nama lengkap wajib diisi"),
   email: z.string().email("Format email tidak valid"),
-  role: z.enum(["superadmin", "customer_service", "marketing"], {
-    message: "Role wajib dipilih",
-  }),
-  branch_id: z.string().optional(),
+  role: z.literal("superadmin"),
 });
 
 export const OprprdUserSchema = z.object({

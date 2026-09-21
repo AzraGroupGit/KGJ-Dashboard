@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useCallback } from "react";
-import { X, User, Mail, Shield, Building, Hash, Circle } from "lucide-react";
+import { X, User, Mail, Shield, Hash, Circle } from "lucide-react";
 
 interface ProfileData {
   id: string;
@@ -15,7 +15,6 @@ interface ProfileData {
     role_group: string;
     description: string | null;
   };
-  branch: { id: string; name: string; code: string } | null;
 }
 
 export default function ProfileModal({
@@ -48,7 +47,6 @@ export default function ProfileModal({
     { icon: <Mail className="h-4 w-4" />, label: "Email", value: profile.email || "—" },
     { icon: <Shield className="h-4 w-4" />, label: "Role", value: formatRole(profile.role.name), color: P.purple },
     { icon: <Shield className="h-4 w-4" />, label: "Role Group", value: formatRole(profile.role.role_group) },
-    { icon: <Building className="h-4 w-4" />, label: "Branch", value: profile.branch ? `${profile.branch.name} (${profile.branch.code})` : "—" },
     {
       icon: <Circle className="h-4 w-4" />,
       label: "Status",

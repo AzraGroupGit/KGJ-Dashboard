@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleProps } from "@/lib/auth/session";
-import { notifySupervisors, getSupervisorRoleForApproval, notifyCsForOrder } from "@/lib/notifications";
+import { notifySupervisors, getSupervisorRoleForApproval } from "@/lib/notifications";
 import { STAGE_SEQUENCE, STAGE_GROUP, effectiveNext } from "@/lib/stages";
 import { pushStageToYii2 } from "@/lib/legacy/push-status";
 
@@ -581,8 +581,6 @@ export async function POST(request: Request) {
           changed_by: userId,
           created_at: now,
         });
-
-        notifyCsForOrder(orderId);
 
         // Pengiriman berhasil → order masuk tahap selesai.
         await pushStageToYii2(orderId, legacyId, "selesai");

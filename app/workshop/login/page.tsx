@@ -184,7 +184,6 @@ function WorkshopLoginContent() {
       username: user.username,
       role: "supervisor",
       roleDetail: user.roleDetail,
-      branch: null,
     });
   }, []);
 

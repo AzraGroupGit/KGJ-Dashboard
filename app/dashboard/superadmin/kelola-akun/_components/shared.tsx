@@ -2,21 +2,13 @@
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface BranchRef {
-  id: string;
-  name: string;
-  code: string;
-}
-
 export interface RoleOPRPRD {
   id: string;
   name: string;
   role_group:
     | "management"
     | "operational"
-    | "production"
-    | "marketing"
-    | "customer_service";
+    | "production";
   description: string | null;
   permissions: {
     can_read: boolean;
@@ -33,31 +25,15 @@ export interface UnifiedUser {
   email: string | null;
   username: string | null;
   phone: string | null;
-  role: "superadmin" | "customer_service" | "marketing" | null;
+  role: "superadmin" | null;
   roles: RoleOPRPRD | null;
   role_id: string | null;
-  branch_id: string | null;
-  branches: BranchRef | null;
   status: "active" | "inactive" | null;
   is_active: boolean;
   last_login: string | null;
   last_login_at: string | null;
   created_at: string;
   userType: "bms" | "supervisor" | "oprprd" | "management";
-}
-
-export interface Branch {
-  id: string;
-  code: string;
-  name: string;
-  address: string;
-  phone: string | null;
-  email: string | null;
-  pic: string | null;
-  status: "active" | "inactive";
-  total_leads: number;
-  total_closing: number;
-  created_at: string;
 }
 
 export type AlertState = {
@@ -71,7 +47,7 @@ export type NewUserType = "bms" | "supervisor" | "oprprd" | "management" | null;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const BMS_ROLES = ["superadmin", "customer_service", "marketing"] as const;
+export const BMS_ROLES = ["superadmin"] as const;
 
 export const ROLE_GROUP_LABELS: Record<string, { label: string; bg: string }> = {
   management: { label: "Manajemen", bg: "bg-purple-100 text-purple-800" },
@@ -81,7 +57,7 @@ export const ROLE_GROUP_LABELS: Record<string, { label: string; bg: string }> = 
 
 export const SEGMENT_OPTIONS: { value: UserSegment; label: string }[] = [
   { value: "all", label: "Semua" },
-  { value: "bms", label: "BMS (Admin, CS, Marketing)" },
+  { value: "bms", label: "Superadmin" },
   { value: "management", label: "Manajemen" },
   { value: "operational", label: "Operasional" },
   { value: "production", label: "Produksi" },
@@ -94,8 +70,7 @@ export const EMPTY_BMS_FORM = {
   full_name: "",
   email: "",
   password: "",
-  role: "customer_service" as "superadmin" | "customer_service" | "marketing",
-  branch_id: "",
+  role: "superadmin" as const,
 };
 
 export const EMPTY_OPRPRD_FORM = {
@@ -113,16 +88,6 @@ export const EMPTY_SUPERVISOR_FORM = {
   email: "",
   password: "",
   role: "operational_supervisor" as "operational_supervisor" | "production_supervisor" | "customer_service_supervisor",
-};
-
-export const EMPTY_BRANCH_FORM = {
-  name: "",
-  code: "",
-  address: "",
-  phone: "",
-  email: "",
-  pic: "",
-  status: "active" as Branch["status"],
 };
 
 export const EMPTY_MANAGEMENT_FORM = {
@@ -159,17 +124,15 @@ export const parseApiError = (raw: string, httpStatus?: number): string => {
     return "Nama lengkap dan password wajib diisi.";
   if (raw.includes("Password minimal"))
     return "Password terlalu pendek, minimal 6 karakter.";
-  if (raw.includes("Email wajib")) return "Email wajib diisi untuk akun BMS.";
-  if (raw.includes("Cabang wajib"))
-    return "Pilih cabang terlebih dahulu untuk role Customer Service.";
+  if (raw.includes("Email wajib")) return "Email wajib diisi untuk akun Superadmin.";
   if (raw.includes("Username minimal"))
     return "Username terlalu pendek, minimal 3 karakter.";
   if (raw.includes("Role harus dipilih") || raw.includes("Role tidak valid"))
     return "Role belum dipilih atau tidak valid.";
   if (raw.includes("Role harus salah satu"))
-    return "Role tidak dikenali. Pilih: Super Admin, Customer Service, atau Marketing.";
+    return "Role tidak dikenali. Pilih Super Admin atau role operasional yang tersedia.";
   if (raw.includes("role BMS, gunakan field"))
-    return "Untuk role BMS gunakan mode BMS, bukan mode Operasional.";
+    return "Untuk role Superadmin gunakan mode Superadmin, bukan mode Operasional.";
 
   if (raw.startsWith("Gagal membuat akun auth:")) return raw;
   if (raw.includes("Gagal menyimpan profil"))
@@ -217,8 +180,6 @@ export const getRoleBadge = (user: UnifiedUser) => {
   if (user.userType === "bms") {
     const map: Record<string, { bg: string; label: string }> = {
       superadmin: { bg: "bg-purple-100 text-purple-800", label: "Super Admin" },
-      customer_service: { bg: "bg-blue-100 text-blue-800", label: "Customer Service" },
-      marketing: { bg: "bg-emerald-500/10 text-green-800", label: "Marketing" },
     };
     const cfg = map[user.role ?? ""] ?? {
       bg: "bg-white/10 text-cream",
@@ -229,7 +190,7 @@ export const getRoleBadge = (user: UnifiedUser) => {
         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${cfg.bg}`}>
           {cfg.label}
         </span>
-        <span className="text-[10px] text-white/40">BMS</span>
+        <span className="text-[10px] text-white/40">Superadmin</span>
       </div>
     );
   }
@@ -322,13 +283,3 @@ export const getStatusBadge = (user: UnifiedUser) => {
   );
 };
 
-export const getBranchStatusBadge = (status: "active" | "inactive") =>
-  status === "active" ? (
-    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-emerald-500/10 text-green-800">
-      Aktif
-    </span>
-  ) : (
-    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-rose-500/10 text-red-800">
-      Nonaktif
-    </span>
-  );

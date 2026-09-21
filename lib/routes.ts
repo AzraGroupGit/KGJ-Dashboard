@@ -26,9 +26,16 @@ import {
 
 /**
  * Alias untuk LoginRole — dipakai di banyak tempat sebagai "app role" untuk dashboard.
- * Union: 'superadmin' | 'customer_service' | 'marketing'
+ * Saat ini berisi role dashboard aktif dari LoginRole.
  */
 export type AppRole = LoginRole;
+
+const RETIRED_DASHBOARD_ROLES = ["customer_service", "marketing"] as const;
+
+export function isRetiredDashboardRole(value: unknown): boolean {
+  return typeof value === "string" &&
+    (RETIRED_DASHBOARD_ROLES as readonly string[]).includes(value);
+}
 
 /**
  * Role yang digunakan untuk akses workshop / QR scan.
@@ -66,8 +73,6 @@ export const ROUTES = {
 
   // Dashboards per role (entry point)
   DASHBOARD_SUPERADMIN: "/dashboard/superadmin",
-  DASHBOARD_CS: "/dashboard/cs",
-  DASHBOARD_MARKETING: "/dashboard/marketing",
   DASHBOARD_SUPERVISOR: "/dashboard/supervisor",
 
   // Workshop / QR access
@@ -84,13 +89,7 @@ export const SUPERADMIN_ROUTES = {
   KELOLA_AKUN: "/dashboard/superadmin/kelola-akun",
   KELOLA_QR_CODES: "/dashboard/superadmin/kelola-qr-codes",
 
-  // BMS submenu
-  BMS_DASHBOARD: "/dashboard/superadmin/bms",
-  STATISTIK: "/dashboard/superadmin/bms/statistik",
-  LAPORAN: "/dashboard/superadmin/bms/laporan",
-
   // OPR-PRD submenu
-  OPRPRD_DASHBOARD: "/dashboard/superadmin/oprprd",
   OPRPRD_MONITORING: "/dashboard/superadmin/oprprd/monitoring",
   OPRPRD_MONITORING_OPERASI: "/dashboard/superadmin/oprprd/operasi",
   OPRPRD_MONITORING_PRODUKSI: "/dashboard/superadmin/oprprd/produksi",
@@ -100,19 +99,6 @@ export const SUPERADMIN_ROUTES = {
   MONITORING_MANAJEMEN: "/dashboard/superadmin/management/monitoring",
   MANAGEMENT_DASHBOARD: "/dashboard/superadmin/management",
   MANAGEMENT_HISTORY: "/dashboard/superadmin/management/history",
-} as const;
-
-export const CS_ROUTES = {
-  DASHBOARD: "/dashboard/cs",
-  INPUT_LEADS: "/dashboard/cs/input-leads",
-  INPUT_ORDER: "/dashboard/cs/input-order",
-  PELANGGAN: "/dashboard/cs/pelanggan",
-} as const;
-
-export const MARKETING_ROUTES = {
-  DASHBOARD: "/dashboard/marketing",
-  INPUT: "/dashboard/marketing/input",
-  ANALISIS: "/dashboard/marketing/analisis",
 } as const;
 
 /**
@@ -131,7 +117,6 @@ export const SUPERVISOR_ROUTES = {
   APPROVAL: "/dashboard/supervisor/approval",
   ACCOUNTS: "/dashboard/supervisor/accounts",
   PERSONNEL: "/dashboard/supervisor/personnel",
-  SLOT_MANAGEMENT: "/dashboard/supervisor/slot-management",
   QR_CODES: "/dashboard/supervisor/qr-codes",
   HISTORY: "/dashboard/supervisor/history",
   APPROVAL_HISTORY: "/dashboard/supervisor/history-approval",
@@ -196,7 +181,10 @@ export function isAppRole(value: unknown): value is AppRole {
  * since workshop role names are DB-driven and cannot be enumerated statically.
  */
 export function isWorkshopRole(value: unknown): value is WorkshopRole {
-  return typeof value === "string" && value.length > 0 && !isAppRole(value);
+  return typeof value === "string" &&
+    value.length > 0 &&
+    !isAppRole(value) &&
+    !isRetiredDashboardRole(value);
 }
 
 /**
@@ -218,25 +206,21 @@ export function isAllRole(value: unknown): value is AllRole {
  *
  * Pembagian:
  *   - superadmin                       → /dashboard/superadmin
- *   - customer_service                 → /dashboard/cs
- *   - marketing                        → /dashboard/marketing
+ *   - customer_service                 → akun dashboard lama (dinonaktifkan)
+ *   - marketing                        → akun dashboard lama (dinonaktifkan)
  *   - production_staff / qc_staff / admin  → /workshop/login
  *
  * Menerima input unknown (dari DB atau user input) — kalau bukan AllRole
  * valid, return null. Defensive untuk runtime safety.
  */
 export function getDashboardPath(role: unknown): string | null {
+  if (isRetiredDashboardRole(role)) return null;
+
   // Cek AppRole (dashboard)
   if (isAppRole(role)) {
     switch (role) {
       case "superadmin":
         return ROUTES.DASHBOARD_SUPERADMIN;
-
-      case "customer_service":
-        return ROUTES.DASHBOARD_CS;
-
-      case "marketing":
-        return ROUTES.DASHBOARD_MARKETING;
 
       case "management":
         return "/dashboard/management";
@@ -273,6 +257,8 @@ export function getDashboardPath(role: unknown): string | null {
  * Menerima role string (bisa AppRole atau WorkshopRole) dan path.
  */
 export function canAccessPath(role: string, path: string): boolean {
+  if (isRetiredDashboardRole(role)) return false;
+
   // Superadmin bisa akses semua KECUALI supervisor dashboard
   if (role === "superadmin") {
     return !path.startsWith(ROUTES.DASHBOARD_SUPERVISOR);
@@ -303,20 +289,6 @@ export function canAccessPath(role: string, path: string): boolean {
     );
   }
 
-  // Customer Service — hanya dashboard CS
-  if (role === "customer_service") {
-    return (
-      path.startsWith(ROUTES.DASHBOARD_CS) || path.startsWith("/api/") // izinkan API call
-    );
-  }
-
-  // Marketing — hanya dashboard marketing
-  if (role === "marketing") {
-    return (
-      path.startsWith(ROUTES.DASHBOARD_MARKETING) || path.startsWith("/api/") // izinkan API call
-    );
-  }
-
   // Role tidak dikenali
   return false;
 }
@@ -327,8 +299,6 @@ export function canAccessPath(role: string, path: string): boolean {
  *
  * Contoh:
  *   '?role=admin' → 'superadmin'
- *   '?role=cs'    → 'customer_service'  (alias lama)
- *   '?role=customer_service' → 'customer_service'
  *   '?role=xxx'   → null
  */
 export function queryParamToAppRole(param: string | null): AppRole | null {
@@ -336,8 +306,6 @@ export function queryParamToAppRole(param: string | null): AppRole | null {
 
   // Alias untuk kompatibilitas link lama
   if (param === "admin") return "superadmin";
-  if (param === "cs") return "customer_service";
-
   return isAppRole(param) ? param : null;
 }
 
@@ -360,7 +328,7 @@ export function isPublicPath(pathname: string): boolean {
 
 /**
  * Cek apakah path perlu authentication (user harus sudah login).
- * Contoh: /dashboard/cs → true, /workshop/input → true, /login → false
+ * Contoh: /dashboard/superadmin → true, /workshop/input → true, /login → false
  */
 export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(

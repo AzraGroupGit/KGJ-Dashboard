@@ -11,8 +11,6 @@ import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
 import { getClientUser, type ClientUser } from "@/lib/auth/session";
-import CycleTimeTab from "@/components/analytics/CycleTimeTab";
-import WorkerProductivityTab from "@/components/analytics/WorkerProductivityTab";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -25,8 +23,6 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
-
-type TabId = "overview" | "cycle-time" | "worker-productivity";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -156,19 +152,10 @@ export default function AnalisisPage() {
     if (!user) router.push("/login");
   }, [router]);
   const [period, setPeriod] = useState<string>(currentPeriod());
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
-
   const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ["analyst-oprprd", period],
     queryFn: () => fetcher<AnalystData>(`/api/analyst-oprprd?period=${period}`),
   });
-
-  const tabs: { id: TabId; label: string }[] = [
-    { id: "overview", label: "Overview" },
-    { id: "cycle-time", label: "Cycle Time" },
-    { id: "worker-productivity", label: "Worker Productivity" },
-  ];
-
 
   const handlePeriodChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value; // YYYY-MM
@@ -191,7 +178,7 @@ export default function AnalisisPage() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Link
-                  href="/dashboard/superadmin/oprprd"
+                  href="/dashboard/superadmin"
                   className="inline-flex items-center gap-1 text-xs text-white/40 hover:text-white/70 transition-colors"
                 >
                   <ArrowLeft className="h-3 w-3" /> OPR-PRD
@@ -225,31 +212,8 @@ export default function AnalisisPage() {
             </div>
           </div>
 
-          {/* ── Tab bar ── */}
-          <div className="mb-6 border-b border-gold/15">
-            <nav className="flex gap-6">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`pb-2 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === tab.id
-                      ? "border-gold text-ivory"
-                      : "border-transparent text-white/40 hover:text-white/70"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-
           {/* ── Content ── */}
-          {activeTab === "cycle-time" ? (
-            <CycleTimeTab />
-          ) : activeTab === "worker-productivity" ? (
-            <WorkerProductivityTab />
-          ) : isLoading ? (
+          {isLoading ? (
             <Loading variant="skeleton" text="Memuat data analisis..." />
           ) : error ? (
             <ErrorState error={error?.message ?? "Terjadi kesalahan"} onRetry={() => refetch()} />

@@ -23,7 +23,6 @@ export interface Account {
   created_at: string;
   role_id: string | null;
   role: Role | null;
-  branch_name?: string | null;
 }
 
 export type ModalType =
@@ -93,8 +92,6 @@ export function roleLabel(name: string): string {
     supervisor: "Supervisor",
     superadmin: "Superadmin",
     admin: "Admin",
-    marketing: "Marketing",
-    cs: "Customer Service",
   };
   return (
     map[name] ??
@@ -107,8 +104,6 @@ export function roleGroupLabel(group: string): string {
     production: "Produksi",
     operational: "Operasional",
     management: "Manajemen",
-    customer_service: "Customer Service",
-    marketing: "Marketing",
   };
   return map[group] ?? group;
 }
@@ -118,8 +113,6 @@ export function roleGroupColor(group: string): string {
     production: "bg-amber-500/10 text-amber-800 border-amber-400/20",
     operational: "bg-sky-500/10 text-sky-300 border-sky-400/20",
     management: "bg-purple-100 text-purple-800 border-purple-200",
-    customer_service: "bg-emerald-500/10 text-emerald-800 border-emerald-200",
-    marketing: "bg-pink-100 text-pink-800 border-pink-200",
   };
   return map[group] ?? "bg-white/10 text-cream border-gold/15";
 }

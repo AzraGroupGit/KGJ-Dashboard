@@ -227,7 +227,7 @@ export default function LaporanPage() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Link
-                  href="/dashboard/superadmin/oprprd"
+                  href="/dashboard/superadmin"
                   className="inline-flex items-center gap-1 text-xs text-white/40 hover:text-white/70 transition-colors"
                 >
                   <ArrowLeft className="h-3 w-3" /> OPR-PRD
