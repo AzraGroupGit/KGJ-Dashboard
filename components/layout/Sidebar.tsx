@@ -7,8 +7,6 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef, startTransition } from "react";
 import {
   SUPERADMIN_ROUTES,
-  CS_ROUTES,
-  MARKETING_ROUTES,
   SUPERVISOR_ROUTES,
   MANAGEMENT_ROUTES,
 } from "@/lib/routes";
@@ -18,7 +16,6 @@ import {
   Users,
   FileText,
   Edit3,
-  Building2,
   Package,
   CalendarDays,
   Activity,
@@ -47,9 +44,9 @@ const menuItems: Record<string, MenuItem[]> = {
       href: SUPERADMIN_ROUTES.DASHBOARD,
     },
 
-    // Kelola seluruh akun dan cabang
+    // Kelola seluruh akun
     {
-      name: "Kelola Akun & Cabang",
+      name: "Kelola Akun",
       icon: "users",
       href: SUPERADMIN_ROUTES.KELOLA_AKUN,
     },
@@ -84,35 +81,12 @@ const menuItems: Record<string, MenuItem[]> = {
       ],
     },
 
-    // Menu besar BMS - berisi menu utama sebelumnya
-    {
-      name: "BMS",
-      icon: "bms",
-      submenu: [
-        {
-          name: "Dashboard",
-          icon: "dashboard",
-          href: SUPERADMIN_ROUTES.BMS_DASHBOARD,
-        },
-        {
-          name: "Data Statistik",
-          icon: "statistik",
-          href: SUPERADMIN_ROUTES.STATISTIK,
-        },
-        { name: "Laporan", icon: "report", href: SUPERADMIN_ROUTES.LAPORAN },
-      ],
-    },
 
     // Menu besar OPRPRD
     {
       name: "OPR-PRD",
       icon: "oprprd",
       submenu: [
-        {
-          name: "Dashboard",
-          icon: "dashboard",
-          href: SUPERADMIN_ROUTES.OPRPRD_DASHBOARD,
-        },
         {
           name: "Monitoring OPR-PRD",
           icon: "monitor",
@@ -136,21 +110,6 @@ const menuItems: Record<string, MenuItem[]> = {
       ],
     },
   ],
-  customer_service: [
-    { name: "Dashboard", icon: "dashboard", href: CS_ROUTES.DASHBOARD },
-    { name: "Input Leads", icon: "input", href: CS_ROUTES.INPUT_LEADS },
-    { name: "Input Order", icon: "order", href: CS_ROUTES.INPUT_ORDER },
-    { name: "Pelanggan", icon: "users", href: CS_ROUTES.PELANGGAN },
-  ],
-  marketing: [
-    { name: "Dashboard", icon: "dashboard", href: MARKETING_ROUTES.DASHBOARD },
-    { name: "Input Marketing", icon: "input", href: MARKETING_ROUTES.INPUT },
-    {
-      name: "Analisis Channel",
-      icon: "analisis",
-      href: MARKETING_ROUTES.ANALISIS,
-    },
-  ],
   supervisor: [
     { name: "Dashboard", icon: "dashboard", href: SUPERVISOR_ROUTES.DASHBOARD },
     { name: "Persetujuan", icon: "approval", href: SUPERVISOR_ROUTES.APPROVAL },
@@ -160,11 +119,6 @@ const menuItems: Record<string, MenuItem[]> = {
       href: SUPERVISOR_ROUTES.ACCOUNTS,
     },
     { name: "Personnel", icon: "personnel", href: SUPERVISOR_ROUTES.PERSONNEL },
-    {
-      name: "Slot Management",
-      icon: "slot",
-      href: SUPERVISOR_ROUTES.SLOT_MANAGEMENT,
-    },
     { name: "QR Code", icon: "qr", href: SUPERVISOR_ROUTES.QR_CODES },
     { name: "Riwayat Order", icon: "order", href: SUPERVISOR_ROUTES.HISTORY },
     {
@@ -186,7 +140,6 @@ const iconMap: Record<string, React.ReactNode> = {
   users: <Users className="w-5 h-5" />,
   report: <FileText className="w-5 h-5" />,
   input: <Edit3 className="w-5 h-5" />,
-  branch: <Building2 className="w-5 h-5" />,
   analisis: <BarChart3 className="w-5 h-5" />,
   bms: <Package className="w-5 h-5" />,
   oprprd: <CalendarDays className="w-5 h-5" />,
@@ -195,7 +148,6 @@ const iconMap: Record<string, React.ReactNode> = {
   production: <DollarSign className="w-5 h-5" />,
   approval: <CheckCircle className="w-5 h-5" />,
   order: <ClipboardList className="w-5 h-5" />,
-  slot: <CalendarDays className="w-5 h-5" />,
   personnel: <UserPlus className="w-5 h-5" />,
   chevronDown: <ChevronDown className="w-4 h-4" />,
   chevronRight: <ChevronRight className="w-4 h-4" />,

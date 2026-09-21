@@ -18,18 +18,6 @@ import QRCodeLib from "qrcode";
 import { Download, Eye, MapPin, Plus, Power, QrCode, Trash2 } from "lucide-react";
 import type { Role, QRCode } from "@/types/qr-code";
 
-interface ScanEvent {
-  id: string;
-  order_id: string;
-  order_number: string;
-  user_name: string;
-  stage_label: string;
-  action: string;
-  action_label: string;
-  scanned_at: string;
-  scanned_at_formatted: string;
-}
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ROLE_GROUP_STYLES: Record<
@@ -54,15 +42,6 @@ const ROLE_GROUP_STYLES: Record<
     border: "border-amber-400/20",
     text: "text-amber-300",
   },
-};
-
-const ACTION_STYLES: Record<string, { label: string; color: string }> = {
-  open: { label: "Buka", color: "bg-blue-50 text-blue-700" },
-  submit: { label: "Submit", color: "bg-emerald-500/10 text-emerald-300" },
-  edit: { label: "Edit", color: "bg-yellow-50 text-yellow-700" },
-  read: { label: "Baca", color: "bg-[#26211c] text-cream" },
-  delete: { label: "Hapus", color: "bg-rose-500/10 text-rose-300" },
-  reject: { label: "Tolak", color: "bg-orange-500/10 text-orange-300" },
 };
 
 const STAGE_LABELS: Record<string, string> = {
@@ -143,9 +122,6 @@ const DownloadIcon = () => <Download className="w-4 h-4" />;
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function KelolaQRPage() {
-  const [activeTab, setActiveTab] = useState<"workstations" | "scan-logs">(
-    "workstations",
-  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedQR, setSelectedQR] = useState<QRCode | null>(null);
@@ -213,36 +189,6 @@ export default function KelolaQRPage() {
       ),
   });
   const roles = Array.isArray(rolesData) ? rolesData : [];
-
-  const { data: scansToday = 0 } = useQuery<number>({
-    queryKey: ["scans-today"],
-    queryFn: () => {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      return fetcher<{ total: number }>(
-        `/api/scan-events?start_date=${todayStart.toISOString()}&limit=1`,
-      ).then((r) => r.total ?? 0);
-    },
-  });
-
-  const { data: scanEvents = [] } = useQuery<ScanEvent[]>({
-    queryKey: ["scan-events"],
-    queryFn: () =>
-      fetcher<{ data: Record<string, unknown>[] }>("/api/scan-events?limit=100").then((r) =>
-        (r.data ?? []).map((e) => ({
-          id: e.id as string,
-          order_id: e.order_id as string,
-          order_number: (e.order_number as string) ?? "—",
-          user_name: (e.user_name as string) ?? "—",
-          stage_label: (e.stage_label as string) ?? "—",
-          action: e.action as string,
-          action_label: (e.action_label as string) ?? "—",
-          scanned_at: e.scanned_at as string,
-          scanned_at_formatted: e.scanned_at_formatted as string,
-        })),
-      ),
-    enabled: activeTab === "scan-logs",
-  });
 
   const isLoading = isQrLoading || isRolesLoading;
 
@@ -436,20 +382,6 @@ export default function KelolaQRPage() {
     );
   };
 
-  const getActionBadge = (action: string) => {
-    const config = ACTION_STYLES[action] || {
-      label: action,
-      color: "bg-[#26211c] text-cream",
-    };
-    return (
-      <span
-        className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${config.color}`}
-      >
-        {config.label}
-      </span>
-    );
-  };
-
   const workstationStats = useMemo(
     () => ({
       total: qrCodes.length,
@@ -562,37 +494,9 @@ export default function KelolaQRPage() {
                   {workstationStats.production}
                 </p>
               </div>
-              <div className="bg-cocoa rounded-xl p-4 border border-gold/10 border-t-2 border-t-indigo-400">
-                <p className="text-white/50 text-xs mb-1.5">Scan Hari Ini</p>
-                <p className="text-2xl font-semibold text-indigo-300">
-                  {scansToday}
-                </p>
-              </div>
             </div>
 
-            {/* Tabs */}
-            <div className="border-b border-gold/15 mb-5">
-              <nav className="flex gap-8">
-                {(["workstations", "scan-logs"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`pb-3.5 px-1 font-medium text-sm transition-colors ${
-                      activeTab === tab
-                        ? "text-indigo-600 border-b-2 border-indigo-600"
-                        : "text-white/50 hover:text-cream"
-                    }`}
-                  >
-                    {tab === "workstations" ? "QR Code" : "Riwayat Aktivitas"}
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            {/* Tab: QR Workstation */}
-            {activeTab === "workstations" && (
-              <>
-                {/* Filters */}
+            {/* Filters */}
                 <div className="flex flex-wrap items-center gap-3 mb-5">
                   <div className="relative flex-1 min-w-[200px]">
                     <input
@@ -705,75 +609,6 @@ export default function KelolaQRPage() {
                     )}
                   </div>
                 )}
-              </>
-            )}
-
-            {/* Tab: Riwayat Aktivitas */}
-            {activeTab === "scan-logs" && (
-              <div className="bg-cocoa rounded-xl shadow-sm border border-gold/10 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-[#26211c]/80 border-b border-gold/10">
-                      <tr>
-                        {["Waktu", "Workstation", "Order", "User", "Aksi"].map(
-                          (header) => (
-                            <th
-                              key={header}
-                              className="px-5 py-3.5 text-left text-xs font-medium text-white/50 uppercase tracking-wider"
-                            >
-                              {header}
-                            </th>
-                          ),
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {scanEvents.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan={5}
-                            className="px-5 py-12 text-center text-white/40 text-sm"
-                          >
-                            Belum ada aktivitas scan.
-                          </td>
-                        </tr>
-                      ) : (
-                        scanEvents.map((event) => (
-                          <tr key={event.id} className="hover:bg-[#26211c]/50">
-                            <td className="px-5 py-3.5">
-                              <div className="text-sm text-cream">
-                                {formatDate(event.scanned_at)}
-                              </div>
-                              <div className="text-xs text-white/40">
-                                {formatRelativeTime(event.scanned_at)}
-                              </div>
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <span className="text-sm font-medium text-cream">
-                                {event.stage_label}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <span className="text-sm font-mono text-cream">
-                                {event.order_number}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <span className="text-sm text-cream">
-                                {event.user_name}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3.5">
-                              {getActionBadge(event.action)}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
           </main>
         </div>
       </div>

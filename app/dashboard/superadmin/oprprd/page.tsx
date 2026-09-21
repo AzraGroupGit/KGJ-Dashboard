@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api";
-import { useRouter } from "next/navigation";
+import { redirect, useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Loading from "@/components/ui/Loading";
@@ -111,6 +111,23 @@ interface DashboardData {
       waiting: number;
     };
 
+  };
+  workshopPulse: {
+    today: {
+      ordersReceived: number;
+      ordersCompleted: number;
+      reworksLogged: number;
+      activeUsers: number;
+    };
+    workInProgress: {
+      activeOrders: number;
+      overdueOrders: number;
+    };
+    afterProduction: {
+      customerCare: number;
+      packing: number;
+      shipping: number;
+    };
   };
   recentActivities: Array<{
     id: string;
@@ -222,7 +239,7 @@ function formatRelativeTime(timestamp: string): string {
 // Page
 // ============================================================
 
-export default function OwnerDashboardPage() {
+export function OwnerDashboardContent() {
   const router = useRouter();
   // Dibaca di useEffect (bukan initializer useState) agar render pertama di
   // client identik dengan SSR — menghindari hydration mismatch di Header.
@@ -361,38 +378,38 @@ export default function OwnerDashboardPage() {
                     <h3 className="font-playfair text-[15px] font-semibold tracking-wide text-ivory">
                       Workshop Pulse
                     </h3>
+                    <span className="ml-auto text-[10px] font-medium uppercase tracking-wide text-white/35">
+                      Data live · WIB
+                    </span>
                   </header>
                   <div className="p-5 space-y-4">
-                    {/* Hari Ini */}
                     <div>
                       <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/40">
-                        Hari Ini
+                        Aktivitas Hari Ini
                       </p>
                       <div className="grid grid-cols-2 gap-2">
-                        <MiniStat label="Order Masuk" value={data.kpi.additional.ordersHariIni} accent="sky" />
-                        <MiniStat label="Order Selesai" value={data.kpi.additional.selesaiHariIni} accent="emerald" />
-                        <MiniStat label="Rework" value={data.kpi.additional.totalRework} accent={data.kpi.additional.criticalRework > 0 ? "rose" : "slate"} />
-                        <MiniStat label="Selesai 30 Hari" value={data.kpi.additional.completedCount} accent="slate" />
+                        <MiniStat label="Order Dibuat" value={data.workshopPulse.today.ordersReceived} accent="sky" />
+                        <MiniStat label="Order Selesai" value={data.workshopPulse.today.ordersCompleted} accent="emerald" />
+                        <MiniStat label="Rework Dicatat" value={data.workshopPulse.today.reworksLogged} accent="rose" />
+                        <MiniStat label="Pengguna Aktif" value={data.workshopPulse.today.activeUsers} accent="slate" />
                       </div>
                     </div>
 
                     <hr className="border-gold/10" />
 
-                    {/* After Sales */}
                     <div>
                       <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/40">
-                        After Sales
+                        Pekerjaan Berjalan
                       </p>
-                      <div className="grid grid-cols-3 gap-2">
-                        <MiniStat label="Konfirmasi" value={data.operasional.afterSales.totalKonfirmasi} accent="sky" />
-                        <MiniStat label="Pelunasan" value={data.operasional.afterSales.totalPelunasan} accent="amber" />
-                        <MiniStat label="Delivery" value={data.operasional.afterSales.totalDelivery} accent="emerald" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <MiniStat label="Order Aktif" value={data.workshopPulse.workInProgress.activeOrders} accent="violet" />
+                        <MiniStat label="Lewat Estimasi" value={data.workshopPulse.workInProgress.overdueOrders} accent={data.workshopPulse.workInProgress.overdueOrders > 0 ? "rose" : "emerald"} />
                       </div>
-                      {data.operasional.afterSales.urgentCount > 0 && (
+                      {data.workshopPulse.workInProgress.overdueOrders > 0 && (
                         <div className="mt-2 flex items-start gap-1.5 rounded-md border border-rose-400/20 bg-rose-500/10 px-2.5 py-1.5">
                           <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-rose-300" />
                           <p className="text-[11px] text-rose-200">
-                            {data.operasional.afterSales.urgentCount} order butuh follow-up segera
+                            {data.workshopPulse.workInProgress.overdueOrders} order melewati tanggal estimasi selesai
                           </p>
                         </div>
                       )}
@@ -400,39 +417,20 @@ export default function OwnerDashboardPage() {
 
                     <hr className="border-gold/10" />
 
-                    {/* Produksi */}
                     <div>
                       <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/40">
-                        Produksi
+                        Setelah Produksi
                       </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <MiniStat
-                          label="Tukang Aktif"
-                          value={`${data.produksi.experts.aktif}/${data.produksi.experts.total}`}
-                          accent="slate"
-                        />
-                        <MiniStat label="Micro Setting" value={data.produksi.microSetting.total} accent="violet" />
-                        <MiniStat
-                          label="Shrinkage"
-                          value={`${data.operasional.racik.rataShrinkage.toFixed(2)}%`}
-                          accent={data.operasional.racik.rataShrinkage <= data.operasional.racik.targetShrinkage ? "emerald" : "rose"}
-                        />
-                        <MiniStat label="Laser Antrian" value={data.operasional.laser.antrian} accent="slate" />
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
-                          Admin: {data.operasional.adminTasks.active} aktif
-                        </span>
-                        {data.operasional.adminTasks.delayed > 0 && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-medium text-rose-300 ring-1 ring-inset ring-rose-400/20">
-                            {data.operasional.adminTasks.delayed} terlambat
-                          </span>
-                        )}
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-white/50 ring-1 ring-inset ring-white/10">
-                          QC: {data.operasional.qc.totalChecks} hari ini
-                        </span>
+                      <div className="grid grid-cols-3 gap-2">
+                        <MiniStat label="Customer Care" value={data.workshopPulse.afterProduction.customerCare} accent="sky" />
+                        <MiniStat label="Packing" value={data.workshopPulse.afterProduction.packing} accent="amber" />
+                        <MiniStat label="Pengiriman" value={data.workshopPulse.afterProduction.shipping} accent="emerald" />
                       </div>
                     </div>
+
+                    <p className="border-t border-gold/10 pt-3 text-[10px] leading-relaxed text-white/35">
+                      Berdasarkan order Yii2, tracking stage, riwayat aktivitas, dan log rework.
+                    </p>
                   </div>
                 </section>
 
@@ -908,4 +906,8 @@ function DashboardError({
       </div>
     </div>
   );
+}
+
+export default function OprprdDashboardRedirect() {
+  redirect("/dashboard/superadmin");
 }

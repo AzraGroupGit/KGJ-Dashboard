@@ -194,18 +194,6 @@ export async function POST(request: Request) {
       user_agent: request.headers.get("user-agent"),
     });
 
-    // 9. Log scan event
-    await admin.from("scan_events").insert({
-      user_id: userData.id,
-      stage: "login",
-      action: "open",
-      device_info: "QR Scanner (PIN)",
-      ip_address:
-        request.headers.get("x-forwarded-for") ||
-        request.headers.get("x-real-ip"),
-      scanned_at: new Date().toISOString(),
-    });
-
     const roleProps = getRoleProps(userData);
 
     return NextResponse.json({

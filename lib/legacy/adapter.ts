@@ -4,7 +4,7 @@
 // into the object shapes main-erp API routes already return, so the frontend
 // (components/pages) stays byte-for-byte unchanged.
 //
-// Fields that exist in cs_orders but have no legacy equivalent are returned as
+// Fields with no legacy equivalent are returned as
 // null (or "—" where a string is required by the UI). Only the DISPLAYED DATA
 // changes; the response contract does not.
 
@@ -253,7 +253,7 @@ export function legacyToOrderSummary(
 
 // ── Order detail (order-detail route) ─────────────────────────────────────────
 //
-// Same key set the frontend consumes today. Every cs_orders-only field that the
+// Same key set the frontend consumes today. Every field that the
 // legacy schema cannot supply is null; the UI already renders "—"/blank for null.
 
 export function legacyToOrderDetail(

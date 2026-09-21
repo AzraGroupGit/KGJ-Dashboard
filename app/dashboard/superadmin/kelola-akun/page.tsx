@@ -15,9 +15,7 @@ import { getClientUser, type ClientUser } from "@/lib/auth/session";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import {
   Building2,
-  MapPin,
   Pencil,
-  Phone,
   Plus,
   Power,
   Trash2,
@@ -31,18 +29,15 @@ import {
   EMPTY_BMS_FORM,
   EMPTY_OPRPRD_FORM,
   EMPTY_SUPERVISOR_FORM,
-  EMPTY_BRANCH_FORM,
   EMPTY_MANAGEMENT_FORM,
   parseApiError,
   resolveUserType,
   getRoleBadge,
   getStatusBadge,
-  getBranchStatusBadge,
   formatDate,
   currentUserIsActive,
   type UnifiedUser,
   type RoleOPRPRD,
-  type Branch,
   type AlertState,
   type UserSegment,
   type NewUserType,
@@ -51,7 +46,6 @@ import { UserTypePicker } from "./_components/UserTypePicker";
 import { BmsUserForm } from "./_components/BmsUserForm";
 import { SupervisorUserForm } from "./_components/SupervisorUserForm";
 import { OprprdUserForm } from "./_components/OprprdUserForm";
-import { BranchForm } from "./_components/BranchForm";
 import { ManagementUserForm } from "./_components/ManagementUserForm";
 import {
   BmsUserSchema,
@@ -65,7 +59,7 @@ import {
 } from "@/lib/schemas/kelola-akun";
 
 export default function KelolaAkunPage() {
-  const [activeTab, setActiveTab] = useState<"all" | "bms" | "oprprd" | "management" | "branches">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "bms" | "oprprd" | "management">("all");
   const [clientUser, setClientUser] = useState<ClientUser | null>(null);
   const [alert, setAlert] = useState<AlertState>(null);
 
@@ -90,12 +84,6 @@ export default function KelolaAkunPage() {
 
   const [userToToggle, setUserToToggle] = useState<UnifiedUser | null>(null);
 
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
-  const [branchForm, setBranchForm] = useState(EMPTY_BRANCH_FORM);
-  const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
-  const [branchToToggle, setBranchToToggle] = useState<Branch | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     setClientUser(getClientUser());
@@ -113,7 +101,6 @@ export default function KelolaAkunPage() {
 
   interface UsersResponse { data: Record<string, unknown>[]; }
   interface RolesResponse { data: Record<string, unknown>[]; }
-  interface BranchesResponse { data: Record<string, unknown>[]; }
 
   const { data: usersData, isLoading: usersLoading, refetch: refetchUsers } = useQuery<UsersResponse>({
     queryKey: ["users", showInactive],
@@ -129,12 +116,7 @@ export default function KelolaAkunPage() {
     queryFn: () => fetcher("/api/roles"),
   });
 
-  const { data: branchesData, isLoading: branchesLoading, refetch: refetchBranches } = useQuery<BranchesResponse>({
-    queryKey: ["branches"],
-    queryFn: () => fetcher("/api/branches"),
-  });
-
-  const isQueriesLoading = usersLoading || rolesLoading || branchesLoading;
+  const isQueriesLoading = usersLoading || rolesLoading;
 
   useEffect(() => {
     if (usersData?.data) {
@@ -149,7 +131,7 @@ export default function KelolaAkunPage() {
 
   useEffect(() => {
     if (rolesData?.data) {
-      const BMS_NAMES = new Set(["superadmin", "customer_service", "marketing"]);
+      const BMS_NAMES = new Set(["superadmin"]);
       setRoles(
         ((rolesData.data ?? []) as unknown as RoleOPRPRD[]).filter(
           (r: RoleOPRPRD) => !BMS_NAMES.has(r.name),
@@ -157,12 +139,6 @@ export default function KelolaAkunPage() {
       );
     }
   }, [rolesData]);
-
-  useEffect(() => {
-    if (branchesData?.data) {
-      setBranches((branchesData.data ?? []) as unknown as Branch[]);
-    }
-  }, [branchesData]);
 
   // ─── Filtered & stats ──────────────────────────────────────────
 
@@ -219,8 +195,7 @@ export default function KelolaAkunPage() {
         full_name: user.full_name,
         email: user.email ?? "",
         password: "",
-        role: (user.role as typeof EMPTY_BMS_FORM.role) ?? "customer_service",
-        branch_id: user.branch_id ?? "",
+        role: (user.role as typeof EMPTY_BMS_FORM.role) ?? "superadmin",
       });
     } else if (user.userType === "supervisor") {
       setSupervisorForm({
@@ -266,7 +241,6 @@ export default function KelolaAkunPage() {
       email: bmsForm.email,
       password: bmsForm.password,
       role: bmsForm.role,
-      branch_id: bmsForm.branch_id || undefined,
     });
     if (!validation.success) {
       showAlert("error", validation.error.issues[0]?.message ?? "Validasi gagal");
@@ -284,17 +258,12 @@ export default function KelolaAkunPage() {
       showAlert("error", "Password terlalu pendek, minimal 6 karakter.");
       return;
     }
-    if (bmsForm.role === "customer_service" && !bmsForm.branch_id) {
-      showAlert("error", "Pilih cabang terlebih dahulu untuk role Customer Service.");
-      return;
-    }
     setIsSaving(true);
     try {
       const payload = {
         full_name: bmsForm.full_name.trim(),
         email: bmsForm.email.trim(),
         role: bmsForm.role,
-        branch_id: bmsForm.role === "customer_service" ? bmsForm.branch_id || null : null,
         ...(bmsForm.username?.trim() ? { username: bmsForm.username.trim() } : {}),
         ...(bmsForm.password ? { password: bmsForm.password } : {}),
       };
@@ -304,7 +273,7 @@ export default function KelolaAkunPage() {
       );
       const json = await res.json();
       if (!res.ok) { showAlert("error", parseApiError(json.error, res.status)); return; }
-      showAlert("success", isEditMode ? "Akun berhasil diperbarui!" : "Akun BMS baru berhasil dibuat!");
+      showAlert("success", isEditMode ? "Akun berhasil diperbarui!" : "Akun Superadmin baru berhasil dibuat!");
       setIsModalOpen(false);
       setTimeout(() => { refetchUsers(); }, 500);
     } finally {
@@ -494,87 +463,12 @@ export default function KelolaAkunPage() {
     }
   };
 
-  // ─── Branch handlers ───────────────────────────────────────────
-
-  const handleOpenBranchModal = (branch?: Branch) => {
-    if (branch) {
-      setIsEditMode(true);
-      setSelectedBranch(branch);
-      setBranchForm({
-        name: branch.name, code: branch.code, address: branch.address,
-        phone: branch.phone ?? "", email: branch.email ?? "",
-        pic: branch.pic ?? "", status: branch.status,
-      });
-    } else {
-      setIsEditMode(false);
-      setSelectedBranch(null);
-      setBranchForm(EMPTY_BRANCH_FORM);
-    }
-    setIsModalOpen(true);
-  };
-
-  const handleSaveBranch = async () => {
-    if (!branchForm.name.trim() || !branchForm.code.trim() || !branchForm.address.trim()) {
-      showAlert("error", "Nama cabang, kode, dan alamat wajib diisi.");
-      return;
-    }
-    setIsSaving(true);
-    try {
-      const payload = {
-        name: branchForm.name.trim(), code: branchForm.code.trim(),
-        address: branchForm.address.trim(),
-        phone: branchForm.phone.trim() || null, email: branchForm.email.trim() || null,
-        pic: branchForm.pic.trim() || null, status: branchForm.status,
-      };
-      const res = await fetch(
-        isEditMode ? `/api/branches/${selectedBranch!.id}` : "/api/branches",
-        { method: isEditMode ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) },
-      );
-      const json = await res.json();
-      if (!res.ok) { showAlert("error", parseApiError(json.error, res.status)); return; }
-      showAlert("success", isEditMode ? `Data ${branchForm.name} berhasil diperbarui.` : `Cabang ${branchForm.name} berhasil ditambahkan.`);
-      setIsModalOpen(false);
-      setTimeout(() => { refetchBranches(); }, 500);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleToggleBranchStatus = async (branch: Branch) => {
-    const newStatus = branch.status === "active" ? "inactive" : "active";
-    const res = await fetch(`/api/branches/${branch.id}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: newStatus }),
-    });
-    const json = await res.json();
-    if (!res.ok) { showAlert("error", parseApiError(json.error, res.status)); return; }
-    showAlert("success", `Cabang ${branch.name} berhasil ${newStatus === "active" ? "diaktifkan" : "dinonaktifkan"}.`);
-    await refetchBranches();
-  };
-
-  const handleDeleteBranch = async () => {
-    if (!branchToDelete) return;
-    setIsDeleting(true);
-    try {
-      const res = await fetch(`/api/branches/${branchToDelete.id}`, { method: "DELETE" });
-      const json = await res.json();
-      if (!res.ok) { showAlert("error", parseApiError(json.error, res.status)); return; }
-      showAlert("success", `Cabang ${branchToDelete.name} berhasil dihapus.`);
-      await refetchBranches();
-    } finally {
-      setIsDeleting(false);
-      setBranchToDelete(null);
-    }
-  };
-
-  const activeBranches = branches.filter((b) => b.status === "active");
-
   // ─── Render ────────────────────────────────────────────────────
 
   const modalTitle = (() => {
-    if (activeTab === "branches") return isEditMode ? "Edit Cabang" : "Tambah Cabang Baru";
     if (isEditMode) {
       const prefix = `Edit Akun — `;
-      if (selectedUser?.userType === "bms") return prefix + "BMS";
+      if (selectedUser?.userType === "bms") return prefix + "Superadmin";
       if (selectedUser?.userType === "supervisor")
         return prefix + (selectedUser.roles?.name === "production_supervisor" ? "Supervisor Produksi" : "Supervisor Operasional");
       if (selectedUser?.userType === "management")
@@ -582,7 +476,7 @@ export default function KelolaAkunPage() {
       return prefix + "Operasional & Produksi";
     }
     if (newUserType === null) return "Pilih Tipe Akun";
-    if (newUserType === "bms") return "Buat Akun BMS";
+    if (newUserType === "bms") return "Buat Akun Superadmin";
     if (newUserType === "supervisor") return "Buat Akun Supervisor";
     if (newUserType === "management") return "Buat Akun Management";
     return "Buat Akun Operasional / Produksi";
@@ -612,15 +506,15 @@ export default function KelolaAkunPage() {
             {/* Page header */}
             <div className="flex justify-between items-center mb-8">
               <div>
-                <h2 className="text-2xl font-bold text-cream mb-2">Kelola Akun & Data Cabang</h2>
-                <p className="text-white/70">Buat, edit, dan kelola akses pengguna serta data cabang</p>
+                <h2 className="text-2xl font-bold text-cream mb-2">Kelola Akun</h2>
+                <p className="text-white/70">Buat, edit, dan kelola akses pengguna</p>
               </div>
               <Button
                 variant="primary"
-                onClick={() => activeTab === "branches" ? handleOpenBranchModal() : handleOpenCreateModal()}
+                onClick={handleOpenCreateModal}
                 leftIcon={<Plus className="w-4 h-4" />}
               >
-                {activeTab === "branches" ? "Tambah Cabang" : "Buat Akun Baru"}
+                Buat Akun Baru
               </Button>
             </div>
 
@@ -636,10 +530,9 @@ export default function KelolaAkunPage() {
               <nav className="flex gap-6 overflow-x-auto">
                 {([
                   { key: "all" as const, label: "Semua User", icon: Users },
-                  { key: "bms" as const, label: "BMS", icon: Building2 },
+                  { key: "bms" as const, label: "Superadmin", icon: Building2 },
                   { key: "oprprd" as const, label: "OPRPRD", icon: Wrench },
                   { key: "management" as const, label: "Manajemen", icon: Shield },
-                  { key: "branches" as const, label: "Cabang", icon: MapPin },
                 ]).map(({ key, label, icon: Icon }) => (
                   <button
                     key={key}
@@ -654,14 +547,13 @@ export default function KelolaAkunPage() {
             </div>
 
             {/* ── Tab: Users ── */}
-            {activeTab !== "branches" && (
-              <>
+            <>
                 {/* Stats */}
                 {activeTab === "all" ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
                     {[
                       { label: "Total", value: stats.total, color: "border-indigo-400", text: "text-indigo-700" },
-                      { label: "BMS", value: stats.bms, color: "border-purple-400", text: "text-purple-700" },
+                      { label: "Superadmin", value: stats.bms, color: "border-purple-400", text: "text-purple-700" },
                       { label: "Manajemen", value: stats.management, color: "border-orange-400", text: "text-orange-300" },
                       { label: "Operasional", value: stats.operational, color: "border-blue-400", text: "text-blue-700" },
                       { label: "Produksi", value: stats.production, color: "border-amber-400", text: "text-amber-300" },
@@ -755,86 +647,7 @@ export default function KelolaAkunPage() {
                     </table>
                   </div>
                 </div>
-              </>
-            )}
-
-            {/* ── Tab: Branches ── */}
-            {activeTab === "branches" && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                  {[
-                    { label: "Total Cabang", value: branches.length, color: "border-blue-500" },
-                    { label: "Cabang Aktif", value: activeBranches.length, color: "border-green-500" },
-                    { label: "Total Lead (All Time)", value: branches.reduce((s, b) => s + b.total_leads, 0).toLocaleString("id-ID"), color: "border-purple-500" },
-                    { label: "Total Closing (All Time)", value: branches.reduce((s, b) => s + b.total_closing, 0).toLocaleString("id-ID"), color: "border-orange-500" },
-                  ].map(({ label, value, color }) => (
-                    <div key={label} className={`bg-cocoa rounded-xl shadow-sm p-6 border-l-4 ${color}`}>
-                      <p className="text-sm text-white/70 mb-2">{label}</p>
-                      <p className="text-2xl font-bold text-cream">{value}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {branches.length === 0 ? (
-                  <div className="text-center py-20 text-white/50 text-sm">Belum ada data cabang.</div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {branches.map((branch) => (
-                      <div key={branch.id} className="bg-cocoa rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <h3 className="text-lg font-bold text-white">{branch.name}</h3>
-                              <p className="text-sm text-indigo-100">{branch.code}</p>
-                            </div>
-                            {getBranchStatusBadge(branch.status)}
-                          </div>
-                        </div>
-                        <div className="p-6">
-                          <div className="space-y-3">
-                            <div className="flex items-start gap-3">
-                              <MapPin className="w-5 h-5 text-white/40 mt-0.5 shrink-0" />
-                              <div><p className="text-xs text-white/50">Alamat</p><p className="text-sm text-cream">{branch.address}</p></div>
-                            </div>
-                            {branch.phone && (
-                              <div className="flex items-center gap-3">
-                                <Phone className="w-5 h-5 text-white/40 shrink-0" />
-                                <div><p className="text-xs text-white/50">Telepon</p><p className="text-sm text-cream">{branch.phone}</p></div>
-                              </div>
-                            )}
-                            {branch.pic && (
-                              <div className="flex items-center gap-3">
-                                <User className="w-5 h-5 text-white/40 shrink-0" />
-                                <div><p className="text-xs text-white/50">PIC</p><p className="text-sm text-cream">{branch.pic}</p></div>
-                              </div>
-                            )}
-                          </div>
-                          <div className="mt-4 pt-4 border-t border-gold/15">
-                            <div className="flex justify-between text-sm mb-2">
-                              <span className="text-white/70">Total Lead</span>
-                              <span className="font-semibold text-cream">{branch.total_leads.toLocaleString("id-ID")}</span>
-                            </div>
-                            <div className="flex justify-between text-sm mb-4">
-                              <span className="text-white/70">Total Closing</span>
-                              <span className="font-semibold text-cream">{branch.total_closing.toLocaleString("id-ID")}</span>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline" onClick={() => handleOpenBranchModal(branch)} className="flex-1">Edit</Button>
-                              <Button size="sm" variant={branch.status === "active" ? "warning" : "success"} onClick={() => setBranchToToggle(branch)} className="flex-1">
-                                {branch.status === "active" ? "Nonaktifkan" : "Aktifkan"}
-                              </Button>
-                              <button onClick={() => setBranchToDelete(branch)} className="p-1.5 rounded-lg text-red-500 hover:text-rose-300 hover:bg-rose-500/100/10 transition-colors" title="Hapus cabang">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
+            </>
 
             {/* ── Modal ── */}
             <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={modalTitle} size="md">
@@ -844,32 +657,18 @@ export default function KelolaAkunPage() {
                 </div>
               )}
 
-              {/* Branch Form */}
-              {activeTab === "branches" && (
-                <BranchForm
-                  isEditMode={isEditMode}
-                  isSaving={isSaving}
-                  form={branchForm}
-                  setForm={setBranchForm}
-                  onSave={handleSaveBranch}
-                  onClose={handleCloseModal}
-                  showAlert={showAlert}
-                />
-              )}
-
               {/* User Type Picker */}
-              {activeTab !== "branches" && !isEditMode && newUserType === null && (
+              {!isEditMode && newUserType === null && (
                 <UserTypePicker onSelect={setNewUserType} />
               )}
 
-              {/* BMS Form */}
-              {activeTab !== "branches" && (isEditMode ? selectedUser?.userType === "bms" : newUserType === "bms") && (
+              {/* Superadmin Form */}
+              {(isEditMode ? selectedUser?.userType === "bms" : newUserType === "bms") && (
                 <BmsUserForm
                   isEditMode={isEditMode}
                   isSaving={isSaving}
                   form={bmsForm}
                   setForm={setBmsForm}
-                  activeBranches={activeBranches}
                   onSave={handleSaveBmsUser}
                   onClose={handleCloseModal}
                   onBack={() => setNewUserType(null)}
@@ -878,7 +677,7 @@ export default function KelolaAkunPage() {
               )}
 
               {/* Supervisor Form */}
-              {activeTab !== "branches" && (isEditMode ? selectedUser?.userType === "supervisor" : newUserType === "supervisor") && (
+              {(isEditMode ? selectedUser?.userType === "supervisor" : newUserType === "supervisor") && (
                 <SupervisorUserForm
                   isEditMode={isEditMode}
                   isSaving={isSaving}
@@ -892,7 +691,7 @@ export default function KelolaAkunPage() {
               )}
 
               {/* OPRPRD Form */}
-              {activeTab !== "branches" && (isEditMode ? selectedUser?.userType === "oprprd" : newUserType === "oprprd") && (
+              {(isEditMode ? selectedUser?.userType === "oprprd" : newUserType === "oprprd") && (
                 <OprprdUserForm
                   isEditMode={isEditMode}
                   isSaving={isSaving}
@@ -907,7 +706,7 @@ export default function KelolaAkunPage() {
               )}
 
               {/* Management Form */}
-              {activeTab !== "branches" && (isEditMode ? selectedUser?.userType === "management" : newUserType === "management") && (
+              {(isEditMode ? selectedUser?.userType === "management" : newUserType === "management") && (
                 <ManagementUserForm
                   isEditMode={isEditMode}
                   isSaving={isSaving}
@@ -925,17 +724,6 @@ export default function KelolaAkunPage() {
       </div>
 
       {/* Confirm Dialogs */}
-      <ConfirmDialog
-        isOpen={!!branchToDelete}
-        variant="danger"
-        title="Hapus cabang ini?"
-        message={branchToDelete ? `Cabang "${branchToDelete.name}" (${branchToDelete.code}) akan dihapus permanen. Pastikan tidak ada pengguna yang masih terhubung ke cabang ini.` : ""}
-        confirmText="Ya, Hapus"
-        cancelText="Batal"
-        isLoading={isDeleting}
-        onConfirm={handleDeleteBranch}
-        onCancel={() => !isDeleting && setBranchToDelete(null)}
-      />
       <ConfirmDialog
         isOpen={!!userToDelete}
         variant="danger"
@@ -956,16 +744,6 @@ export default function KelolaAkunPage() {
         cancelText="Batal"
         onConfirm={() => { handleToggleUserStatus(userToToggle!); setUserToToggle(null); }}
         onCancel={() => setUserToToggle(null)}
-      />
-      <ConfirmDialog
-        isOpen={!!branchToToggle}
-        variant="warning"
-        title={branchToToggle?.status === "active" ? "Nonaktifkan cabang?" : "Aktifkan cabang?"}
-        message={branchToToggle ? (branchToToggle.status === "active" ? `Cabang "${branchToToggle.name}" akan dinonaktifkan. Data cabang tetap tersimpan.` : `Cabang "${branchToToggle.name}" akan diaktifkan kembali.`) : ""}
-        confirmText={branchToToggle?.status === "active" ? "Ya, Nonaktifkan" : "Ya, Aktifkan"}
-        cancelText="Batal"
-        onConfirm={() => { handleToggleBranchStatus(branchToToggle!); setBranchToToggle(null); }}
-        onCancel={() => setBranchToToggle(null)}
       />
     </>
   );

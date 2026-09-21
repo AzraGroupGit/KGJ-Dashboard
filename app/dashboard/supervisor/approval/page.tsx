@@ -201,7 +201,7 @@ function StageInfoPopup({
 
     switch (stage) {
       case "approval_penerimaan_order":
-        // Data comes from cs_orders (via promoted_to_order_id), not stage_results
+        // Data comes from the order intake record, not a stage result.
         return [
           {
             label: "Nama Customer",
@@ -543,7 +543,7 @@ function formatDataValue(value: unknown): string {
   if (typeof value === "number") return value.toLocaleString("id-ID");
   if (Array.isArray(value)) {
     if (value.length === 0) return "—";
-    // Summarise array of objects (e.g. material_transactions)
+    // Summarise an array of objects.
     if (typeof value[0] === "object" && value[0] !== null) {
       return value
         .map((item) => {

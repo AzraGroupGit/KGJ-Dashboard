@@ -28,8 +28,6 @@ import {
 } from "lucide-react";
 import {
   SUPERADMIN_ROUTES,
-  CS_ROUTES,
-  MARKETING_ROUTES,
   SUPERVISOR_ROUTES,
 } from "@/lib/routes";
 import { getClientUser } from "@/lib/auth/session";
@@ -52,7 +50,7 @@ const menuItems: Record<string, MenuItem[]> = {
       href: SUPERADMIN_ROUTES.DASHBOARD,
     },
     {
-      name: "Kelola Akun & Cabang",
+      name: "Kelola Akun",
       icon: "users",
       href: SUPERADMIN_ROUTES.KELOLA_AKUN,
     },
@@ -62,31 +60,9 @@ const menuItems: Record<string, MenuItem[]> = {
       href: SUPERADMIN_ROUTES.KELOLA_QR_CODES,
     },
     {
-      name: "BMS",
-      icon: "bms",
-      submenu: [
-        {
-          name: "Dashboard",
-          icon: "dashboard",
-          href: SUPERADMIN_ROUTES.BMS_DASHBOARD,
-        },
-        {
-          name: "Data Statistik",
-          icon: "statistik",
-          href: SUPERADMIN_ROUTES.STATISTIK,
-        },
-        { name: "Laporan", icon: "report", href: SUPERADMIN_ROUTES.LAPORAN },
-      ],
-    },
-    {
       name: "OPR-PRD",
       icon: "oprprd",
       submenu: [
-        {
-          name: "Dashboard",
-          icon: "dashboard",
-          href: SUPERADMIN_ROUTES.OPRPRD_DASHBOARD,
-        },
         {
           name: "Monitoring Operasional",
           icon: "monitor",
@@ -115,19 +91,6 @@ const menuItems: Record<string, MenuItem[]> = {
       ],
     },
   ],
-  customer_service: [
-    { name: "Dashboard", icon: "dashboard", href: CS_ROUTES.DASHBOARD },
-    { name: "Input Leads", icon: "input", href: CS_ROUTES.INPUT_LEADS },
-  ],
-  marketing: [
-    { name: "Dashboard", icon: "dashboard", href: MARKETING_ROUTES.DASHBOARD },
-    { name: "Input Marketing", icon: "input", href: MARKETING_ROUTES.INPUT },
-    {
-      name: "Analisis Channel",
-      icon: "analisis",
-      href: MARKETING_ROUTES.ANALISIS,
-    },
-  ],
   supervisor: [
     {
       name: "Dashboard",
@@ -137,11 +100,6 @@ const menuItems: Record<string, MenuItem[]> = {
     { name: "Persetujuan", icon: "approval", href: SUPERVISOR_ROUTES.APPROVAL },
     { name: "Kelola Akun", icon: "users", href: SUPERVISOR_ROUTES.ACCOUNTS },
     { name: "Personnel", icon: "personnel", href: SUPERVISOR_ROUTES.PERSONNEL },
-    {
-      name: "Slot Management",
-      icon: "slot",
-      href: SUPERVISOR_ROUTES.SLOT_MANAGEMENT,
-    },
     { name: "QR Code", icon: "qr", href: SUPERVISOR_ROUTES.QR_CODES },
     { name: "Riwayat Order", icon: "order", href: SUPERVISOR_ROUTES.HISTORY },
     {
@@ -166,7 +124,6 @@ const iconMap: Record<string, React.ReactNode> = {
   scan: <ScanEye className="w-5 h-5" />,
   production: <DollarSign className="w-5 h-5" />,
   approval: <CheckCircle className="w-5 h-5" />,
-  slot: <CalendarDays className="w-5 h-5" />,
   personnel: <UserPlus className="w-5 h-5" />,
   chevronDown: <ChevronDown className="w-4 h-4" />,
   chevronRight: <ChevronRight className="w-4 h-4" />,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SupervisorUserSchema } from "@/lib/schemas/kelola-akun";
+import { BmsUserSchema, SupervisorUserSchema } from "@/lib/schemas/kelola-akun";
 
 describe("supervisor account schema", () => {
   it("menerima role supervisor customer service", () => {
@@ -12,5 +12,19 @@ describe("supervisor account schema", () => {
         role: "customer_service_supervisor",
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("retired BMS account roles", () => {
+  const baseAccount = {
+    full_name: "Admin ERP",
+    email: "admin@example.com",
+    password: "rahasia-aman",
+  };
+
+  it("hanya mengizinkan pembuatan akun Super Admin", () => {
+    expect(BmsUserSchema.safeParse({ ...baseAccount, role: "superadmin" }).success).toBe(true);
+    expect(BmsUserSchema.safeParse({ ...baseAccount, role: "customer_service" }).success).toBe(false);
+    expect(BmsUserSchema.safeParse({ ...baseAccount, role: "marketing" }).success).toBe(false);
   });
 });
