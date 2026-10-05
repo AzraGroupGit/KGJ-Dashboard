@@ -3,6 +3,7 @@ import {
   canValidateIntake,
   hasIntakeBrand,
   requiresPreReceiptValidation,
+  shouldQueueIntakeValidation,
 } from "@/lib/legacy/intake";
 
 describe("legacy intake policy", () => {
@@ -36,6 +37,13 @@ describe("intake validator permission", () => {
   it("mengizinkan permission validasi intake tanpa mengecek nama role", () => {
     expect(canValidateIntake({ can_validate_intake: true })).toBe(true);
     expect(canValidateIntake({ can_read: true })).toBe(false);
+  });
+});
+
+describe("intake rework", () => {
+  it("tidak membuka kembali rework hanya karena webhook order biasa diterima", () => {
+    expect(shouldQueueIntakeValidation("returned_for_revision")).toBe(false);
+    expect(shouldQueueIntakeValidation("pending_spv_cs_validation")).toBe(true);
   });
 });
 

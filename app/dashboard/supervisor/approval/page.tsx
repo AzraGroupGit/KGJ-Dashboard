@@ -79,6 +79,7 @@ interface IntakeItem {
   legacy_order_id: string;
   state: string;
   reason: string | null;
+  rework_sync_status: "pending" | "failed" | "synced" | "exhausted" | null;
   created_at: string;
   updated_at: string;
   legacy_orders: {
@@ -149,7 +150,13 @@ function IntakeCard({
       {order?.catatan && <p className="rounded-md bg-black/15 p-2 text-xs text-white/65">{order.catatan}</p>}
       {waitingForRevision && (
         <div className="rounded-md border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-xs" role="status">
-          <p className="font-medium text-amber-100">Menunggu pembaruan revisi dari Yii2</p>
+          <p className="font-medium text-amber-100">
+            {item.rework_sync_status === "exhausted"
+              ? "Pengiriman permintaan revisi ke Yii2 memerlukan perhatian admin"
+              : item.rework_sync_status === "pending" || item.rework_sync_status === "failed"
+                ? "Permintaan revisi akan dikirim ke Yii2"
+                : "Menunggu pembaruan revisi dari Yii2"}
+          </p>
           {item.reason && <p className="mt-1 text-amber-100/75">Alasan: {item.reason}</p>}
         </div>
       )}
@@ -160,13 +167,21 @@ function IntakeCard({
       >
         Lihat Detail Order
       </button>
+      <label htmlFor={`intake-reason-${item.id}`} className="block text-xs text-white/60">
+        Alasan keputusan
+      </label>
       <textarea
+        id={`intake-reason-${item.id}`}
         value={reason}
         onChange={(event) => setReason(event.target.value)}
         rows={2}
-        placeholder="Catatan validasi (wajib untuk dikembalikan/ditolak)"
+        aria-describedby={`intake-reason-help-${item.id}`}
+        placeholder="Contoh: Ukiran nama perlu dikoreksi"
         className="w-full rounded-lg border border-gold/15 bg-carbon px-3 py-2 text-xs text-cream placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-gold/30"
       />
+      <p id={`intake-reason-help-${item.id}`} className="text-xs text-white/45">
+        Wajib diisi untuk mengembalikan atau menolak order.
+      </p>
       <div className="grid grid-cols-3 gap-2">
         <button disabled={loading || waitingForRevision} onClick={() => decide("approve")} title={waitingForRevision ? "Menunggu pembaruan revisi dari Yii2" : undefined} className="rounded-lg bg-emerald-600 px-2 py-2 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50">Setujui</button>
         <button disabled={loading || !reason.trim()} onClick={() => decide("return")} className="rounded-lg border border-amber-400/25 px-2 py-2 text-xs font-medium text-amber-200 disabled:opacity-50">Kembalikan</button>

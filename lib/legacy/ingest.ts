@@ -19,7 +19,12 @@ import {
   type Yii2OrderPayload,
 } from "@/lib/legacy/adapter";
 import { getBrandCode } from "@/lib/legacy/brands";
-import { requiresPreReceiptValidation, type BrandIntakePolicy } from "@/lib/legacy/intake";
+import {
+  requiresPreReceiptValidation,
+  shouldQueueIntakeValidation,
+  type BrandIntakePolicy,
+  type IntakeState,
+} from "@/lib/legacy/intake";
 
 type Db = ReturnType<typeof createAdminClient>;
 
@@ -112,7 +117,7 @@ async function queueIntakeValidation(db: Db, orderId: string): Promise<void> {
     .maybeSingle();
   if (error) throw new Error(`legacy_order_intakes query gagal: ${error.message}`);
 
-  if (existing?.state === "approved_spv_cs" || existing?.state === "rejected_by_spv_cs" || existing?.state === "cancelled_from_source") {
+  if (!shouldQueueIntakeValidation(existing?.state as IntakeState | undefined)) {
     return;
   }
 
