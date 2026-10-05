@@ -114,6 +114,7 @@ function IntakeCard({
   const [loading, setLoading] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const order = item.legacy_orders;
+  const waitingForRevision = item.state === "returned_for_revision";
 
   const decide = async (action: "approve" | "return" | "reject") => {
     if (action !== "approve" && !reason.trim()) return;
@@ -132,8 +133,12 @@ function IntakeCard({
           <p className="text-base font-semibold text-ivory">{order?.kode_order ?? "—"}</p>
           <p className="text-sm text-white/60">{order?.nama ?? "—"}</p>
         </div>
-        <span className="rounded-full bg-sky-500/15 px-2 py-1 text-[10px] font-semibold text-sky-200">
-          Validasi SPV CS
+        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+          waitingForRevision
+            ? "bg-amber-500/15 text-amber-200"
+            : "bg-sky-500/15 text-sky-200"
+        }`}>
+          {waitingForRevision ? "Menunggu Revisi" : "Validasi SPV CS"}
         </span>
       </div>
       <dl className="space-y-1.5 text-xs">
@@ -142,6 +147,12 @@ function IntakeCard({
         <div className="flex justify-between gap-3"><dt className="text-white/45">Brand</dt><dd className="text-cream text-right">{getBrandDisplayName(order?.id_brand)}</dd></div>
       </dl>
       {order?.catatan && <p className="rounded-md bg-black/15 p-2 text-xs text-white/65">{order.catatan}</p>}
+      {waitingForRevision && (
+        <div className="rounded-md border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-xs" role="status">
+          <p className="font-medium text-amber-100">Menunggu pembaruan revisi dari Yii2</p>
+          {item.reason && <p className="mt-1 text-amber-100/75">Alasan: {item.reason}</p>}
+        </div>
+      )}
       <button
         type="button"
         onClick={() => setShowDetail(true)}
@@ -157,7 +168,7 @@ function IntakeCard({
         className="w-full rounded-lg border border-gold/15 bg-carbon px-3 py-2 text-xs text-cream placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-gold/30"
       />
       <div className="grid grid-cols-3 gap-2">
-        <button disabled={loading} onClick={() => decide("approve")} className="rounded-lg bg-emerald-600 px-2 py-2 text-xs font-medium text-white disabled:opacity-50">Setujui</button>
+        <button disabled={loading || waitingForRevision} onClick={() => decide("approve")} title={waitingForRevision ? "Menunggu pembaruan revisi dari Yii2" : undefined} className="rounded-lg bg-emerald-600 px-2 py-2 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50">Setujui</button>
         <button disabled={loading || !reason.trim()} onClick={() => decide("return")} className="rounded-lg border border-amber-400/25 px-2 py-2 text-xs font-medium text-amber-200 disabled:opacity-50">Kembalikan</button>
         <button disabled={loading || !reason.trim()} onClick={() => decide("reject")} className="rounded-lg border border-rose-400/25 px-2 py-2 text-xs font-medium text-rose-200 disabled:opacity-50">Tolak</button>
       </div>
@@ -1299,7 +1310,7 @@ export default function SupervisorApprovalPage() {
     queryFn: () => fetcher<{ data: IntakeItem[] }>("/api/intake/pending"),
     select: (res) => res.data ?? [],
     enabled: accessResolved && canValidateIntake,
-    refetchInterval,
+    refetchInterval: 30_000,
   });
 
   useEffect(() => {
