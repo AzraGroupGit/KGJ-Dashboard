@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { canValidateIntake } from "@/lib/legacy/intake";
 import { getRoleProps } from "@/lib/auth/session";
 import { admitLegacyOrderToReceiptApproval } from "@/lib/legacy/ingest";
+import { pushReworkRequestToYii2 } from "@/lib/legacy/push-rework";
+import { randomUUID } from "crypto";
 
 export async function POST(
   request: Request,
@@ -49,21 +51,62 @@ export async function POST(
       return NextResponse.json({ error: "Antrean intake sudah diproses" }, { status: 409 });
     }
 
+    if (intake.state === "returned_for_revision" && action === "approve") {
+      return NextResponse.json({ error: "Menunggu revisi dari Yii2" }, { status: 409 });
+    }
+
     const state = action === "approve"
       ? "approved_spv_cs"
       : action === "return"
         ? "returned_for_revision"
         : "rejected_by_spv_cs";
     const now = new Date().toISOString();
+    const reworkRequestId = action === "return" ? randomUUID() : null;
     const { error: updateError } = await admin
       .from("legacy_order_intakes")
-      .update({ state, reason: reason || null, decided_by: user.id, decided_at: now, updated_at: now })
+      .update({
+        state,
+        reason: reason || null,
+        decided_by: user.id,
+        decided_at: now,
+        updated_at: now,
+        ...(action === "return" ? {
+          rework_request_id: reworkRequestId,
+          rework_requested_at: now,
+          rework_completed_at: null,
+          rework_sync_status: "pending",
+          rework_sync_attempt_count: 0,
+          rework_last_error: null,
+          rework_last_http_status: null,
+          rework_next_retry_at: now,
+          rework_synced_at: null,
+        } : {}),
+      })
       .eq("id", intake.id);
     if (updateError) throw updateError;
 
     if (action === "approve") {
       await admitLegacyOrderToReceiptApproval(admin, orderId);
     }
+
+    const reworkSync = action === "return"
+      ? await (async () => {
+        const { data: order, error } = await admin
+          .from("legacy_orders")
+          .select("legacy_id, kode_order")
+          .eq("id", orderId)
+          .maybeSingle();
+        if (error || !order) throw new Error(error?.message ?? "Order sumber tidak ditemukan");
+        return pushReworkRequestToYii2({
+          intakeId: intake.id,
+          legacyId: order.legacy_id,
+          kodeOrder: order.kode_order,
+          requestId: reworkRequestId!,
+          reason,
+          requestedAt: now,
+        });
+      })()
+      : null;
 
     await admin.from("activity_logs").insert({
       user_id: user.id,
@@ -73,7 +116,7 @@ export async function POST(
       new_data: { action, state, reason: reason || null },
     });
 
-    return NextResponse.json({ success: true, state });
+    return NextResponse.json({ success: true, state, rework_sync: reworkSync?.status ?? null });
   } catch (error) {
     console.error("[POST /api/intake/:orderId/decision]", error);
     return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });

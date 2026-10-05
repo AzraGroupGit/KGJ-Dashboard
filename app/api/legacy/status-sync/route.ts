@@ -3,6 +3,7 @@ import {
   backfillCurrentStatusSyncs,
   retryPendingStatusSyncs,
 } from "@/lib/legacy/push-status";
+import { retryPendingReworkSyncs } from "@/lib/legacy/push-rework";
 
 export const maxDuration = 300;
 
@@ -34,7 +35,11 @@ export async function GET(request: Request) {
 
   try {
     if (mode === "retry") {
-      return NextResponse.json(await retryPendingStatusSyncs(limit));
+      const [statusSync, reworkSync] = await Promise.all([
+        retryPendingStatusSyncs(limit),
+        retryPendingReworkSyncs(limit),
+      ]);
+      return NextResponse.json({ ...statusSync, reworkSync });
     }
     if (mode === "backfill") {
       const dryRun = url.searchParams.get("dry_run") !== "false";

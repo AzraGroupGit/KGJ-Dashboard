@@ -33,7 +33,7 @@ export async function GET() {
     const { data, error } = await auth.admin
       .from("legacy_order_intakes")
       .select(`
-        id, legacy_order_id, state, reason, created_at, updated_at,
+        id, legacy_order_id, state, reason, rework_sync_status, created_at, updated_at,
         legacy_orders!legacy_order_intakes_legacy_order_id_fkey(
           id, kode_order, nama, no_hp, tgl_order, tgl_selesai, catatan,
           komponen, harga_final, jumlah_bayar, sisa_bayar,

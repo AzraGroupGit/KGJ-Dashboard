@@ -7,6 +7,15 @@ export type IntakeState =
   | "rejected_by_spv_cs"
   | "cancelled_from_source";
 
+export function shouldQueueIntakeValidation(
+  state: IntakeState | null | undefined,
+): boolean {
+  return state !== "approved_spv_cs"
+    && state !== "returned_for_revision"
+    && state !== "rejected_by_spv_cs"
+    && state !== "cancelled_from_source";
+}
+
 export interface BrandIntakePolicy {
   brand_code: string;
   requires_pre_receipt_validation: boolean;
