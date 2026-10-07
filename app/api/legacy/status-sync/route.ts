@@ -4,6 +4,7 @@ import {
   retryPendingStatusSyncs,
 } from "@/lib/legacy/push-status";
 import { retryPendingReworkSyncs } from "@/lib/legacy/push-rework";
+import { retryPendingApprovalLocks } from "@/lib/legacy/push-approval-lock";
 
 export const maxDuration = 300;
 
@@ -35,11 +36,12 @@ export async function GET(request: Request) {
 
   try {
     if (mode === "retry") {
-      const [statusSync, reworkSync] = await Promise.all([
+      const [statusSync, reworkSync, approvalLockSync] = await Promise.all([
         retryPendingStatusSyncs(limit),
         retryPendingReworkSyncs(limit),
+        retryPendingApprovalLocks(limit),
       ]);
-      return NextResponse.json({ ...statusSync, reworkSync });
+      return NextResponse.json({ ...statusSync, reworkSync, approvalLockSync });
     }
     if (mode === "backfill") {
       const dryRun = url.searchParams.get("dry_run") !== "false";

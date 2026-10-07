@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { syncNewOrders, computeSinceWatermark } from "@/lib/legacy/sync-service";
 import { retryPendingStatusSyncs } from "@/lib/legacy/push-status";
 import { retryPendingReworkSyncs } from "@/lib/legacy/push-rework";
+import { retryPendingApprovalLocks } from "@/lib/legacy/push-approval-lock";
 
 export const maxDuration = 300;
 
@@ -23,9 +24,10 @@ export async function GET(request: Request) {
     const db = createAdminClient();
     const since = await computeSinceWatermark(db);
     const result = await syncNewOrders(since, "cron");
-    const [statusSync, reworkSync] = await Promise.all([
+    const [statusSync, reworkSync, approvalLockSync] = await Promise.all([
       retryPendingStatusSyncs(),
       retryPendingReworkSyncs(),
+      retryPendingApprovalLocks(),
     ]);
 
     return NextResponse.json({
@@ -35,6 +37,7 @@ export async function GET(request: Request) {
       since,
       statusSync,
       reworkSync,
+      approvalLockSync,
     });
   } catch (error) {
     console.error("[GET /api/legacy/cron] unexpected:", error);
