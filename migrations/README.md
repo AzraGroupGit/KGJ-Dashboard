@@ -15,7 +15,7 @@ Schema Main-ERP saat ini memakai model integrasi Yii2: `legacy_orders` sebagai d
 
 - Identitas dan akses: `roles`, `users`, `activity_logs`, `notifications`, `qr_codes`, `stage_personnel`.
 - Order Yii2 dan produksi: `legacy_orders`, `tracking_stages`, `stage_history`, `legacy_rework_logs`, `legacy_deliveries`, `legacy_quality_checklist_results`.
-- Sinkronisasi dan intake: `sync_logs`, `legacy_status_sync_queue`, `legacy_order_intakes`, `brand_intake_policies`.
+- Sinkronisasi dan intake: `sync_logs`, `legacy_status_sync_queue`, `legacy_approval_lock_sync_queue`, `legacy_order_intakes`, `brand_intake_policies`.
 - Migration `025` menambahkan metadata dan retry pengiriman rework SPV CS pada `legacy_order_intakes`.
 - Management: tabel `management_*` dan storage attachment terkait.
 

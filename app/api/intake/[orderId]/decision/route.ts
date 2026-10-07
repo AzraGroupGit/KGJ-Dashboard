@@ -5,6 +5,7 @@ import { canValidateIntake } from "@/lib/legacy/intake";
 import { getRoleProps } from "@/lib/auth/session";
 import { admitLegacyOrderToReceiptApproval } from "@/lib/legacy/ingest";
 import { pushReworkRequestToYii2 } from "@/lib/legacy/push-rework";
+import { pushApprovalLockToYii2 } from "@/lib/legacy/push-approval-lock";
 import { randomUUID } from "crypto";
 
 export async function POST(
@@ -89,6 +90,24 @@ export async function POST(
       await admitLegacyOrderToReceiptApproval(admin, orderId);
     }
 
+    const approvalLockSync = action === "approve"
+      ? await (async () => {
+        const { data: order, error } = await admin
+          .from("legacy_orders")
+          .select("legacy_id, kode_order, id_brand")
+          .eq("id", orderId)
+          .maybeSingle();
+        if (error || !order) throw new Error(error?.message ?? "Order sumber tidak ditemukan");
+        if (order.id_brand !== 3) return null;
+        return pushApprovalLockToYii2({
+          orderId,
+          legacyId: order.legacy_id,
+          kodeOrder: order.kode_order,
+          approvedAt: now,
+        });
+      })()
+      : null;
+
     const reworkSync = action === "return"
       ? await (async () => {
         const { data: order, error } = await admin
@@ -116,7 +135,12 @@ export async function POST(
       new_data: { action, state, reason: reason || null },
     });
 
-    return NextResponse.json({ success: true, state, rework_sync: reworkSync?.status ?? null });
+    return NextResponse.json({
+      success: true,
+      state,
+      rework_sync: reworkSync?.status ?? null,
+      approval_lock_sync: approvalLockSync?.status ?? null,
+    });
   } catch (error) {
     console.error("[POST /api/intake/:orderId/decision]", error);
     return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
