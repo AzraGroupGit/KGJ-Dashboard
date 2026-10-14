@@ -139,7 +139,7 @@ export async function GET(request: Request) {
 
     let orders: LegacyOrderRow[] = [];
     if (orderIds.length > 0) {
-      let orderQuery = admin
+      const orderQuery = admin
         .from("legacy_orders")
         .select("*")
         .in("id", orderIds);
