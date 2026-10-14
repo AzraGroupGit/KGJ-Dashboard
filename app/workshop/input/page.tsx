@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import BrandHeader from "@/components/qr/BrandHeader";
@@ -48,6 +48,12 @@ interface WorkshopOrderInfo {
   updated_at: string | null;
   customer_name: string | null;
   proses_produksi: string | null;
+}
+
+interface WorkshopOrdersPage {
+  data: WorkshopOrderInfo[];
+  total: number;
+  next_offset: number | null;
 }
 
 interface WorkshopWorkOrder {
@@ -167,6 +173,8 @@ type Phase = "loading" | "list" | "form" | "success";
 const ROLE_STAGE_MAP: Record<string, string[]> = {
   customer_care: ["konfirmasi"],
 };
+
+const WORKSHOP_ORDERS_PAGE_SIZE = 50;
 
 const STAGE_LABELS: Record<string, string> = {
   penerimaan_order: "Penerimaan Order",
@@ -298,18 +306,29 @@ function PhaseOrderList({
   }, [search]);
 
   const {
-    data: orders = [],
-    isFetching,
+    data: orderPages,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
     error: fetchError,
     refetch,
-  } = useQuery<WorkshopOrderInfo[]>({
+  } = useInfiniteQuery({
     queryKey: ["workshop-orders", debouncedSearch],
-    queryFn: async () => {
-      const url = `/api/workshop/orders${debouncedSearch ? `?q=${encodeURIComponent(debouncedSearch)}` : ""}`;
-      const res = await fetcher<{ data: WorkshopOrderInfo[] }>(url);
-      return res.data ?? [];
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const params = new URLSearchParams({
+        limit: String(WORKSHOP_ORDERS_PAGE_SIZE),
+        offset: String(pageParam),
+      });
+      if (debouncedSearch) params.set("q", debouncedSearch);
+      return fetcher<WorkshopOrdersPage>(`/api/workshop/orders?${params}`);
     },
+    getNextPageParam: (lastPage) => lastPage.next_offset,
   });
+
+  const orders = orderPages?.pages.flatMap((page) => page.data) ?? [];
+  const totalOrders = orderPages?.pages[0]?.total ?? 0;
 
   const roleStages = (
     user.role.allowed_stages.length > 0
@@ -376,7 +395,7 @@ function PhaseOrderList({
       )}
 
       <div className="rounded-2xl border border-stone-200/80 bg-white/90 backdrop-blur-sm shadow-sm overflow-hidden">
-        {isFetching ? (
+        {isLoading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-14">
             <div
               className={`h-8 w-8 rounded-full border-2 border-stone-100 animate-spin ${theme.spinner}`}
@@ -487,14 +506,28 @@ function PhaseOrderList({
         )}
       </div>
 
-      {/* Refresh hint */}
-      {!isFetching && !fetchError && displayOrders.length > 0 && (
-        <button
-          onClick={() => refetch()}
-          className="mt-3 w-full text-center text-[12px] text-stone-300 hover:text-stone-500 transition-colors py-1"
-        >
-          Refresh daftar
-        </button>
+      {!isLoading && !fetchError && (
+        <div className="mt-3 space-y-2">
+          {hasNextPage && (
+            <button
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className={`w-full rounded-lg border border-stone-200 px-4 py-2 text-[13px] font-medium text-stone-600 transition-colors hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 ${theme.ring}`}
+            >
+              {isFetchingNextPage
+                ? "Memuat order..."
+                : `Muat lebih banyak (${orders.length} dari ${totalOrders})`}
+            </button>
+          )}
+          {displayOrders.length > 0 && (
+            <button
+              onClick={() => refetch()}
+              className="w-full py-1 text-center text-[12px] text-stone-300 transition-colors hover:text-stone-500"
+            >
+              Refresh daftar
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
