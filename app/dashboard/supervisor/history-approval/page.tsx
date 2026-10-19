@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
@@ -56,17 +56,27 @@ export default function SupervisorApprovalHistoryPage() {
     })();
   }, [router]);
 
-  const { data, isLoading, isFetching, refetch } = useQuery<{
-    data: { items: ApprovalItem[] };
+  const {
+    data,
+    isLoading,
+    isFetching,
+    refetch,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery<{
+    data: { items: ApprovalItem[]; next_offset: number | null };
   }>({
     queryKey: ["approval-history", brand],
-    queryFn: () =>
-      fetcher<{ data: { items: ApprovalItem[] } }>(
-        `/api/supervisor/approval-history?brand=${brand}`,
+    queryFn: ({ pageParam }) =>
+      fetcher<{ data: { items: ApprovalItem[]; next_offset: number | null } }>(
+        `/api/supervisor/approval-history?brand=${brand}&limit=50&offset=${pageParam}`,
       ),
+    initialPageParam: 0,
+    getNextPageParam: (page) => page.data.next_offset,
   });
 
-  const items = data?.data.items ?? [];
+  const items = data?.pages.flatMap((page) => page.data.items) ?? [];
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#26211c]">
@@ -176,6 +186,17 @@ export default function SupervisorApprovalHistoryPage() {
               </table>
             </div>
           </div>
+          {hasNextPage && (
+            <div className="mt-3 flex justify-center">
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="rounded-md border border-gold/15 bg-cocoa px-4 py-2 text-xs font-medium text-cream transition hover:bg-[#26211c] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isFetchingNextPage ? "Memuat riwayat..." : "Muat riwayat lainnya"}
+              </button>
+            </div>
+          )}
         </main>
       </div>
 

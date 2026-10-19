@@ -43,6 +43,7 @@ export function OverviewTab({
   prodBnCount,
   opBnCount,
   completedOrders,
+  completedCount,
   reworkData,
   onOrderClick,
 }: {
@@ -60,6 +61,7 @@ export function OverviewTab({
   prodBnCount: number;
   opBnCount: number;
   completedOrders: Array<{ id: string; order_number: string; customer_name: string; completed_at: string }>;
+  completedCount: number;
   reworkData: ReworkData | null;
   onOrderClick: (orderId: string, orderNumber: string) => void;
 }) {
@@ -77,10 +79,10 @@ export function OverviewTab({
         />
         <KpiChip
           label="Selesai"
-          value={String(completedOrders.length)}
+          value={String(completedCount)}
           icon={CheckCircle2}
           accent="emerald"
-          sub="bulan ini"
+          sub="sesuai filter"
         />
         <KpiChip
           label="Tukang Aktif"
@@ -252,7 +254,7 @@ export function OverviewTab({
             {
               key: "completed" as const,
               label: "Selesai",
-              count: completedOrders.length,
+              count: completedCount,
             },
           ].map((tab) => (
             <button
@@ -289,6 +291,7 @@ export function OverviewTab({
               </p>
             </div>
           ) : (
+            <>
             <div className="divide-y divide-white/5">
               {completedOrders.map((o) => (
                 <button
@@ -312,6 +315,12 @@ export function OverviewTab({
                 </button>
               ))}
             </div>
+              {completedCount > completedOrders.length && (
+                <p className="border-t border-gold/10 px-5 py-2.5 text-xs text-white/40">
+                  Menampilkan {completedOrders.length} order selesai terbaru dari {completedCount} order.
+                </p>
+              )}
+            </>
           )
         ) : filteredBn.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">

@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api";
 import Sidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/MobileHeader";
@@ -11,7 +11,7 @@ import SupervisorPageLoading from "@/components/layout/SupervisorPageLoading";
 import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
 import { formatAddsOnList } from "@/lib/adds-on";
 import { STAGE_SEQUENCE, getStageLabel } from "@/lib/stages";
-import { BRAND_FILTER_OPTIONS, getBrandCode, getBrandDisplayName, getBrandPrefix } from "@/lib/legacy/brands";
+import { BRAND_FILTER_OPTIONS, getBrandCode, getBrandDisplayName, getBrandFilterCode } from "@/lib/legacy/brands";
 import { useSupervisorPageAccess } from "@/lib/auth/use-supervisor-page-access";
 import {
   AlertTriangle,
@@ -94,6 +94,12 @@ interface IntakeItem {
     sisa_bayar: number | null;
     id_brand: number | null;
   } | null;
+}
+
+interface PendingPage<T> {
+  data: T[];
+  total: number;
+  next_offset: number | null;
 }
 
 type ActionState =
@@ -1307,26 +1313,45 @@ export default function SupervisorApprovalPage() {
 
   const [refetchInterval, setRefetchInterval] = useState<number | false>(30_000);
 
-  const { data: items = [], isLoading: loading, error, refetch } = useQuery({
-    queryKey: ["supervisor", "pending", access?.roleName],
-    queryFn: () => fetcher<{ data: PendingItem[] }>("/api/supervisor/pending"),
-    select: (res) => res.data ?? [],
+  const {
+    data: pendingPages,
+    isLoading: loading,
+    error,
+    refetch,
+    hasNextPage: hasNextPendingPage,
+    fetchNextPage: fetchNextPendingPage,
+    isFetchingNextPage: isFetchingNextPendingPage,
+  } = useInfiniteQuery({
+    queryKey: ["supervisor", "pending", access?.roleName, brandFilter],
+    queryFn: ({ pageParam }) => fetcher<PendingPage<PendingItem>>(
+      `/api/supervisor/pending?brand=${brandFilter}&limit=50&offset=${pageParam}`,
+    ),
+    initialPageParam: 0,
+    getNextPageParam: (page) => page.next_offset,
     enabled: accessResolved && canAccessPending,
     refetchInterval,
   });
+  const items = pendingPages?.pages.flatMap((page) => page.data) ?? [];
 
   const {
-    data: intakeItems = [],
+    data: intakePages,
     isLoading: intakeLoading,
     error: intakeError,
     refetch: refetchIntake,
-  } = useQuery({
-    queryKey: ["intake", "pending", access?.roleName],
-    queryFn: () => fetcher<{ data: IntakeItem[] }>("/api/intake/pending"),
-    select: (res) => res.data ?? [],
+    hasNextPage: hasNextIntakePage,
+    fetchNextPage: fetchNextIntakePage,
+    isFetchingNextPage: isFetchingNextIntakePage,
+  } = useInfiniteQuery({
+    queryKey: ["intake", "pending", access?.roleName, brandFilter],
+    queryFn: ({ pageParam }) => fetcher<PendingPage<IntakeItem>>(
+      `/api/intake/pending?brand=${brandFilter}&limit=50&offset=${pageParam}`,
+    ),
+    initialPageParam: 0,
+    getNextPageParam: (page) => page.next_offset,
     enabled: accessResolved && canValidateIntake,
     refetchInterval: 30_000,
   });
+  const intakeItems = intakePages?.pages.flatMap((page) => page.data) ?? [];
 
   useEffect(() => {
     if (!accessResolved) return;
@@ -1503,7 +1528,7 @@ export default function SupervisorApprovalPage() {
     : items).filter((item) =>
       brandFilter === "all"
         ? true
-        : getBrandPrefix(item.order_number) === brandFilter,
+        : getBrandFilterCode(item.order_number) === brandFilter,
     );
   const isIntakeTab = isCustomerServiceSupervisor || filter === "intake_validation";
   const scopedIntakeItems = isCustomerServiceSupervisor
@@ -1743,6 +1768,19 @@ export default function SupervisorApprovalPage() {
                         onCancel={handleCancel}
                       />
                     ))}
+                </div>
+              )}
+              {(isIntakeTab ? hasNextIntakePage : hasNextPendingPage) && (
+                <div className="flex justify-center pt-1">
+                  <button
+                    onClick={() => isIntakeTab ? fetchNextIntakePage() : fetchNextPendingPage()}
+                    disabled={isIntakeTab ? isFetchingNextIntakePage : isFetchingNextPendingPage}
+                    className="rounded-md border border-gold/15 bg-cocoa px-4 py-2 text-xs font-medium text-cream transition hover:bg-[#26211c] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {(isIntakeTab ? isFetchingNextIntakePage : isFetchingNextPendingPage)
+                      ? "Memuat order..."
+                      : "Muat lebih banyak"}
+                  </button>
                 </div>
               )}
             </div>

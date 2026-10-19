@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { formatAddsOnList } from "@/lib/adds-on";
 import { getStageDeadlineStatus } from "@/lib/stage-deadlines";
-import { getBrandPrefix } from "@/lib/legacy/brands";
+import { getBrandFilterCode } from "@/lib/legacy/brands";
 import type { Field } from "@/components/fields/types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -346,7 +346,7 @@ function PhaseOrderList({
         o.status !== "completed" &&
         o.status !== "cancelled" &&
         o.status !== "waiting_approval" &&
-        (brandFilter === "all" || getBrandPrefix(o.order_number) === brandFilter),
+        (brandFilter === "all" || getBrandFilterCode(o.order_number) === brandFilter),
     )
     .sort((a, b) => {
       if (sortBy === "deadline") {

@@ -18,6 +18,16 @@ export function getBrandPrefix(kodeOrder: string): string | null {
   return match ? match[1] : null;
 }
 
+export function getBrandFilterCode(kodeOrder: string): string | null {
+  const prefix = getBrandPrefix(kodeOrder);
+  return prefix === "MPM" ? "MP" : prefix;
+}
+
+export function getBrandIdFromFilterCode(brandCode: string): number | null {
+  const entry = Object.entries(BRANDS).find(([, brand]) => brand.code === brandCode);
+  return entry ? Number(entry[0]) : null;
+}
+
 export function getBrandName(idBrand: number | null | undefined): string {
   if (idBrand == null) return "KGJ";
   return BRANDS[idBrand]?.name ?? `Brand #${idBrand}`;

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleProps } from "@/lib/auth/session";
+import { getBrandIdFromFilterCode } from "@/lib/legacy/brands";
 import { STAGE_SEQUENCE, STAGE_GROUP, STAGE_LABELS } from "@/lib/stages";
 import {
   komponenLabel,
@@ -31,7 +32,7 @@ const SUPERVISOR_VISIBLE_STAGES: Record<string, Set<string>> = {
   production_supervisor: new Set(["approval_produksi"]),
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createClient();
     const {
@@ -86,16 +87,30 @@ export async function GET() {
       visibleApprovalStages = [...APPROVAL_STAGES] as string[];
     }
 
+    const { searchParams } = new URL(request.url);
+    const brand = searchParams.get("brand") ?? "all";
+    const brandId = brand === "all" ? null : getBrandIdFromFilterCode(brand);
+    if (brand !== "all" && brandId === null) {
+      return NextResponse.json({ error: "Brand tidak valid" }, { status: 400 });
+    }
+    const requestedLimit = Number.parseInt(searchParams.get("limit") ?? "50", 10);
+    const requestedOffset = Number.parseInt(searchParams.get("offset") ?? "0", 10);
+    const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 100) : 50;
+    const offset = Number.isFinite(requestedOffset) ? Math.max(requestedOffset, 0) : 0;
+
     // ── 1. legacy orders at an approval stage (via tracking_stages) ───────────
-    const { data: trackingRows, error: ordersError } = await admin
+    let trackingQuery = admin
       .from("tracking_stages")
       .select(
         `order_id, current_stage, stage_status, updated_at,
-         legacy_orders!tracking_stages_order_id_fkey ( id, kode_order, nama, no_hp, email, tgl_order, tgl_selesai, catatan, komponen, berat_cincin_pria, berat_cincin_wanita, reference_image_pria_url, reference_image_wanita_url )`,
+         legacy_orders!tracking_stages_order_id_fkey${brandId ? "!inner" : ""} ( id, kode_order, nama, no_hp, email, tgl_order, tgl_selesai, catatan, komponen, berat_cincin_pria, berat_cincin_wanita, reference_image_pria_url, reference_image_wanita_url )`,
+        { count: "exact" },
       )
       .in("current_stage", visibleApprovalStages)
-      .order("updated_at", { ascending: false })
-      .limit(100);
+      .order("updated_at", { ascending: false });
+    if (brandId) trackingQuery = trackingQuery.eq("legacy_orders.id_brand", brandId);
+    const { data: trackingRows, error: ordersError, count: total } = await trackingQuery
+      .range(offset, offset + limit - 1);
 
     if (ordersError) {
       console.error("[Pending] tracking_stages query error:", ordersError);
@@ -301,7 +316,10 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: pending,
-      total: pending.length,
+      total: total ?? 0,
+      next_offset: trackingRows && offset + trackingRows.length < (total ?? 0)
+        ? offset + trackingRows.length
+        : null,
     });
   } catch (error) {
     console.error("[GET /api/supervisor/pending] Error:", error);
