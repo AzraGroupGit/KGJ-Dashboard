@@ -14,7 +14,7 @@ import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
 import type { BottleneckData } from "@/types/bottleneck";
 import { Search, RefreshCw } from "lucide-react";
 import type { Channel } from "pusher-js";
-import { BRAND_FILTER_OPTIONS, getBrandPrefix } from "@/lib/legacy/brands";
+import { BRAND_FILTER_OPTIONS, getBrandFilterCode } from "@/lib/legacy/brands";
 import {
   buildUrl,
   ErrorState,
@@ -64,8 +64,13 @@ export default function MonitoringPage() {
         refetchInterval,
       },
       {
-        queryKey: ["monitoring", "supervisor", dateFrom, dateTo],
-        queryFn: () => fetcher<{ data: { completedOrders: Array<{ id: string; order_number: string; customer_name: string; completed_at: string }> } }>(buildUrl("/api/supervisor", dateFrom, dateTo)),
+        queryKey: ["monitoring", "supervisor", dateFrom, dateTo, brandFilter],
+        queryFn: () => {
+          const url = buildUrl("/api/supervisor", dateFrom, dateTo);
+          return fetcher<{ data: { completedOrders: Array<{ id: string; order_number: string; customer_name: string; completed_at: string }>; completedCount: number } }>(
+            `${url}${url.includes("?") ? "&" : "?"}brand=${brandFilter}`,
+          );
+        },
         refetchInterval,
       },
       {
@@ -86,7 +91,9 @@ export default function MonitoringPage() {
     (bnQuery.data as { data: BottleneckData } | undefined)?.data ?? null;
   const completedOrders: Array<{ id: string; order_number: string; customer_name: string; completed_at: string }> =
     (supervisorQuery.data as { data: { completedOrders: Array<{ id: string; order_number: string; customer_name: string; completed_at: string }> } } | undefined)?.data?.completedOrders ?? [];
-  const filteredCompletedOrders = completedOrders.filter((o) => brandFilter === "all" || getBrandPrefix(o.order_number) === brandFilter);
+  const completedCount =
+    (supervisorQuery.data as { data: { completedCount: number } } | undefined)?.data?.completedCount ?? 0;
+  const filteredCompletedOrders = completedOrders.filter((o) => brandFilter === "all" || getBrandFilterCode(o.order_number) === brandFilter);
   const reworkData: ReworkData | null =
     (reworkQuery.data as { data: ReworkData } | undefined)?.data ?? null;
 
@@ -175,7 +182,7 @@ export default function MonitoringPage() {
         orders: (!searchQuery && brandFilter === "all") ? b.orders : b.orders.filter(
           (o) => {
             const matchSearch = !searchQuery || o.order_number.toLowerCase().includes(searchQuery.toLowerCase()) || (o.customer_name ?? "").toLowerCase().includes(searchQuery.toLowerCase());
-            const matchBrand = brandFilter === "all" || getBrandPrefix(o.order_number) === brandFilter;
+            const matchBrand = brandFilter === "all" || getBrandFilterCode(o.order_number) === brandFilter;
             return matchSearch && matchBrand;
           }
         ),
@@ -312,6 +319,7 @@ export default function MonitoringPage() {
               prodBnCount={prodBnCount}
               opBnCount={opBnCount}
               completedOrders={filteredCompletedOrders}
+              completedCount={completedCount}
               reworkData={reworkData}
               onOrderClick={(orderId, orderNumber) => {
                 setDetailOrderId(orderId);

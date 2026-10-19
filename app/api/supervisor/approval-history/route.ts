@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRoleProps } from "@/lib/auth/session";
 import { STAGE_LABELS } from "@/lib/stages";
-import { getBrandPrefix } from "@/lib/legacy/brands";
+import { getBrandFilterCode, getBrandPrefix } from "@/lib/legacy/brands";
 import { getPersonalApprovalAction, PERSONAL_HISTORY_ACTIONS } from "@/lib/supervisor/history";
 
 async function verifySupervisor(userId: string) {
@@ -49,17 +49,20 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const brand = searchParams.get("brand") ?? "all";
-    const limit = Math.min(Number(searchParams.get("limit") ?? 100), 200);
+    const requestedLimit = Number.parseInt(searchParams.get("limit") ?? "50", 10);
+    const requestedOffset = Number.parseInt(searchParams.get("offset") ?? "0", 10);
+    const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 100) : 50;
+    const offset = Number.isFinite(requestedOffset) ? Math.max(requestedOffset, 0) : 0;
 
     const admin = createAdminClient();
 
-    const { data: history, error } = await admin
+    const { data: history, error, count: total } = await admin
       .from("activity_logs")
-      .select("entity_id, action, new_data, created_at")
+      .select("entity_id, action, new_data, created_at", { count: "exact" })
       .eq("user_id", authUser.id)
       .in("action", [...PERSONAL_HISTORY_ACTIONS])
       .order("created_at", { ascending: false })
-      .limit(limit * 3);
+      .range(offset, offset + limit - 1);
 
     if (error) {
       console.error("[approval-history] query error:", error.message);
@@ -122,12 +125,17 @@ export async function GET(request: Request) {
           brand: getBrandPrefix(orderNumber) ?? "—",
         };
       })
-      .filter((item) => brand === "all" || item.brand === brand)
+      .filter((item) => brand === "all" || getBrandFilterCode(item.order_number) === brand)
       .slice(0, limit);
 
     return NextResponse.json({
       success: true,
-      data: { items },
+      data: {
+        items,
+        next_offset: history && offset + history.length < (total ?? 0)
+          ? offset + history.length
+          : null,
+      },
       total: items.length,
     });
   } catch (err) {

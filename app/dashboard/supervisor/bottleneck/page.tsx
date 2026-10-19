@@ -26,7 +26,7 @@ import BottleneckHeatmap from "@/components/analytics/BottleneckHeatmap";
 import OrderDetailPopup from "@/components/orders/OrderDetailPopup";
 import type { StageBottleneck, BottleneckData } from "@/types/bottleneck";
 import type { SupervisorGroup } from "@/types/roles";
-import { BRAND_FILTER_OPTIONS, getBrandPrefix } from "@/lib/legacy/brands";
+import { BRAND_FILTER_OPTIONS, getBrandFilterCode, getBrandPrefix } from "@/lib/legacy/brands";
 import { getBottleneckSearchResult } from "@/lib/bottleneck/search";
 import { useSupervisorPageAccess } from "@/lib/auth/use-supervisor-page-access";
 
@@ -437,7 +437,7 @@ export default function SupervisorBottleneckPage() {
       .map((b) => {
         const orders = brandFilter === "all"
           ? b.orders
-          : b.orders.filter((order) => getBrandPrefix(order.order_number) === brandFilter);
+          : b.orders.filter((order) => getBrandFilterCode(order.order_number) === brandFilter);
         return {
           ...b,
           orders,
